@@ -60,8 +60,7 @@ GPU = "H100"          # A100-80GB also works, ["H100", "A100-80GB"] for fallback
 # If the dataset repo is private, also
 #   modal secret create huggingface HF_TOKEN=hf_...
 # and append modal.Secret.from_name("huggingface") to SECRETS.
-SECRETS = [modal.Secret.from_name("wandb")]
-
+SECRETS = [modal.Secret.from_name("wandb"), modal.Secret.from_name("huggingface")]
 
 # ---------------------------------------------------------------------------
 # Data

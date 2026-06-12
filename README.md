@@ -26,7 +26,7 @@ inplace-ttt/
 ├── train_utils.py       pure training logic (session schedule, grad norms)
 ├── train_modal.py       Modal app, training + sanity check
 ├── infer_modal.py       Modal app, inference + evaluation
-├── pipeline.py          arXiv data pipeline (separate, already run)
+├── pipeline/          arXiv data pipeline (separate, already run)
 └── tests/               local CPU suite, no Modal/GPU/downloads (~3s)
     ├── conftest.py            shared tiny-module fixtures
     ├── test_scan_math.py      scan vs sequential reference, both modes

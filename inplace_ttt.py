@@ -334,7 +334,8 @@ def patch_model_with_ttt(model, cfg: TTTConfig):
     dtype = next(model.parameters()).dtype
     for idx in cfg.layer_indices:
         layer = model.model.layers[idx]
-        layer.mlp = InPlaceTTTMLP(layer.mlp, hidden, cfg, tap).to(dtype)
+        device = layer.mlp.down_proj.weight.device
+        layer.mlp = InPlaceTTTMLP(layer.mlp, hidden, cfg, tap).to(device=device, dtype=dtype)
     model._ttt_tap = tap
     return tap
 

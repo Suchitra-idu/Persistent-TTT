@@ -1,7 +1,5 @@
 """
-Pure training utilities, extracted from train_modal.py so they are
-unit-testable without Modal installed (CRAP reduction, the session
-schedule shapes every training run and previously had zero coverage).
+Pure training utilities, extracted from train_modal.py.
 """
 
 
