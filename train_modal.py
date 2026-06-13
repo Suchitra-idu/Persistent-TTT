@@ -17,6 +17,7 @@ Checkpoints land in the 'ttt-checkpoints' volume as
     /ckpt/<run_name>/step_<n>/ttt_params.pt   (W_down, W_target, Conv1D)
 """
 
+import dataclasses
 import math
 import os
 import time
@@ -105,7 +106,8 @@ def load_token_dataset(tokenizer, limit_docs: int | None):
 # ---------------------------------------------------------------------------
 @app.function(image=image, gpu=GPU, volumes=VOLUMES, secrets=SECRETS,
               timeout=60 * 60 * 24)
-def train(limit_docs: int = 0, num_epochs: int = 0):
+def train(limit_docs: int = 0, num_epochs: int = 0,
+          grad_accum: int = 0, session: int = -1):
     import numpy as np
     import torch
     from transformers import get_cosine_schedule_with_warmup
@@ -121,8 +123,15 @@ def train(limit_docs: int = 0, num_epochs: int = 0):
     )
     from train_utils import grad_norms, make_session_schedule
 
-    cfg = TRAIN_CFG
-    epochs = num_epochs or cfg.num_epochs
+    overrides = {}
+    if num_epochs:
+        overrides["num_epochs"] = num_epochs
+    if grad_accum:
+        overrides["grad_accum_steps"] = grad_accum
+    if session in (0, 1):
+        overrides["session_training"] = bool(session)
+    cfg = dataclasses.replace(TRAIN_CFG, **overrides) if overrides else TRAIN_CFG
+    epochs = cfg.num_epochs
     torch.manual_seed(cfg.seed)
 
     # ---- model -----------------------------------------------------------
@@ -172,7 +181,7 @@ def train(limit_docs: int = 0, num_epochs: int = 0):
     total_steps = steps_per_epoch * epochs
     scheduler = get_cosine_schedule_with_warmup(
         optimizer,
-        num_warmup_steps=max(1, int(cfg.warmup_ratio * total_steps)),
+        num_warmup_steps=max(cfg.warmup_min_steps, int(cfg.warmup_ratio * total_steps)),
         num_training_steps=total_steps,
     )
     print(f"{total_steps} optimizer steps "
@@ -225,12 +234,18 @@ def train(limit_docs: int = 0, num_epochs: int = 0):
                 n_tok = ids.numel()
                 window_tokens += n_tok
                 total_tokens += n_tok
+                state_norms = session_state_norms(model)
+                state_ratio_mean = (
+                    sum(state_norms.values()) / len(state_norms)
+                    if state_norms else 0.0
+                )
                 telemetry.log({
                     "micro/step": micro,
                     "micro/paper_loss": loss.item(),
                     "micro/paper_tokens": n_tok,
                     "micro/session_pos": pos,
                     "micro/session_n": len(session),
+                    "micro/state_ratio_mean": state_ratio_mean,
                 })
                 micro += 1
 
@@ -356,5 +371,7 @@ def sanity_check():
 
 
 @app.local_entrypoint()
-def main(limit_docs: int = 0, num_epochs: int = 0):
-    train.remote(limit_docs=limit_docs, num_epochs=num_epochs)
+def main(limit_docs: int = 0, num_epochs: int = 0,
+         grad_accum: int = 0, session: int = -1):
+    train.remote(limit_docs=limit_docs, num_epochs=num_epochs,
+                 grad_accum=grad_accum, session=session)

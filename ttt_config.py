@@ -96,6 +96,7 @@ class TrainConfig:
     weight_decay_full: float = 0.1
     weight_decay_lora: float = 0.0
     warmup_ratio: float = 0.02
+    warmup_min_steps: int = 10
     max_grad_norm: float = 1.0
 
     # LoRA. Alpha at 2x rank per current practice.

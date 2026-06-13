@@ -400,17 +400,20 @@ def advance_session_state(model):
 
 
 def session_state_norms(model) -> dict:
-    """||eta * carried||_F / ||W0||_F per TTT layer. THE health metric
-    for persistence. If this grows without bound across a session, you
-    have found the point where a forgetting mechanism becomes mandatory."""
+    """||eta * carried||_F / ||W0||_F keyed by the actual base-model layer
+    index (e.g. 5, 11, 17, ...), not by enumeration order. THE health
+    metric for persistence. If this grows without bound across a session,
+    you have found the point where a forgetting mechanism becomes mandatory."""
+    modules = list(iter_ttt_modules(model))
+    layer_indices = modules[0].cfg.layer_indices if modules else ()
     out = {}
-    for i, m in enumerate(iter_ttt_modules(model)):
+    for layer_idx, m in zip(layer_indices, modules):
         if m.carried_delta is None:
-            out[i] = 0.0
+            out[layer_idx] = 0.0
             continue
         num = (m.cfg.eta * m.carried_delta).norm()
         den = m.down_proj.weight.detach().float().norm()
-        out[i] = float(num / den)
+        out[layer_idx] = float(num / den)
     return out
 
 
