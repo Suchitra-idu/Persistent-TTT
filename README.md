@@ -32,7 +32,7 @@ inplace-ttt/
     ├── test_scan_math.py      scan vs sequential reference, both modes
     ├── test_mechanism.py      identity, causality, stream/scan, evolve, clip
     ├── test_wiring.py         LoRA regex, param groups, checkpoint I/O
-    ├── test_session.py        carry lifecycle, staging idempotence, schedule
+    ├── test_session.py        carry lifecycle, staging idempotence, schedule, slicing
     └── test_observability.py  telemetry safety, metric collectors
 ```
 
@@ -87,8 +87,10 @@ defines the one train/eval boundary, the newest `HOLDOUT_LAST_N` papers
 never enter training and are the contamination-free pool for session
 evaluation.
 
-**train_utils.py.** Pure functions used by the training loop, the
-session scheduler and per-group gradient norms. Kept Modal-free so the
+**train_utils.py.** Pure functions used by the training loop: the
+session scheduler, the `SessionItem` / `slice_doc` / `build_session_items`
+slicing primitives, the `expected_items_per_doc` LR-schedule sizing
+estimate, and per-group gradient norms. Kept Modal-free so the
 schedule, which shapes every run, is unit-tested.
 
 **observability.py.** `Telemetry` wraps wandb and can never crash or
@@ -124,6 +126,16 @@ Chunk i is processed with updates from strictly earlier chunks. Session
 mode changes exactly one thing, `S_0` starts from the previous paper's
 final state instead of zero, and gradients never cross the paper
 boundary (truncated BPTT).
+
+Inside a session we ALSO randomly slice papers into token-range
+sub-papers (no text parsing, random boundaries). A session
+`[p1, p2, p3]` may expand to `[p1.1, p1.2, p1.3, p2, p3.1, p3.2]` where
+each `p_i.j` is one forward/backward with carry threaded through. This
+prevents the model from overfitting to "carry only helps within the
+same paper" and gives a strictly cleaner training signal than between-
+paper carry alone (later chunks of a paper DO depend on its earlier
+chunks, by construction). Set `TrainConfig.slice_prob=0` to disable;
+behavior then matches the non-sliced schedule exactly.
 
 Trainable parameters, three groups with separate learning rates
 
@@ -255,7 +267,7 @@ of each chart
 | `health/w_target_L*`, `health/conv_L*` | rising then flattening | flat from the start means new components not learning |
 | `train/grad_clip_ratio` | ~1.0 | persistently below 1 means clipping is eating updates |
 | `anomaly/nonfinite_count` | 0 | NaN/inf losses (guarded, skipped, alerted) |
-| `micro/paper_loss` vs `micro/session_pos` | later positions cheaper | session carry not helping during training |
+| `micro/paper_loss` vs `micro/session_pos` | later positions cheaper | session carry not helping during training (a "position" is one SessionItem: either a whole paper or one of its random slices) |
 | `gpu/mem_*`, `perf/*` | flat | OOM creep, throughput regressions |
 
 Heavier `health/*` metrics log every `param_log_every` (50) steps.

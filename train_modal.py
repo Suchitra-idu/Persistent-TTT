@@ -121,7 +121,10 @@ def train(limit_docs: int = 0, num_epochs: int = 0,
         Telemetry, gpu_stats, param_health, session_metrics,
         snapshot_wdown,
     )
-    from train_utils import grad_norms, make_session_schedule
+    from train_utils import (
+        build_session_items, expected_items_per_doc, grad_norms,
+        make_session_schedule,
+    )
 
     overrides = {}
     if num_epochs:
@@ -177,7 +180,19 @@ def train(limit_docs: int = 0, num_epochs: int = 0,
     # ---- data ------------------------------------------------------------
     ds = load_token_dataset(tokenizer, limit_docs or None)
     hf_vol.commit()   # persist dataset + model downloads for next runs
-    steps_per_epoch = math.ceil(len(ds) / cfg.grad_accum_steps)
+    # One pass to memoize per-doc lengths so the session scheduler can
+    # slice token ranges without re-reading each row. HF datasets are
+    # memory-mapped, so iterating is cheap and the resulting list is
+    # small (one int per doc).
+    doc_lengths = [len(ex["input_ids"]) for ex in ds]
+    # Slicing inflates the number of forward/backward passes per epoch.
+    # Use the expected items/doc to size the cosine schedule so warmup
+    # and anneal land roughly where they would for a non-sliced run.
+    items_per_doc = expected_items_per_doc(
+        cfg.slice_prob, cfg.slice_min, cfg.slice_max
+    )
+    items_per_epoch = math.ceil(len(ds) * items_per_doc)
+    steps_per_epoch = math.ceil(items_per_epoch / cfg.grad_accum_steps)
     total_steps = steps_per_epoch * epochs
     scheduler = get_cosine_schedule_with_warmup(
         optimizer,
@@ -187,7 +202,10 @@ def train(limit_docs: int = 0, num_epochs: int = 0,
     print(f"{total_steps} optimizer steps "
           f"({len(ds)} docs x {epochs} epochs / accum {cfg.grad_accum_steps}); "
           f"session_training={cfg.session_training} "
-          f"n in [{cfg.session_papers_min}, {cfg.session_papers_max}]")
+          f"n in [{cfg.session_papers_min}, {cfg.session_papers_max}]; "
+          f"slice_prob={cfg.slice_prob} "
+          f"k in [{cfg.slice_min}, {cfg.slice_max}] "
+          f"min_tok={cfg.slice_min_tokens}")
 
     # ---- loop ------------------------------------------------------------
     # One paper = one forward/backward, exactly as before. Sessions only
@@ -204,11 +222,22 @@ def train(limit_docs: int = 0, num_epochs: int = 0,
         sessions = make_session_schedule(
             len(ds), cfg.session_papers_min, cfg.session_papers_max, rng
         )
+        sessions = build_session_items(
+            sessions, doc_lengths,
+            slice_prob=cfg.slice_prob, slice_min=cfg.slice_min,
+            slice_max=cfg.slice_max, min_slice_tokens=cfg.slice_min_tokens,
+            rng=rng,
+        )
         for session in sessions:
             reset_session_state(model)
-            for pos, doc_idx in enumerate(session):
+            for pos, item in enumerate(session):
+                # SessionItem may be a whole paper (start=0, end=len) or
+                # one slice of one. From the model's perspective both
+                # look like a sequence; the fast-weight carry threads
+                # all of them.
+                full_ids = ds[item.doc_idx]["input_ids"]
                 ids = torch.tensor(
-                    [ds[int(doc_idx)]["input_ids"]], device="cuda"
+                    [full_ids[item.start:item.end]], device="cuda"
                 )
                 loss = model(input_ids=ids, labels=ids).loss
 
@@ -222,7 +251,8 @@ def train(limit_docs: int = 0, num_epochs: int = 0,
                         telemetry.alert(
                             "Nonfinite loss",
                             f"{nonfinite} nonfinite losses, last at micro "
-                            f"{micro} (doc {int(doc_idx)}, epoch {epoch})",
+                            f"{micro} (doc {item.doc_idx} "
+                            f"[{item.start}:{item.end}], epoch {epoch})",
                         )
                     advance_session_state(model)  # keep carry semantics
                     micro += 1

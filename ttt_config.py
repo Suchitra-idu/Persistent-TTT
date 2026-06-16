@@ -113,6 +113,21 @@ class TrainConfig:
     session_papers_min: int = 2
     session_papers_max: int = 6
 
+    # Random within-paper slicing inside a session. With probability
+    # slice_prob, a paper is split into k ~ Uniform[slice_min, slice_max]
+    # consecutive token-range slices at random boundaries; each slice
+    # becomes its own forward/backward inside the same session, so fast
+    # weight carry now spans BOTH intra-paper slice boundaries and
+    # inter-paper boundaries. No text parsing involved -- boundaries are
+    # token positions. Set slice_prob=0 to disable; behavior then matches
+    # the pre-slicing schedule exactly. slice_min_tokens guards against
+    # slices smaller than one TTT chunk (where the within-slice scan is
+    # a no-op).
+    slice_prob: float = 0.5
+    slice_min: int = 2
+    slice_max: int = 4
+    slice_min_tokens: int = 1024
+
     seed: int = 42
     log_every: int = 10
     save_every: int = 200

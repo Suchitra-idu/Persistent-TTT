@@ -20,6 +20,10 @@ Two execution modes (cohesion -- each mode is one method):
   * stateless scan  -- training and whole-sequence evaluation. Fast
     weights implicitly reset every forward call, which matches the
     paper's per-document reset when you feed one document per sequence.
+    Session mode (see below) opts into cross-call carry; the training
+    loop also randomly slices papers so one "call" may be a token-range
+    sub-paper rather than a whole document, with carry threaded
+    through. See train_utils.build_session_items.
   * stateful stream -- autoregressive inference. Fast weight deltas
     persist across forward calls in a TTTState object, enabling the
     cross-session persistence experiments. Evolution can be switched
@@ -53,7 +57,7 @@ from ttt_config import TTTConfig
 
 # ===========================================================================
 # Embedding tap. One hook on embed_tokens makes the token embeddings X0
-# available to every TTT layer without changing model signatures (DRY).
+# available to every TTT layer without changing model signatures .
 # ===========================================================================
 class EmbeddingTap:
     """Captures embed_tokens output each forward and, in stateful mode,
