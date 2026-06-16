@@ -24,8 +24,9 @@ inplace-ttt/
 ├── data_utils.py        dataset loading and the holdout split
 ├── observability.py     wandb telemetry and metric collectors
 ├── train_utils.py       pure training logic (session schedule, grad norms)
+├── chat_utils.py        pure chat helpers (sampling, prompt format, stop ids)
 ├── train_modal.py       Modal app, training + sanity check
-├── infer_modal.py       Modal app, inference + evaluation
+├── infer_modal.py       Modal app, inference + evaluation + chat
 ├── pipeline/          arXiv data pipeline (separate, already run)
 └── tests/               local CPU suite, no Modal/GPU/downloads (~3s)
     ├── conftest.py            shared tiny-module fixtures
@@ -33,6 +34,7 @@ inplace-ttt/
     ├── test_mechanism.py      identity, causality, stream/scan, evolve, clip
     ├── test_wiring.py         LoRA regex, param groups, checkpoint I/O
     ├── test_session.py        carry lifecycle, staging idempotence, schedule, slicing
+    ├── test_chat_utils.py     sampling, prompt format, stop-token assembly
     └── test_observability.py  telemetry safety, metric collectors
 ```
 
@@ -106,8 +108,14 @@ Also `sanity_check`, the identity test that must pass before anything.
 **infer_modal.py.** The inference app. A warm `TTTInference` class with
 perplexity scoring, session perplexity (fast weights persisting across
 papers), generation with streaming fast weight updates, fast weight
-snapshot save/load for cross-session persistence, and holdout
-evaluation entrypoints.
+snapshot save/load for cross-session persistence, holdout evaluation
+entrypoints, and an interactive chat REPL whose only cross-turn memory
+channel is the TTT fast weights (no past KV cache or re-fed history).
+
+**chat_utils.py.** Pure helpers for the chat REPL: top-p sampling, the
+`User: / Assistant:` prompt formatter (with optional static system
+prompt), and stop-token assembly. No Modal / GPU / model deps, so the
+exact prompt bytes and sampling semantics are unit-tested on CPU.
 
 ---
 
@@ -214,6 +222,47 @@ modal run infer_modal.py::generate_cli --prompt "..." --ckpt step_600
 # same with evolution frozen
 modal run infer_modal.py::generate_cli --prompt "..." --ckpt step_600 --no-evolve
 ```
+
+**4. Chat.** Interactive REPL that probes TTT as a memory mechanism.
+Fast weights evolve chunk-by-chunk over the conversation when
+`evolve=True`; if the run is going somewhere interesting, `/save <name>`
+persists the accumulated fast-weight state under
+`<run_name>/sessions/<name>.pt`.
+```
+modal run infer_modal.py::chat --ckpt step_600
+```
+
+**Invariant (do NOT relax):** each turn the model sees ONLY the current
+turn's prompt — an optional static system instruction followed by
+`User: ... \nAssistant: `. Prior user/assistant turns are NOT re-fed
+as context, and `past_key_values` from earlier turns is NOT carried
+across the turn boundary; the within-turn KV cache is discarded and the
+embedding rolling buffer is reset. The TTT fast-weight state
+(`state.delta` + the buffered partial chunk) is the SOLE channel for
+cross-turn memory. Re-feeding the conversation history would silently
+turn this into a test of context-window memory, not the mechanism.
+
+REPL commands inside the chat:
+
+* `/save <name>` — persist the current fast weights as a snapshot.
+* `/reset` — drop fast-weight state and start over with the same model.
+* `/quit` — exit.
+
+Resume from a saved snapshot on a later run (slow weights from the
+`--ckpt` plus the fast-weight delta from the snapshot):
+```
+modal run infer_modal.py::chat --ckpt step_600 --from-snapshot mychat
+```
+Options: `--evolve True/False`, `--system "..."`, `--max-new-tokens N`,
+`--temperature t`, `--top-p p`. With `--evolve False` the fast weights
+stay frozen at whatever state was loaded — useful for measuring how
+the saved memory affects raw outputs without further adaptation.
+
+The format is plain `User: / Assistant:`, not the Qwen instruct chat
+template. The trained model is base Qwen3 + continual pretraining on
+arxiv, NOT instruct-tuned, so expect arxiv-flavored completions rather
+than chatbot-style replies — a chat template would just wrap the same
+raw-completion behavior in extra special tokens.
 
 ---
 
