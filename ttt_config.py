@@ -38,9 +38,9 @@ BASE_MODEL = "Qwen/Qwen3-8B"
 # Qwen3-8B architecture facts used for layer selection and the LoRA regex.
 NUM_LAYERS = 36
 
-# Every 6th layer, matching the In-Place TTT paper's drop-in recipe.
-# Sweep placement later; this is the v1 baseline.
-TTT_LAYER_INDICES = (5, 11, 17, 23, 29, 35)
+# Every 3rd layer. Doubles fast-weight capacity vs the paper's every-6th
+# baseline by distributing TTT sites across more depths.
+TTT_LAYER_INDICES = (2, 5, 8, 11, 14, 17, 20, 23, 26, 29, 32, 35)
 
 
 @dataclass
@@ -113,7 +113,7 @@ class TrainConfig:
     # its own forward/backward exactly as before; the ONLY difference is
     # that fast weight deltas carry across papers within a session
     # (detached, TBPTT-style) and reset at session boundaries.
-    session_training: bool = True
+    session_training: bool = False
     session_papers_min: int = 2
     session_papers_max: int = 6
 

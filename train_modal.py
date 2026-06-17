@@ -59,7 +59,7 @@ ckpt_vol = modal.Volume.from_name(CKPT_VOLUME_NAME, create_if_missing=True)
 hf_vol = modal.Volume.from_name(HF_CACHE_VOLUME_NAME, create_if_missing=True)
 
 VOLUMES = {CKPT_MOUNT: ckpt_vol, HF_CACHE_MOUNT: hf_vol}
-GPU = "A100-80GB"     # H100 also works; A100 is ~½ the $/hr and usually wins on $/token here
+GPU = "H100"          # A100-80GB also works, ["H100", "A100-80GB"] for fallback
 
 # Telemetry needs a wandb API key, create it once with
 #   modal secret create wandb WANDB_API_KEY=...
