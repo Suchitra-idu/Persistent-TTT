@@ -48,7 +48,7 @@ image = (
     )
     .env({"HF_HOME": HF_CACHE_MOUNT})
     .add_local_python_source("ttt_config", "inplace_ttt", "model_setup",
-                             "data_utils", "chat_utils")
+                             "data_utils", "chat_utils", "train_utils")
 )
 
 ckpt_vol = modal.Volume.from_name(CKPT_VOLUME_NAME, create_if_missing=True)
@@ -121,38 +121,93 @@ class TTTInference:
 
     # ------------------------------------------------------------------
     @modal.method()
-    def session_perplexity(self, texts: list, evolve: bool = True) -> list:
+    def session_perplexity(self, texts: list, evolve: bool = True,
+                           slice_papers: bool = True,
+                           slice_seed: int = 0) -> list:
         """Per-paper perplexity with fast weights persisting ACROSS the
         papers, mirroring session training. The headline persistence
         signal is later papers getting cheaper with evolve=True than
         with evolve=False, i.e. memory of earlier papers carrying over
-        through weights, with no shared context window."""
+        through weights, with no shared context window.
+
+        When slice_papers=True (default) each paper is also randomly
+        sliced into 1..k consecutive sub-papers using TRAIN_CFG's
+        slicing config, and the slices are threaded through the same
+        session with carry -- matching exactly what training saw, so
+        the carry's contribution is measured on the same distribution
+        the slow weights were trained on. Passing the SAME slice_seed
+        to two calls (evolve=True and evolve=False) guarantees both
+        passes see byte-identical inputs; only the TTT term toggles.
+
+        Returns one token-weighted perplexity per input paper. When a
+        paper is sliced into multiple items, its PPL is exp of the
+        token-weighted mean cross-entropy over its slices, which is
+        the correct per-token average for the whole paper."""
         import math
 
+        import numpy as np
         import torch
 
         from inplace_ttt import (
             advance_session_state, reset_session_state, set_session_mode,
         )
+        from train_utils import SessionItem, build_session_items
 
         self._set_mode(evolve=evolve, stateful=False)
         set_session_mode(self.model, True)
         reset_session_state(self.model)
-        ppls = []
+
+        # Tokenize once. Truncate to max_seq_len for parity with what
+        # the training loop would have seen for this paper.
+        paper_token_ids = [
+            self.tokenizer(
+                t, return_tensors="pt", truncation=True,
+                max_length=TRAIN_CFG.max_seq_len,
+            ).input_ids[0].tolist()
+            for t in texts
+        ]
+        doc_lengths = [len(ids) for ids in paper_token_ids]
+
+        if slice_papers:
+            rng = np.random.default_rng(slice_seed)
+            items = build_session_items(
+                [list(range(len(texts)))], doc_lengths,
+                slice_prob=TRAIN_CFG.slice_prob,
+                slice_min=TRAIN_CFG.slice_min,
+                slice_max=TRAIN_CFG.slice_max,
+                min_slice_tokens=TRAIN_CFG.slice_min_tokens,
+                rng=rng,
+            )[0]
+        else:
+            items = [SessionItem(i, 0, doc_lengths[i])
+                     for i in range(len(texts))]
+
+        # Token-weighted accumulator per paper. HF returns mean CE over
+        # the slice's tokens, so the per-paper mean CE is
+        # sum(mean_ce * n_tok) / sum(n_tok); exp gives the per-paper PPL.
+        loss_x_tokens = [0.0] * len(texts)
+        n_tokens = [0] * len(texts)
+
         try:
-            for text in texts:
-                ids = self.tokenizer(
-                    text, return_tensors="pt", truncation=True,
-                    max_length=TRAIN_CFG.max_seq_len,
-                ).input_ids.cuda()
+            for item in items:
+                ids = torch.tensor(
+                    [paper_token_ids[item.doc_idx][item.start:item.end]],
+                    device="cuda",
+                )
                 with torch.no_grad():
                     loss = self.model(input_ids=ids, labels=ids).loss
                 advance_session_state(self.model)
-                ppls.append(math.exp(loss.item()))
+                n_tok = item.end - item.start
+                loss_x_tokens[item.doc_idx] += loss.item() * n_tok
+                n_tokens[item.doc_idx] += n_tok
         finally:
             set_session_mode(self.model, False)
             reset_session_state(self.model)
-        return ppls
+
+        return [
+            math.exp(lx / n) if n else float("nan")
+            for lx, n in zip(loss_x_tokens, n_tokens)
+        ]
 
     # ------------------------------------------------------------------
     @modal.method()
@@ -333,31 +388,48 @@ def compare_ppl(text_path: str, ckpt: str = ""):
 
 
 @app.local_entrypoint()
-def holdout_eval(n_papers: int = 5, seed: int = 0, ckpt: str = ""):
+def holdout_eval(n_papers: int = 5, seed: int = 0, ckpt: str = "",
+                 slice_papers: bool = True):
     """One command, zero local files. Samples n held-out papers (never
     seen by the slow weights), runs them as one session with fast weight
     carry and once without. The carry-vs-fresh gap on papers 2..n is the
-    cross-session memory signal."""
+    cross-session memory signal.
+
+    slice_papers=True (default) mirrors training: each paper is randomly
+    split into 1..k sub-papers per TRAIN_CFG and the carry threads
+    through both inter-paper and intra-paper boundaries. The same
+    slice_seed (=seed) is used for both evolve=True and evolve=False so
+    the two passes see identical inputs."""
     engine = TTTInference(ckpt=ckpt)
     texts = engine.fetch_holdout_texts.remote(n_papers, seed)
-    with_mem = engine.session_perplexity.remote(texts, evolve=True)
-    without = engine.session_perplexity.remote(texts, evolve=False)
+    with_mem = engine.session_perplexity.remote(
+        texts, evolve=True, slice_papers=slice_papers, slice_seed=seed,
+    )
+    without = engine.session_perplexity.remote(
+        texts, evolve=False, slice_papers=slice_papers, slice_seed=seed,
+    )
     print(f"{'paper #':<8} {'ppl carry':>10} {'ppl fresh':>10} {'gap':>8}")
     for k, (a, b) in enumerate(zip(with_mem, without), 1):
         print(f"{k:<8} {a:>10.3f} {b:>10.3f} {b - a:>+8.3f}")
 
 
 @app.local_entrypoint()
-def session_eval(papers_dir: str, ckpt: str = ""):
+def session_eval(papers_dir: str, ckpt: str = "",
+                 slice_papers: bool = True, slice_seed: int = 0):
     """Feed every .txt in papers_dir (sorted) as one session, twice.
-    Per-paper ppl with carry vs without isolates cross-paper memory."""
+    Per-paper ppl with carry vs without isolates cross-paper memory.
+    slice_papers=True mirrors training (see holdout_eval docstring)."""
     import glob
 
     paths = sorted(glob.glob(os.path.join(papers_dir, "*.txt")))
     texts = [open(p).read() for p in paths]
     engine = TTTInference(ckpt=ckpt)
-    with_mem = engine.session_perplexity.remote(texts, evolve=True)
-    without = engine.session_perplexity.remote(texts, evolve=False)
+    with_mem = engine.session_perplexity.remote(
+        texts, evolve=True, slice_papers=slice_papers, slice_seed=slice_seed,
+    )
+    without = engine.session_perplexity.remote(
+        texts, evolve=False, slice_papers=slice_papers, slice_seed=slice_seed,
+    )
     print(f"{'paper':<40} {'ppl carry':>10} {'ppl fresh':>10} {'gap':>8}")
     for p, a, b in zip(paths, with_mem, without):
         print(f"{os.path.basename(p):<40} {a:>10.3f} {b:>10.3f} "

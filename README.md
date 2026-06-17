@@ -211,6 +211,21 @@ modal run infer_modal.py::holdout_eval --n-papers 5 --ckpt step_600
 Per-paper perplexity with fast weight carry vs without. The carry vs
 fresh gap on papers 2..n is the cross-session memory signal.
 
+By default the eval mirrors training: each paper is randomly sliced
+into 1..k sub-papers (per `TRAIN_CFG.slice_*`), carry threads through
+both inter- and intra-paper boundaries, and the same `slice_seed` is
+used for both passes so `evolve=True` and `evolve=False` see byte-
+identical inputs — the only difference is the TTT term toggling.
+Per-paper PPL is the token-weighted exp of the mean cross-entropy
+across that paper's slices, so the output table stays one row per
+input paper. Pass `--slice-papers False` to compare against the old
+whole-paper-at-a-time eval.
+
+Keep `--n-papers` ≤ your training `session_papers_max` (default 6) for
+in-distribution carry behavior. Pushing past it stress-tests the
+out-of-distribution regime (the carry's `state.delta` will accumulate
+past what training taught the model to use — expect negative gaps).
+
 Other evaluation commands
 ```
 # single-text TTT on/off perplexity gap
