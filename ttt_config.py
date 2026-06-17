@@ -50,8 +50,14 @@ class TTTConfig:
     layer_indices: tuple = TTT_LAYER_INDICES
 
     # Chunk size for the chunk-wise fast weight update.
-    # The paper's ablation found 512 and 1024 best, 1024 more efficient.
-    chunk_size: int = 1024
+    # The paper's ablation found 512 and 1024 both good; 1024 is more
+    # compute-efficient, 512 does more update commits per forward so
+    # the per-position carry signal becomes visible earlier in training.
+    # Lowered from 1024 to 512 to surface the mechanism's effect at
+    # current data scale. WARNING: any old checkpoint trained with a
+    # different chunk_size will exhibit subtly different within-paper
+    # dynamics when loaded under this config -- retrain after changing.
+    chunk_size: int = 512
 
     # Inner-loop learning rate eta for the fast weight update
     # W <- W + eta * V^T Z. NOT verified against the official repo,
@@ -89,9 +95,9 @@ class TrainConfig:
     num_epochs: int = 1
 
     # Three parameter groups, three learning rates.
-    lr_lora: float = 1e-4          # pretrained weights adapted via LoRA
-    lr_wdown: float = 2e-5         # pretrained fast weight initial state, move gently
-    lr_new_modules: float = 2e-4   # Conv1D + W_target, fresh and zero-init
+    lr_lora: float = 5e-5          # pretrained weights adapted via LoRA
+    lr_wdown: float = 2e-4         # pretrained fast weight initial state, move gently
+    lr_new_modules: float = 1e-3   # Conv1D + W_target, fresh and zero-init
 
     weight_decay_full: float = 0.1
     weight_decay_lora: float = 0.0
@@ -127,6 +133,19 @@ class TrainConfig:
     slice_min: int = 2
     slice_max: int = 4
     slice_min_tokens: int = 1024
+
+    # Single-paper-session training. When True, each session is ONE
+    # paper sliced into k ~ Uniform[single_paper_slices_min,
+    # single_paper_slices_max] consecutive random pieces; the
+    # session_papers_* and slice_* fields above are IGNORED. Every item
+    # in a session is guaranteed to share content with the rest, so the
+    # carry has a real signal to learn from and there's no risk of an
+    # unrelated paper being silently "carried" between items as noise.
+    # Trades the cross-paper memory training signal for a cleaner
+    # intra-paper one.
+    single_paper_sessions: bool = False
+    single_paper_slices_min: int = 2
+    single_paper_slices_max: int = 6
 
     seed: int = 42
     log_every: int = 10

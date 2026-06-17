@@ -63,6 +63,25 @@ def slice_doc(doc_length: int, k: int, min_slice_tokens: int, rng) -> list:
     return [(boundaries[i], boundaries[i + 1]) for i in range(k)]
 
 
+def equal_token_slices(doc_length: int, n_slices: int) -> list:
+    """Partition [0, doc_length] into n_slices consecutive token ranges
+    of roughly equal size. Boundary positions are nearest-integer
+    rounded, the last boundary is pinned at doc_length, and empty
+    (zero-token) ranges are dropped -- so passing n_slices > doc_length
+    returns fewer than n_slices items instead of crashing.
+
+    Used by single-paper eval: same paper at every slice = same content
+    distribution, so the per-position carry signal is isolated from
+    paper-to-paper variation."""
+    if n_slices < 1:
+        raise ValueError(f"n_slices must be >= 1, got {n_slices}")
+    boundaries = [round(i * doc_length / n_slices) for i in range(n_slices + 1)]
+    boundaries[-1] = doc_length
+    return [(boundaries[i], boundaries[i + 1])
+            for i in range(n_slices)
+            if boundaries[i + 1] > boundaries[i]]
+
+
 def build_session_items(
     sessions: list,
     doc_lengths,
@@ -95,6 +114,36 @@ def build_session_items(
                 items.append(SessionItem(int(doc_idx), s, e))
         out.append(items)
     return out
+
+
+def make_single_paper_sessions(num_docs: int, doc_lengths, lo: int, hi: int,
+                                min_slice_tokens: int, rng) -> list:
+    """Build sessions where each session = ONE paper randomly sliced
+    into k ~ Uniform[lo, hi] consecutive pieces. Every paper appears
+    exactly once per epoch in shuffled order. Falls back to fewer
+    slices (down to a single whole-paper item) when the paper is too
+    short to admit k slices of min_slice_tokens each.
+
+    Use when you want EVERY item in a session to share content with
+    the rest: the carry has guaranteed signal to learn from, no risk
+    of an unrelated paper's content being silently "carried" between
+    items as noise. Trades the cross-paper memory training signal for
+    a cleaner intra-paper one -- pick the mode that matches the
+    research question."""
+    order = rng.permutation(num_docs)
+    sessions = []
+    for doc_idx in order.tolist():
+        L = int(doc_lengths[doc_idx])
+        k = int(rng.integers(lo, hi + 1))
+        # Cap k by feasibility so slice_doc never silently collapses
+        # to k=1 just because we asked for more than the paper allows.
+        while k > 1 and k * min_slice_tokens > L:
+            k -= 1
+        ranges = slice_doc(L, k, min_slice_tokens, rng)
+        sessions.append(
+            [SessionItem(int(doc_idx), s, e) for s, e in ranges]
+        )
+    return sessions
 
 
 def expected_items_per_doc(slice_prob: float, slice_min: int,

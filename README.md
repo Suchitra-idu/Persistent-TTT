@@ -145,6 +145,17 @@ paper carry alone (later chunks of a paper DO depend on its earlier
 chunks, by construction). Set `TrainConfig.slice_prob=0` to disable;
 behavior then matches the non-sliced schedule exactly.
 
+**Single-paper session mode** (`TrainConfig.single_paper_sessions=True`,
+or `--single-paper 1` on the CLI) flips this around: each session is
+ONE paper sliced into `k ~ U[single_paper_slices_min,
+single_paper_slices_max]` consecutive pieces; the `session_papers_*`
+and `slice_*` fields are ignored. Every item in a session is
+guaranteed to share content with the rest, so the carry has a real
+signal to learn from and there is zero risk of an unrelated paper
+being silently "carried" between items as noise. Trades the cross-
+paper memory training signal for a cleaner intra-paper one — pick the
+mode that matches the research question.
+
 Trainable parameters, three groups with separate learning rates
 
 | group  | what                                   | LR    | why |
@@ -216,15 +227,43 @@ into 1..k sub-papers (per `TRAIN_CFG.slice_*`), carry threads through
 both inter- and intra-paper boundaries, and the same `slice_seed` is
 used for both passes so `evolve=True` and `evolve=False` see byte-
 identical inputs — the only difference is the TTT term toggling.
-Per-paper PPL is the token-weighted exp of the mean cross-entropy
-across that paper's slices, so the output table stays one row per
-input paper. Pass `--slice-papers False` to compare against the old
-whole-paper-at-a-time eval.
+Pass `--slice-papers False` to compare against the old whole-paper-
+at-a-time eval.
+
+Output is in two parts. **Per-item table** (one row per slice, in
+session order): `pos` is the position in the session (where the carry
+effect lives — more `pos` means more accumulated carry), `p.s` is
+`paper.slice_within_paper` 1-indexed, then `n_tok`, `ppl carry`,
+`ppl fresh`, `gap = fresh - carry`, and **`state`** which is
+`||eta * carried_delta||_F / ||W_down||_F` averaged across TTT layers,
+captured after each slice. **Per-paper summary** at the bottom:
+token-weighted PPL per input paper (correct per-token average across
+that paper's slices). The per-item table is the carry-by-position
+signal; the summary is the headline number per paper.
+
+The `state` column is the diagnostic for "is the mechanism actually
+doing anything". Monotonically growing across positions ⇒ carry is
+accumulating, mechanism is engaged (any small `gap` then reflects
+training scale, not a wiring bug). Stuck at `0.00e+00` at every
+position ⇒ carry is never staged, real bug to find.
 
 Keep `--n-papers` ≤ your training `session_papers_max` (default 6) for
 in-distribution carry behavior. Pushing past it stress-tests the
 out-of-distribution regime (the carry's `state.delta` will accumulate
 past what training taught the model to use — expect negative gaps).
+
+**Single-paper eval** — the cleanest within-paper carry signal:
+```
+modal run infer_modal.py::single_paper_eval --n-slices 8 --ckpt step_600
+```
+One held-out paper is cut into N equal-token consecutive slices and
+run as a single session. Because it's the same paper at every slice,
+content distribution is constant across positions, and the per-slice
+`gap` column isolates the carry's contribution from paper-to-paper
+PPL variance (which dominates `holdout_eval` at small N). Change
+`--seed` to pick a different held-out paper. Same as `holdout_eval`,
+keep `N` near or below your training `session_papers_max` for an
+in-distribution read.
 
 Other evaluation commands
 ```
@@ -343,6 +382,11 @@ Per-paper `micro/*` metrics use their own x-axis.
 
 * **eta** (inner learning rate), default 1e-3 with per-chunk
   normalization. Tune on the overfit run.
+* **chunk_size**, default 512 (paper's ablation found both 512 and 1024
+  good). Lower = more update commits per forward = carry signal visible
+  earlier in training, at slightly higher compute. Any checkpoint
+  trained with a different chunk_size will exhibit subtly different
+  within-paper dynamics when loaded — retrain after changing.
 * **Conv1D kernel size**, default 4.
 * **Frobenius clipping formula** (paper appendix, tau = 1e-5). The
   literal absolute-cap reading would zero the mechanism at inference,

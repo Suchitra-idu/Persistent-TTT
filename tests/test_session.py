@@ -13,9 +13,12 @@ from inplace_ttt import (
     advance_session_state, reset_session_state, session_state_norms,
     set_session_mode,
 )
+import pytest
+
 from train_utils import (
-    SessionItem, build_session_items, expected_items_per_doc,
-    make_session_schedule, slice_doc,
+    SessionItem, build_session_items, equal_token_slices,
+    expected_items_per_doc, make_session_schedule,
+    make_single_paper_sessions, slice_doc,
 )
 
 
@@ -236,3 +239,134 @@ def test_expected_items_per_doc_bounds():
     assert expected_items_per_doc(0.5, 2, 4) == 2.0
     # slice_max=1 means slicing disabled regardless of prob
     assert expected_items_per_doc(1.0, 1, 1) == 1.0
+
+
+# ----------------------------------------------------- equal slicing --
+def test_equal_token_slices_exact_division():
+    """1000 / 4 = 250 exactly, so all four slices should be equal."""
+    assert equal_token_slices(1000, 4) == [
+        (0, 250), (250, 500), (500, 750), (750, 1000),
+    ]
+
+
+def test_equal_token_slices_contiguous_and_covers_full_range():
+    """For arbitrary L, slices must partition [0, L] with no gap or
+    overlap, last boundary pinned exactly at L."""
+    slices = equal_token_slices(1003, 4)
+    assert slices[0][0] == 0
+    assert slices[-1][1] == 1003
+    for (_, b), (c, _) in zip(slices, slices[1:]):
+        assert b == c
+
+
+def test_equal_token_slices_drops_empty_when_more_slices_than_tokens():
+    """n_slices > doc_length would produce zero-length slices via
+    rounding; those must be dropped, not crashed on."""
+    slices = equal_token_slices(3, 10)
+    assert all(e > s for s, e in slices)
+    # Total token count is preserved.
+    assert sum(e - s for s, e in slices) == 3
+
+
+def test_equal_token_slices_n_one_returns_whole_doc():
+    assert equal_token_slices(1000, 1) == [(0, 1000)]
+
+
+def test_equal_token_slices_rejects_zero_or_negative_n():
+    with pytest.raises(ValueError):
+        equal_token_slices(1000, 0)
+    with pytest.raises(ValueError):
+        equal_token_slices(1000, -3)
+
+
+def test_equal_token_slices_sizes_balanced_within_one():
+    """Token counts should differ by at most 1 between any two slices."""
+    slices = equal_token_slices(1003, 4)
+    sizes = [e - s for s, e in slices]
+    assert max(sizes) - min(sizes) <= 1
+
+
+# --------------------------------------------- single-paper sessions --
+def test_single_paper_sessions_one_paper_per_session():
+    """Every item in a session must come from the same paper."""
+    rng = np.random.default_rng(7)
+    doc_lengths = [10_000] * 5
+    sessions = make_single_paper_sessions(5, doc_lengths, 2, 4, 1024, rng)
+    assert len(sessions) == 5
+    for s in sessions:
+        paper_ids = {it.doc_idx for it in s}
+        assert len(paper_ids) == 1
+
+
+def test_single_paper_sessions_every_paper_appears_exactly_once():
+    """Each paper produces exactly one session; no paper is dropped or
+    duplicated across the epoch's shuffle."""
+    rng = np.random.default_rng(7)
+    doc_lengths = [10_000] * 10
+    sessions = make_single_paper_sessions(10, doc_lengths, 2, 4, 1024, rng)
+    seen = set()
+    for s in sessions:
+        pid = s[0].doc_idx
+        assert pid not in seen
+        seen.add(pid)
+    assert seen == set(range(10))
+
+
+def test_single_paper_sessions_slices_are_contiguous():
+    """Slices within a session must cover [0, L] with no gaps/overlap."""
+    rng = np.random.default_rng(7)
+    doc_lengths = [10_000] * 5
+    sessions = make_single_paper_sessions(5, doc_lengths, 2, 4, 1024, rng)
+    for s in sessions:
+        L = doc_lengths[s[0].doc_idx]
+        assert s[0].start == 0
+        assert s[-1].end == L
+        for prev, curr in zip(s, s[1:]):
+            assert prev.end == curr.start
+
+
+def test_single_paper_sessions_short_doc_falls_back_to_whole():
+    """Paper too short for k*min_slice_tokens -> whole-paper single item.
+    Must NOT silently emit zero-length slices or skip the paper."""
+    rng = np.random.default_rng(7)
+    doc_lengths = [1500] * 5  # 2 * 1024 = 2048 > 1500
+    sessions = make_single_paper_sessions(5, doc_lengths, 2, 4, 1024, rng)
+    for s in sessions:
+        assert len(s) == 1
+        assert s[0].start == 0
+        assert s[0].end == 1500
+
+
+def test_single_paper_sessions_respects_slice_min_tokens():
+    rng = np.random.default_rng(7)
+    doc_lengths = [10_000] * 10
+    sessions = make_single_paper_sessions(10, doc_lengths, 2, 4, 1024, rng)
+    for s in sessions:
+        if len(s) > 1:
+            for item in s:
+                assert item.end - item.start >= 1024
+
+
+def test_single_paper_sessions_deterministic_per_seed():
+    doc_lengths = [10_000] * 20
+    a = make_single_paper_sessions(
+        20, doc_lengths, 2, 4, 1024, np.random.default_rng(11),
+    )
+    b = make_single_paper_sessions(
+        20, doc_lengths, 2, 4, 1024, np.random.default_rng(11),
+    )
+    c = make_single_paper_sessions(
+        20, doc_lengths, 2, 4, 1024, np.random.default_rng(12),
+    )
+    assert a == b
+    assert a != c
+
+
+def test_single_paper_sessions_slice_count_within_bounds():
+    """When the doc is long enough, the chosen k stays in [lo, hi]."""
+    rng = np.random.default_rng(7)
+    doc_lengths = [10_000] * 50  # long enough for any k in [2, 4]
+    sessions = make_single_paper_sessions(50, doc_lengths, 2, 4, 1024, rng)
+    counts = [len(s) for s in sessions]
+    assert min(counts) >= 2
+    assert max(counts) <= 4

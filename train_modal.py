@@ -107,7 +107,8 @@ def load_token_dataset(tokenizer, limit_docs: int | None):
 @app.function(image=image, gpu=GPU, volumes=VOLUMES, secrets=SECRETS,
               timeout=60 * 60 * 24)
 def train(limit_docs: int = 0, num_epochs: int = 0,
-          grad_accum: int = 0, session: int = -1):
+          grad_accum: int = 0, session: int = -1,
+          single_paper: int = -1):
     import numpy as np
     import torch
     from transformers import get_cosine_schedule_with_warmup
@@ -123,7 +124,7 @@ def train(limit_docs: int = 0, num_epochs: int = 0,
     )
     from train_utils import (
         build_session_items, expected_items_per_doc, grad_norms,
-        make_session_schedule,
+        make_session_schedule, make_single_paper_sessions,
     )
 
     overrides = {}
@@ -133,6 +134,8 @@ def train(limit_docs: int = 0, num_epochs: int = 0,
         overrides["grad_accum_steps"] = grad_accum
     if session in (0, 1):
         overrides["session_training"] = bool(session)
+    if single_paper in (0, 1):
+        overrides["single_paper_sessions"] = bool(single_paper)
     cfg = dataclasses.replace(TRAIN_CFG, **overrides) if overrides else TRAIN_CFG
     epochs = cfg.num_epochs
     torch.manual_seed(cfg.seed)
@@ -188,9 +191,16 @@ def train(limit_docs: int = 0, num_epochs: int = 0,
     # Slicing inflates the number of forward/backward passes per epoch.
     # Use the expected items/doc to size the cosine schedule so warmup
     # and anneal land roughly where they would for a non-sliced run.
-    items_per_doc = expected_items_per_doc(
-        cfg.slice_prob, cfg.slice_min, cfg.slice_max
-    )
+    if cfg.single_paper_sessions:
+        # Each session = one paper sliced into k ~ U[lo, hi] pieces, so
+        # items per doc is the mean of that uniform.
+        items_per_doc = 0.5 * (
+            cfg.single_paper_slices_min + cfg.single_paper_slices_max
+        )
+    else:
+        items_per_doc = expected_items_per_doc(
+            cfg.slice_prob, cfg.slice_min, cfg.slice_max
+        )
     items_per_epoch = math.ceil(len(ds) * items_per_doc)
     steps_per_epoch = math.ceil(items_per_epoch / cfg.grad_accum_steps)
     total_steps = steps_per_epoch * epochs
@@ -199,13 +209,20 @@ def train(limit_docs: int = 0, num_epochs: int = 0,
         num_warmup_steps=max(cfg.warmup_min_steps, int(cfg.warmup_ratio * total_steps)),
         num_training_steps=total_steps,
     )
+    if cfg.single_paper_sessions:
+        mode_line = (f"single_paper_sessions=True "
+                     f"k in [{cfg.single_paper_slices_min}, "
+                     f"{cfg.single_paper_slices_max}] "
+                     f"min_tok={cfg.slice_min_tokens}")
+    else:
+        mode_line = (f"n_papers in [{cfg.session_papers_min}, "
+                     f"{cfg.session_papers_max}]; "
+                     f"slice_prob={cfg.slice_prob} "
+                     f"k in [{cfg.slice_min}, {cfg.slice_max}] "
+                     f"min_tok={cfg.slice_min_tokens}")
     print(f"{total_steps} optimizer steps "
           f"({len(ds)} docs x {epochs} epochs / accum {cfg.grad_accum_steps}); "
-          f"session_training={cfg.session_training} "
-          f"n in [{cfg.session_papers_min}, {cfg.session_papers_max}]; "
-          f"slice_prob={cfg.slice_prob} "
-          f"k in [{cfg.slice_min}, {cfg.slice_max}] "
-          f"min_tok={cfg.slice_min_tokens}")
+          f"session_training={cfg.session_training}; {mode_line}")
 
     # ---- loop ------------------------------------------------------------
     # One paper = one forward/backward, exactly as before. Sessions only
@@ -219,15 +236,22 @@ def train(limit_docs: int = 0, num_epochs: int = 0,
     window_tokens, total_tokens, sessions_done, nonfinite = 0, 0, 0, 0
 
     for epoch in range(epochs):
-        sessions = make_session_schedule(
-            len(ds), cfg.session_papers_min, cfg.session_papers_max, rng
-        )
-        sessions = build_session_items(
-            sessions, doc_lengths,
-            slice_prob=cfg.slice_prob, slice_min=cfg.slice_min,
-            slice_max=cfg.slice_max, min_slice_tokens=cfg.slice_min_tokens,
-            rng=rng,
-        )
+        if cfg.single_paper_sessions:
+            sessions = make_single_paper_sessions(
+                len(ds), doc_lengths,
+                cfg.single_paper_slices_min, cfg.single_paper_slices_max,
+                cfg.slice_min_tokens, rng,
+            )
+        else:
+            sessions = make_session_schedule(
+                len(ds), cfg.session_papers_min, cfg.session_papers_max, rng,
+            )
+            sessions = build_session_items(
+                sessions, doc_lengths,
+                slice_prob=cfg.slice_prob, slice_min=cfg.slice_min,
+                slice_max=cfg.slice_max, min_slice_tokens=cfg.slice_min_tokens,
+                rng=rng,
+            )
         for session in sessions:
             reset_session_state(model)
             for pos, item in enumerate(session):
@@ -402,6 +426,8 @@ def sanity_check():
 
 @app.local_entrypoint()
 def main(limit_docs: int = 0, num_epochs: int = 0,
-         grad_accum: int = 0, session: int = -1):
+         grad_accum: int = 0, session: int = -1,
+         single_paper: int = -1):
     train.remote(limit_docs=limit_docs, num_epochs=num_epochs,
-                 grad_accum=grad_accum, session=session)
+                 grad_accum=grad_accum, session=session,
+                 single_paper=single_paper)
