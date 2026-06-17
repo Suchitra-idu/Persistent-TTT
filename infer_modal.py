@@ -21,9 +21,11 @@ Usage
     modal run infer_modal.py::generate_cli --prompt "..." --ckpt step_600 \
         --no-evolve
 
-    # interactive multi-turn chat; /save <name> persists the evolved
-    # fast weights, /quit exits. Resume later with --from-snapshot <name>.
-    modal run infer_modal.py::chat --ckpt step_600
+    # interactive multi-turn chat: deploy the app and run the local
+    # REPL client (`modal run` swallows stdin so a `local_entrypoint`
+    # REPL can't read user input).
+    modal deploy infer_modal.py
+    python chat_client.py --ckpt step_600
 
     # one held-out paper sliced into N equal parts; cleanest signal
     # for the within-paper carry effect (no cross-paper variation).
@@ -87,7 +89,8 @@ class TTTInference:
 
         adapter, ttt_ckpt = _ckpt_paths(self.ckpt)
         self.model, self.tokenizer = build_model(
-            adapter_path=adapter, ttt_ckpt_path=ttt_ckpt, trainable=False
+            adapter_path=adapter, ttt_ckpt_path=ttt_ckpt, trainable=False,
+            attn_impl="sdpa",
         )
         self.model.eval()
         self.model.config.use_cache = True
@@ -326,15 +329,18 @@ class TTTInference:
     # testing context-window memory.
     # ------------------------------------------------------------------
     @modal.method()
-    def chat_reset(self, system_prompt: str = "", evolve: bool = True,
+    def chat_reset(self, evolve: bool = True,
                    from_snapshot_name: str = "") -> dict:
-        """Start a fresh chat. Resets TTT fast weights and the embedding
-        rolling buffer; optionally loads a saved fast-weight snapshot.
-        The system prompt is stored and prepended to every turn -- it is
-        a static instruction, not in-context conversation memory."""
+        """Reset TTT fast weights and (optionally) load a snapshot.
+
+        Per-turn config (system prompt, enable_thinking, sampling)
+        deliberately lives on chat_turn instead of being stashed on
+        self, so a container that scales down and respawns can keep
+        serving without an explicit re-init. The one thing it can't
+        recover is the prior fast-weight carry -- that died with the
+        container."""
         import torch
 
-        from chat_utils import chat_stop_token_ids
         from inplace_ttt import import_fast_weights
 
         self._set_mode(evolve=evolve, stateful=True, fresh=True)
@@ -348,36 +354,83 @@ class TTTInference:
             import_fast_weights(self.model, snapshot)
             seeded = True
 
-        self._chat_ready = True
-        self._chat_system_prompt = system_prompt
-        self._chat_stop_ids = chat_stop_token_ids(self.tokenizer)
-        return {"ready": True, "evolve": evolve, "seeded_from_snapshot": seeded,
-                "has_system_prompt": bool(system_prompt.strip())}
+        return {"ready": True, "evolve": evolve,
+                "seeded_from_snapshot": seeded}
 
     @modal.method()
-    def chat_turn(self, user_message: str, max_new_tokens: int = 512,
-                  temperature: float = 0.7, top_p: float = 0.9) -> str:
+    def chat_turn(self, user_message: str,
+                  system_prompt: str = "",
+                  enable_thinking: bool = True,
+                  evolve: bool = True,
+                  max_new_tokens: int = 512,
+                  temperature: float = 0.6, top_p: float = 0.95,
+                  top_k: int = 20) -> dict:
         """One conversation turn. The model sees ONLY this turn's prompt
-        (optional system prompt + the current user message) -- no past
-        KV cache from prior turns, no re-fed conversation history.
-        Within-turn KV cache is used for O(N) sampling and discarded at
-        turn end; the embedding rolling buffer is reset. TTT fast
-        weights persist across turns and are the SOLE channel for
-        conversation memory."""
+        (system prompt + the current user message, formatted via Qwen3's
+        chat template) -- no past KV cache from prior turns, no re-fed
+        conversation history. Within-turn KV cache is used for O(N)
+        sampling and discarded at turn end; the embedding rolling buffer
+        is reset. TTT fast weights persist across turns within the same
+        container and are the SOLE channel for conversation memory.
+
+        Default sampling matches Qwen3-8B's recommended thinking-mode
+        setup (temp=0.6, top_p=0.95, top_k=20); the team explicitly
+        warns against greedy decoding (endless repetition).
+
+        Returns a dict so callers can also inspect raw sampling output:
+            text:          final answer, scaffolding tokens stripped,
+                           any <think>...</think> block removed
+            thinking_text: content between <think> and </think>, empty
+                           if thinking is off, the model didn't emit a
+                           proper pair, or the closer came before the
+                           opener
+            raw:           decoded answer WITH special tokens shown --
+                           the signal you actually want for diagnosing
+                           things like 'why did the model stop after
+                           one token'
+            token_ids:     all sampled token ids (excludes the final
+                           stop token if one fired)
+            stop_reason:   'stop_token' | 'max_tokens'
+            stop_token_id: id of the token that ended the turn, or None
+        """
         import torch
 
-        from chat_utils import format_user_turn, sample_top_p
+        from chat_utils import (
+            chat_stop_token_ids, sample_top_p, split_thinking,
+            strip_chat_specials,
+        )
+        from inplace_ttt import (
+            set_ttt_evolve, set_ttt_stateful, stateful_state_norms,
+            stream_pending_progress,
+        )
 
-        if not getattr(self, "_chat_ready", False):
-            raise RuntimeError("call chat_reset() before chat_turn()")
+        # Idempotent per-turn mode set -- NO fast-weight reset here, so
+        # carry persists turn-to-turn within a container. _set_mode is
+        # only used by chat_reset, which is allowed to be destructive.
+        set_ttt_stateful(self.model, True)
+        set_ttt_evolve(self.model, evolve)
 
-        new_text = format_user_turn(user_message, self._chat_system_prompt)
+        # Tokenizer-derived; cache on first use so subsequent turns
+        # don't pay for it. Survives container lifetime.
+        if not hasattr(self, "_chat_stop_ids"):
+            self._chat_stop_ids = chat_stop_token_ids(self.tokenizer)
+
+        messages = []
+        if system_prompt.strip():
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": user_message})
+        new_text = self.tokenizer.apply_chat_template(
+            messages, tokenize=False, add_generation_prompt=True,
+            enable_thinking=enable_thinking,
+        )
         new_ids = self.tokenizer(
             new_text, return_tensors="pt"
         ).input_ids.cuda()
 
         generated = []
         past_kv = None     # within-turn cache only; never carried over
+        stop_reason = "max_tokens"
+        stop_token_id = None
         with torch.no_grad():
             # Prefill on this turn only. No past_key_values from prior
             # turns -- attention must NOT see any earlier conversation.
@@ -386,8 +439,11 @@ class TTTInference:
             next_logits = out.logits[:, -1, :]
 
             for _ in range(max_new_tokens):
-                next_id = sample_top_p(next_logits, temperature, top_p)
+                next_id = sample_top_p(next_logits, temperature, top_p,
+                                       top_k=top_k)
                 if next_id in self._chat_stop_ids:
+                    stop_reason = "stop_token"
+                    stop_token_id = next_id
                     break
                 generated.append(next_id)
                 tok = torch.tensor([[next_id]], device="cuda")
@@ -403,8 +459,40 @@ class TTTInference:
         # only memory carried across turns by design.
         self.model._ttt_tap.reset_stream()
 
-        return self.tokenizer.decode(generated,
-                                     skip_special_tokens=True).rstrip()
+        raw_with_specials = self.tokenizer.decode(
+            generated, skip_special_tokens=False,
+        )
+        cleaned = strip_chat_specials(raw_with_specials)
+        thinking_text, answer = split_thinking(cleaned)
+
+        # Carry magnitude diagnostic. Mean of ||eta * delta||_F / ||W0||_F
+        # across TTT layers, captured AFTER the turn has updated weights.
+        # Reads the STREAMING state (m.state.delta), which is the path
+        # chat uses (stateful=True). session_state_norms would always
+        # return 0.0 here because it reads carried_delta, only populated
+        # under session_mode.
+        #
+        # state_ratio==0.0 has TWO meanings: either evolve was off so no
+        # delta ever staged, OR we haven't accumulated chunk_size tokens
+        # yet so the pending buffer hasn't committed. pending_tokens /
+        # chunk_size tells you which: low ratio with pending climbing
+        # toward chunk_size means carry hasn't engaged yet but will.
+        norms = stateful_state_norms(self.model)
+        state_ratio = (sum(norms.values()) / len(norms)) if norms else 0.0
+        pending_tokens, chunk_size = stream_pending_progress(self.model)
+
+        return {
+            "text": answer.strip(),
+            "thinking_text": thinking_text,
+            "raw": raw_with_specials,
+            "token_ids": [int(t) for t in generated],
+            "stop_reason": stop_reason,
+            "stop_token_id": (int(stop_token_id)
+                              if stop_token_id is not None else None),
+            "state_ratio_mean": float(state_ratio),
+            "pending_tokens": int(pending_tokens),
+            "chunk_size": int(chunk_size),
+        }
 
 
 # ---------------------------------------------------------------------------
@@ -422,6 +510,21 @@ def compare_ppl(text_path: str, ckpt: str = ""):
     print(f"ppl  TTT on  {on:.3f}")
     print(f"ppl  TTT off {off:.3f}")
     print(f"gap          {off - on:+.3f}  (positive = TTT helping)")
+
+
+def _print_paper_preview(texts: list, labels: list | None = None,
+                         max_chars: int = 400):
+    """Print a short preview of selected papers so you can inspect quality
+    before running evaluation."""
+    if labels is None:
+        labels = [str(i + 1) for i in range(len(texts))]
+    print("selected papers:")
+    for label, text in zip(labels, texts):
+        snippet = " ".join(text.strip().splitlines())
+        if len(snippet) > max_chars:
+            snippet = snippet[:max_chars].rstrip() + "..."
+        print(f"- {label}: {snippet}")
+    print()
 
 
 def _print_session_results(carry: list, fresh: list,
@@ -499,6 +602,7 @@ def holdout_eval(n_papers: int = 5, seed: int = 0, ckpt: str = "",
     evolve=False so the two passes see identical inputs."""
     engine = TTTInference(ckpt=ckpt)
     texts = engine.fetch_holdout_texts.remote(n_papers, seed)
+    _print_paper_preview(texts, [f"holdout {i+1}" for i in range(len(texts))])
     carry = engine.session_perplexity.remote(
         texts, evolve=True, slice_papers=slice_papers, slice_seed=seed,
     )
@@ -519,6 +623,8 @@ def session_eval(papers_dir: str, ckpt: str = "",
 
     paths = sorted(glob.glob(os.path.join(papers_dir, "*.txt")))
     texts = [open(p).read() for p in paths]
+    labels = [os.path.basename(p) for p in paths]
+    _print_paper_preview(texts, labels)
     engine = TTTInference(ckpt=ckpt)
     carry = engine.session_perplexity.remote(
         texts, evolve=True, slice_papers=slice_papers, slice_seed=slice_seed,
@@ -528,7 +634,7 @@ def session_eval(papers_dir: str, ckpt: str = "",
     )
     _print_session_results(
         carry, fresh,
-        paper_labels=[os.path.basename(p) for p in paths],
+        paper_labels=labels,
     )
 
 
@@ -557,6 +663,7 @@ def single_paper_eval(n_slices: int = 8, ckpt: str = "", seed: int = 0):
     if not texts:
         print("no holdout papers available")
         return
+    _print_paper_preview(texts, ["selected paper"])
     carry = engine.session_perplexity.remote(
         texts, evolve=True, equal_n_slices=n_slices,
     )
@@ -566,62 +673,7 @@ def single_paper_eval(n_slices: int = 8, ckpt: str = "", seed: int = 0):
     _print_session_results(carry, fresh)
 
 
-@app.local_entrypoint()
-def chat(ckpt: str = "", evolve: bool = True, system: str = "",
-         from_snapshot: str = "", max_new_tokens: int = 512,
-         temperature: float = 0.7, top_p: float = 0.9):
-    """Interactive REPL against the trained model. Fast weights evolve
-    over the conversation when evolve=True; if the run is interesting,
-    /save <name> persists the accumulated state under <run>/sessions/
-    so a later chat can pick up where this one left off with
-    --from-snapshot <name>.
-
-    REPL commands:
-        /save <name>   persist current fast weights as a snapshot
-        /reset         start over with the same model (drops chat state)
-        /quit          exit"""
-    engine = TTTInference(ckpt=ckpt)
-    info = engine.chat_reset.remote(
-        system_prompt=system, evolve=evolve,
-        from_snapshot_name=from_snapshot,
-    )
-    print(f"chat ready  (evolve={info['evolve']}, "
-          f"seeded_from_snapshot={info['seeded_from_snapshot']}, "
-          f"system_prompt={info['has_system_prompt']})")
-    print("commands: /save <name>, /reset, /quit")
-    print()
-    while True:
-        try:
-            user = input("you> ").strip()
-        except (EOFError, KeyboardInterrupt):
-            print()
-            break
-        if not user:
-            continue
-        if user == "/quit":
-            break
-        if user == "/reset":
-            engine.chat_reset.remote(system_prompt=system, evolve=evolve)
-            print("[reset]\n")
-            continue
-        if user.startswith("/save"):
-            parts = user.split(maxsplit=1)
-            if len(parts) != 2 or not parts[1].strip():
-                print("[usage: /save <name>]\n")
-                continue
-            try:
-                path = engine.save_session.remote(name=parts[1].strip())
-                print(f"[saved fast weights -> {path}]\n")
-            except Exception as e:
-                print(f"[save error: {e}]\n")
-            continue
-        try:
-            reply = engine.chat_turn.remote(
-                user_message=user,
-                max_new_tokens=max_new_tokens,
-                temperature=temperature, top_p=top_p,
-            )
-        except Exception as e:
-            print(f"[error: {e}]\n")
-            continue
-        print(f"bot> {reply}\n")
+# Interactive chat lives in chat_client.py instead of a local_entrypoint
+# here -- `modal run` doesn't forward stdin to local_entrypoint
+# subprocesses, so the REPL has to run in a regular python process and
+# call into the deployed class via modal.Cls.from_name(...).

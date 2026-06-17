@@ -421,6 +421,42 @@ def session_state_norms(model) -> dict:
     return out
 
 
+def stateful_state_norms(model) -> dict:
+    """Same health metric as session_state_norms, but reads the
+    STREAMING fast-weight state (m.state.delta) instead of the TBPTT
+    carry (m.carried_delta). Use this from the inference chat path,
+    where stateful=True is set and state.delta accumulates across
+    forward calls; session_state_norms would return 0.0 there because
+    carried_delta is only populated when session_mode=True."""
+    modules = list(iter_ttt_modules(model))
+    layer_indices = modules[0].cfg.layer_indices if modules else ()
+    out = {}
+    for layer_idx, m in zip(layer_indices, modules):
+        if m.state.delta is None:
+            out[layer_idx] = 0.0
+            continue
+        num = (m.cfg.eta * m.state.delta).norm()
+        den = m.down_proj.weight.detach().float().norm()
+        out[layer_idx] = float(num / den)
+    return out
+
+
+def stream_pending_progress(model) -> tuple[int, int]:
+    """Returns (pending_tokens, chunk_size) for the streaming path.
+    pending_tokens is how full the not-yet-committed chunk buffer is on
+    any one TTT layer (all layers see the same token stream so it
+    suffices to read one). When pending_tokens hits chunk_size the
+    layer commits a delta into state.delta. Useful for chat-side
+    diagnostics: a state_ratio of 0.0 with pending_tokens just shy of
+    chunk_size means carry has not been engaged yet but the next
+    chunk-worth of tokens will push it over."""
+    modules = list(iter_ttt_modules(model))
+    if not modules:
+        return 0, 0
+    m = modules[0]
+    return int(m.state.pending_tokens), int(m.cfg.chunk_size)
+
+
 def export_fast_weights(model) -> dict:
     """Snapshot accumulated deltas for cross-session persistence."""
     return {

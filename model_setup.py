@@ -25,16 +25,18 @@ from ttt_config import BASE_MODEL, NUM_LAYERS, TTT_CFG, TRAIN_CFG
 
 def build_model(adapter_path: str | None = None,
                 ttt_ckpt_path: str | None = None,
-                trainable: bool = True):
+                trainable: bool = True,
+                attn_impl: str = "flash_attention_2"):
     """Build base + TTT + LoRA. Pass adapter_path / ttt_ckpt_path to
-    resume or to load for inference. trainable=False skips grad setup."""
+    resume or to load for inference. trainable=False skips grad setup.
+    attn_impl="sdpa" lets inference skip the flash-attn dependency."""
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
     tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
     model = AutoModelForCausalLM.from_pretrained(
         BASE_MODEL,
         torch_dtype=torch.bfloat16,
-        attn_implementation="sdpa",   # flash_attn optional later, sdpa is fine
+        attn_implementation=attn_impl,
         device_map="cuda",
     )
 

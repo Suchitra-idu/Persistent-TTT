@@ -45,6 +45,11 @@ image = (
         "accelerate>=1.0",
         "wandb>=0.19",
     )
+    # Prebuilt wheel matches torch 2.8 + cu12 + cp311 + cxx11abiTRUE.
+    # Avoids needing nvcc in the base image (debian_slim has no CUDA toolkit).
+    .pip_install(
+        "flash-attn @ https://github.com/Dao-AILab/flash-attention/releases/download/v2.8.3.post1/flash_attn-2.8.3.post1%2Bcu12torch2.8cxx11abiTRUE-cp311-cp311-linux_x86_64.whl"
+    )
     .env({"HF_HOME": HF_CACHE_MOUNT})
     .add_local_python_source("ttt_config", "inplace_ttt", "model_setup",
                              "data_utils", "observability", "train_utils")
@@ -54,7 +59,7 @@ ckpt_vol = modal.Volume.from_name(CKPT_VOLUME_NAME, create_if_missing=True)
 hf_vol = modal.Volume.from_name(HF_CACHE_VOLUME_NAME, create_if_missing=True)
 
 VOLUMES = {CKPT_MOUNT: ckpt_vol, HF_CACHE_MOUNT: hf_vol}
-GPU = "H100"          # A100-80GB also works, ["H100", "A100-80GB"] for fallback
+GPU = "A100-80GB"     # H100 also works; A100 is ~½ the $/hr and usually wins on $/token here
 
 # Telemetry needs a wandb API key, create it once with
 #   modal secret create wandb WANDB_API_KEY=...

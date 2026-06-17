@@ -51,13 +51,11 @@ class TTTConfig:
 
     # Chunk size for the chunk-wise fast weight update.
     # The paper's ablation found 512 and 1024 both good; 1024 is more
-    # compute-efficient, 512 does more update commits per forward so
-    # the per-position carry signal becomes visible earlier in training.
-    # Lowered from 1024 to 512 to surface the mechanism's effect at
-    # current data scale. WARNING: any old checkpoint trained with a
-    # different chunk_size will exhibit subtly different within-paper
-    # dynamics when loaded under this config -- retrain after changing.
-    chunk_size: int = 512
+    # compute-efficient (half as many cumsum steps, larger einsums).
+    # WARNING: any old checkpoint trained with a different chunk_size
+    # will exhibit subtly different within-paper dynamics when loaded
+    # under this config -- retrain after changing.
+    chunk_size: int = 1024
 
     # Inner-loop learning rate eta for the fast weight update
     # W <- W + eta * V^T Z. NOT verified against the official repo,
@@ -91,13 +89,13 @@ class TrainConfig:
     min_doc_tokens: int = 2048     # drop docs too short to span multiple chunks
     micro_batch_size: int = 1      # fixed at 1 by the session loop; fast
                                    # weight carry is per-stream by design
-    grad_accum_steps: int = 16     # effective batch ~ 256k tokens
+    grad_accum_steps: int = 4     # effective batch ~ 256k tokens
     num_epochs: int = 1
 
     # Three parameter groups, three learning rates.
-    lr_lora: float = 5e-5          # pretrained weights adapted via LoRA
-    lr_wdown: float = 2e-4         # pretrained fast weight initial state, move gently
-    lr_new_modules: float = 1e-3   # Conv1D + W_target, fresh and zero-init
+    lr_lora: float = 1e-4          # pretrained weights adapted via LoRA
+    lr_wdown: float = 2e-5         # pretrained fast weight initial state, move gently
+    lr_new_modules: float = 2e-4   # Conv1D + W_target, fresh and zero-init
 
     weight_decay_full: float = 0.1
     weight_decay_lora: float = 0.0
@@ -129,9 +127,9 @@ class TrainConfig:
     # the pre-slicing schedule exactly. slice_min_tokens guards against
     # slices smaller than one TTT chunk (where the within-slice scan is
     # a no-op).
-    slice_prob: float = 0.5
+    slice_prob: float = 0
     slice_min: int = 2
-    slice_max: int = 4
+    slice_max: int = 6
     slice_min_tokens: int = 1024
 
     # Single-paper-session training. When True, each session is ONE
