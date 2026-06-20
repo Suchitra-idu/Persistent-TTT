@@ -128,7 +128,9 @@ def train(limit_docs: int = 0, num_epochs: int = 0,
         snapshot_wdown,
     )
     from train_utils import (
-        build_session_items, expected_items_per_doc, grad_norms,
+        apply_loss_mask, apply_protect_passes, build_common_token_mask,
+        build_session_items, common_mask_from_counts,
+        expected_items_per_doc, grad_norms, load_reference_counts,
         make_session_schedule, make_single_paper_sessions,
     )
 
@@ -193,6 +195,51 @@ def train(limit_docs: int = 0, num_epochs: int = 0,
     # memory-mapped, so iterating is cheap and the resulting list is
     # small (one int per doc).
     doc_lengths = [len(ex["input_ids"]) for ex in ds]
+
+    # Content-token loss mask. Built once over either a reference
+    # general-English corpus (preferred, structural fix for "domain
+    # glue looks common") or the actual training corpus (fallback).
+    # Lives on GPU for cheap indexing in the hot loop; ~150KB at
+    # Qwen3's vocab size, negligible.
+    common_mask = None
+    if cfg.loss_mask_enabled:
+        # Prefer external reference; fall back to in-corpus if missing.
+        ref_counts, ref_meta = load_reference_counts(
+            cfg.loss_mask_reference_counts_path, model.config.vocab_size,
+        )
+        if ref_counts is not None:
+            print(f"loss mask: using external reference from "
+                  f"{ref_meta.get('dataset_id', '?')}/"
+                  f"{ref_meta.get('dataset_config', '?')} "
+                  f"({ref_meta.get('n_tokens', 0):,} tokens)")
+            common_mask = common_mask_from_counts(
+                ref_counts, keep_fraction=cfg.loss_mask_keep_fraction,
+            )
+        else:
+            if cfg.loss_mask_reference_counts_path:
+                print(f"loss mask: reference path "
+                      f"{cfg.loss_mask_reference_counts_path!r} not "
+                      f"found, falling back to in-corpus frequency. "
+                      f"Run build_reference_counts to populate.")
+            common_mask = build_common_token_mask(
+                (ex["input_ids"] for ex in ds),
+                vocab_size=model.config.vocab_size,
+                keep_fraction=cfg.loss_mask_keep_fraction,
+            )
+        n_before = int(common_mask.sum())
+        n_freed_terms, n_freed_numeric = apply_protect_passes(
+            common_mask, tokenizer,
+            cfg.loss_mask_protect_terms,
+            cfg.loss_mask_protect_numeric,
+        )
+        common_mask = common_mask.cuda()
+        n_final = int(common_mask.sum())
+        print(f"loss mask: {n_final}/{model.config.vocab_size} token ids "
+              f"masked (kf={cfg.loss_mask_keep_fraction:.2f}, "
+              f"protect-terms freed {n_freed_terms}, "
+              f"protect-numeric freed {n_freed_numeric}, "
+              f"initial {n_before}); "
+              f"first_tokens={cfg.loss_mask_first_tokens} at paper-start items")
     # Slicing inflates the number of forward/backward passes per epoch.
     # Use the expected items/doc to size the cosine schedule so warmup
     # and anneal land roughly where they would for a non-sliced run.
@@ -268,7 +315,15 @@ def train(limit_docs: int = 0, num_epochs: int = 0,
                 ids = torch.tensor(
                     [full_ids[item.start:item.end]], device="cuda"
                 )
-                loss = model(input_ids=ids, labels=ids).loss
+                # Leading-token mask applies ONLY at paper-start items;
+                # mid-paper slices (start > 0) are real content, not
+                # shared boilerplate.
+                first_n = (
+                    cfg.loss_mask_first_tokens if item.start == 0 else 0
+                )
+                labels = apply_loss_mask(ids, common_mask,
+                                         first_tokens=first_n)
+                loss = model(input_ids=ids, labels=labels).loss
 
                 # Anomaly guard: a nonfinite loss must not poison the
                 # accumulated gradients. Skip backward, count, alert.
@@ -298,14 +353,22 @@ def train(limit_docs: int = 0, num_epochs: int = 0,
                     sum(state_norms.values()) / len(state_norms)
                     if state_norms else 0.0
                 )
-                telemetry.log({
+                micro_log = {
                     "micro/step": micro,
                     "micro/paper_loss": loss.item(),
                     "micro/paper_tokens": n_tok,
                     "micro/session_pos": pos,
                     "micro/session_n": len(session),
                     "micro/state_ratio_mean": state_ratio_mean,
-                })
+                }
+                if common_mask is not None:
+                    # Fraction of positions that contributed to the loss
+                    # this step -- the runtime check that masking is doing
+                    # roughly what loss_mask_keep_fraction promised.
+                    micro_log["micro/unmasked_token_frac"] = (
+                        float((labels != -100).float().mean())
+                    )
+                telemetry.log(micro_log)
                 micro += 1
 
                 if micro % cfg.grad_accum_steps:
@@ -391,6 +454,99 @@ def save_checkpoint(model, run_dir: str, step: int):
 
 
 # ---------------------------------------------------------------------------
+# One-time job: precompute reference unigram counts for the loss mask.
+#
+#     modal run train_modal.py::build_reference_counts
+#     modal run train_modal.py::build_reference_counts --dataset-id wikipedia \
+#         --dataset-config 20220301.en --split train --out-name reference_wiki.pt
+#
+# Outputs land at /ckpt/loss_mask/<out_name>; the default matches
+# TRAIN_CFG.loss_mask_reference_counts_path so subsequent training picks
+# it up automatically.
+# ---------------------------------------------------------------------------
+@app.function(image=image, volumes=VOLUMES, secrets=SECRETS,
+              timeout=60 * 60)
+def build_reference_counts(
+    dataset_id: str = "wikitext",
+    dataset_config: str = "wikitext-103-raw-v1",
+    split: str = "train",
+    text_column: str = "text",
+    out_name: str = "reference_wikitext103.pt",
+    limit_docs: int = 0,
+):
+    """Build a [vocab_size] unigram count tensor from a general-English
+    reference corpus, tokenized with Qwen3's BPE so token ids align
+    with the training run. Saved to /ckpt/loss_mask/<out_name> as a
+    pickled dict containing the counts plus metadata (tokenizer name,
+    dataset id, n_tokens, ...).
+
+    Run once per tokenizer change; the resulting counts are reusable
+    across all training runs. Cost: ~10-20 min on CPU for wikitext-103.
+
+    The fallback path in train() means a missing file does not block
+    training -- you can ship the in-corpus baseline first and add the
+    reference later when convenient.
+    """
+    import torch
+    from datasets import load_dataset
+    from transformers import AutoTokenizer
+
+    from ttt_config import BASE_MODEL
+    from train_utils import count_unigrams
+
+    print(f"loading {dataset_id} / {dataset_config} / {split} from HF Hub")
+    ds = load_dataset(dataset_id, dataset_config, split=split)
+    if limit_docs:
+        ds = ds.select(range(min(limit_docs, len(ds))))
+    print(f"loaded {len(ds)} rows; text column = {text_column!r}")
+
+    tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
+    vocab_size = max(tokenizer.vocab_size, len(tokenizer))
+    print(f"tokenizer vocab_size = {vocab_size}")
+
+    # Batched tokenization. Wikitext rows are short paragraph chunks,
+    # some are empty header lines; the tokenizer handles those fine.
+    # add_special_tokens=False so BOS/EOS don't pollute the unigram
+    # tally with artifacts that never appear at training time.
+    def tokenize(batch):
+        out = tokenizer(batch[text_column],
+                        add_special_tokens=False, truncation=False)
+        return {"input_ids": out["input_ids"]}
+
+    print("tokenizing (batched)...")
+    tokens_ds = ds.map(tokenize, batched=True, batch_size=1000,
+                       remove_columns=ds.column_names, desc="tokenize")
+
+    print("counting unigrams (one pass)...")
+    counts = count_unigrams(
+        (ex["input_ids"] for ex in tokens_ds), vocab_size=vocab_size,
+    )
+    n_tokens = int(counts.sum().item())
+    n_unique = int((counts > 0).sum().item())
+    print(f"counted {n_tokens:,} tokens across {len(tokens_ds)} rows; "
+          f"{n_unique} unique token ids observed")
+
+    out_dir = os.path.join(CKPT_MOUNT, "loss_mask")
+    os.makedirs(out_dir, exist_ok=True)
+    out_path = os.path.join(out_dir, out_name)
+    torch.save({
+        "counts": counts,
+        "tokenizer_name": BASE_MODEL,
+        "dataset_id": dataset_id,
+        "dataset_config": dataset_config,
+        "split": split,
+        "n_docs": len(tokens_ds),
+        "n_tokens": n_tokens,
+        "n_unique": n_unique,
+        "vocab_size": vocab_size,
+    }, out_path)
+    ckpt_vol.commit()
+    print(f"saved -> {out_path}")
+    print(f"set TRAIN_CFG.loss_mask_reference_counts_path = {out_path!r} "
+          f"to use this in training (default already points here).")
+
+
+# ---------------------------------------------------------------------------
 # Wiring check. Run this FIRST, before any training.
 # ---------------------------------------------------------------------------
 @app.function(image=image, gpu=GPU, volumes=VOLUMES, timeout=60 * 30)
@@ -427,6 +583,266 @@ def sanity_check():
     print(f"max |logit diff| = {diff:.6f}")
     assert diff < 1e-2, "identity check FAILED, wiring is broken"
     print("identity check passed")
+
+
+# ---------------------------------------------------------------------------
+# Loss-mask diagnostic. CPU-only; does not start training.
+#
+#     modal run train_modal.py::diagnose_loss_mask
+#     modal run train_modal.py::diagnose_loss_mask --limit-docs 400
+#     modal run train_modal.py::diagnose_loss_mask --keep-fraction 0.5
+#
+# Use this BEFORE a real run to verify that loss_mask_keep_fraction is
+# catching function words / punctuation rather than domain content words
+# you care about (e.g. "model", "training", "diffusion"). The chronological
+# prefix sweep surfaces date-driven drift -- a token that only enters the
+# mask once newer arxiv years are included is exactly the kind of failure
+# mode raw frequency masking has on a domain corpus.
+# ---------------------------------------------------------------------------
+@app.function(image=image, volumes=VOLUMES, secrets=SECRETS,
+              timeout=60 * 30)
+def diagnose_loss_mask(limit_docs: int = 0, top_k: int = 80,
+                       keep_fraction: float = 0.0,
+                       use_reference: bool = False):
+    """Report what the content-token loss mask catches.
+
+    Two modes:
+
+      use_reference=False (default): build the mask from the
+        date-sorted training corpus, broken into cumulative
+        chronological prefixes (first 25%, 50%, 75%, 100%). This is
+        the diagnostic for the in-corpus fallback path.
+
+      use_reference=True: build the mask from the external reference
+        unigram distribution at
+        TRAIN_CFG.loss_mask_reference_counts_path. The reference is
+        fixed, so chronological slicing collapses to a single row;
+        the spot-check then reflects what training will actually use.
+
+    Sections (both modes):
+      1. Mask statistics (mask size, fraction of positions actually
+         kept). The kept fraction should land near keep_fraction;
+         deviation reveals discretization slack.
+      2. Top-K masked tokens, decoded back to strings. If this is all
+         function words / punctuation, the mask is doing its job.
+      3. Spot-check table: a curated list of (function | ML-glue |
+         domain-content) words, showing MASKED vs kept. Lets you see
+         at a glance which categories the mask eats.
+
+    Args:
+        limit_docs: cap on training docs (in-corpus mode only).
+        top_k: how many top-frequency masked tokens to decode/print.
+        keep_fraction: override TRAIN_CFG.loss_mask_keep_fraction
+                       (0.0 = use the value in config).
+        use_reference: see above.
+    """
+    import torch
+    from transformers import AutoTokenizer
+
+    from ttt_config import BASE_MODEL
+    from train_utils import (
+        apply_protect_passes, common_mask_from_counts,
+        load_reference_counts,
+    )
+
+    kf = keep_fraction if keep_fraction > 0 else TRAIN_CFG.loss_mask_keep_fraction
+    print(f"loss_mask diagnostic: keep_fraction={kf:.3f}, "
+          f"mode={'external-reference' if use_reference else 'in-corpus'}\n")
+
+    tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
+    # tokenizer.vocab_size excludes added/special tokens; len(tokenizer)
+    # is the full table the model indexes into.
+    vocab_size = max(tokenizer.vocab_size, len(tokenizer))
+
+    if use_reference:
+        # External reference path: load the precomputed counts and
+        # synthesize a single "snapshot" so the rest of the function
+        # (section 1/2/3) runs unchanged. Per-slice chronological
+        # bookkeeping is meaningless when the baseline is fixed, so
+        # we collapse to one row labeled with the reference's source.
+        ref_counts, ref_meta = load_reference_counts(
+            TRAIN_CFG.loss_mask_reference_counts_path, vocab_size,
+        )
+        if ref_counts is None:
+            raise RuntimeError(
+                f"use_reference=True but "
+                f"{TRAIN_CFG.loss_mask_reference_counts_path!r} not "
+                f"found; run build_reference_counts first"
+            )
+        label = (f"ref:{ref_meta.get('dataset_id', '?')}/"
+                 f"{ref_meta.get('dataset_config', '?')}")
+        print(f"reference: {label}, "
+              f"{ref_meta.get('n_tokens', 0):,} tokens across "
+              f"{ref_meta.get('n_docs', 0)} rows")
+        snapshots = [(label, ref_meta.get("n_docs", 0), ref_counts)]
+    else:
+        ds = load_token_dataset(tokenizer, limit_docs or None)
+        hf_vol.commit()
+        n = len(ds)
+        if n < 4:
+            raise RuntimeError(
+                f"need at least 4 docs for quartile slicing, got {n}"
+            )
+
+        # Cumulative date-sorted prefixes. ds is the train split
+        # returned by split_holdout, which excludes the newest
+        # HOLDOUT_LAST_N rows; remaining rows are in arxiv-id order,
+        # i.e. oldest -> newest.
+        cuts = [
+            ("first 25%", n // 4),
+            ("first 50%", n // 2),
+            ("first 75%", 3 * n // 4),
+            ("full set",  n),
+        ]
+        cut_lookup = {k: label for label, k in cuts}
+
+        # Stream once; snapshot running counts at each cumulative
+        # boundary. Avoids re-tallying the prefix four times.
+        print(f"counting tokens over {n} docs (one pass)...")
+        snapshots = []   # list of (label, k_docs, counts_tensor)
+        running = torch.zeros(vocab_size, dtype=torch.int64)
+        for i in range(n):
+            ids_list = ds[i]["input_ids"]
+            t = torch.as_tensor(ids_list, dtype=torch.int64)
+            if t.numel():
+                if int(t.max()) >= vocab_size or int(t.min()) < 0:
+                    raise ValueError(
+                        f"OOR token at doc {i}: min={int(t.min())}, "
+                        f"max={int(t.max())}, vocab_size={vocab_size}"
+                    )
+                running += torch.bincount(t, minlength=vocab_size)
+            if (i + 1) in cut_lookup:
+                snapshots.append(
+                    (cut_lookup[i + 1], i + 1, running.clone())
+                )
+
+    # Build the mask at each snapshot and apply BOTH protect passes so
+    # the diagnostic reflects what the training loop will actually use.
+    slices = []   # list of dicts
+    for label, k, counts in snapshots:
+        mask = common_mask_from_counts(counts, keep_fraction=kf)
+        n_pre_protect = int(mask.sum())
+        freed_terms, freed_numeric = apply_protect_passes(
+            mask, tokenizer,
+            TRAIN_CFG.loss_mask_protect_terms,
+            TRAIN_CFG.loss_mask_protect_numeric,
+        )
+        total = int(counts.sum().item())
+        n_masked = int(mask.sum())
+        kept_share = (
+            float((counts * (~mask).long()).sum().item() / total)
+            if total else 0.0
+        )
+        slices.append({
+            "label": label, "k": k, "tokens": total,
+            "mask": mask, "counts": counts,
+            "n_pre_protect": n_pre_protect,
+            "freed_terms": freed_terms,
+            "freed_numeric": freed_numeric,
+            "n_masked": n_masked, "kept_share": kept_share,
+        })
+
+    # ------------------------------------------------- section 1: stats --
+    header = ("Mask statistics (external reference)"
+              if use_reference else
+              "Per-slice mask statistics (post-protect passes)")
+    print(f"\n=== {header} ===")
+    label_w = max(20, max(len(s["label"]) for s in slices) + 1)
+    print(f"  {'slice':<{label_w}} {'docs':>6} {'tokens':>14} "
+          f"{'pre_protect':>11} {'free_t':>7} {'free_n':>7} "
+          f"{'masked_ids':>11} {'pos_kept':>9}")
+    for s in slices:
+        print(f"  {s['label']:<{label_w}} {s['k']:>6} {s['tokens']:>14,} "
+              f"{s['n_pre_protect']:>11} {s['freed_terms']:>7} "
+              f"{s['freed_numeric']:>7} "
+              f"{s['n_masked']:>11} {s['kept_share']:>8.1%}")
+    print("  free_t = freed by protect-terms list, "
+          "free_n = freed by protect-numeric predicate.")
+
+    # ----------------------------------- section 2: top-K masked tokens --
+    where = "external ref" if use_reference else "full set"
+    print(f"\n=== Top-{top_k} masked tokens ({where}, descending freq) ===")
+    print(f"  {'rank':>4}  {'id':>6}  {'count':>14}  token")
+    full = slices[-1]
+    masked_counts = full["counts"].clone()
+    masked_counts[~full["mask"]] = 0
+    top_vals, top_ids = torch.topk(masked_counts, k=min(top_k, vocab_size))
+    for rank, (val, tid) in enumerate(
+        zip(top_vals.tolist(), top_ids.tolist()), 1
+    ):
+        if val == 0:
+            break
+        s = tokenizer.decode([tid])
+        print(f"  {rank:>4}  {tid:>6}  {val:>14,}  {s!r}")
+
+    # ------------------------------------------- section 3: spot check --
+    # Three groups so the user can see (a) the mask catches obvious glue,
+    # (b) whether it overcatches ML-glue, (c) whether it spares domain
+    # content. The leading-space form (' word') is the BPE convention for
+    # mid-sequence words; the bare form occasionally differs in id.
+    spot_terms = [
+        ("function-words",
+         ["the", "of", "and", "is", "we", "in", "to", "a", "for", "with"]),
+        ("ML-glue (the question)",
+         ["model", "training", "data", "loss", "gradient", "layer",
+          "network", "learning", "weights", "function"]),
+        ("domain content (should stay kept)",
+         ["transformer", "diffusion", "convolution", "attention",
+          "embedding", "tokenizer", "Bayesian", "Markov", "kernel",
+          "VAE", "GAN", "policy", "reward"]),
+    ]
+    print("\n=== Spot check: mask status across cumulative slices ===")
+    print("  Row 1: first-piece status per slice (legacy summary).")
+    print("  Row 2: ACTUAL pieces -- decoded string and full-set mask "
+          "status of each.")
+    print("  A multi-piece row whose first piece is MASKED does NOT "
+          "mean the full term was masked; it means BPE split the term "
+          "and one piece happened to be a common id. Read row 2.")
+    col_w = max(10, max(len(s["label"]) for s in slices))
+    header_cells = "  ".join(f"{s['label']:>{col_w}s}" for s in slices)
+    print(f"\n  {'term':<24}  {header_cells}")
+    print(f"  {'-' * 24}  " + "  ".join("-" * col_w for _ in slices))
+    full_mask = slices[-1]["mask"]
+    for group_name, terms in spot_terms:
+        print(f"  [{group_name}]")
+        for term in terms:
+            ids = tokenizer.encode(" " + term, add_special_tokens=False)
+            if not ids:
+                continue
+            # Row 1: first-piece status across slices.
+            cells = []
+            for s in slices:
+                cells.append("MASKED" if bool(s["mask"][ids[0]])
+                             else "kept")
+            cell_str = "  ".join(f"{c:>{col_w}s}" for c in cells)
+            shown = f"' {term}' (1st id {ids[0]})"
+            print(f"  {shown:<24}  {cell_str}")
+            # Row 2: per-piece breakdown in the full-set mask.
+            piece_parts = []
+            for tid in ids:
+                tid = int(tid)
+                mark = "M" if bool(full_mask[tid]) else "k"
+                decoded = tokenizer.decode([tid])
+                piece_parts.append(f"[{tid}:{decoded!r}={mark}]")
+            piece_str = " + ".join(piece_parts)
+            tag = " <-- single piece" if len(ids) == 1 else \
+                  f" <-- {len(ids)}-piece BPE split"
+            print(f"  {'':<24}  pieces: {piece_str}{tag}")
+
+    print("\ndone.")
+    print("Reading the spot check:")
+    print("  - Row 1 is the legacy 'first-piece' summary; Row 2 is the "
+          "truth.")
+    print("  - Single-piece rows: 'MASKED' there = the whole word's "
+          "loss is dropped. If those are domain content, the "
+          "protect-list should have caught them; otherwise raise "
+          "keep_fraction or add the term.")
+    print("  - Multi-piece rows with M+k...: BPE split the term, the "
+          "first piece is a common id (e.g. ' V', ' G'). protect_token_ids "
+          "deliberately skips these to avoid leak-unmasking every "
+          "capital-V mid-sentence word; the trailing pieces still "
+          "receive loss, so the model still trains on the rare onset "
+          "+ the full tail.")
 
 
 @app.local_entrypoint()

@@ -171,3 +171,287 @@ def grad_norms(named_groups: dict) -> dict:
         )
         out[name] = float(torch.as_tensor(sq).sqrt())
     return out
+
+
+# ---------------------------------------------------------------------------
+# Content-token loss masking.
+#
+# Standard next-token CE on a long document is dominated by predictable
+# function words, punctuation, and corpus-style tokens. The handful of
+# tokens that actually carry document-specific information (entities,
+# numbers, technical terms) contribute almost nothing to the gradient.
+# This pair of helpers lets the training loop concentrate the loss on
+# rare/content-bearing tokens by setting common-token positions to -100,
+# which CrossEntropyLoss skips by default.
+# ---------------------------------------------------------------------------
+def build_common_token_mask(input_ids_iter, vocab_size: int,
+                            keep_fraction: float):
+    """Returns a [vocab_size] BoolTensor where True marks 'common' tokens
+    whose loss should be ignored.
+
+    Algorithm: count unigram occurrences across the supplied corpus, sort
+    token ids by frequency descending, then mark the smallest prefix of
+    token ids whose cumulative count covers (1 - keep_fraction) of total
+    occurrences. The unmarked tail therefore carries approximately
+    keep_fraction of corpus token positions -- the rare-token signal.
+
+    input_ids_iter -- any iterable yielding 1D int sequences (e.g. a
+        list of lists, or `(ex["input_ids"] for ex in ds)`).
+    vocab_size -- width of the returned mask. Token ids observed must
+        all be in [0, vocab_size).
+    keep_fraction -- must be in (0, 1]. 1.0 disables masking (returns
+        all-False); smaller values mask more aggressively. Validated at
+        the boundary; behavior at exactly the limits is documented in
+        tests.
+
+    Determinism: with the same input_ids_iter, vocab_size, and
+    keep_fraction the returned mask is bit-exact, including the
+    tie-breaking order from `torch.sort(descending=True)` (stable sort
+    on counts; ties broken by original token id order).
+
+    Thin wrapper around the count + threshold pair so callers that
+    want both passes in one shot stay clean. Argument validation
+    lives inside the two helpers, which run independent of each
+    other (the diagnostic counts once and thresholds multiple times)."""
+    counts = count_unigrams(input_ids_iter, vocab_size)
+    return common_mask_from_counts(counts, keep_fraction)
+
+
+def count_unigrams(input_ids_iter, vocab_size: int):
+    """Single-pass unigram tally over an input-ids iterable. Lifted out
+    of build_common_token_mask so diagnostics can reuse counts across
+    multiple thresholds or cumulative prefixes (one pass, not N).
+
+    Returns a [vocab_size] int64 CPU tensor. Out-of-range token ids
+    are rejected loudly at the call site that caused them, rather than
+    being silently absorbed into a wider bincount vector that would
+    later shape-mismatch."""
+    import torch
+
+    if vocab_size <= 0:
+        raise ValueError(f"vocab_size must be > 0, got {vocab_size}")
+    counts = torch.zeros(vocab_size, dtype=torch.int64)
+    for ids in input_ids_iter:
+        t = torch.as_tensor(ids, dtype=torch.int64)
+        if not t.numel():
+            continue
+        # Range-check BEFORE bincount: bincount silently returns a
+        # vector sized max(minlength, max(t)+1), which would then shape-
+        # mismatch the running counts and crash with a confusing error.
+        if int(t.max()) >= vocab_size or int(t.min()) < 0:
+            raise ValueError(
+                f"token id out of range [0, {vocab_size}): "
+                f"saw min={int(t.min())}, max={int(t.max())}"
+            )
+        counts += torch.bincount(t, minlength=vocab_size)
+    return counts
+
+
+def common_mask_from_counts(counts, keep_fraction: float):
+    """The threshold half of the mask pipeline: given a [vocab_size]
+    count tensor, return a [vocab_size] BoolTensor marking the smallest
+    prefix of frequency-sorted token ids whose cumulative occurrences
+    cover (1 - keep_fraction) of the total. Separated from counting so
+    diagnostics can sweep keep_fraction without re-tallying."""
+    import torch
+
+    if not (0.0 < keep_fraction <= 1.0):
+        raise ValueError(
+            f"keep_fraction must be in (0, 1], got {keep_fraction}"
+        )
+    vocab_size = int(counts.numel())
+    mask = torch.zeros(vocab_size, dtype=torch.bool)
+    total = int(counts.sum().item())
+    drop_budget = int(round((1.0 - keep_fraction) * total))
+    # keep_fraction=1.0, empty corpus, or rounding to zero => mask nothing.
+    if drop_budget <= 0:
+        return mask
+
+    sorted_counts, sorted_ids = torch.sort(counts, descending=True, stable=True)
+    cum = sorted_counts.cumsum(0)
+    budget_t = torch.tensor(drop_budget, dtype=cum.dtype)
+    # First index where cum >= drop_budget; we drop ids 0..idx inclusive.
+    idx = int(torch.searchsorted(cum, budget_t, right=False).item())
+    n_dropped = min(idx + 1, vocab_size)
+    mask[sorted_ids[:n_dropped]] = True
+    return mask
+
+
+def apply_loss_mask(ids, common_mask, first_tokens: int = 0):
+    """Return a labels tensor with positions ignored by the CE loss
+    where appropriate. Two independent masking sources, each applied
+    only if active:
+
+      1. common_mask -- token-id based. Catches the most-frequent token
+         ids (function words, punctuation, generic ML-glue) so the
+         gradient concentrates on content-bearing tokens. Caller passes
+         None to disable.
+      2. first_tokens -- position based. Sets the leading N positions
+         of every sequence to ignore_index. Use when the corpus shares
+         a near-identical opening that the model would otherwise burn
+         capacity learning (e.g. arxiv papers all starting with
+         "1. Introduction"). Caller passes 0 to disable, OR passes 0
+         specifically for mid-paper slices where the position-based
+         skip would discard real content.
+
+    When BOTH disable signals are set (common_mask=None and
+    first_tokens<=0), ids is returned identically (no clone, zero
+    overhead), so the helper can be wired in unconditionally and
+    toggled via config.
+
+    Inputs are NOT mutated. common_mask must live on the same device
+    as ids when supplied; first_tokens is a CPU int. Shape and dtype
+    of the return value match ids."""
+    if common_mask is None and first_tokens <= 0:
+        return ids
+    labels = ids.clone()
+    if common_mask is not None:
+        labels[common_mask[ids]] = -100
+    if first_tokens > 0:
+        # Mask the leading N positions of each sequence. Last axis is
+        # the token dimension; arbitrary leading batch dims are fine.
+        k = min(first_tokens, labels.shape[-1])
+        labels[..., :k] = -100
+    return labels
+
+
+def apply_protect_passes(mask, tokenizer, protect_terms, protect_numeric: bool):
+    """Apply both protect-list and protect-numeric overlays on top of
+    a frequency-built mask. The two callers (train() and
+    diagnose_loss_mask()) ran the same three-statement dance before
+    this extraction; keeping it in one place makes the
+    "what's safe to never mask" policy a single source of truth.
+
+    Mutates `mask` in place. Returns (n_freed_terms, n_freed_numeric)
+    so the caller can log the deltas. protect_terms may be empty/None
+    to disable the term path; protect_numeric=False disables the
+    digit-predicate path. Either being off is a zero-cost no-op."""
+    n_freed_terms = 0
+    if protect_terms:
+        touched = protect_token_ids(mask, tokenizer, protect_terms)
+        n_freed_terms = sum(len(v) for v in touched.values())
+    n_freed_numeric = 0
+    if protect_numeric:
+        n_freed_numeric = len(protect_numeric_tokens(mask, tokenizer))
+    return n_freed_terms, n_freed_numeric
+
+
+def load_reference_counts(path: str, expected_vocab_size: int):
+    """Load a precomputed reference unigram count tensor from disk
+    (built by train_modal.py::build_reference_counts). Returns
+    (counts, metadata_dict) or (None, None) if `path` is empty / the
+    file is missing -- the caller can then fall back to in-corpus
+    counting without an explicit feature flag.
+
+    Raises RuntimeError on a vocab_size mismatch so a tokenizer
+    change is caught at training start, not silently at the first
+    bincount.
+
+    Importing torch lazily (like the other train_utils helpers) keeps
+    the module light on the path where the feature is unused."""
+    import os
+    import torch
+
+    if not path or not os.path.exists(path):
+        return None, None
+    blob = torch.load(path, map_location="cpu", weights_only=False)
+    counts = blob["counts"]
+    if counts.numel() != expected_vocab_size:
+        raise RuntimeError(
+            f"reference counts vocab_size {counts.numel()} != "
+            f"expected {expected_vocab_size}; rebuild the reference "
+            f"after a tokenizer change via build_reference_counts"
+        )
+    return counts, blob
+
+
+def protect_numeric_tokens(mask, tokenizer):
+    """Force-unmask token ids whose decoded form (stripped) is a
+    pure-digit string. Numbers in scientific corpora carry content --
+    hyperparameter values, benchmark scores, model sizes, dataset
+    statistics -- and the loss should always see them. The term-based
+    protect-list can't handle digits cleanly (single-character pieces
+    fail the length gate), hence the separate predicate path.
+
+    Catches '0'..'9' and multi-digit pieces ('100', '1024', etc.) in
+    whatever form BPE chose to emit them, including the leading-space
+    form (' 1', ' 100'). Tokens with any non-digit character (' 1.',
+    '0)', 'e-4', '1st') are left untouched; treat those as
+    number-adjacent rather than pure numerical content.
+
+    Iterates only over the currently-masked indices so the cost is
+    O(|mask.sum()|) tokenizer.decode calls (~200 at kf=0.5) rather
+    than O(vocab_size) (~150k). Mutates `mask` in place. Returns the
+    sorted list of token ids flipped from masked to unmasked."""
+    indices = mask.nonzero(as_tuple=True)[0].tolist()
+    flipped = []
+    for tid in indices:
+        decoded = tokenizer.decode([int(tid)]).strip()
+        # str.isdigit() is True on non-empty all-digit strings AND on
+        # unicode superscript/subscript digits ('²', '₁'). The latter
+        # are content-bearing too, so the looser semantics are fine.
+        if decoded and decoded.isdigit():
+            flipped.append(int(tid))
+            mask[tid] = False
+    return sorted(flipped)
+
+
+def protect_token_ids(mask, tokenizer, terms, min_piece_chars: int = 3):
+    """Force-unmask token ids reached by tokenizing any of `terms`, so
+    the frequency mask cannot eat domain-critical vocabulary.
+
+    Variant generation. For each term we try bare / leading-space /
+    capitalized / all-caps, with and without leading space (8 variants
+    after dedup).
+
+    Per-variant gating. Each variant tokenizes to one or more BPE
+    pieces. We unmask the variant's pieces only when EVERY piece has
+    at least `min_piece_chars` non-whitespace characters when decoded.
+    This admits multi-piece content terms (' diff' + 'usion',
+    ' trans' + 'former') while rejecting acronym splits like
+    ' VAE' -> [' V', 'AE']. Unmasking ' V' alone would leak to every
+    mid-sentence capital-V word; better to leave the acronym
+    unprotected (the second piece 'AE' is rare enough that the
+    frequency mask spares it anyway, so the model still gets gradient
+    on most of the acronym).
+
+    Mutates `mask` in place. Returns a dict { term: [token_id, ...] }
+    listing the token ids each term genuinely flipped from masked to
+    unmasked. Empty list distinguishes 'no variant passed the gate'
+    from 'every passing variant was already unmasked'; both cases are
+    useful in the startup log.
+
+    'add_special_tokens=False' is critical -- with it, BOS/EOS are not
+    glued onto the variant and the encoded length reflects only the
+    term itself."""
+    touched = {}
+    for term in terms:
+        if not term:
+            continue
+        variants = set()
+        for base in (term, term.lower(), term.upper(), term.capitalize()):
+            variants.add(base)
+            variants.add(" " + base)
+        flipped = []
+        # sorted() so the reported list is deterministic; the actual
+        # mask flip is order-independent.
+        for v in sorted(variants):
+            ids = tokenizer.encode(v, add_special_tokens=False)
+            if not ids:
+                continue
+            # Length gate: decode each piece, strip whitespace (the
+            # leading-space convention shouldn't inflate length),
+            # require every piece to clear the floor.
+            pieces = [tokenizer.decode([int(tid)]) for tid in ids]
+            if any(len(p.strip()) < min_piece_chars for p in pieces):
+                continue
+            for tid in ids:
+                tid = int(tid)
+                if 0 <= tid < mask.numel() and bool(mask[tid]):
+                    flipped.append(tid)
+                    mask[tid] = False
+        # De-dup: the same token id can show up via several variants
+        # (e.g. ' transformer' and ' Transformer' may map identically
+        # after BPE normalization), but only the first flip is real.
+        touched[term] = sorted(set(flipped))
+    return touched
