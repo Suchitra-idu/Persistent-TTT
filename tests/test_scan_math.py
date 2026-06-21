@@ -30,7 +30,8 @@ torch.set_default_dtype(torch.float64)
 
 D, DFF, C = 8, 16, 4
 CFG = TTTConfig(layer_indices=(0,), chunk_size=C, eta=0.05,
-                conv_kernel_size=3, normalize_delta_by_chunk=True)
+                conv_kernel_size=3, normalize_delta_by_chunk=True,
+                v_source="embedding", v_bidirectional=False)
 
 
 def build_module():

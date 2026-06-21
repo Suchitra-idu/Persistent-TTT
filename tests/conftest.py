@@ -22,9 +22,13 @@ D, DFF, C, KERNEL = 8, 16, 4, 3
 
 @pytest.fixture
 def cfg():
+    # Pin v_source / v_bidirectional explicitly so tests stay independent
+    # of whatever production defaults TTTConfig is currently set to. Tests
+    # exercising the other modes override these with dataclasses.replace.
     return TTTConfig(layer_indices=(0,), chunk_size=C, eta=0.05,
                      conv_kernel_size=KERNEL,
-                     normalize_delta_by_chunk=True)
+                     normalize_delta_by_chunk=True,
+                     v_source="embedding", v_bidirectional=False)
 
 
 @pytest.fixture

@@ -8,8 +8,12 @@ any Qwen3 variant (0.6B, 1.7B, 8B, ...) -- the TTT layer schedule and
 LoRA regex are derived from model.config.num_hidden_layers at load time.
 
 Mechanism per TTT layer, for activations Z = silu(gate(H)) * up(H)
-and LM-aligned targets V = CausalConv1D(X0) @ W_target, chunked into
-non-overlapping chunks of size C:
+and LM-aligned targets V = Conv1D(source) @ W_target, chunked into
+non-overlapping chunks of size C. `source` is either the raw embedding
+X0 (the paper's choice, cfg.v_source="embedding") or the layer's own
+input hidden_states (cfg.v_source="hidden_state"). The conv is causal
+by default; setting cfg.v_bidirectional=True turns it into a centered
+window (past + current + future tokens) on the scan path.
 
     apply:   O_[i] = Z_[i] @ (W_down + eta * S_i)^T
     update:  S_{i+1} = S_i + V_[i]^T @ Z_[i]        (S_0 = 0)
@@ -21,7 +25,7 @@ identical to the sequential apply-then-update loop.
 Two execution modes (cohesion -- each mode is one method):
   * stateless scan  -- training and whole-sequence evaluation. Fast
     weights implicitly reset every forward call, which matches the
-    paper's per-document reset when you feed one document per sequence.
+    paper's per-document W_gatereset when you feed one document per sequence.
     Session mode (see below) opts into cross-call carry; the training
     loop also randomly slices papers so one "call" may be a token-range
     sub-paper rather than a whole document, with carry threaded
@@ -46,7 +50,6 @@ Critical wiring rules, do not break these:
 
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -59,7 +62,9 @@ from ttt_config import TTTConfig
 
 # ===========================================================================
 # Embedding tap. One hook on embed_tokens makes the token embeddings X0
-# available to every TTT layer without changing model signatures.
+# available to every TTT layer without changing model signatures. Used
+# when cfg.v_source="embedding"; the "hidden_state" mode skips the hook
+# registration and bypasses the tap entirely.
 # ===========================================================================
 class EmbeddingTap:
     """Captures embed_tokens output each forward and, in stateful mode,
@@ -139,22 +144,49 @@ class InPlaceTTTMLP(nn.Module):
             self.target_conv.weight.zero_()
             self.target_conv.weight[:, :, -1] = 1.0
 
-        # Small-randn init (NOT zero) because the output is linear in W_target
-        # with coefficient eta, so the gradient on W_target is gated by eta;
-        # at exact zero init, the symmetry breaks SO slowly that W_target
-        # never escapes its starting region within a reasonable run.
-        # std=1e-3 gives state_ratio ~10-20% at init (visible but not
-        # destabilizing), the LoRA + base can absorb the perturbation.
-        # Trade: model is no longer bit-exact identity at init -- sanity_check
-        # zeroes W_target temporarily to test the wiring property separately.
-        self.w_target = nn.Parameter(
-            torch.randn(hidden_size, hidden_size) * 1e-3
-        )
+        # Zero-init: at step 0 V = conv(source) @ 0 = 0, so delta = 0, so
+        # ttt_out = 0, so the model is bit-exact identity to the base MLP.
+        # The non-zero randn init was tried (commit history) but caused the
+        # carry to overfit to training-paper-specific directions; reverting
+        # to the paper's zero init removes that pathology. Gradient escape
+        # from zero is slower but more honest -- the carry only ever points
+        # in a direction the loss explicitly rewards.
+        self.w_target = nn.Parameter(torch.zeros(hidden_size, hidden_size))
+
+        # Per-position output gate: output = base + sigmoid(W_g h) * ttt_out.
+        # See TTTConfig.output_gate for rationale (opens a new gradient path
+        # to W_target through the gate's learning, avoiding cumsum-averaging
+        # starvation). Bias init defaults to negative (sigmoid ~ 0.12) so
+        # the carry is mostly closed at start and must be EARNED open by
+        # gradient; this is "normalization by init" against the overfit
+        # mode where a freely-open gate amplifies noise. Weight init tiny
+        # so the gate is mostly bias-determined until learning shapes it.
+        # None when disabled, so _gated() short-circuits cheaply.
+        if cfg.output_gate:
+            self.output_gate = nn.Linear(hidden_size, 1, bias=True)
+            with torch.no_grad():
+                self.output_gate.bias.fill_(cfg.output_gate_bias_init)
+                nn.init.normal_(self.output_gate.weight, std=1e-3)
+        else:
+            self.output_gate = None
+
+        # Stashed by _gated() during forward when the gate is active and
+        # the module is in training mode, consumed by gate_reg_term(model)
+        # in the training loop to add an L2 penalty on the gate output.
+        # None signals "no penalty available" (gate disabled OR last
+        # forward was in eval mode); the helper skips silently.
+        self._gate_l2: Optional[torch.Tensor] = None
 
         # Runtime switches, controlled via the module-tree helpers below.
         self.ttt_evolve = True       # False => behaves as a vanilla MLP (+LoRA)
         self.stateful = False        # True  => persist fast weights across calls
         self.state = TTTState()
+
+        # Per-module rolling buffer of past hidden_states, used in stream
+        # mode when cfg.v_source="hidden_state" so the causal conv sees
+        # real past tokens instead of zero-padding. Only populated when
+        # the layer is in stream mode; reset_stream_state() clears it.
+        self._hidden_context: Optional[torch.Tensor] = None
 
         # Session-persistent training (TBPTT-style). carried_delta is the
         # fp32 fast weight delta accumulated over previous papers in the
@@ -167,25 +199,95 @@ class InPlaceTTTMLP(nn.Module):
         self._next_carried: Optional[torch.Tensor] = None
 
     # ----------------------------------------------------------- targets --
-    def _targets(self, x0: torch.Tensor,
+    def _targets(self, source: torch.Tensor,
                  left_context: Optional[torch.Tensor]) -> torch.Tensor:
-        """V = CausalConv1D(X0) @ W_target, shape [B, N, d_model].
+        """V = Conv1D(source) @ W_target, shape [B, N, d_model].
 
-        Causal padding keeps each chunk's delta free of future tokens,
-        making the parallel scan equivalent to the sequential update."""
-        if left_context is not None:
-            x = torch.cat([left_context.to(x0.dtype), x0], dim=1)
-            pad = self.cfg.conv_kernel_size - 1 - left_context.shape[1]
+        `source` is the tensor that feeds the conv (X0 from the embedding
+        tap when cfg.v_source="embedding", layer-local hidden_states when
+        cfg.v_source="hidden_state"); the dispatch lives in _v_source().
+
+        Padding is split between left and right by cfg.v_bidirectional:
+          * False (default, causal): left-only pad => each output sees the
+            K positions strictly to the left (including itself). Preserves
+            chunk-causality so the parallel scan equals the sequential
+            apply-then-update.
+          * True (centered window): symmetric pad so output at position n
+            sees ~K/2 past + n + ~K/2 future tokens. Streaming IGNORES this
+            (future tokens are unavailable across call boundaries) -- the
+            streaming path is the one with non-None left_context, so we
+            detect it here and force-causal.
+
+        `left_context` is the per-stream rolling buffer of source-tensor
+        positions from previous calls (None outside streaming); it
+        substitutes for left padding so the conv sees real past tokens
+        instead of zeros."""
+        K = self.cfg.conv_kernel_size
+        streaming = left_context is not None
+        if self.cfg.v_bidirectional and not streaming:
+            left_pad = K // 2
+            right_pad = K - 1 - left_pad
         else:
-            x = x0
-            pad = self.cfg.conv_kernel_size - 1
-        x = x.transpose(1, 2)                       # [B, d, N(+ctx)]
-        if pad > 0:
-            x = F.pad(x, (pad, 0))                  # left pad => causal
-        v = self.target_conv(x).transpose(1, 2)     # [B, N, d]
-        if left_context is not None:
-            v = v[:, -x0.shape[1]:, :]              # keep only new positions
+            left_pad = K - 1
+            right_pad = 0
+
+        if streaming:
+            x = torch.cat([left_context.to(source.dtype), source], dim=1)
+            left_pad = max(0, left_pad - left_context.shape[1])
+        else:
+            x = source
+
+        x = x.transpose(1, 2)                           # [B, d, N(+ctx)]
+        if left_pad > 0 or right_pad > 0:
+            x = F.pad(x, (left_pad, right_pad))
+        v = self.target_conv(x).transpose(1, 2)         # [B, N, d]
+        if streaming:
+            v = v[:, -source.shape[1]:, :]              # keep only new positions
         return v @ self.w_target
+
+    # ---------------------------------------------------- v-source dispatch --
+    def _v_source(self, hidden_states: torch.Tensor) -> torch.Tensor:
+        """Tensor that feeds target_conv. Single source of truth so scan
+        and stream paths can't disagree about which signal V is built
+        from."""
+        if self.cfg.v_source == "hidden_state":
+            return hidden_states
+        return self.tap.current
+
+    def _v_left_context(self) -> Optional[torch.Tensor]:
+        """Rolling left-context buffer matched to _v_source. Same DRY
+        rationale: single dispatch site for the v-input pipeline."""
+        if self.cfg.v_source == "hidden_state":
+            return self._hidden_context
+        return self.tap.prev_context
+
+    def _update_hidden_context(self, hidden_states: torch.Tensor):
+        """Mirror of EmbeddingTap's rolling buffer, but per-module --
+        hidden_states differ between layers, so each TTT module keeps
+        its own (conv_kernel_size - 1)-token tail. No-op when v_source
+        is "embedding" (the shared tap owns the buffer in that mode);
+        call unconditionally from the stream path."""
+        if self.cfg.v_source != "hidden_state":
+            return
+        ctx_len = self.cfg.conv_kernel_size - 1
+        if ctx_len <= 0:
+            return
+        joined = hidden_states if self._hidden_context is None else torch.cat(
+            [self._hidden_context, hidden_states], dim=1
+        )
+        self._hidden_context = joined[:, -ctx_len:, :].detach()
+
+    def reset_stream_state(self):
+        """Drop the per-module streaming buffers AND committed fast-weight
+        state. Called from the model-tree helper reset_fast_weights()."""
+        self.state.reset()
+        self._hidden_context = None
+
+    def reset_v_context(self):
+        """Soft turn-boundary reset: clear only the conv left-context
+        buffer that matches cfg.v_source. Leaves state.delta and
+        pending_z/pending_v intact -- that's the cross-turn memory."""
+        self._hidden_context = None
 
     # ---------------------------------------------------------- clipping --
     def _clip(self, delta: torch.Tensor) -> torch.Tensor:
@@ -199,6 +301,26 @@ class InPlaceTTTMLP(nn.Module):
         scale = (self.cfg.clip_tau / norm.clamp_min(1e-12)).clamp(max=1.0)
         return delta * scale
 
+    # ------------------------------------------------------------- gate --
+    def _gated(self, ttt_term: torch.Tensor,
+               hidden_states: torch.Tensor) -> torch.Tensor:
+        """Multiply the TTT contribution by sigmoid(W_g h) per position when
+        output_gate is configured. Single source of truth so both the scan
+        and stream paths apply gating identically (DRY -- if you change the
+        formulation here it's a one-place edit). When the gate is None
+        (cfg.output_gate=False) the term passes through unchanged, so the
+        original paper formulation is preserved as the default.
+
+        Side effect during training: stashes mean-square of the gate output
+        in self._gate_l2 so gate_reg_term(model) can pick it up and add an
+        L2 penalty to the training loss. Skipped under eval/no_grad."""
+        if self.output_gate is None:
+            return ttt_term
+        gate = torch.sigmoid(self.output_gate(hidden_states))   # [B, N, 1]
+        if self.training and torch.is_grad_enabled():
+            self._gate_l2 = (gate ** 2).mean()
+        return gate * ttt_term
+
     # --------------------------------------------------------- main path --
     def forward(self, hidden_states: torch.Tensor) -> torch.Tensor:
         z = self.act_fn(self.gate_proj(hidden_states)) * self.up_proj(hidden_states)
@@ -210,11 +332,12 @@ class InPlaceTTTMLP(nn.Module):
             return self.down_proj(z)
 
         if self.stateful:
-            return self._stream_forward(z)
-        return self._scan_forward(z)
+            return self._stream_forward(z, hidden_states)
+        return self._scan_forward(z, hidden_states)
 
     # ----------------------------------------------- stateless scan path --
-    def _scan_forward(self, z: torch.Tensor) -> torch.Tensor:
+    def _scan_forward(self, z: torch.Tensor,
+                     hidden_states: torch.Tensor) -> torch.Tensor:
         """Training / whole-sequence eval. Parallel chunk scan.
 
         session_mode off: fast weights implicitly reset every call,
@@ -223,9 +346,12 @@ class InPlaceTTTMLP(nn.Module):
         session_mode on: the scan starts from carried_delta (state from
         previous papers in the session, fp32, detached) and the new
         total delta of this sequence is staged for carry-over. Gradients
-        never cross the paper boundary, truncated-BPTT style."""
-        x0 = self.tap.current
+        never cross the paper boundary, truncated-BPTT style.
 
+        hidden_states feeds the output gate (when configured) AND, when
+        cfg.v_source="hidden_state", feeds target_conv via _v_source().
+        Keep computing z from it outside this function so the no-evolve
+        ablation path can short-circuit without touching scan logic."""
         B, N, d_ff = z.shape
         C = self.cfg.chunk_size
         w0 = self.down_proj.weight                          # [d, d_ff]
@@ -242,9 +368,11 @@ class InPlaceTTTMLP(nn.Module):
 
         if N <= C and carried is None and not self.session_mode:
             # Single chunk, no carry => no update can ever be applied.
+            # Gate isn't needed either; the only TTT term would be zero.
             return base_out
 
-        v = self._targets(x0, left_context=None)            # [B, N, d]
+        v = self._targets(self._v_source(hidden_states),
+                          left_context=None)                # [B, N, d]
 
         # Pad to a multiple of C so we can chunk with a reshape.
         n_chunks = (N + C - 1) // C
@@ -292,16 +420,23 @@ class InPlaceTTTMLP(nn.Module):
                 else self.carried_delta + total
             )
 
-        return base_out + ttt_out
+        return base_out + self._gated(ttt_out, hidden_states)
 
     # --------------------------------------------- stateful stream path --
     @torch.no_grad()
-    def _stream_forward(self, z: torch.Tensor) -> torch.Tensor:
+    def _stream_forward(self, z: torch.Tensor,
+                       hidden_states: torch.Tensor) -> torch.Tensor:
         """Autoregressive inference. Apply current fast weights, buffer
         the chunk in progress, commit an update each time a full chunk
-        completes (only if ttt_evolve is True)."""
-        x0 = self.tap.current
-        v = self._targets(x0, left_context=self.tap.prev_context)
+        completes (only if ttt_evolve is True).
+
+        hidden_states feeds the output gate (when configured), is sliced
+        per-position so gating is exact, AND -- when cfg.v_source=
+        "hidden_state" -- feeds the conv via _v_source() with the
+        per-module rolling buffer as left context."""
+        source = self._v_source(hidden_states)
+        v = self._targets(source, left_context=self._v_left_context())
+        self._update_hidden_context(hidden_states)
 
         w0 = self.down_proj.weight
         st = self.state
@@ -317,9 +452,10 @@ class InPlaceTTTMLP(nn.Module):
             # Apply with the CURRENT state, then buffer (apply-then-update).
             out = z_part @ w0.T
             if st.delta is not None:
-                out = out + self.cfg.eta * (
+                ttt_term = self.cfg.eta * (
                     z_part @ st.delta.to(z_part.dtype).transpose(-1, -2)
                 )
+                out = out + self._gated(ttt_term, hidden_states[:, pos:pos + take])
             outputs.append(out)
 
             if self.ttt_evolve:
@@ -353,9 +489,15 @@ class InPlaceTTTMLP(nn.Module):
 def patch_model_with_ttt(model, cfg: TTTConfig):
     """Replace the MLP on cfg.layer_indices with InPlaceTTTMLP and attach
     the embedding tap. Call BEFORE get_peft_model. The tap is stashed
-    on the model as `_ttt_tap` for downstream helpers."""
+    on the model as `_ttt_tap` for downstream helpers.
+
+    When cfg.v_source="hidden_state" the tap is still constructed (so the
+    module-tree helpers stay uniform) but its forward hook is NOT
+    registered -- nothing reads tap.current in that mode, so the hook
+    would just allocate per-step."""
     tap = EmbeddingTap(cfg.conv_kernel_size)
-    model.get_input_embeddings().register_forward_hook(tap.hook)
+    if cfg.v_source == "embedding":
+        model.get_input_embeddings().register_forward_hook(tap.hook)
 
     hidden = model.config.hidden_size
     dtype = next(model.parameters()).dtype
@@ -388,10 +530,26 @@ def set_ttt_stateful(model, stateful: bool):
 
 def reset_fast_weights(model):
     """Drop accumulated fast weight state, e.g. at document or session
-    boundaries, restoring the pretrained-plus-LoRA model."""
+    boundaries, restoring the pretrained-plus-LoRA model. Clears BOTH
+    the shared embedding tap's rolling buffer (used when v_source=
+    "embedding") and the per-module hidden-state buffer (used when
+    v_source="hidden_state"), so this is correct in either mode."""
     model._ttt_tap.reset_stream()
     for m in iter_ttt_modules(model):
-        m.state.reset()
+        m.reset_stream_state()
+
+
+def reset_v_left_context(model):
+    """Soft turn-boundary reset: clear ONLY the conv left-context buffer
+    that matches cfg.v_source (the embedding-tap rolling buffer or the
+    per-module hidden buffer). Leaves state.delta + pending chunk
+    buffers intact -- the chat path relies on these being the only memory
+    carried across turns. Use this instead of reset_fast_weights when you
+    want the next call's conv to start with zero left context but the
+    fast weights to keep accumulating from where they left off."""
+    model._ttt_tap.reset_stream()
+    for m in iter_ttt_modules(model):
+        m.reset_v_context()
 
 
 # ---------------------------------------------------------------------------
@@ -470,6 +628,20 @@ def mean_state_ratio(norms: dict) -> float:
     return sum(norms.values()) / len(norms) if norms else 0.0
 
 
+def gate_reg_term(model) -> torch.Tensor | float:
+    """Sum of mean-square gate outputs across TTT layers, ready to be
+    added to the training loss multiplied by TRAIN_CFG.gate_reg_weight.
+    Returns 0.0 (a Python float, not a tensor) when no module has stashed
+    a value -- gate disabled, model in eval, or the no-evolve ablation
+    path skipped the gate -- so the caller can do `loss + w * gate_reg`
+    unconditionally and the no-op cost is a multiply by zero."""
+    accum = None
+    for m in iter_ttt_modules(model):
+        if m._gate_l2 is not None:
+            accum = m._gate_l2 if accum is None else accum + m._gate_l2
+    return accum if accum is not None else 0.0
+
+
 def stream_pending_progress(model) -> tuple[int, int]:
     """Returns (pending_tokens, chunk_size) for the streaming path.
     pending_tokens is how full the not-yet-committed chunk buffer is on
@@ -508,7 +680,7 @@ def import_fast_weights(model, snapshot: dict):
 # LoRA wiring and parameter groups.
 # ===========================================================================
 _PEFT_PREFIX = "base_model.model."
-TTT_PARAM_MARKERS = ("target_conv", "w_target")
+TTT_PARAM_MARKERS = ("target_conv", "w_target", "output_gate")
 
 
 def ttt_down_suffixes(cfg: TTTConfig) -> set:

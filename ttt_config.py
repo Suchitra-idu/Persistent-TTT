@@ -152,11 +152,67 @@ class TTTConfig:
     normalize_delta_by_chunk: bool = True
 
     # Causal Conv1D kernel width for the LM-aligned target
-    # V = Conv1D(X0) @ W_target. Larger kernel gives V more left context
+    # V = Conv1D(source) @ W_target. Larger kernel gives V more left context
     # to encode in each position -- helpful when the carry needs to store
     # multi-token structure (definitions, named entities, math notation)
     # rather than just single-token features.
     conv_kernel_size: int = 8
+
+    # Source tensor that feeds target_conv. The paper uses the raw token
+    # embedding X0 ("embedding"); each TTT layer then sees the same V up
+    # to its own W_target. "hidden_state" instead feeds each TTT layer
+    # its OWN input hidden_states (post-attention, post-prior-layers),
+    # which is what every modern linear-attention paper (RWKV, RetNet,
+    # Mamba) does. Trade-off: more expressive V, but streaming inference
+    # needs per-layer rolling buffers of past hidden_states instead of
+    # the shared embedding tap.
+    v_source: str = "hidden_state"
+
+    # When True, target_conv sees PAST + CURRENT + FUTURE tokens
+    # (symmetric pad) instead of past + current only (causal left-pad).
+    # Lets V at position n encode information about positions n+1..n+K/2,
+    # which materially helps when the carry should remember multi-token
+    # structure on the right of each position (e.g. an entity completed
+    # several tokens later).
+    #
+    # WARNING: breaks the chunk-causality invariant that makes the parallel
+    # scan equivalent to a sequential apply-then-update under standard
+    # next-token-prediction training. Under CE loss, the carry now leaks
+    # ground-truth tokens from the right into earlier positions' updates,
+    # so the loss can decrease via shortcut rather than via learning. Use
+    # this with a prefill+continuation training objective (or accept the
+    # leakage for ablations). Streaming inference IGNORES this flag --
+    # future tokens are not available across call boundaries -- so the
+    # stream path remains strictly causal regardless of this setting.
+    v_bidirectional: bool = False
+
+    # Per-position output gating: output = base + sigmoid(W_g h) * eta * ttt_out
+    # When False (default), the carry is added uniformly to every position --
+    # matches the original paper formulation. When True, each TTT layer
+    # learns a per-position scalar gate from the hidden state, so the model
+    # decides where the carry should matter.
+    #
+    # Why this exists: raw linear-attention fast weights have a known
+    # training-difficulty failure mode (cumsum averaging washes out the
+    # gradient on W_target, the loss surface around any working W_target
+    # is flat). Gating opens a NEW gradient path -- the gate's own learning
+    # rewards W_target for being useful when gated on -- avoiding that
+    # starvation. Off by default so flipping on is a clean A/B.
+    output_gate: bool = False
+
+    # Bias init for the output gate. At -2.0 the gate starts at
+    # sigmoid(-2) ~= 0.12, so the carry is mostly closed by default and
+    # the model has to learn to OPEN it where it's actually useful. This
+    # is "regularization by init" -- pushes against the overfit failure
+    # mode where the gate learned to be wide-open and amplified noisy V
+    # directions on held-out data (single_paper_eval -3.9 PPL gap).
+    output_gate_bias_init: float = -2.0
+
+    # L2 regularization on the gate output, added to training loss as
+    # gate_reg_weight * mean(sigmoid(W_g h)^2). Encourages "default closed"
+    # gates more aggressively than just the bias init alone; useful when
+    # the gate is consistently high after warmup. Set to 0 to disable.
+    gate_reg_weight: float = 0.0
 
     # Frobenius norm clipping of the accumulated fast weight update at
     # inference, from the paper appendix (tau = 1e-5). Implemented as an
@@ -167,6 +223,13 @@ class TTTConfig:
     clip_enabled: bool = False
     clip_tau: float = 1e-5
     clip_at_inference_only: bool = True
+
+    def __post_init__(self):
+        if self.v_source not in ("embedding", "hidden_state"):
+            raise ValueError(
+                "v_source must be 'embedding' or 'hidden_state', "
+                f"got {self.v_source!r}"
+            )
 
 
 @dataclass
@@ -188,13 +251,20 @@ class TrainConfig:
     # converge a useful update rule.
     lr_lora: float = 3e-5          # pretrained weights adapted via LoRA
     lr_wdown: float = 2e-5         # pretrained fast weight initial state, move gently
-    lr_new_modules: float = 1e-3   
+    lr_new_modules: float = 3e-4   # Reduced from 1e-3 after the randn-init +
+                                   # 1e-3 combination produced a HARMFUL carry
+                                   # (single_paper_eval -3.9 per-paper PPL,
+                                   # monotonic with state_ratio). With zero
+                                   # W_target init we want gentle, gradient-
+                                   # respecting escape from the zero region;
+                                   # 3e-4 is slow but avoids over-eager
+                                   # learning of training-specific directions.
 
     weight_decay_full: float = 0.1
     weight_decay_lora: float = 0.0
     warmup_ratio: float = 0.02
     warmup_min_steps: int = 10
-    max_grad_norm: float = 5.0   # Catches occasional spikes (observed |g| ~ 5.5
+    max_grad_norm: float = 10.0   # Catches occasional spikes (observed |g| ~ 5.5
                                  # at random steps) without clipping the routine
                                  # ~0.5 gradient norms.
 

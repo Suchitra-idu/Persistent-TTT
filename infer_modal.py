@@ -465,11 +465,14 @@ class TTTInference:
                 next_logits = out.logits[:, -1, :]
 
         # Turn boundary: drop the within-turn KV cache (just go out of
-        # scope) and reset the embedding rolling buffer so the next
+        # scope) and reset the conv left-context buffer so the next
         # turn's causal conv starts with zero left context. TTT
         # state.delta + pending chunk buffer PERSIST -- they are the
-        # only memory carried across turns by design.
-        self.model._ttt_tap.reset_stream()
+        # only memory carried across turns by design. The helper does
+        # the right thing whether v_source is "embedding" (clears the
+        # shared tap buffer) or "hidden_state" (clears per-module).
+        from inplace_ttt import reset_v_left_context
+        reset_v_left_context(self.model)
 
         raw_with_specials = self.tokenizer.decode(
             generated, skip_special_tokens=False,

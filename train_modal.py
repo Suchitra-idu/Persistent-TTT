@@ -123,9 +123,9 @@ def train(limit_docs: int = 0, num_epochs: int = 0,
     from transformers import get_cosine_schedule_with_warmup
 
     from inplace_ttt import (
-        advance_session_state, build_param_groups, iter_ttt_modules,
-        mean_state_ratio, reset_session_state, session_state_norms,
-        set_session_mode,
+        advance_session_state, build_param_groups, gate_reg_term,
+        iter_ttt_modules, mean_state_ratio, reset_session_state,
+        session_state_norms, set_session_mode,
     )
     from model_setup import build_model
     from observability import (
@@ -333,6 +333,11 @@ def train(limit_docs: int = 0, num_epochs: int = 0,
                 labels = apply_loss_mask(ids, common_mask,
                                          first_tokens=first_n)
                 loss = model(input_ids=ids, labels=labels).loss
+                # L2 penalty on gate outputs (no-op when output_gate is
+                # off OR gate_reg_weight=0). Encourages gates to stay
+                # closed by default; the model must earn each open gate.
+                if TTT_CFG.output_gate and TTT_CFG.gate_reg_weight > 0:
+                    loss = loss + TTT_CFG.gate_reg_weight * gate_reg_term(model)
 
                 # Anomaly guard: a nonfinite loss must not poison the
                 # accumulated gradients. Skip backward, count, alert.
@@ -433,7 +438,7 @@ def train(limit_docs: int = 0, num_epochs: int = 0,
                         f"state/W0 {metrics.get('session/state_ratio_mean', 0):.2e}"
                     )
                     # If grad/new stays ~0 while grad/lora is healthy, the
-                    # X0 tap or target computation is broken. Stop and debug.
+                    # V source or target computation is broken. Stop and debug.
                     # If session/state_ratio_* climbs steadily past ~1e-1,
                     # unbounded fast weight growth; add forgetting.
                     running = 0.0
