@@ -34,26 +34,35 @@ TOKENS_EST_COLUMN = "tokens_est"   # cheap length pre-filter, no tokenizing
 # seen the papers used to measure fast weight memory.
 HOLDOUT_LAST_N = 200
 
-# Model identity. Switch sizes for cheap iteration vs the full run:
-#   TTT_MODEL_SIZE=0.6B modal run ...   # fast experiments
-#   TTT_MODEL_SIZE=8B   modal run ...   # default, the real run
+# Model identity. Default is the small variant for cheap iteration;
+# flip to 8B for the full run via the env var:
+#   modal run ...                       # default, Qwen3-0.6B
+#   TTT_MODEL_SIZE=8B modal run ...     # the real run
 # TTT_BASE_MODEL fully overrides if you need a non-Qwen3 path (rare).
 # The rest of the code is model-size invariant: NUM_LAYERS and the TTT
 # layer schedule are derived from model.config.num_hidden_layers in
 # model_setup.build_model, so changing this env var is the ONLY edit
 # needed to swap sizes.
-MODEL_SIZE = os.environ.get("TTT_MODEL_SIZE", "8B")
+MODEL_SIZE = os.environ.get("TTT_MODEL_SIZE", "0.6B")
 BASE_MODEL = os.environ.get("TTT_BASE_MODEL", f"Qwen/Qwen3-{MODEL_SIZE}")
+
+# TTT layer schedule. stride=2 + start=1 yields 14 TTT layers on Qwen3-0.6B
+# (28 transformer blocks), up from 9 at stride=3. Fast weight capacity is
+# a bigger fraction of total model capacity on the small model, so we can
+# afford denser placement. Override via env if you want the old every-3rd
+# schedule or something else.
+LAYER_STRIDE = int(os.environ.get("TTT_LAYER_STRIDE", "2"))
+LAYER_START = int(os.environ.get("TTT_LAYER_START", "1"))
 
 
 def derive_ttt_layer_indices(num_layers: int,
-                             stride: int = 3,
-                             start: int = 2) -> tuple:
+                             stride: int = LAYER_STRIDE,
+                             start: int = LAYER_START) -> tuple:
     """Every `stride`-th layer starting at `start`, capped at num_layers-1.
-    Default (stride=3, start=2) reproduces the every-3rd-layer schedule:
-        Qwen3-8B  (36 layers) -> (2, 5, 8, 11, 14, 17, 20, 23, 26, 29, 32, 35)
-        Qwen3-0.6B (28 layers) -> (2, 5, 8, 11, 14, 17, 20, 23, 26)
-    Doubles fast-weight capacity vs the paper's every-6th baseline by
+    Default (stride=2, start=1) places TTT on alternating layers:
+        Qwen3-0.6B (28 layers) -> 14 TTT layers (1, 3, 5, ..., 27)
+        Qwen3-8B   (36 layers) -> 18 TTT layers (1, 3, 5, ..., 35)
+    Quadruples fast-weight capacity vs the paper's every-6th baseline by
     distributing TTT sites across more depths."""
     return tuple(range(start, num_layers, stride))
 
@@ -133,15 +142,21 @@ class TTTConfig:
     # Inner-loop learning rate eta for the fast weight update
     # W <- W + eta * V^T Z. NOT verified against the official repo,
     # tune on the overfit-100-papers run before the full run.
-    eta: float = 1e-3
+    # Bumped from 1e-2 because eta gates the gradient on W_target
+    # (output is linear in W_target with coefficient eta), so a small
+    # eta starves W_target's gradient signal in a vicious cycle.
+    eta: float = 1e-1
 
     # Divide each chunk delta by chunk_size so eta's scale is roughly
     # independent of C. Set False to match a raw-sum formulation.
     normalize_delta_by_chunk: bool = True
 
     # Causal Conv1D kernel width for the LM-aligned target
-    # V = Conv1D(X0) @ W_target. Verify against the official repo.
-    conv_kernel_size: int = 4
+    # V = Conv1D(X0) @ W_target. Larger kernel gives V more left context
+    # to encode in each position -- helpful when the carry needs to store
+    # multi-token structure (definitions, named entities, math notation)
+    # rather than just single-token features.
+    conv_kernel_size: int = 8
 
     # Frobenius norm clipping of the accumulated fast weight update at
     # inference, from the paper appendix (tau = 1e-5). Implemented as an
@@ -173,13 +188,15 @@ class TrainConfig:
     # converge a useful update rule.
     lr_lora: float = 3e-5          # pretrained weights adapted via LoRA
     lr_wdown: float = 2e-5         # pretrained fast weight initial state, move gently
-    lr_new_modules: float = 2e-4   # Conv1D + W_target, fresh and zero-init
+    lr_new_modules: float = 1e-3   
 
     weight_decay_full: float = 0.1
     weight_decay_lora: float = 0.0
     warmup_ratio: float = 0.02
     warmup_min_steps: int = 10
-    max_grad_norm: float = 10.0
+    max_grad_norm: float = 5.0   # Catches occasional spikes (observed |g| ~ 5.5
+                                 # at random steps) without clipping the routine
+                                 # ~0.5 gradient norms.
 
     # LoRA. Alpha at 2x rank per current practice.
     lora_r: int = 32
@@ -231,8 +248,14 @@ class TrainConfig:
     # away from syntactic glue. Two effects:
     #   1. LoRA overfits less on small corpora, preserving base ppl.
     #   2. TTT modules see a sharper retention-critical training signal.
-    # Set loss_mask_enabled=False for the unchanged-baseline behavior.
     # 1.0 disables masking even when loss_mask_enabled=True.
+    #
+    # Disabled by default because masking starves the indirect-gradient
+    # path that W_target depends on (gradient on V at masked positions
+    # comes only via downstream unmasked positions through the carry,
+    # and at keep_fraction=0.5 that's at least halved). Enable for runs
+    # where you specifically want the LoRA-corruption protection on
+    # small-data overfit experiments.
     #
     # keep_fraction semantics: the mask covers the top-K most-frequent
     # tokens whose cumulative occurrences in the *baseline distribution*
@@ -243,7 +266,7 @@ class TrainConfig:
     # in-general-English tokens accounting for half of reference
     # positions"; under in-corpus fallback it means "drop the top-N
     # most-common-in-our-papers tokens." Both modes use the same field.
-    loss_mask_enabled: bool = True
+    loss_mask_enabled: bool = False
     loss_mask_keep_fraction: float = 0.5
 
     # Domain-content protect-list. Token ids reached by tokenizing any of

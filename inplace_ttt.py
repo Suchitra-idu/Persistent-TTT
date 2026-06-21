@@ -139,8 +139,17 @@ class InPlaceTTTMLP(nn.Module):
             self.target_conv.weight.zero_()
             self.target_conv.weight[:, :, -1] = 1.0
 
-        # Zero init => V = 0 => fast weight delta = 0 at step 0.
-        self.w_target = nn.Parameter(torch.zeros(hidden_size, hidden_size))
+        # Small-randn init (NOT zero) because the output is linear in W_target
+        # with coefficient eta, so the gradient on W_target is gated by eta;
+        # at exact zero init, the symmetry breaks SO slowly that W_target
+        # never escapes its starting region within a reasonable run.
+        # std=1e-3 gives state_ratio ~10-20% at init (visible but not
+        # destabilizing), the LoRA + base can absorb the perturbation.
+        # Trade: model is no longer bit-exact identity at init -- sanity_check
+        # zeroes W_target temporarily to test the wiring property separately.
+        self.w_target = nn.Parameter(
+            torch.randn(hidden_size, hidden_size) * 1e-3
+        )
 
         # Runtime switches, controlled via the module-tree helpers below.
         self.ttt_evolve = True       # False => behaves as a vanilla MLP (+LoRA)
@@ -251,7 +260,18 @@ class InPlaceTTTMLP(nn.Module):
         # i sees only deltas from chunks < i (strict chunk causality).
         deltas = torch.einsum("bkcd,bkcf->bkdf", vc, zc)    # [B, k, d, d_ff]
         if self.cfg.normalize_delta_by_chunk:
-            deltas = deltas / C
+            # Divide each chunk by its ACTUAL non-padded token count.
+            # All but the last chunk are full (size C); the last chunk has
+            # C - pad real tokens. Dividing the last chunk by C would
+            # silently halve its contribution -- common when papers
+            # aren't a multiple of chunk_size.
+            chunk_sizes = [C] * n_chunks
+            if pad:
+                chunk_sizes[-1] = C - pad
+            chunk_sizes = torch.tensor(
+                chunk_sizes, dtype=deltas.dtype, device=deltas.device,
+            ).clamp_min(1).view(1, n_chunks, 1, 1)
+            deltas = deltas / chunk_sizes
         cum = deltas.cumsum(dim=1)
         cum = torch.cat([torch.zeros_like(cum[:, :1]), cum[:, :-1]], dim=1)
         if carried is not None:

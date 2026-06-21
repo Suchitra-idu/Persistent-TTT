@@ -558,38 +558,62 @@ def build_reference_counts(
 # ---------------------------------------------------------------------------
 # Wiring check. Run this FIRST, before any training.
 # ---------------------------------------------------------------------------
-@app.function(image=image, gpu=GPU, volumes=VOLUMES, timeout=60 * 30)
+@app.function(image=image, gpu=GPU, volumes=VOLUMES, timeout=60 * 10)
 def sanity_check():
-    """Zero-init TTT + fresh LoRA (B=0) must reproduce the base model
-    exactly. A non-tiny diff means the wiring is broken; do not train."""
-    import torch
-    from transformers import AutoModelForCausalLM, AutoTokenizer
+    """Verifies the TTT wiring property: if W_target = 0, the TTT path
+    contributes exactly zero (V = conv(X0) @ 0 = 0, delta = V^T Z = 0,
+    ttt_out = eta * Z @ delta^T = 0). Single model load + on/off compare.
 
+    The default init is no longer zero (small randn breaks the zero-symmetry
+    trap on gradient), so we zero W_target temporarily for this test. We're
+    testing the math of the path, not the chosen init magnitude.
+
+    Also prints the diff at the actual init magnitudes so you can see how
+    much the TTT path contributes at start-of-training."""
+    import torch
+    from transformers import AutoTokenizer
+
+    from inplace_ttt import iter_ttt_modules, set_ttt_evolve, set_ttt_stateful
     from model_setup import build_model
 
     tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
+    # Need N > chunk_size so the scan path actually fires (the early
+    # return at N <= C would mask wiring bugs in the chunked math).
     ids = tokenizer(
         "Test-time training updates a subset of weights during inference. "
-        * 40,
+        * 20,
         return_tensors="pt",
     ).input_ids.cuda()
+    print(f"input tokens: {ids.shape[1]} (chunk_size={TTT_CFG.chunk_size})")
 
-    base = AutoModelForCausalLM.from_pretrained(
-        BASE_MODEL, torch_dtype=torch.bfloat16, device_map="cuda"
-    ).eval()
+    model, _ = build_model(trainable=False)
+    model.eval()
+    set_ttt_stateful(model, False)
+
+    # First, the diff at the actual training-time init magnitudes. Should be
+    # small but nonzero -- this is what training starts from.
+    set_ttt_evolve(model, True)
     with torch.no_grad():
-        ref = base(ids).logits
-    del base
-    torch.cuda.empty_cache()
-
-    patched, _ = build_model(trainable=False)
-    patched.eval()
+        logits_on_real = model(ids).logits
+    set_ttt_evolve(model, False)
     with torch.no_grad():
-        got = patched(ids).logits
+        logits_off = model(ids).logits
+    diff_real = (logits_on_real - logits_off).abs().max().item()
+    print(f"max |logit diff| at REAL init (small-randn W_target) = "
+          f"{diff_real:.4f}")
 
-    diff = (ref - got).abs().max().item()
-    print(f"max |logit diff| = {diff:.6f}")
-    assert diff < 1e-2, "identity check FAILED, wiring is broken"
+    # Now the strict wiring check: zero W_target and re-test. The diff must
+    # be exact-zero (modulo bf16 precision) or the wiring is broken.
+    for m in iter_ttt_modules(model):
+        m.w_target.data.zero_()
+
+    set_ttt_evolve(model, True)
+    with torch.no_grad():
+        logits_on_zero = model(ids).logits
+
+    diff_zero = (logits_on_zero - logits_off).abs().max().item()
+    print(f"max |logit diff| at ZEROED W_target = {diff_zero:.6f}")
+    assert diff_zero < 1e-3, "TTT path not exact-zero at W_target=0, wiring broken"
     print("identity check passed")
 
 

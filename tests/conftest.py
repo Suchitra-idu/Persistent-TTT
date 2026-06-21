@@ -47,6 +47,12 @@ def module_factory(cfg):
         if randomize:
             torch.nn.init.normal_(m.w_target, std=0.5)
             torch.nn.init.normal_(m.target_conv.weight, std=0.5)
+        else:
+            # Force exact zeros so the zero-init identity / conv-grad-blocked
+            # tests still hold. The runtime default is small-randn now
+            # because that's what real training wants, but those tests
+            # specifically check the zero-init properties.
+            m.w_target.data.zero_()
         m.eval()
         return m, mlp, tap
 

@@ -66,7 +66,10 @@ def reference(m, mlp, papers, carry_across):
         for s in range(0, z.shape[0], C):
             zc, vc = z[s:s + C], v[s:s + C]
             out[s:s + C] = zc @ (W0 + CFG.eta * S).T   # apply
-            S = S + (vc.T @ zc) / C                    # then update
+            # Divide by actual non-padded chunk size (not constant C) so the
+            # last partial chunk isn't silently under-normalized. Matches
+            # the chunked implementation's per-chunk-size division.
+            S = S + (vc.T @ zc) / max(vc.shape[0], 1)  # then update
         outs.append(out)
     return outs
 
