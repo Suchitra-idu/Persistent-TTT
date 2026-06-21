@@ -49,13 +49,13 @@ def chat_stop_token_ids(tokenizer) -> set:
     """Token ids that should end a chat turn. Includes the tokenizer's
     pad and eos tokens, plus every CHAT_SPECIAL_TOKENS marker known to
     the vocab. <|im_start|> mid-stream means the model is faking a new
-    turn, so it's a stop too."""
+    turn, so it's a stop too. A missing pad_token_id is just skipped --
+    do NOT default to id 0, that is a real token in the vocab, not a
+    stop sentinel."""
     ids = set()
     pad_id = getattr(tokenizer, "pad_token_id", None)
     if pad_id is not None:
         ids.add(int(pad_id))
-    else:
-        ids.add(0)
     if tokenizer.eos_token_id is not None:
         ids.add(int(tokenizer.eos_token_id))
     unk = getattr(tokenizer, "unk_token_id", None)

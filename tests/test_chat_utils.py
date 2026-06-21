@@ -4,8 +4,9 @@ Chat-mode helper tests. Pure CPU torch, no model, no Modal.
 The integration code (KV cache lifecycle, fast-weight persistence) lives
 in infer_modal.py and can't be tested without a real model -- but the
 pure helpers below cover every choice that wouldn't be obvious from
-reading the code: top-1 retention at top_p=0, greedy-at-T=0, prompt
-format with and without a system prompt, stop-token assembly.
+reading the code: top-1 retention at top_p=0, greedy-at-T=0, stop-token
+assembly. Prompt format is now produced by tokenizer.apply_chat_template
+inside infer_modal.py so there is no standalone formatter to test.
 """
 
 import sys
@@ -13,9 +14,7 @@ import types
 
 import torch
 
-from chat_utils import (
-    chat_stop_token_ids, format_user_turn, sample_top_p,
-)
+from chat_utils import chat_stop_token_ids, sample_top_p
 
 
 # ----------------------------------------------------------- sampling --
@@ -74,36 +73,6 @@ def test_sample_top_p_bf16_logits_dont_break_softmax():
     """sample_top_p casts to float; bf16 inputs must work."""
     logits = torch.tensor([[1.0, 3.0, 2.0]], dtype=torch.bfloat16)
     assert sample_top_p(logits, temperature=0.0, top_p=0.9) == 1
-
-
-# ------------------------------------------------------------ prompt --
-def test_format_user_turn_no_system_prompt():
-    assert format_user_turn("hi there") == "User: hi there\nAssistant: "
-
-
-def test_format_user_turn_with_system_prompt():
-    text = format_user_turn("hi", system_prompt="Be brief.")
-    assert text == "Be brief.\n\nUser: hi\nAssistant: "
-
-
-def test_format_user_turn_strips_system_prompt_trailing_whitespace():
-    text = format_user_turn("hi", system_prompt="Be brief.\n\n")
-    assert text == "Be brief.\n\nUser: hi\nAssistant: "
-
-
-def test_format_user_turn_blank_system_prompt_treated_as_absent():
-    """Empty / whitespace-only system prompts must not add a phantom
-    "\\n\\nUser:" leading separator -- the prompt should be byte-equal
-    to the no-system case so the experiment isn't affected by an
-    accidentally-empty --system flag."""
-    assert format_user_turn("hi", system_prompt="") == "User: hi\nAssistant: "
-    assert format_user_turn("hi", system_prompt="   \n") == "User: hi\nAssistant: "
-
-
-def test_format_user_turn_preserves_multiline_message():
-    text = format_user_turn("line one\nline two")
-    assert "line one\nline two" in text
-    assert text.endswith("Assistant: ")
 
 
 # ------------------------------------------------------ stop tokens --

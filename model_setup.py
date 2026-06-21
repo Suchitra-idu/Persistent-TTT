@@ -3,11 +3,15 @@ Model assembly shared by the training and inference apps.
 
 One function builds the full stack in the one order that is correct:
 
-    base Qwen3-8B (bf16) -> patch TTT layers -> wrap with LoRA
+    base Qwen3 (bf16) -> patch TTT layers -> wrap with LoRA
     -> unfreeze TTT trainables -> (optionally) load a checkpoint
 
 Keeping this in one place means train and inference can never assemble
 the model differently (DRY), which would silently corrupt evaluation.
+
+Model-size invariant: NUM_LAYERS and the TTT layer schedule are derived
+from model.config.num_hidden_layers right after the HF load, so swapping
+BASE_MODEL (e.g. 8B -> 0.6B via TTT_MODEL_SIZE) needs no edits here.
 """
 
 import os
@@ -20,7 +24,7 @@ from inplace_ttt import (
     patch_model_with_ttt,
     unfreeze_ttt_params,
 )
-from ttt_config import BASE_MODEL, NUM_LAYERS, TTT_CFG, TRAIN_CFG
+from ttt_config import BASE_MODEL, TTT_CFG, TRAIN_CFG, derive_ttt_layer_indices
 
 
 def build_model(adapter_path: str | None = None,
@@ -40,6 +44,14 @@ def build_model(adapter_path: str | None = None,
         device_map="cuda",
     )
 
+    # Derive the TTT layer schedule from the actual loaded model. Populated
+    # once, idempotent across train/infer (re-deriving with the same
+    # num_layers yields the same tuple). Skip if a caller has already
+    # supplied an explicit schedule (e.g. tests, ablations).
+    num_layers = model.config.num_hidden_layers
+    if TTT_CFG.layer_indices is None:
+        TTT_CFG.layer_indices = derive_ttt_layer_indices(num_layers)
+
     # 1. TTT patch must precede LoRA so PEFT sees and wraps the gate/up
     #    projections living inside InPlaceTTTMLP.
     patch_model_with_ttt(model, TTT_CFG)
@@ -53,9 +65,9 @@ def build_model(adapter_path: str | None = None,
     else:
         from peft import get_peft_model
         lora_cfg = build_lora_config(
-            NUM_LAYERS, TTT_CFG,
+            num_layers, TTT_CFG,
             r=TRAIN_CFG.lora_r, alpha=TRAIN_CFG.lora_alpha,
-            dropout=TRAIN_CFG.lora_dropout, #Maybe NOT needed 
+            dropout=TRAIN_CFG.lora_dropout,
         )
         model = get_peft_model(model, lora_cfg)
 

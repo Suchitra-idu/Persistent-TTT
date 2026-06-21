@@ -9,8 +9,9 @@ import pytest
 import torch
 
 from train_utils import (
-    apply_loss_mask, build_common_token_mask, load_reference_counts,
-    protect_numeric_tokens, protect_token_ids,
+    apply_loss_mask, apply_protect_passes, build_common_token_mask,
+    load_reference_counts, protect_by_predicate, protect_numeric_tokens,
+    protect_symbol_tokens, protect_token_ids,
 )
 
 
@@ -457,6 +458,135 @@ def test_protect_numeric_tokens_mutates_in_place():
     protect_numeric_tokens(mask, tok)
     assert mask.data_ptr() == before_ptr
     assert not bool(mask[3])
+
+
+# ----------------------------------------------- symbol-token protect --
+def test_protect_symbol_tokens_unmasks_listed_symbols():
+    """Math operators (=, @, ^, _, +, -, etc.) are content in scientific
+    corpora and would otherwise always be in the masked set. The
+    symbol predicate matches the decoded form against an explicit
+    allowlist; ids in the list get unmasked."""
+    mask = torch.zeros(20, dtype=torch.bool)
+    mask[[5, 6, 7]] = True
+    tok = FakeTokenizer({}, {5: '=', 6: '@', 7: '^'})
+    flipped = protect_symbol_tokens(mask, tok, {"=", "@", "^"})
+    assert flipped == [5, 6, 7]
+    assert not any(bool(mask[t]) for t in [5, 6, 7])
+
+
+def test_protect_symbol_tokens_handles_leading_space_form():
+    """' =' and '=' are the same symbol; the predicate must match on
+    the stripped form so both BPE variants protect their respective
+    id."""
+    mask = torch.zeros(20, dtype=torch.bool)
+    mask[[5, 9]] = True
+    tok = FakeTokenizer({}, {5: '=', 9: ' ='})
+    flipped = protect_symbol_tokens(mask, tok, {"="})
+    assert flipped == [5, 9]
+
+
+def test_protect_symbol_tokens_skips_non_listed():
+    mask = torch.zeros(20, dtype=torch.bool)
+    mask[[5, 6]] = True
+    tok = FakeTokenizer({}, {5: '=', 6: '%'})    # % not in allowlist
+    flipped = protect_symbol_tokens(mask, tok, {"="})
+    assert flipped == [5]
+    assert bool(mask[6])                          # % stayed masked
+
+
+def test_protect_symbol_tokens_accepts_tuple_or_set():
+    """Both apply_protect_passes (which passes the config tuple
+    directly) and inline callers (which might pass a set) need to
+    work without explicit conversion."""
+    mask = torch.zeros(20, dtype=torch.bool)
+    mask[5] = True
+    tok = FakeTokenizer({}, {5: '='})
+    # Tuple form (config-shaped):
+    assert protect_symbol_tokens(mask, tok, ("=",)) == [5]
+    mask[5] = True
+    # Set form:
+    assert protect_symbol_tokens(mask, tok, {"="}) == [5]
+
+
+def test_protect_symbol_tokens_empty_symbols_is_noop():
+    mask = torch.zeros(20, dtype=torch.bool)
+    mask[5] = True
+    tok = FakeTokenizer({}, {5: '='})
+    flipped = protect_symbol_tokens(mask, tok, set())
+    assert flipped == []
+    assert bool(mask[5])
+
+
+def test_protect_symbol_tokens_default_list_includes_critical_ops():
+    """The default config list must include the operators called out
+    by the user as content-bearing in ML papers: '=', '@', '^', '_',
+    '\\' (LaTeX), '|' (norms). Regression guard for a future shrink."""
+    from ttt_config import TRAIN_CFG
+    defaults = set(TRAIN_CFG.loss_mask_protect_symbols)
+    for required in ("=", "@", "^", "_", "\\", "|"):
+        assert required in defaults, required
+
+
+# ------------------------------------------------- predicate-base --
+def test_protect_by_predicate_unmasks_only_matching_ids():
+    """The base helper for protect_numeric and protect_symbol. Caller
+    supplies the predicate; ids whose decoded-stripped form returns
+    True get unmasked."""
+    mask = torch.zeros(20, dtype=torch.bool)
+    mask[[1, 2, 3]] = True
+    tok = FakeTokenizer({}, {1: "abc", 2: "xyz", 3: "abc"})
+    flipped = protect_by_predicate(mask, tok, lambda s: s == "abc")
+    assert flipped == [1, 3]
+    assert bool(mask[2])
+
+
+def test_protect_by_predicate_skips_already_unmasked():
+    mask = torch.zeros(20, dtype=torch.bool)
+    mask[1] = True                                # 2 NOT masked
+    tok = FakeTokenizer({}, {1: "abc", 2: "abc"})
+    flipped = protect_by_predicate(mask, tok, lambda s: s == "abc")
+    assert flipped == [1]
+
+
+def test_protect_by_predicate_handles_no_masked_ids():
+    mask = torch.zeros(10, dtype=torch.bool)
+    tok = FakeTokenizer({}, {})
+    assert protect_by_predicate(mask, tok, lambda s: True) == []
+
+
+# ------------------------------------------------- apply_protect_passes --
+def test_apply_protect_passes_aggregates_all_three_freed_counts():
+    """Smoke test the orchestrator: returns the three counts in the
+    documented order (terms, numeric, symbols) and applies them in
+    that order. Caller relies on this for the startup log."""
+    mask = torch.zeros(30, dtype=torch.bool)
+    mask[[10, 20, 25]] = True
+    tok = FakeTokenizer(
+        {" diff": [10], "diff": [10]},        # term match (single-piece >=3 chars)
+        {10: " diff", 20: "0", 25: "="},
+    )
+    n_t, n_n, n_s = apply_protect_passes(
+        mask, tok, protect_terms=("diff",),
+        protect_numeric=True, protect_symbols=("=",),
+    )
+    assert n_t == 1
+    assert n_n == 1
+    assert n_s == 1
+    assert not any(bool(mask[t]) for t in [10, 20, 25])
+
+
+def test_apply_protect_passes_all_disabled_is_noop():
+    """Each protect path independently disable-able. With all three
+    off, the mask is untouched and all counts are zero."""
+    mask = torch.zeros(20, dtype=torch.bool)
+    mask[5] = True
+    tok = FakeTokenizer({}, {5: '='})
+    n_t, n_n, n_s = apply_protect_passes(
+        mask, tok, protect_terms=None,
+        protect_numeric=False, protect_symbols=(),
+    )
+    assert (n_t, n_n, n_s) == (0, 0, 0)
+    assert bool(mask[5])                           # untouched
 
 
 def test_protect_token_ids_default_list_is_non_empty():

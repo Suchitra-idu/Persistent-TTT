@@ -3,7 +3,9 @@ In-Place Test-Time Training (In-Place TTT) for HuggingFace Qwen3 models.
 
 Implements the mechanism from "In-Place Test-Time Training"
 (ByteDance Seed, arXiv 2604.06169) as a drop-in replacement for the
-gated MLP block on a subset of layers.
+gated MLP block on a subset of layers. Model-size invariant: works on
+any Qwen3 variant (0.6B, 1.7B, 8B, ...) -- the TTT layer schedule and
+LoRA regex are derived from model.config.num_hidden_layers at load time.
 
 Mechanism per TTT layer, for activations Z = silu(gate(H)) * up(H)
 and LM-aligned targets V = CausalConv1D(X0) @ W_target, chunked into
@@ -36,8 +38,8 @@ Critical wiring rules, do not break these:
     initial state W0). LoRA must never target down_proj on TTT layers;
     build_lora_config() guarantees this via a regex.
   * W_target is zero-initialized, so at step 0 every TTT layer is
-    bit-equivalent to the original MLP and the model reproduces base
-    Qwen3-8B exactly. Verify with sanity_check_identity().
+    bit-equivalent to the original MLP and the model reproduces the
+    base model exactly. Verify with sanity_check_identity().
     Zero W_target also blocks gradient to the conv kernel until
     W_target moves, exactly like LoRA's B=0 init. Expected behavior.
 """
@@ -57,7 +59,7 @@ from ttt_config import TTTConfig
 
 # ===========================================================================
 # Embedding tap. One hook on embed_tokens makes the token embeddings X0
-# available to every TTT layer without changing model signatures .
+# available to every TTT layer without changing model signatures.
 # ===========================================================================
 class EmbeddingTap:
     """Captures embed_tokens output each forward and, in stateful mode,
@@ -330,7 +332,8 @@ class InPlaceTTTMLP(nn.Module):
 # ===========================================================================
 def patch_model_with_ttt(model, cfg: TTTConfig):
     """Replace the MLP on cfg.layer_indices with InPlaceTTTMLP and attach
-    the embedding tap. Call BEFORE get_peft_model. Returns the tap."""
+    the embedding tap. Call BEFORE get_peft_model. The tap is stashed
+    on the model as `_ttt_tap` for downstream helpers."""
     tap = EmbeddingTap(cfg.conv_kernel_size)
     model.get_input_embeddings().register_forward_hook(tap.hook)
 
@@ -341,7 +344,6 @@ def patch_model_with_ttt(model, cfg: TTTConfig):
         device = layer.mlp.down_proj.weight.device
         layer.mlp = InPlaceTTTMLP(layer.mlp, hidden, cfg, tap).to(device=device, dtype=dtype)
     model._ttt_tap = tap
-    return tap
 
 
 def iter_ttt_modules(model):
@@ -441,6 +443,13 @@ def stateful_state_norms(model) -> dict:
     return out
 
 
+def mean_state_ratio(norms: dict) -> float:
+    """Mean of per-layer ||eta * delta||_F / ||W0||_F. Empty dict (no TTT
+    modules patched, or norms not computed) is 0.0 so callers can log
+    unconditionally."""
+    return sum(norms.values()) / len(norms) if norms else 0.0
+
+
 def stream_pending_progress(model) -> tuple[int, int]:
     """Returns (pending_tokens, chunk_size) for the streaming path.
     pending_tokens is how full the not-yet-committed chunk buffer is on
@@ -520,15 +529,27 @@ def build_lora_config(num_layers: int, cfg: TTTConfig,
     )
 
 
+def _classify_ttt_param(name: str, ttt_down: set) -> str | None:
+    """Map a parameter name to its training group, or None for params
+    that are not part of TTT/LoRA training. Single source of truth so
+    unfreeze and the optimizer grouping can't disagree about which name
+    belongs where."""
+    if "lora_" in name:
+        return "lora"
+    if any(marker in name for marker in TTT_PARAM_MARKERS):
+        return "new"
+    if any(name.endswith(suffix) for suffix in ttt_down):
+        return "wdown"
+    return None
+
+
 def unfreeze_ttt_params(model, cfg: TTTConfig):
     """PEFT freezes everything non-LoRA; re-enable grads for the TTT
     trainables, which we manage outside PEFT on purpose (modules_to_save
     has known sharp edges with custom modules)."""
     ttt_down = ttt_down_suffixes(cfg)
     for name, p in model.named_parameters():
-        if any(marker in name for marker in TTT_PARAM_MARKERS):
-            p.requires_grad_(True)
-        elif any(name.endswith(suffix) for suffix in ttt_down):
+        if _classify_ttt_param(name, ttt_down) in ("new", "wdown"):
             p.requires_grad_(True)
 
 
@@ -542,14 +563,10 @@ def build_param_groups(model, cfg: TTTConfig, lr_lora: float,
     for name, p in model.named_parameters():
         if not p.requires_grad:
             continue
-        if "lora_" in name:
-            groups["lora"].append(p)
-        elif any(marker in name for marker in TTT_PARAM_MARKERS):
-            groups["new"].append(p)
-        elif any(name.endswith(suffix) for suffix in ttt_down):
-            groups["wdown"].append(p)
-        else:
+        group = _classify_ttt_param(name, ttt_down)
+        if group is None:
             raise RuntimeError(f"Unclassified trainable parameter: {name}")
+        groups[group].append(p)
     optim_groups = [
         {"params": groups["lora"], "lr": lr_lora, "weight_decay": wd_lora},
         {"params": groups["wdown"], "lr": lr_wdown, "weight_decay": wd_full},

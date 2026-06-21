@@ -7,7 +7,7 @@ plain local Python process. Deploy the app once, then run this script:
     modal deploy infer_modal.py
     python chat_client.py --ckpt step_232
 
-Sampling defaults follow Qwen3-8B's recommended thinking-mode setup
+Sampling defaults follow Qwen3's recommended thinking-mode setup
 (temp=0.6, top_p=0.95, top_k=20); the Qwen team explicitly warns against
 greedy decoding (endless repetition), so don't pass --temperature 0.
 
@@ -65,7 +65,7 @@ def main():
                         "decode, and thinking trace for each turn")
     args = p.parse_args()
 
-    # Sampling defaults per Qwen3-8B model card.
+    # Sampling defaults per the Qwen3 model card.
     if args.temperature is None:
         args.temperature = 0.6 if args.enable_thinking else 0.7
     if args.top_p is None:
@@ -76,7 +76,7 @@ def main():
 
     info = _reset(engine, args)
     _print_ready(info, args)
-    print("commands: /save <name>, /reset, /quit")
+    print("commands: /m (multiline), /save <name>, /reset, /quit")
     print()
 
     while True:
@@ -85,6 +85,25 @@ def main():
         except (EOFError, KeyboardInterrupt):
             print()
             break
+        # Multiline / paste mode. Plain input() returns once per
+        # newline, so pasting an N-line block fires N separate turns
+        # (each on a fragmentary line). /m collects lines until an
+        # empty one, then sends the joined block as a single turn.
+        if user == "/m":
+            print("[multiline: end with an empty line]")
+            lines = []
+            while True:
+                try:
+                    line = input("... ")
+                except (EOFError, KeyboardInterrupt):
+                    print()
+                    break
+                if not line:
+                    break
+                lines.append(line)
+            user = "\n".join(lines).strip()
+            if not user:
+                continue
         # Strip any accidental "you> " or "bot> " prefixes from pasted
         # content -- they're the REPL's own scaffolding and the model
         # has no business seeing them as user input. Loop in case the

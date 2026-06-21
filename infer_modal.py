@@ -5,8 +5,9 @@ The key knob everywhere is `evolve`:
     evolve=True   fast weights update chunk-by-chunk as text streams in
     evolve=False  fast weight evolution is frozen; any previously
                   accumulated (or imported) state is still APPLIED,
-                  and with no state loaded the model behaves as plain
-                  Qwen3-8B + LoRA. This is your eta-ablation in one flag.
+                  and with no state loaded the model behaves as the
+                  plain base model + LoRA. This is your eta-ablation
+                  in one flag.
 
 Usage
 -----
@@ -169,8 +170,8 @@ class TTTInference:
         import torch
 
         from inplace_ttt import (
-            advance_session_state, reset_session_state, session_state_norms,
-            set_session_mode,
+            advance_session_state, mean_state_ratio, reset_session_state,
+            session_state_norms, set_session_mode,
         )
         from train_utils import (
             SessionItem, build_session_items, equal_token_slices,
@@ -230,8 +231,7 @@ class TTTInference:
                 # return in _scan_forward never stages a delta), so the
                 # column doubles as a sanity check on the toggle.
                 norms = session_state_norms(self.model)
-                state_ratio = (sum(norms.values()) / len(norms)
-                               if norms else 0.0)
+                state_ratio = mean_state_ratio(norms)
                 out.append({
                     "paper_idx": int(item.doc_idx),
                     "slice_in_paper": slice_in_paper[item.doc_idx],
@@ -253,11 +253,19 @@ class TTTInference:
     @modal.method()
     def generate(self, prompt: str, evolve: bool = True,
                  max_new_tokens: int = 512,
-                 fast_weight_snapshot: dict | None = None) -> dict:
+                 fast_weight_snapshot: dict | None = None,
+                 temperature: float = 0.7, top_p: float = 0.9,
+                 seed: int | None = None,
+                 do_sample: bool = True) -> dict:
         """Streaming generation. Fast weights evolve over the prompt and
         the generated tokens (chunk by chunk) when evolve=True. Returns
         the text plus a snapshot of the accumulated fast weights so a
-        later session can resume from them (cross-session persistence)."""
+        later session can resume from them (cross-session persistence).
+
+        seed: if set, torch.manual_seed is called before model.generate
+        so two calls with the same seed and the same prompt produce
+        comparable samples (used by holdout_generate to A/B carry on
+        vs off)."""
         import torch
 
         from inplace_ttt import export_fast_weights, import_fast_weights
@@ -266,11 +274,15 @@ class TTTInference:
         if fast_weight_snapshot:
             import_fast_weights(self.model, fast_weight_snapshot)
 
+        if seed is not None:
+            torch.manual_seed(seed)
+            torch.cuda.manual_seed_all(seed)
+
         ids = self.tokenizer(prompt, return_tensors="pt").input_ids.cuda()
         with torch.no_grad():
             out = self.model.generate(
-                ids, max_new_tokens=max_new_tokens, do_sample=True,
-                temperature=0.7, top_p=0.9,
+                ids, max_new_tokens=max_new_tokens, do_sample=do_sample,
+                temperature=temperature, top_p=top_p,
                 pad_token_id=self.tokenizer.eos_token_id,
             )
         text = self.tokenizer.decode(out[0, ids.shape[1]:],
@@ -373,7 +385,7 @@ class TTTInference:
         is reset. TTT fast weights persist across turns within the same
         container and are the SOLE channel for conversation memory.
 
-        Default sampling matches Qwen3-8B's recommended thinking-mode
+        Default sampling matches the Qwen3 recommended thinking-mode
         setup (temp=0.6, top_p=0.95, top_k=20); the team explicitly
         warns against greedy decoding (endless repetition).
 
@@ -400,8 +412,8 @@ class TTTInference:
             strip_chat_specials,
         )
         from inplace_ttt import (
-            set_ttt_evolve, set_ttt_stateful, stateful_state_norms,
-            stream_pending_progress,
+            mean_state_ratio, set_ttt_evolve, set_ttt_stateful,
+            stateful_state_norms, stream_pending_progress,
         )
 
         # Idempotent per-turn mode set -- NO fast-weight reset here, so
@@ -478,7 +490,7 @@ class TTTInference:
         # chunk_size tells you which: low ratio with pending climbing
         # toward chunk_size means carry hasn't engaged yet but will.
         norms = stateful_state_norms(self.model)
-        state_ratio = (sum(norms.values()) / len(norms)) if norms else 0.0
+        state_ratio = mean_state_ratio(norms)
         pending_tokens, chunk_size = stream_pending_progress(self.model)
 
         return {
@@ -647,6 +659,55 @@ def generate_cli(prompt: str, ckpt: str = "", evolve: bool = True,
     print(out["text"])
     n = len(out["fast_weights"])
     print(f"\n[{n} TTT layers accumulated fast weight state]")
+
+
+@app.local_entrypoint()
+def holdout_generate(n_papers: int = 1, prefix_chars: int = 1200,
+                     max_new_tokens: int = 120, seed: int = 0,
+                     ckpt: str = "", temperature: float = 0.7,
+                     top_p: float = 0.9, greedy: bool = False):
+    """Sanity-check what the model ACTUALLY outputs, carry on vs off.
+    Useful when ppl numbers look bad and you want to know whether the
+    carry path is producing semi-coherent text or pure garbage.
+
+    For each held-out paper: take the first prefix_chars characters as
+    prompt, then generate max_new_tokens continuations twice with the
+    same seed -- once with evolve=True (carry on), once with
+    evolve=False (eta=0 ablation). Print side-by-side. Pass --greedy
+    to make sampling deterministic so the ONLY thing differing between
+    the two outputs is the carry."""
+    engine = TTTInference(ckpt=ckpt)
+    texts = engine.fetch_holdout_texts.remote(n_papers, seed)
+    if not texts:
+        print("no holdout papers available")
+        return
+
+    do_sample = not greedy
+    for i, text in enumerate(texts):
+        prompt = text[:prefix_chars]
+        print("=" * 80)
+        print(f"paper {i+1}  (prefix {len(prompt)} chars, "
+              f"greedy={greedy}, T={temperature}, top_p={top_p}, seed={seed})")
+        print("-" * 80)
+        print("PROMPT (tail):")
+        print(prompt[-400:] if len(prompt) > 400 else prompt)
+        print("-" * 80)
+        carry = engine.generate.remote(
+            prompt, evolve=True, max_new_tokens=max_new_tokens,
+            temperature=temperature, top_p=top_p, seed=seed,
+            do_sample=do_sample,
+        )
+        fresh = engine.generate.remote(
+            prompt, evolve=False, max_new_tokens=max_new_tokens,
+            temperature=temperature, top_p=top_p, seed=seed,
+            do_sample=do_sample,
+        )
+        print("CARRY ON (evolve=True):")
+        print(carry["text"])
+        print("-" * 80)
+        print("CARRY OFF (evolve=False):")
+        print(fresh["text"])
+        print()
 
 
 @app.local_entrypoint()

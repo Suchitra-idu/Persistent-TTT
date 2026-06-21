@@ -6,6 +6,7 @@ and training hyperparameters. Both the training app and the inference
 app import from here so the two can never drift apart (DRY).
 """
 
+import os
 from dataclasses import dataclass, field
 
 
@@ -33,14 +34,28 @@ TOKENS_EST_COLUMN = "tokens_est"   # cheap length pre-filter, no tokenizing
 # seen the papers used to measure fast weight memory.
 HOLDOUT_LAST_N = 200
 
-BASE_MODEL = "Qwen/Qwen3-8B"
+# Model identity. Switch sizes for cheap iteration vs the full run:
+#   TTT_MODEL_SIZE=0.6B modal run ...   # fast experiments
+#   TTT_MODEL_SIZE=8B   modal run ...   # default, the real run
+# TTT_BASE_MODEL fully overrides if you need a non-Qwen3 path (rare).
+# The rest of the code is model-size invariant: NUM_LAYERS and the TTT
+# layer schedule are derived from model.config.num_hidden_layers in
+# model_setup.build_model, so changing this env var is the ONLY edit
+# needed to swap sizes.
+MODEL_SIZE = os.environ.get("TTT_MODEL_SIZE", "8B")
+BASE_MODEL = os.environ.get("TTT_BASE_MODEL", f"Qwen/Qwen3-{MODEL_SIZE}")
 
-# Qwen3-8B architecture facts used for layer selection and the LoRA regex.
-NUM_LAYERS = 36
 
-# Every 3rd layer. Doubles fast-weight capacity vs the paper's every-6th
-# baseline by distributing TTT sites across more depths.
-TTT_LAYER_INDICES = (2, 5, 8, 11, 14, 17, 20, 23, 26, 29, 32, 35)
+def derive_ttt_layer_indices(num_layers: int,
+                             stride: int = 3,
+                             start: int = 2) -> tuple:
+    """Every `stride`-th layer starting at `start`, capped at num_layers-1.
+    Default (stride=3, start=2) reproduces the every-3rd-layer schedule:
+        Qwen3-8B  (36 layers) -> (2, 5, 8, 11, 14, 17, 20, 23, 26, 29, 32, 35)
+        Qwen3-0.6B (28 layers) -> (2, 5, 8, 11, 14, 17, 20, 23, 26)
+    Doubles fast-weight capacity vs the paper's every-6th baseline by
+    distributing TTT sites across more depths."""
+    return tuple(range(start, num_layers, stride))
 
 
 # Default protect-list for the content-token loss mask. These terms
@@ -101,7 +116,11 @@ LOSS_MASK_DEFAULT_PROTECT_TERMS = (
 class TTTConfig:
     """Hyperparameters of the In-Place TTT mechanism itself."""
 
-    layer_indices: tuple = TTT_LAYER_INDICES
+    # Populated lazily from model.config.num_hidden_layers in
+    # model_setup.build_model so swapping BASE_MODEL needs no edits here.
+    # Tests construct TTTConfig with an explicit tuple; runtime code must
+    # go through build_model before reading this.
+    layer_indices: tuple | None = None
 
     # Chunk size for the chunk-wise fast weight update.
     # The paper's ablation found 512 and 1024 both good; 1024 is more
@@ -143,7 +162,7 @@ class TrainConfig:
     min_doc_tokens: int = 2048     # drop docs too short to span multiple chunks
     micro_batch_size: int = 1      # fixed at 1 by the session loop; fast
                                    # weight carry is per-stream by design
-    grad_accum_steps: int = 4     # effective batch ~ 256k tokens
+    grad_accum_steps: int = 16     # effective batch ~ 256k tokens
     num_epochs: int = 1
 
     # Three parameter groups, three learning rates. lr_lora was 1e-4 but
@@ -160,7 +179,7 @@ class TrainConfig:
     weight_decay_lora: float = 0.0
     warmup_ratio: float = 0.02
     warmup_min_steps: int = 10
-    max_grad_norm: float = 1.0
+    max_grad_norm: float = 10.0
 
     # LoRA. Alpha at 2x rank per current practice.
     lora_r: int = 32
@@ -270,6 +289,24 @@ class TrainConfig:
     # are mostly enumeration glue ("1. Introduction") rather than
     # content -- but on arxiv-ml-16k they are content.
     loss_mask_protect_numeric: bool = True
+
+    # Predicate-protect: math symbols. In a scientific corpus, single-
+    # character math operators ARE content -- they signal equations
+    # (=), tensor operations (@), exponents (^), subscripts (_), LaTeX
+    # commands (\), and norms (|). The term-based protect can't catch
+    # them (the length gate rejects single-character pieces); the
+    # numeric predicate doesn't match (non-digit). This is the third
+    # predicate path, exactly the same shape as protect_numeric but
+    # with a configurable symbol set.
+    #
+    # Defaults to unambiguously math-leaning ASCII operators. NOT
+    # included by default: parentheses/brackets/braces (heavy prose
+    # use), periods/commas/colons/semicolons (pure punctuation), and
+    # unicode math glyphs (often multi-byte BPE-split). Add to the
+    # tuple if your corpus uses them as content.
+    loss_mask_protect_symbols: tuple = (
+        "=", "@", "^", "_", "\\", "+", "-", "*", "/", "|", "<", ">",
+    )
 
     # Mask the first N tokens of every paper-START item (i.e. items
     # whose SessionItem.start == 0). Every arxiv paper opens with

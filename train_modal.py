@@ -1,5 +1,9 @@
 """
-Modal app for In-Place TTT continual pretraining on Qwen3-8B.
+Modal app for In-Place TTT continual pretraining on Qwen3 (any size).
+
+The BASE_MODEL is set via TTT_MODEL_SIZE / TTT_BASE_MODEL env vars; see
+ttt_config.py. Defaults to Qwen/Qwen3-8B. The training stack is
+model-size invariant.
 
 Usage
 -----
@@ -25,8 +29,8 @@ import time
 import modal
 
 from ttt_config import (
-    CKPT_MOUNT, CKPT_VOLUME_NAME, HF_CACHE_MOUNT, HF_CACHE_VOLUME_NAME,
-    TEXT_COLUMN, TOKENS_EST_COLUMN, TRAIN_CFG, TTT_CFG,
+    BASE_MODEL, CKPT_MOUNT, CKPT_VOLUME_NAME, HF_CACHE_MOUNT,
+    HF_CACHE_VOLUME_NAME, TEXT_COLUMN, TOKENS_EST_COLUMN, TRAIN_CFG, TTT_CFG,
 )
 
 # ---------------------------------------------------------------------------
@@ -120,7 +124,8 @@ def train(limit_docs: int = 0, num_epochs: int = 0,
 
     from inplace_ttt import (
         advance_session_state, build_param_groups, iter_ttt_modules,
-        reset_session_state, session_state_norms, set_session_mode,
+        mean_state_ratio, reset_session_state, session_state_norms,
+        set_session_mode,
     )
     from model_setup import build_model
     from observability import (
@@ -176,6 +181,8 @@ def train(limit_docs: int = 0, num_epochs: int = 0,
         enabled=cfg.wandb_enabled, project=cfg.wandb_project,
         run_name=cfg.run_name, job_type="train",
         config={**asdict(cfg), **asdict(TTT_CFG),
+                "base_model": BASE_MODEL,
+                "num_layers": model.config.num_hidden_layers,
                 "trainable_params_M": n_train / 1e6},
     )
     ttt_modules = list(iter_ttt_modules(model))
@@ -227,10 +234,11 @@ def train(limit_docs: int = 0, num_epochs: int = 0,
                 keep_fraction=cfg.loss_mask_keep_fraction,
             )
         n_before = int(common_mask.sum())
-        n_freed_terms, n_freed_numeric = apply_protect_passes(
+        n_freed_terms, n_freed_numeric, n_freed_symbols = apply_protect_passes(
             common_mask, tokenizer,
             cfg.loss_mask_protect_terms,
             cfg.loss_mask_protect_numeric,
+            cfg.loss_mask_protect_symbols,
         )
         common_mask = common_mask.cuda()
         n_final = int(common_mask.sum())
@@ -238,6 +246,7 @@ def train(limit_docs: int = 0, num_epochs: int = 0,
               f"masked (kf={cfg.loss_mask_keep_fraction:.2f}, "
               f"protect-terms freed {n_freed_terms}, "
               f"protect-numeric freed {n_freed_numeric}, "
+              f"protect-symbols freed {n_freed_symbols}, "
               f"initial {n_before}); "
               f"first_tokens={cfg.loss_mask_first_tokens} at paper-start items")
     # Slicing inflates the number of forward/backward passes per epoch.
@@ -349,10 +358,7 @@ def train(limit_docs: int = 0, num_epochs: int = 0,
                 window_tokens += n_tok
                 total_tokens += n_tok
                 state_norms = session_state_norms(model)
-                state_ratio_mean = (
-                    sum(state_norms.values()) / len(state_norms)
-                    if state_norms else 0.0
-                )
+                state_ratio_mean = mean_state_ratio(state_norms)
                 micro_log = {
                     "micro/step": micro,
                     "micro/paper_loss": loss.item(),
@@ -467,7 +473,7 @@ def save_checkpoint(model, run_dir: str, step: int):
 @app.function(image=image, volumes=VOLUMES, secrets=SECRETS,
               timeout=60 * 60)
 def build_reference_counts(
-    dataset_id: str = "wikitext",
+    dataset_id: str = "Salesforce/wikitext",
     dataset_config: str = "wikitext-103-raw-v1",
     split: str = "train",
     text_column: str = "text",
@@ -489,9 +495,8 @@ def build_reference_counts(
     """
     import torch
     from datasets import load_dataset
-    from transformers import AutoTokenizer
+    from transformers import AutoConfig, AutoTokenizer
 
-    from ttt_config import BASE_MODEL
     from train_utils import count_unigrams
 
     print(f"loading {dataset_id} / {dataset_config} / {split} from HF Hub")
@@ -501,8 +506,12 @@ def build_reference_counts(
     print(f"loaded {len(ds)} rows; text column = {text_column!r}")
 
     tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
-    vocab_size = max(tokenizer.vocab_size, len(tokenizer))
-    print(f"tokenizer vocab_size = {vocab_size}")
+    # Align on model.config.vocab_size (padded embedding, e.g. 151936)
+    # rather than tokenizer.vocab_size (BPE entries, e.g. 151669) so the
+    # saved counts tensor matches what train() validates against.
+    vocab_size = AutoConfig.from_pretrained(BASE_MODEL).vocab_size
+    print(f"tokenizer vocab_size = {tokenizer.vocab_size}, "
+          f"model.config.vocab_size = {vocab_size} (using padded)")
 
     # Batched tokenization. Wikitext rows are short paragraph chunks,
     # some are empty header lines; the tokenizer handles those fine.
@@ -551,13 +560,12 @@ def build_reference_counts(
 # ---------------------------------------------------------------------------
 @app.function(image=image, gpu=GPU, volumes=VOLUMES, timeout=60 * 30)
 def sanity_check():
-    """Zero-init TTT + fresh LoRA (B=0) must reproduce base Qwen3-8B
+    """Zero-init TTT + fresh LoRA (B=0) must reproduce the base model
     exactly. A non-tiny diff means the wiring is broken; do not train."""
     import torch
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
     from model_setup import build_model
-    from ttt_config import BASE_MODEL
 
     tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
     ids = tokenizer(
@@ -639,7 +647,6 @@ def diagnose_loss_mask(limit_docs: int = 0, top_k: int = 80,
     import torch
     from transformers import AutoTokenizer
 
-    from ttt_config import BASE_MODEL
     from train_utils import (
         apply_protect_passes, common_mask_from_counts,
         load_reference_counts,
@@ -722,10 +729,11 @@ def diagnose_loss_mask(limit_docs: int = 0, top_k: int = 80,
     for label, k, counts in snapshots:
         mask = common_mask_from_counts(counts, keep_fraction=kf)
         n_pre_protect = int(mask.sum())
-        freed_terms, freed_numeric = apply_protect_passes(
+        freed_terms, freed_numeric, freed_symbols = apply_protect_passes(
             mask, tokenizer,
             TRAIN_CFG.loss_mask_protect_terms,
             TRAIN_CFG.loss_mask_protect_numeric,
+            TRAIN_CFG.loss_mask_protect_symbols,
         )
         total = int(counts.sum().item())
         n_masked = int(mask.sum())
@@ -739,6 +747,7 @@ def diagnose_loss_mask(limit_docs: int = 0, top_k: int = 80,
             "n_pre_protect": n_pre_protect,
             "freed_terms": freed_terms,
             "freed_numeric": freed_numeric,
+            "freed_symbols": freed_symbols,
             "n_masked": n_masked, "kept_share": kept_share,
         })
 
@@ -749,15 +758,15 @@ def diagnose_loss_mask(limit_docs: int = 0, top_k: int = 80,
     print(f"\n=== {header} ===")
     label_w = max(20, max(len(s["label"]) for s in slices) + 1)
     print(f"  {'slice':<{label_w}} {'docs':>6} {'tokens':>14} "
-          f"{'pre_protect':>11} {'free_t':>7} {'free_n':>7} "
+          f"{'pre_protect':>11} {'free_t':>7} {'free_n':>7} {'free_s':>7} "
           f"{'masked_ids':>11} {'pos_kept':>9}")
     for s in slices:
         print(f"  {s['label']:<{label_w}} {s['k']:>6} {s['tokens']:>14,} "
               f"{s['n_pre_protect']:>11} {s['freed_terms']:>7} "
-              f"{s['freed_numeric']:>7} "
+              f"{s['freed_numeric']:>7} {s['freed_symbols']:>7} "
               f"{s['n_masked']:>11} {s['kept_share']:>8.1%}")
-    print("  free_t = freed by protect-terms list, "
-          "free_n = freed by protect-numeric predicate.")
+    print("  free_t = protect-terms, free_n = protect-numeric, "
+          "free_s = protect-symbols.")
 
     # ----------------------------------- section 2: top-K masked tokens --
     where = "external ref" if use_reference else "full set"

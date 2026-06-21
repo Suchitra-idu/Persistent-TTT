@@ -123,7 +123,7 @@ def param_health(named_groups: dict, wdown_init: list,
     """Heavier health metrics, intended for every param_log_every steps.
     Flat learning curves on w_target/conv after warmup mean the new
     components are not training; large wdown_drift means the fast weight
-    initial state is being pushed far from pretrained Qwen3-8B."""
+    initial state is being pushed far from the pretrained base."""
     import torch
 
     out = {}
@@ -141,10 +141,10 @@ def param_health(named_groups: dict, wdown_init: list,
 
 
 def session_metrics(state_norms: dict) -> dict:
+    from inplace_ttt import mean_state_ratio
+
     out = {f"session/state_ratio_L{i}": v for i, v in state_norms.items()}
     if state_norms:
-        out["session/state_ratio_mean"] = (
-            sum(state_norms.values()) / len(state_norms)
-        )
+        out["session/state_ratio_mean"] = mean_state_ratio(state_norms)
         out["session/state_ratio_max"] = max(state_norms.values())
     return out

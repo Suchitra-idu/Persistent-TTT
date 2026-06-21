@@ -315,17 +315,17 @@ def apply_loss_mask(ids, common_mask, first_tokens: int = 0):
     return labels
 
 
-def apply_protect_passes(mask, tokenizer, protect_terms, protect_numeric: bool):
-    """Apply both protect-list and protect-numeric overlays on top of
-    a frequency-built mask. The two callers (train() and
-    diagnose_loss_mask()) ran the same three-statement dance before
-    this extraction; keeping it in one place makes the
-    "what's safe to never mask" policy a single source of truth.
+def apply_protect_passes(mask, tokenizer, protect_terms,
+                         protect_numeric: bool, protect_symbols):
+    """Apply all three protect overlays on top of a frequency-built
+    mask. The two callers (train() and diagnose_loss_mask()) ran the
+    same dance before this extraction; keeping it in one place makes
+    the "what's safe to never mask" policy a single source of truth.
 
-    Mutates `mask` in place. Returns (n_freed_terms, n_freed_numeric)
-    so the caller can log the deltas. protect_terms may be empty/None
-    to disable the term path; protect_numeric=False disables the
-    digit-predicate path. Either being off is a zero-cost no-op."""
+    Mutates `mask` in place. Returns (n_freed_terms, n_freed_numeric,
+    n_freed_symbols) so the caller can log the deltas. Any input may
+    be empty/None/False to disable that path -- each disabled overlay
+    is a zero-cost no-op."""
     n_freed_terms = 0
     if protect_terms:
         touched = protect_token_ids(mask, tokenizer, protect_terms)
@@ -333,7 +333,12 @@ def apply_protect_passes(mask, tokenizer, protect_terms, protect_numeric: bool):
     n_freed_numeric = 0
     if protect_numeric:
         n_freed_numeric = len(protect_numeric_tokens(mask, tokenizer))
-    return n_freed_terms, n_freed_numeric
+    n_freed_symbols = 0
+    if protect_symbols:
+        n_freed_symbols = len(
+            protect_symbol_tokens(mask, tokenizer, protect_symbols)
+        )
+    return n_freed_terms, n_freed_numeric, n_freed_symbols
 
 
 def load_reference_counts(path: str, expected_vocab_size: int):
@@ -365,35 +370,68 @@ def load_reference_counts(path: str, expected_vocab_size: int):
     return counts, blob
 
 
+def protect_by_predicate(mask, tokenizer, predicate):
+    """Force-unmask token ids whose decoded form (stripped) satisfies
+    a user-supplied predicate. The base building block for any rule
+    that needs to walk the masked set and selectively flip ids based
+    on what the token decodes to.
+
+    Iterates only over currently-masked indices, so the cost is
+    O(|mask.sum()|) tokenizer.decode calls (~200 at kf=0.5) rather
+    than O(vocab_size) (~150k). Mutates `mask` in place. Returns the
+    sorted list of token ids flipped from masked to unmasked.
+
+    predicate(decoded_stripped) -> bool. Receives the decoded token
+    text with leading/trailing whitespace stripped; should return
+    True to unmask. Pure whitespace tokens decode to '' (falsy after
+    strip) -- if the predicate accepts '', that's the predicate's
+    explicit choice."""
+    indices = mask.nonzero(as_tuple=True)[0].tolist()
+    flipped = []
+    for tid in indices:
+        decoded = tokenizer.decode([int(tid)]).strip()
+        if predicate(decoded):
+            flipped.append(int(tid))
+            mask[tid] = False
+    return sorted(flipped)
+
+
 def protect_numeric_tokens(mask, tokenizer):
-    """Force-unmask token ids whose decoded form (stripped) is a
-    pure-digit string. Numbers in scientific corpora carry content --
-    hyperparameter values, benchmark scores, model sizes, dataset
-    statistics -- and the loss should always see them. The term-based
-    protect-list can't handle digits cleanly (single-character pieces
-    fail the length gate), hence the separate predicate path.
+    """Force-unmask token ids whose decoded form is a pure-digit
+    string. Numbers in scientific corpora carry content --
+    hyperparameter values, benchmark scores, model sizes -- so the
+    loss should always see them. The term-based protect-list can't
+    handle digits cleanly (single-character pieces fail its length
+    gate), hence the predicate path.
 
     Catches '0'..'9' and multi-digit pieces ('100', '1024', etc.) in
     whatever form BPE chose to emit them, including the leading-space
     form (' 1', ' 100'). Tokens with any non-digit character (' 1.',
     '0)', 'e-4', '1st') are left untouched; treat those as
-    number-adjacent rather than pure numerical content.
+    number-adjacent rather than pure numerical content. str.isdigit()
+    is True on non-empty all-digit strings AND on unicode
+    superscript/subscript digits ('²', '₁'), which is the looser
+    semantics we want."""
+    return protect_by_predicate(
+        mask, tokenizer, lambda s: bool(s) and s.isdigit(),
+    )
 
-    Iterates only over the currently-masked indices so the cost is
-    O(|mask.sum()|) tokenizer.decode calls (~200 at kf=0.5) rather
-    than O(vocab_size) (~150k). Mutates `mask` in place. Returns the
-    sorted list of token ids flipped from masked to unmasked."""
-    indices = mask.nonzero(as_tuple=True)[0].tolist()
-    flipped = []
-    for tid in indices:
-        decoded = tokenizer.decode([int(tid)]).strip()
-        # str.isdigit() is True on non-empty all-digit strings AND on
-        # unicode superscript/subscript digits ('²', '₁'). The latter
-        # are content-bearing too, so the looser semantics are fine.
-        if decoded and decoded.isdigit():
-            flipped.append(int(tid))
-            mask[tid] = False
-    return sorted(flipped)
+
+def protect_symbol_tokens(mask, tokenizer, symbols):
+    """Force-unmask token ids whose decoded form is exactly one of
+    `symbols`. Math operators ('=', '@', '^', '_', '+', '-', '*',
+    '/', '\\', '|') are content in scientific corpora -- equations,
+    tensor ops, subscripts, superscripts, LaTeX -- and the loss
+    should always see them. Like digits, they're single-character
+    tokens that the term-based protect can't catch.
+
+    `symbols` is any container supporting `in`; pass a set/tuple of
+    decoded strings. Stripped match: ' =' and '=' both protect the
+    same id if either is requested."""
+    symbol_set = frozenset(symbols)
+    return protect_by_predicate(
+        mask, tokenizer, lambda s: s in symbol_set,
+    )
 
 
 def protect_token_ids(mask, tokenizer, terms, min_piece_chars: int = 3):
