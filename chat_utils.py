@@ -1,41 +1,29 @@
-"""
-Pure helpers for the interactive chat REPL.
-
-Lives at the project root (no Modal / GPU / model dependency) so the
-sampling and prompt-formatting logic is unit-testable on CPU. The
-TTTInference class imports from here; the harder-to-test glue (KV
-cache, fast-weight bookkeeping) stays in infer_modal.py.
-"""
+"""Pure helpers for the interactive chat REPL (CPU unit-testable, no Modal/GPU deps)."""
 
 
-# ChatML scaffolding tokens. Single source of truth for both "stop on
-# this token id during sampling" (chat_stop_token_ids) and "strip from
-# the decoded string before presenting it" (strip_chat_specials), so
-# adding a new marker can't fall out of sync.
+# Single source of truth for stop-token ids and decoded-string stripping.
 CHAT_SPECIAL_TOKENS = ("<|im_end|>", "<|endoftext|>", "<|im_start|>")
 
 
 def sample_top_p(logits, temperature: float, top_p: float,
                  top_k: int = 0) -> int:
     """Temperature + top_k + nucleus sampling on a [1, V] logits row.
-    Returns the sampled token id. Greedy when temperature <= 0; top_p=1
-    disables the nucleus filter; top_k<=0 disables top-k. The top-1
-    token is always kept even at top_p=0, so the function never returns
-    a degenerate token. Qwen3's recommended setup is top_k=20."""
+
+    Greedy when temperature <= 0; top_p=1 disables nucleus; top_k<=0 disables top-k.
+    The top-1 token is always kept even at top_p=0. Qwen3 recommends top_k=20.
+    """
     import torch
 
     if temperature <= 0:
         return int(logits.argmax(dim=-1).item())
     scaled = logits.float() / temperature
     if top_k and top_k > 0:
-        # Mask everything below the kth highest logit to -inf before softmax.
         kth = scaled.topk(top_k, dim=-1).values[..., -1:]
         scaled = scaled.masked_fill(scaled < kth, float("-inf"))
     probs = torch.softmax(scaled, dim=-1)
     sorted_probs, sorted_idx = probs.sort(dim=-1, descending=True)
     cumulative = sorted_probs.cumsum(dim=-1)
-    # Drop the suffix whose cumulative prob exceeds top_p, but always
-    # keep the highest-prob token (shift the mask one position right).
+    # Always keep the highest-prob token (shift mask one right).
     mask = cumulative > top_p
     mask[..., 1:] = mask[..., :-1].clone()
     mask[..., 0] = False
@@ -46,12 +34,10 @@ def sample_top_p(logits, temperature: float, top_p: float,
 
 
 def chat_stop_token_ids(tokenizer) -> set:
-    """Token ids that should end a chat turn. Includes the tokenizer's
-    pad and eos tokens, plus every CHAT_SPECIAL_TOKENS marker known to
-    the vocab. <|im_start|> mid-stream means the model is faking a new
-    turn, so it's a stop too. A missing pad_token_id is just skipped --
-    do NOT default to id 0, that is a real token in the vocab, not a
-    stop sentinel."""
+    """Token ids that should end a chat turn.
+
+    A missing pad_token_id is skipped; do NOT default to id 0 (a real vocab token).
+    """
     ids = set()
     pad_id = getattr(tokenizer, "pad_token_id", None)
     if pad_id is not None:
@@ -70,9 +56,7 @@ def chat_stop_token_ids(tokenizer) -> set:
 
 
 def strip_chat_specials(text: str) -> str:
-    """Remove ChatML scaffolding markers from a decoded string.
-    Shares CHAT_SPECIAL_TOKENS with chat_stop_token_ids so adding a new
-    marker updates both sites at once."""
+    """Remove ChatML scaffolding markers from a decoded string."""
     for tok in CHAT_SPECIAL_TOKENS:
         text = text.replace(tok, "")
     return text
@@ -81,11 +65,8 @@ def strip_chat_specials(text: str) -> str:
 def split_thinking(text: str) -> tuple[str, str]:
     """Split an assistant response into (thinking, answer).
 
-    Only splits when BOTH <think> and </think> are present, with the
-    opener before the closer. Otherwise treats the entire string as the
-    answer -- this avoids the asymmetric edge case where a stray
-    </think> with no opener would silently dump real answer text into
-    the thinking field."""
+    Only splits when BOTH <think> and </think> are present with opener before closer.
+    """
     open_tag = "<think>"
     close_tag = "</think>"
     open_idx = text.find(open_tag)

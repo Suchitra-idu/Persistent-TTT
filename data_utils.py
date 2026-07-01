@@ -1,10 +1,7 @@
-"""
-Dataset access shared by the training and inference apps (DRY).
+"""Dataset access shared by the training and inference apps.
 
-open_dataset() auto-detects the storage layout, split_holdout() defines
-the single train/eval boundary used everywhere. Keeping the holdout
-split in one shared function is what makes the contamination guarantee
-real; if train and eval computed it independently they could drift.
+Keeping split_holdout in one shared function is what makes the contamination
+guarantee real; train and eval must not compute the boundary independently.
 """
 
 import glob
@@ -14,9 +11,7 @@ from ttt_config import DATASET_SOURCE, HOLDOUT_LAST_N
 
 
 def open_dataset():
-    """Load the parquet dataset from the HF Hub (downloads cache to
-    HF_HOME on the cache volume, so the Hub is only hit once). A local
-    directory path still works as a fallback for ad-hoc experiments."""
+    """Load the parquet dataset from the HF Hub; a local dir path also works."""
     from datasets import load_dataset, load_from_disk
 
     src = DATASET_SOURCE
@@ -37,9 +32,9 @@ def open_dataset():
 
 
 def split_holdout(ds):
-    """Train = everything except the newest HOLDOUT_LAST_N papers, which
-    are reserved for contamination-free session evaluation. The slow
-    weights (LoRA, W_down, W_target, Conv1D) must never have trained on
-    the papers used to measure fast weight memory."""
+    """Train = everything except the newest HOLDOUT_LAST_N papers (reserved for eval).
+
+    Slow weights must never train on the papers used to measure fast weight memory.
+    """
     cut = len(ds) - HOLDOUT_LAST_N
     return ds.select(range(cut)), ds.select(range(cut, len(ds)))

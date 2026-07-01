@@ -1,7 +1,4 @@
-"""
-Shared fixtures. Tiny dimensions, CPU, fp64, no Modal, no GPU, no model
-downloads. The whole suite runs in seconds.
-"""
+"""Shared fixtures. Tiny dimensions, CPU, fp64, no Modal/GPU/downloads."""
 
 import os
 import sys
@@ -22,21 +19,18 @@ D, DFF, C, KERNEL = 8, 16, 4, 3
 
 @pytest.fixture
 def cfg():
-    # Pin v_source / v_bidirectional explicitly so tests stay independent
-    # of whatever production defaults TTTConfig is currently set to. Tests
-    # exercising the other modes override these with dataclasses.replace.
+    # Pin v_source / v_bidirectional / output_gate explicitly so tests
+    # stay independent of production defaults. Tests exercising other modes
+    # override these with dataclasses.replace.
     return TTTConfig(layer_indices=(0,), chunk_size=C, eta=0.05,
                      conv_kernel_size=KERNEL,
                      normalize_delta_by_chunk=True,
-                     v_source="embedding", v_bidirectional=False)
+                     v_source="embedding", v_bidirectional=False,
+                     output_gate=False)
 
 
 @pytest.fixture
 def module_factory(cfg):
-    """Returns (ttt_module, plain_mlp, tap). randomize=True makes the
-    targets nonzero so updates actually happen; False keeps the exact
-    zero-init that guarantees identity with the base MLP."""
-
     def make(randomize: bool = True, seed: int = 0, config: TTTConfig = None):
         torch.manual_seed(seed)
         mlp = types.SimpleNamespace(
@@ -53,9 +47,7 @@ def module_factory(cfg):
             torch.nn.init.normal_(m.target_conv.weight, std=0.5)
         else:
             # Force exact zeros so the zero-init identity / conv-grad-blocked
-            # tests still hold. The runtime default is small-randn now
-            # because that's what real training wants, but those tests
-            # specifically check the zero-init properties.
+            # tests still hold. Runtime default is small-randn.
             m.w_target.data.zero_()
         m.eval()
         return m, mlp, tap
@@ -64,7 +56,6 @@ def module_factory(cfg):
 
 
 def scan(m, tap, x0):
-    """Run one sequence through the stateless scan path."""
     tap.current = x0.unsqueeze(0)
     with torch.no_grad():
         return m(x0.unsqueeze(0))[0]

@@ -1,21 +1,13 @@
-"""
-Local REPL for the deployed TTTInference class.
+"""Local REPL for the deployed TTTInference class.
 
-`modal run` swallows stdin, so the interactive chat loop has to live in a
-plain local Python process. Deploy the app once, then run this script:
+`modal run` swallows stdin, so the interactive chat loop runs as a plain
+local Python process:
 
     modal deploy infer_modal.py
     python chat_client.py --ckpt step_232
 
-Sampling defaults follow Qwen3's recommended thinking-mode setup
-(temp=0.6, top_p=0.95, top_k=20); the Qwen team explicitly warns against
-greedy decoding (endless repetition), so don't pass --temperature 0.
-
-Per-turn config (system prompt, enable_thinking, sampling) is passed on
-every chat_turn call, so a Modal container that scales down and
-respawns can keep serving with no recovery dance. The only thing the
-new container can't recover is the prior fast-weight carry -- that
-died with the old container.
+Sampling defaults follow Qwen3's recommended thinking-mode setup; do not
+pass --temperature 0 (Qwen team warns greedy decoding causes endless repetition).
 """
 
 import argparse
@@ -85,10 +77,7 @@ def main():
         except (EOFError, KeyboardInterrupt):
             print()
             break
-        # Multiline / paste mode. Plain input() returns once per
-        # newline, so pasting an N-line block fires N separate turns
-        # (each on a fragmentary line). /m collects lines until an
-        # empty one, then sends the joined block as a single turn.
+        # /m collects lines until empty, then sends the block as one turn.
         if user == "/m":
             print("[multiline: end with an empty line]")
             lines = []
@@ -104,10 +93,7 @@ def main():
             user = "\n".join(lines).strip()
             if not user:
                 continue
-        # Strip any accidental "you> " or "bot> " prefixes from pasted
-        # content -- they're the REPL's own scaffolding and the model
-        # has no business seeing them as user input. Loop in case the
-        # paste duplicated the prefix.
+        # Strip accidental "you> "/"bot> " prefixes from pasted content.
         while user.startswith(("you>", "bot>")):
             user = user[4:].lstrip()
         if not user:
@@ -146,12 +132,7 @@ def main():
             continue
 
         print(f"bot> {reply['text']}")
-        # Above the --debug gate because these two numbers together tell
-        # you whether TTT carry is engaged:
-        #   state_ratio grows turn-to-turn => carry is accumulating
-        #   state_ratio == 0 but pending climbing toward chunk_size =>
-        #     mechanism is alive, just hasn't committed a chunk yet
-        #   state_ratio == 0 AND pending flat => carry is actually dead
+        # state_ratio + pending together tell you whether TTT carry is engaged.
         print(f"  [state_ratio={reply['state_ratio_mean']:.3e}  "
               f"pending={reply['pending_tokens']}/{reply['chunk_size']}]")
         if args.debug:

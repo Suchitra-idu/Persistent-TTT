@@ -1,17 +1,5 @@
-"""
-Numerical verification of the chunk-wise scan path against a naive
-sequential apply-then-update reference. Runs locally on CPU in seconds,
-no Modal, no GPU, no Qwen download.
-
-Run after ANY change to InPlaceTTTMLP:
-
-    pip install torch --index-url https://download.pytorch.org/whl/cpu
-    python tests/test_scan_math.py
-
-Checks
-  1. per-document mode  == sequential loop with per-doc resets
-  2. session carry mode == sequential loop with persistent state
-"""
+"""Numerical verification of the chunk-wise scan path against a naive
+sequential apply-then-update reference."""
 
 import sys
 import os
@@ -31,7 +19,8 @@ torch.set_default_dtype(torch.float64)
 D, DFF, C = 8, 16, 4
 CFG = TTTConfig(layer_indices=(0,), chunk_size=C, eta=0.05,
                 conv_kernel_size=3, normalize_delta_by_chunk=True,
-                v_source="embedding", v_bidirectional=False)
+                v_source="embedding", v_bidirectional=False,
+                output_gate=False)
 
 
 def build_module():
@@ -51,7 +40,6 @@ def build_module():
 
 
 def reference(m, mlp, papers, carry_across):
-    """Naive sequential apply-then-update over chunks."""
     W0 = mlp.down_proj.weight.clone()
     S = torch.zeros_like(W0)
     outs = []
@@ -66,11 +54,10 @@ def reference(m, mlp, papers, carry_across):
         out = torch.zeros(z.shape[0], D)
         for s in range(0, z.shape[0], C):
             zc, vc = z[s:s + C], v[s:s + C]
-            out[s:s + C] = zc @ (W0 + CFG.eta * S).T   # apply
+            out[s:s + C] = zc @ (W0 + CFG.eta * S).T
             # Divide by actual non-padded chunk size (not constant C) so the
-            # last partial chunk isn't silently under-normalized. Matches
-            # the chunked implementation's per-chunk-size division.
-            S = S + (vc.T @ zc) / max(vc.shape[0], 1)  # then update
+            # last partial chunk isn't silently under-normalized.
+            S = S + (vc.T @ zc) / max(vc.shape[0], 1)
         outs.append(out)
     return outs
 
@@ -85,7 +72,7 @@ def run_module(m, tap, papers, session):
         with torch.no_grad():
             outs.append(m(x0.unsqueeze(0))[0])
         if session and m._next_carried is not None:
-            m.carried_delta = m._next_carried      # advance_session_state
+            m.carried_delta = m._next_carried
             m._next_carried = None
     return outs
 

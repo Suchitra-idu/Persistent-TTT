@@ -1,28 +1,8 @@
-"""
-Observability for In-Place TTT training, built on Weights & Biases.
+"""Observability for In-Place TTT training, built on Weights & Biases.
 
-Design rules
-  * Telemetry NEVER crashes or stalls a training run. Missing API key,
-    network hiccups, wandb errors, all degrade to console-only.
-  * Every known failure mode of this project has a metric that exposes
-    it. The mapping:
-
-    failure mode                          metric to watch
-    ------------------------------------  --------------------------------
-    X0 tap / target wiring broken         grad/new ~ 0 while grad/lora healthy
-    TTT components not learning           health/w_target_L*, health/conv_L* flat
-    unbounded fast weight growth          session/state_ratio_* climbing
-    W_down drifting from pretrained       health/wdown_drift_L* large
-    LoRA overpowering / dead              health/lora_norm trend
-    loss spike / divergence               train/loss + anomaly/nonfinite_count
-    eta mis-scaled                        session/state_ratio_* (too big/small)
-    throughput regression                 perf/tokens_per_s, perf/sec_per_step
-    OOM creep                             gpu/mem_alloc_gb, gpu/mem_reserved_gb
-    clipping silently active              train/grad_clip_ratio < 1 persistently
-
+Telemetry never crashes or stalls a run; failures degrade to console-only.
 Two x-axes: optimizer steps ("train/step") for aggregates, micro steps
-("micro/step") for per-paper signals. wandb's run.define_metric wires
-each namespace to its axis so the charts come out right by default.
+("micro/step") for per-paper signals.
 """
 
 from __future__ import annotations
@@ -32,8 +12,7 @@ import time
 
 
 class Telemetry:
-    """Thin, failure-proof wandb wrapper. All public methods are no-ops
-    when disabled, so the training loop never branches on wandb state."""
+    """Thin, failure-proof wandb wrapper; all public methods are no-ops when disabled."""
 
     def __init__(self, enabled: bool, project: str, run_name: str,
                  job_type: str, config: dict):
@@ -55,8 +34,6 @@ class Telemetry:
                 job_type=job_type,
                 config=config,
             )
-            # Aggregates plot against optimizer steps, per-paper signals
-            # against micro steps; everything else follows train/step.
             self.run.define_metric("train/step")
             self.run.define_metric("micro/step")
             self.run.define_metric("micro/*", step_metric="micro/step")
@@ -76,8 +53,7 @@ class Telemetry:
             print(f"wandb log failed ({e}), continuing")
 
     def alert(self, title: str, text: str):
-        """Push notification for anomalies (needs Scriptable Alerts
-        enabled in W&B user settings; harmless otherwise)."""
+        """Push notification (needs Scriptable Alerts enabled in W&B settings)."""
         if self.run is None:
             return
         try:
@@ -96,10 +72,6 @@ class Telemetry:
                 pass
 
 
-# ===========================================================================
-# Metric collectors. Pure functions, each returns a flat dict ready for
-# Telemetry.log, namespaced per the table in the module docstring.
-# ===========================================================================
 def gpu_stats() -> dict:
     import torch
 
@@ -112,18 +84,9 @@ def gpu_stats() -> dict:
     }
 
 
-def snapshot_wdown(wdown_params: list) -> list:
-    """Clone the TTT-layer W_down initial values (bf16, ~600MB on GPU)
-    so drift from the pretrained state can be tracked over training."""
-    return [p.detach().clone() for p in wdown_params]
-
-
 def param_health(named_groups: dict, wdown_init: list,
                  ttt_modules: list) -> dict:
-    """Heavier health metrics, intended for every param_log_every steps.
-    Flat learning curves on w_target/conv after warmup mean the new
-    components are not training; large wdown_drift means the fast weight
-    initial state is being pushed far from the pretrained base."""
+    """Heavier health metrics, intended for every param_log_every steps."""
     import torch
 
     out = {}
@@ -137,14 +100,4 @@ def param_health(named_groups: dict, wdown_init: list,
     out["health/lora_norm"] = float(torch.sqrt(sum(
         p.detach().float().pow(2).sum() for p in named_groups["lora"]
     )))
-    return out
-
-
-def session_metrics(state_norms: dict) -> dict:
-    from inplace_ttt import mean_state_ratio
-
-    out = {f"session/state_ratio_L{i}": v for i, v in state_norms.items()}
-    if state_norms:
-        out["session/state_ratio_mean"] = mean_state_ratio(state_norms)
-        out["session/state_ratio_max"] = max(state_norms.values())
     return out

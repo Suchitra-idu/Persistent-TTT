@@ -1,13 +1,4 @@
-"""
-Chat-mode helper tests. Pure CPU torch, no model, no Modal.
-
-The integration code (KV cache lifecycle, fast-weight persistence) lives
-in infer_modal.py and can't be tested without a real model -- but the
-pure helpers below cover every choice that wouldn't be obvious from
-reading the code: top-1 retention at top_p=0, greedy-at-T=0, stop-token
-assembly. Prompt format is now produced by tokenizer.apply_chat_template
-inside infer_modal.py so there is no standalone formatter to test.
-"""
+"""Chat-mode helper tests: sampling and stop-token assembly."""
 
 import sys
 import types
@@ -17,28 +8,22 @@ import torch
 from chat_utils import chat_stop_token_ids, sample_top_p
 
 
-# ----------------------------------------------------------- sampling --
 def test_sample_top_p_greedy_at_temperature_zero():
     logits = torch.tensor([[1.0, 3.0, 2.0, 0.5]])
-    # Run several times; temperature=0 must be deterministic.
     picks = {sample_top_p(logits, temperature=0.0, top_p=0.9)
              for _ in range(10)}
     assert picks == {1}
 
 
 def test_sample_top_p_negative_temperature_is_also_greedy():
-    """temperature <= 0 takes the greedy branch unconditionally."""
     logits = torch.tensor([[0.1, 0.2, 5.0]])
     assert sample_top_p(logits, temperature=-1.0, top_p=0.5) == 2
 
 
 def test_sample_top_p_returns_top1_when_top_p_is_zero():
-    """top_p=0 must still pick SOME single token (the argmax), even
-    though every sorted_prob > 0 -- the shift-by-one in the mask is
-    what keeps the top-1 in the nucleus. With a clear argmax this is
-    deterministic regardless of sort stability."""
+    """top_p=0 must still pick the argmax; the shift-by-one in the mask keeps top-1 in the nucleus."""
     torch.manual_seed(0)
-    logits = torch.tensor([[1.0, 5.0, 2.0, 3.0]])  # argmax = 1
+    logits = torch.tensor([[1.0, 5.0, 2.0, 3.0]])
     picks = {sample_top_p(logits, temperature=1.0, top_p=0.0)
              for _ in range(20)}
     assert picks == {1}
@@ -53,7 +38,6 @@ def test_sample_top_p_returns_id_in_vocab_range():
 
 
 def test_sample_top_p_concentrated_logits_always_pick_argmax():
-    """One token has > top_p mass on its own: must always be sampled."""
     logits = torch.tensor([[10.0, 0.0, 0.0, 0.0]])
     picks = {sample_top_p(logits, temperature=1.0, top_p=0.5)
              for _ in range(50)}
@@ -61,7 +45,6 @@ def test_sample_top_p_concentrated_logits_always_pick_argmax():
 
 
 def test_sample_top_p_uniform_explores_multiple_tokens():
-    """With uniform logits and top_p=1, sampling should explore the vocab."""
     torch.manual_seed(0)
     logits = torch.zeros(1, 8)
     seen = {sample_top_p(logits, temperature=1.0, top_p=1.0)
@@ -75,9 +58,7 @@ def test_sample_top_p_bf16_logits_dont_break_softmax():
     assert sample_top_p(logits, temperature=0.0, top_p=0.9) == 1
 
 
-# ------------------------------------------------------ stop tokens --
 def _fake_tokenizer(eos_id=2, unk_id=0, known=None):
-    """Minimal tokenizer stand-in for stop-token assembly tests."""
     known = known or {}
 
     def convert(tok):
@@ -106,7 +87,6 @@ def test_chat_stop_token_ids_picks_up_qwen_specials_when_present():
 
 
 def test_chat_stop_token_ids_ignores_unknown_specials():
-    """Tokenizers without Qwen specials map them to UNK -- must skip."""
     tok = _fake_tokenizer(eos_id=2, unk_id=0)
     assert chat_stop_token_ids(tok) == {2}
 
@@ -118,9 +98,7 @@ def test_chat_stop_token_ids_tolerates_no_eos():
 
 
 def test_chat_stop_token_ids_tolerates_convert_raising():
-    """If convert_tokens_to_ids raises (some custom tokenizers do for
-    unknown strings), that special is just skipped -- function must not
-    crash."""
+    """Unknown specials that raise in convert_tokens_to_ids are skipped, not fatal."""
 
     def convert(_):
         raise RuntimeError("nope")

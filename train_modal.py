@@ -1,24 +1,7 @@
 """
-Modal app for In-Place TTT continual pretraining on Qwen3 (any size).
+Modal app for In-Place TTT continual pretraining on Qwen3.
 
-The BASE_MODEL is set via TTT_MODEL_SIZE / TTT_BASE_MODEL env vars; see
-ttt_config.py. Defaults to Qwen/Qwen3-8B. The training stack is
-model-size invariant.
-
-Usage
------
-    # 0. one-time wiring check, must print max |logit diff| ~ 0
-    modal run train_modal.py::sanity_check
-
-    # 1. overfit smoke test on 100 papers, loss must fall fast
-    modal run --detach train_modal.py::train --limit-docs 100 --num-epochs 5
-
-    # 2. the real run
-    modal run --detach train_modal.py::train
-
-Checkpoints land in the 'ttt-checkpoints' volume as
-    /ckpt/<run_name>/step_<n>/adapter/        (PEFT LoRA adapter)
-    /ckpt/<run_name>/step_<n>/ttt_params.pt   (W_down, W_target, Conv1D)
+Usage: modal run --detach train_modal.py::train
 """
 
 import dataclasses
@@ -33,9 +16,6 @@ from ttt_config import (
     HF_CACHE_VOLUME_NAME, TEXT_COLUMN, TOKENS_EST_COLUMN, TRAIN_CFG, TTT_CFG,
 )
 
-# ---------------------------------------------------------------------------
-# Modal resources
-# ---------------------------------------------------------------------------
 app = modal.App("inplace-ttt-train")
 
 image = (
@@ -49,44 +29,31 @@ image = (
         "accelerate>=1.0",
         "wandb>=0.19",
     )
-    # Prebuilt wheel matches torch 2.8 + cu12 + cp311 + cxx11abiTRUE.
-    # Avoids needing nvcc in the base image (debian_slim has no CUDA toolkit).
+    # flash-attn wheel matches torch 2.8 + cu12 + cp311 + cxx11abiTRUE -- avoids nvcc in the base image.
     .pip_install(
         "flash-attn @ https://github.com/Dao-AILab/flash-attention/releases/download/v2.8.3.post1/flash_attn-2.8.3.post1%2Bcu12torch2.8cxx11abiTRUE-cp311-cp311-linux_x86_64.whl"
     )
     .env({"HF_HOME": HF_CACHE_MOUNT})
-    .add_local_python_source("ttt_config", "inplace_ttt", "model_setup",
-                             "data_utils", "observability", "train_utils")
+    .add_local_python_source("ttt_config", "inplace_ttt", "ttt_wiring",
+                             "model_setup", "data_utils", "observability",
+                             "train_utils")
 )
 
 ckpt_vol = modal.Volume.from_name(CKPT_VOLUME_NAME, create_if_missing=True)
 hf_vol = modal.Volume.from_name(HF_CACHE_VOLUME_NAME, create_if_missing=True)
 
 VOLUMES = {CKPT_MOUNT: ckpt_vol, HF_CACHE_MOUNT: hf_vol}
-GPU = "H100"          # A100-80GB also works, ["H100", "A100-80GB"] for fallback
+GPU = "H100"
 
-# Telemetry needs a wandb API key, create it once with
-#   modal secret create wandb WANDB_API_KEY=...
-# If the dataset repo is private, also
-#   modal secret create huggingface HF_TOKEN=hf_...
-# and append modal.Secret.from_name("huggingface") to SECRETS.
 SECRETS = [modal.Secret.from_name("wandb"), modal.Secret.from_name("huggingface")]
 
-# ---------------------------------------------------------------------------
-# Data
-# ---------------------------------------------------------------------------
+
 def load_token_dataset(tokenizer, limit_docs: int | None):
-    """One paper per sequence, truncated to max_seq_len, short docs
-    dropped (a doc must span multiple chunks for TTT to do anything).
-    No packing; document-boundary semantics are handled by the session
-    machinery, not by sequence construction."""
     from data_utils import open_dataset, split_holdout
 
     cfg = TRAIN_CFG
     ds, _ = split_holdout(open_dataset())
 
-    # Cheap pre-filter on the precomputed estimate, then an exact filter
-    # after tokenization. Saves tokenizing docs that would be dropped.
     if TOKENS_EST_COLUMN in ds.column_names:
         ds = ds.filter(
             lambda ex: ex[TOKENS_EST_COLUMN] >= cfg.min_doc_tokens,
@@ -110,35 +77,7 @@ def load_token_dataset(tokenizer, limit_docs: int | None):
     return ds
 
 
-# ---------------------------------------------------------------------------
-# Training
-# ---------------------------------------------------------------------------
-@app.function(image=image, gpu=GPU, volumes=VOLUMES, secrets=SECRETS,
-              timeout=60 * 60 * 24)
-def train(limit_docs: int = 0, num_epochs: int = 0,
-          grad_accum: int = 0, session: int = -1,
-          single_paper: int = -1):
-    import numpy as np
-    import torch
-    from transformers import get_cosine_schedule_with_warmup
-
-    from inplace_ttt import (
-        advance_session_state, build_param_groups, gate_reg_term,
-        iter_ttt_modules, mean_state_ratio, reset_session_state,
-        session_state_norms, set_session_mode,
-    )
-    from model_setup import build_model
-    from observability import (
-        Telemetry, gpu_stats, param_health, session_metrics,
-        snapshot_wdown,
-    )
-    from train_utils import (
-        apply_loss_mask, apply_protect_passes, build_common_token_mask,
-        build_session_items, common_mask_from_counts,
-        expected_items_per_doc, grad_norms, load_reference_counts,
-        make_session_schedule, make_single_paper_sessions,
-    )
-
+def _apply_cli_overrides(num_epochs, grad_accum, session, single_paper):
     overrides = {}
     if num_epochs:
         overrides["num_epochs"] = num_epochs
@@ -148,21 +87,140 @@ def train(limit_docs: int = 0, num_epochs: int = 0,
         overrides["session_training"] = bool(session)
     if single_paper in (0, 1):
         overrides["single_paper_sessions"] = bool(single_paper)
-    cfg = dataclasses.replace(TRAIN_CFG, **overrides) if overrides else TRAIN_CFG
+    return dataclasses.replace(TRAIN_CFG, **overrides) if overrides else TRAIN_CFG
+
+
+def _resolve_resume(resume_from: str, run_name: str):
+    """resume_from accepts 'step_<n>' (same-run) or '<other_run>/step_<n>' (cross-run).
+    Returns (adapter_path, ttt_ckpt_path) or (None, None) if resume_from is empty.
+    Optimizer momentum is NOT preserved across resume."""
+    if not resume_from:
+        return None, None
+    if "/" in resume_from:
+        resume_dir = os.path.join(CKPT_MOUNT, resume_from)
+    else:
+        resume_dir = os.path.join(CKPT_MOUNT, run_name, resume_from)
+    adapter_path = os.path.join(resume_dir, "adapter")
+    ttt_ckpt_path = os.path.join(resume_dir, "ttt_params.pt")
+    if not (os.path.exists(adapter_path) and os.path.exists(ttt_ckpt_path)):
+        raise FileNotFoundError(
+            f"resume checkpoint incomplete at {resume_dir}: "
+            f"need both adapter/ and ttt_params.pt"
+        )
+    print(f"resuming from {resume_dir}")
+    return adapter_path, ttt_ckpt_path
+
+
+def _setup_loss_mask(cfg, ds, tokenizer, vocab_size):
+    """Build the content-token loss mask and move it to GPU. Returns None if disabled."""
+    from train_utils import (
+        apply_protect_passes, common_mask_from_counts, count_unigrams,
+        load_reference_counts,
+    )
+
+    if not cfg.loss_mask_enabled:
+        return None
+
+    ref_counts, ref_meta = load_reference_counts(
+        cfg.loss_mask_reference_counts_path, vocab_size,
+    )
+    if ref_counts is not None:
+        print(f"loss mask: using external reference from "
+              f"{ref_meta.get('dataset_id', '?')}/"
+              f"{ref_meta.get('dataset_config', '?')} "
+              f"({ref_meta.get('n_tokens', 0):,} tokens)")
+        common_mask = common_mask_from_counts(
+            ref_counts, keep_fraction=cfg.loss_mask_keep_fraction,
+        )
+    else:
+        if cfg.loss_mask_reference_counts_path:
+            print(f"loss mask: reference path "
+                  f"{cfg.loss_mask_reference_counts_path!r} not "
+                  f"found, falling back to in-corpus frequency. "
+                  f"Run build_reference_counts to populate.")
+        counts = count_unigrams(
+            (ex["input_ids"] for ex in ds), vocab_size=vocab_size,
+        )
+        common_mask = common_mask_from_counts(
+            counts, keep_fraction=cfg.loss_mask_keep_fraction,
+        )
+    n_before = int(common_mask.sum())
+    freed = apply_protect_passes(
+        common_mask, tokenizer,
+        cfg.loss_mask_protect_terms,
+        cfg.loss_mask_protect_numeric,
+        cfg.loss_mask_protect_symbols,
+    )
+    common_mask = common_mask.cuda()
+    print(f"loss mask: {int(common_mask.sum())}/{vocab_size} token ids "
+          f"masked (kf={cfg.loss_mask_keep_fraction:.2f}, "
+          f"protect-terms freed {freed[0]}, "
+          f"protect-numeric freed {freed[1]}, "
+          f"protect-symbols freed {freed[2]}, "
+          f"initial {n_before}); "
+          f"first_tokens={cfg.loss_mask_first_tokens} at paper-start items")
+    return common_mask
+
+
+def _make_epoch_sessions(cfg, num_docs, doc_lengths, rng):
+    """Build the session schedule for one epoch. Dispatches on
+    cfg.single_paper_sessions."""
+    from train_utils import make_slice_sessions
+
+    if cfg.single_paper_sessions:
+        return make_slice_sessions(
+            num_docs, doc_lengths, rng,
+            session_papers=(1, 1), slice_prob=1.0,
+            slice_range=(cfg.single_paper_slices_min,
+                         cfg.single_paper_slices_max),
+            min_slice_tokens=cfg.slice_min_tokens,
+        )
+    return make_slice_sessions(
+        num_docs, doc_lengths, rng,
+        session_papers=(cfg.session_papers_min, cfg.session_papers_max),
+        slice_prob=cfg.slice_prob,
+        slice_range=(cfg.slice_min, cfg.slice_max),
+        min_slice_tokens=cfg.slice_min_tokens,
+    )
+
+
+@app.function(image=image, gpu=GPU, volumes=VOLUMES, secrets=SECRETS,
+              timeout=60 * 60 * 24)
+def train(limit_docs: int = 0, num_epochs: int = 0,
+          grad_accum: int = 0, session: int = -1,
+          single_paper: int = -1, resume_from: str = ""):
+    import numpy as np
+    import torch
+    from transformers import get_cosine_schedule_with_warmup
+
+    from inplace_ttt import (
+        advance_session_state, gate_reg_term, iter_ttt_modules,
+        mean_state_ratio, reset_session_state, state_norms,
+    )
+    from ttt_wiring import build_param_groups
+    from model_setup import build_model
+    from observability import Telemetry, gpu_stats, param_health
+    from train_utils import apply_loss_mask, expected_items_per_doc
+
+    cfg = _apply_cli_overrides(num_epochs, grad_accum, session, single_paper)
     epochs = cfg.num_epochs
     torch.manual_seed(cfg.seed)
 
-    # ---- model -----------------------------------------------------------
-    model, tokenizer = build_model(trainable=True)
+    adapter_path, ttt_ckpt_path = _resolve_resume(resume_from, cfg.run_name)
+    model, tokenizer = build_model(
+        adapter_path=adapter_path, ttt_ckpt_path=ttt_ckpt_path,
+        trainable=True,
+    )
     model.gradient_checkpointing_enable(
         gradient_checkpointing_kwargs={"use_reentrant": False}
     )
-    # Required so checkpointed segments get gradients when inputs come
-    # from frozen (no-grad) embeddings. Classic PEFT + checkpointing trap.
+    # enable_input_require_grads required so checkpointed segments get gradients
+    # from frozen embeddings -- classic PEFT + checkpointing trap.
     model.enable_input_require_grads()
     model.config.use_cache = False
     model.train()
-    set_session_mode(model, cfg.session_training)
+    for m in iter_ttt_modules(model):
+        m.session_mode = cfg.session_training
 
     optim_groups, named_groups = build_param_groups(
         model, TTT_CFG,
@@ -175,7 +233,6 @@ def train(limit_docs: int = 0, num_epochs: int = 0,
           f"wdown {sum(p.numel() for p in named_groups['wdown'])/1e6:.1f}M, "
           f"new {sum(p.numel() for p in named_groups['new'])/1e6:.1f}M)")
 
-    # ---- observability -----------------------------------------------------
     from dataclasses import asdict
     telemetry = Telemetry(
         enabled=cfg.wandb_enabled, project=cfg.wandb_project,
@@ -186,75 +243,31 @@ def train(limit_docs: int = 0, num_epochs: int = 0,
                 "trainable_params_M": n_train / 1e6},
     )
     ttt_modules = list(iter_ttt_modules(model))
-    wdown_init = snapshot_wdown(named_groups["wdown"])  # drift baseline
+    # Snapshot W_down for drift tracking; bf16 clone, ~600MB on GPU.
+    wdown_init = [p.detach().clone() for p in named_groups["wdown"]]
 
-    # 8-bit Adam keeps optimizer state for the ~400M fully trained params
-    # small. The model itself stays bf16; NF4 quantization is incompatible
-    # with fully training W_down, so do not add QLoRA here.
+    # NF4 quantization is incompatible with fully training W_down -- do not add QLoRA here.
     import bitsandbytes as bnb
     optimizer = bnb.optim.PagedAdamW8bit(optim_groups, betas=(0.9, 0.95))
 
-    # ---- data ------------------------------------------------------------
     ds = load_token_dataset(tokenizer, limit_docs or None)
-    hf_vol.commit()   # persist dataset + model downloads for next runs
-    # One pass to memoize per-doc lengths so the session scheduler can
-    # slice token ranges without re-reading each row. HF datasets are
-    # memory-mapped, so iterating is cheap and the resulting list is
-    # small (one int per doc).
+    hf_vol.commit()
+
+    eval_papers = []
+    if cfg.eval_every > 0:
+        eval_papers = fetch_holdout_papers_ids(
+            tokenizer, cfg.eval_n_papers, cfg.eval_holdout_seed
+        )
+        if not eval_papers:
+            print("no holdout papers available, in-loop eval disabled")
+        else:
+            lens = ", ".join(str(len(p)) for p in eval_papers)
+            print(f"in-loop eval ON, {len(eval_papers)} papers ({lens} tokens), "
+                  f"{cfg.eval_n_slices} slices each, every {cfg.eval_every} steps")
     doc_lengths = [len(ex["input_ids"]) for ex in ds]
 
-    # Content-token loss mask. Built once over either a reference
-    # general-English corpus (preferred, structural fix for "domain
-    # glue looks common") or the actual training corpus (fallback).
-    # Lives on GPU for cheap indexing in the hot loop; ~150KB at
-    # Qwen3's vocab size, negligible.
-    common_mask = None
-    if cfg.loss_mask_enabled:
-        # Prefer external reference; fall back to in-corpus if missing.
-        ref_counts, ref_meta = load_reference_counts(
-            cfg.loss_mask_reference_counts_path, model.config.vocab_size,
-        )
-        if ref_counts is not None:
-            print(f"loss mask: using external reference from "
-                  f"{ref_meta.get('dataset_id', '?')}/"
-                  f"{ref_meta.get('dataset_config', '?')} "
-                  f"({ref_meta.get('n_tokens', 0):,} tokens)")
-            common_mask = common_mask_from_counts(
-                ref_counts, keep_fraction=cfg.loss_mask_keep_fraction,
-            )
-        else:
-            if cfg.loss_mask_reference_counts_path:
-                print(f"loss mask: reference path "
-                      f"{cfg.loss_mask_reference_counts_path!r} not "
-                      f"found, falling back to in-corpus frequency. "
-                      f"Run build_reference_counts to populate.")
-            common_mask = build_common_token_mask(
-                (ex["input_ids"] for ex in ds),
-                vocab_size=model.config.vocab_size,
-                keep_fraction=cfg.loss_mask_keep_fraction,
-            )
-        n_before = int(common_mask.sum())
-        n_freed_terms, n_freed_numeric, n_freed_symbols = apply_protect_passes(
-            common_mask, tokenizer,
-            cfg.loss_mask_protect_terms,
-            cfg.loss_mask_protect_numeric,
-            cfg.loss_mask_protect_symbols,
-        )
-        common_mask = common_mask.cuda()
-        n_final = int(common_mask.sum())
-        print(f"loss mask: {n_final}/{model.config.vocab_size} token ids "
-              f"masked (kf={cfg.loss_mask_keep_fraction:.2f}, "
-              f"protect-terms freed {n_freed_terms}, "
-              f"protect-numeric freed {n_freed_numeric}, "
-              f"protect-symbols freed {n_freed_symbols}, "
-              f"initial {n_before}); "
-              f"first_tokens={cfg.loss_mask_first_tokens} at paper-start items")
-    # Slicing inflates the number of forward/backward passes per epoch.
-    # Use the expected items/doc to size the cosine schedule so warmup
-    # and anneal land roughly where they would for a non-sliced run.
+    common_mask = _setup_loss_mask(cfg, ds, tokenizer, model.config.vocab_size)
     if cfg.single_paper_sessions:
-        # Each session = one paper sliced into k ~ U[lo, hi] pieces, so
-        # items per doc is the mean of that uniform.
         items_per_doc = 0.5 * (
             cfg.single_paper_slices_min + cfg.single_paper_slices_max
         )
@@ -285,11 +298,6 @@ def train(limit_docs: int = 0, num_epochs: int = 0,
           f"({len(ds)} docs x {epochs} epochs / accum {cfg.grad_accum_steps}); "
           f"session_training={cfg.session_training}; {mode_line}")
 
-    # ---- loop ------------------------------------------------------------
-    # One paper = one forward/backward, exactly as before. Sessions only
-    # control the fast weight carry. Note an optimizer step landing mid
-    # session makes the carried state slightly stale w.r.t. the freshly
-    # updated slow weights; this is standard TBPTT behavior and benign.
     run_dir = os.path.join(CKPT_MOUNT, cfg.run_name)
     rng = np.random.default_rng(cfg.seed)
     step, micro, t0 = 0, 0, time.time()
@@ -297,50 +305,25 @@ def train(limit_docs: int = 0, num_epochs: int = 0,
     window_tokens, total_tokens, sessions_done, nonfinite = 0, 0, 0, 0
 
     for epoch in range(epochs):
-        if cfg.single_paper_sessions:
-            sessions = make_single_paper_sessions(
-                len(ds), doc_lengths,
-                cfg.single_paper_slices_min, cfg.single_paper_slices_max,
-                cfg.slice_min_tokens, rng,
-            )
-        else:
-            sessions = make_session_schedule(
-                len(ds), cfg.session_papers_min, cfg.session_papers_max, rng,
-            )
-            sessions = build_session_items(
-                sessions, doc_lengths,
-                slice_prob=cfg.slice_prob, slice_min=cfg.slice_min,
-                slice_max=cfg.slice_max, min_slice_tokens=cfg.slice_min_tokens,
-                rng=rng,
-            )
-        for session in sessions:
+        for session in _make_epoch_sessions(cfg, len(ds), doc_lengths, rng):
             reset_session_state(model)
             for pos, item in enumerate(session):
-                # SessionItem may be a whole paper (start=0, end=len) or
-                # one slice of one. From the model's perspective both
-                # look like a sequence; the fast-weight carry threads
-                # all of them.
                 full_ids = ds[item.doc_idx]["input_ids"]
                 ids = torch.tensor(
                     [full_ids[item.start:item.end]], device="cuda"
                 )
-                # Leading-token mask applies ONLY at paper-start items;
-                # mid-paper slices (start > 0) are real content, not
-                # shared boilerplate.
+                # Leading-token mask applies ONLY at paper-start items; mid-paper
+                # slices (start > 0) are real content, not shared boilerplate.
                 first_n = (
                     cfg.loss_mask_first_tokens if item.start == 0 else 0
                 )
                 labels = apply_loss_mask(ids, common_mask,
                                          first_tokens=first_n)
                 loss = model(input_ids=ids, labels=labels).loss
-                # L2 penalty on gate outputs (no-op when output_gate is
-                # off OR gate_reg_weight=0). Encourages gates to stay
-                # closed by default; the model must earn each open gate.
                 if TTT_CFG.output_gate and TTT_CFG.gate_reg_weight > 0:
                     loss = loss + TTT_CFG.gate_reg_weight * gate_reg_term(model)
 
-                # Anomaly guard: a nonfinite loss must not poison the
-                # accumulated gradients. Skip backward, count, alert.
+                # Anomaly guard: nonfinite loss must not poison accum gradients -- skip backward.
                 if not torch.isfinite(loss):
                     nonfinite += 1
                     telemetry.log({"anomaly/nonfinite_count": nonfinite,
@@ -352,18 +335,18 @@ def train(limit_docs: int = 0, num_epochs: int = 0,
                             f"{micro} (doc {item.doc_idx} "
                             f"[{item.start}:{item.end}], epoch {epoch})",
                         )
-                    advance_session_state(model)  # keep carry semantics
+                    advance_session_state(model)
                     micro += 1
                     continue
 
                 (loss / cfg.grad_accum_steps).backward()
-                advance_session_state(model)   # carry fast weights forward
+                advance_session_state(model)
                 step_loss += loss.item() / cfg.grad_accum_steps
                 n_tok = ids.numel()
                 window_tokens += n_tok
                 total_tokens += n_tok
-                state_norms = session_state_norms(model)
-                state_ratio_mean = mean_state_ratio(state_norms)
+                sn = state_norms(model, source="session")
+                state_ratio_mean = mean_state_ratio(sn)
                 micro_log = {
                     "micro/step": micro,
                     "micro/paper_loss": loss.item(),
@@ -373,9 +356,6 @@ def train(limit_docs: int = 0, num_epochs: int = 0,
                     "micro/state_ratio_mean": state_ratio_mean,
                 }
                 if common_mask is not None:
-                    # Fraction of positions that contributed to the loss
-                    # this step -- the runtime check that masking is doing
-                    # roughly what loss_mask_keep_fraction promised.
                     micro_log["micro/unmasked_token_frac"] = (
                         float((labels != -100).float().mean())
                     )
@@ -385,7 +365,14 @@ def train(limit_docs: int = 0, num_epochs: int = 0,
                 if micro % cfg.grad_accum_steps:
                     continue
 
-                norms = grad_norms(named_groups)   # before clipping
+                # L2 grad norms per param group, before clipping.
+                norms = {
+                    name: float(torch.as_tensor(sum(
+                        p.grad.detach().float().pow(2).sum()
+                        for p in params if p.grad is not None
+                    )).sqrt())
+                    for name, params in named_groups.items()
+                }
                 total_norm = torch.nn.utils.clip_grad_norm_(
                     (p for g in optim_groups for p in g["params"]),
                     cfg.max_grad_norm,
@@ -395,9 +382,14 @@ def train(limit_docs: int = 0, num_epochs: int = 0,
                 optimizer.zero_grad(set_to_none=True)
                 step += 1
 
-                # ---- per-step telemetry (cheap scalars) ----------------
                 lrs = scheduler.get_last_lr()
                 dt = time.time() - t0
+                sn = state_norms(model, source="session")
+                session_out = {f"session/state_ratio_L{i}": v
+                               for i, v in sn.items()}
+                if sn:
+                    session_out["session/state_ratio_mean"] = mean_state_ratio(sn)
+                    session_out["session/state_ratio_max"] = max(sn.values())
                 metrics = {
                     "train/step": step,
                     "train/loss": step_loss,
@@ -415,7 +407,7 @@ def train(limit_docs: int = 0, num_epochs: int = 0,
                     "perf/sec_per_step": dt,
                     "perf/total_tokens": total_tokens,
                     "session/sessions_done": sessions_done,
-                    **session_metrics(session_state_norms(model)),
+                    **session_out,
                     **gpu_stats(),
                 }
                 if step % cfg.param_log_every == 0:
@@ -437,15 +429,25 @@ def train(limit_docs: int = 0, num_epochs: int = 0,
                         f"|g|new {norms['new']:.3f} "
                         f"state/W0 {metrics.get('session/state_ratio_mean', 0):.2e}"
                     )
-                    # If grad/new stays ~0 while grad/lora is healthy, the
-                    # V source or target computation is broken. Stop and debug.
-                    # If session/state_ratio_* climbs steadily past ~1e-1,
-                    # unbounded fast weight growth; add forgetting.
                     running = 0.0
 
                 if step % cfg.save_every == 0 or step == total_steps:
                     save_checkpoint(model, run_dir, step)
                     ckpt_vol.commit()
+
+                if eval_papers and step % cfg.eval_every == 0:
+                    eval_metrics = run_holdout_eval(
+                        model, eval_papers, cfg.eval_n_slices,
+                        train_session_mode=cfg.session_training,
+                    )
+                    telemetry.log({"train/step": step, **eval_metrics})
+                    print(
+                        f"  [eval, {len(eval_papers)} papers] "
+                        f"carry_ppl {eval_metrics['eval/carry_ppl']:.2f} "
+                        f"fresh_ppl {eval_metrics['eval/fresh_ppl']:.2f} "
+                        f"gap {eval_metrics['eval/gap']:+.2f} "
+                        f"state/W0 {eval_metrics['eval/state_ratio_final']:.2e}"
+                    )
             sessions_done += 1
 
     save_checkpoint(model, run_dir, step)
@@ -455,26 +457,146 @@ def train(limit_docs: int = 0, num_epochs: int = 0,
 
 
 def save_checkpoint(model, run_dir: str, step: int):
-    from inplace_ttt import save_ttt_state_dict
+    from ttt_wiring import save_ttt_state_dict
 
     path = os.path.join(run_dir, f"step_{step}")
     os.makedirs(path, exist_ok=True)
-    model.save_pretrained(os.path.join(path, "adapter"))           # LoRA
+    model.save_pretrained(os.path.join(path, "adapter"))
     save_ttt_state_dict(model, os.path.join(path, "ttt_params.pt"), TTT_CFG)
     print(f"saved checkpoint -> {path}")
 
 
-# ---------------------------------------------------------------------------
-# One-time job: precompute reference unigram counts for the loss mask.
-#
-#     modal run train_modal.py::build_reference_counts
-#     modal run train_modal.py::build_reference_counts --dataset-id wikipedia \
-#         --dataset-config 20220301.en --split train --out-name reference_wiki.pt
-#
-# Outputs land at /ckpt/loss_mask/<out_name>; the default matches
-# TRAIN_CFG.loss_mask_reference_counts_path so subsequent training picks
-# it up automatically.
-# ---------------------------------------------------------------------------
+def fetch_holdout_papers_ids(tokenizer, n_papers: int, seed: int):
+    import random
+
+    from data_utils import open_dataset, split_holdout
+
+    _, holdout = split_holdout(open_dataset())
+    if len(holdout) == 0:
+        return []
+    rng = random.Random(seed)
+    n = min(n_papers, len(holdout))
+    indices = rng.sample(range(len(holdout)), n)
+    return [
+        tokenizer(holdout[i][TEXT_COLUMN], truncation=True,
+                  max_length=TRAIN_CFG.max_seq_len).input_ids
+        for i in indices
+    ]
+
+
+def _eval_paper(model, paper_ids, n_slices: int, evolve: bool) -> list:
+    """Run one held-out paper as a single-paper session; return per-slice
+    (n_tokens, ppl, state_ratio) rows."""
+    import math
+
+    import torch
+
+    from inplace_ttt import (
+        advance_session_state, iter_ttt_modules, mean_state_ratio,
+        reset_session_state, state_norms,
+    )
+    from train_utils import equal_token_slices
+
+    for m in iter_ttt_modules(model):
+        m.ttt_evolve = evolve
+        m.session_mode = True
+    reset_session_state(model)
+    rows = []
+    for s, e in equal_token_slices(len(paper_ids), n_slices):
+        ids = torch.tensor([paper_ids[s:e]], device="cuda")
+        with torch.no_grad():
+            loss = model(input_ids=ids, labels=ids).loss
+        advance_session_state(model)
+        state_ratio = mean_state_ratio(state_norms(model, source="session"))
+        rows.append((e - s, math.exp(loss.item()), state_ratio))
+    return rows
+
+
+def _token_weighted_ppl(rows) -> float:
+    import math
+
+    total_log = sum(math.log(p) * n for n, p, _ in rows)
+    total_n = sum(n for n, _, _ in rows)
+    return math.exp(total_log / total_n) if total_n else float("nan")
+
+
+def run_holdout_eval(model, holdout_papers, n_slices: int,
+                    train_session_mode: bool) -> dict:
+    """Multi-paper carry-vs-fresh perplexity eval. Snapshots and restores
+    TTT module state so this is a no-op against the training loop."""
+    import math
+
+    from inplace_ttt import iter_ttt_modules
+
+    modules = list(iter_ttt_modules(model))
+    was_training = model.training
+    snap = [
+        (m.carried_delta.clone() if m.carried_delta is not None else None,
+         m._next_carried.clone() if m._next_carried is not None else None)
+        for m in modules
+    ]
+
+    per_paper = []
+    model.eval()
+    try:
+        for paper_ids in holdout_papers:
+            carry_rows = _eval_paper(model, paper_ids, n_slices, evolve=True)
+            fresh_rows = _eval_paper(model, paper_ids, n_slices, evolve=False)
+            per_paper.append({
+                "carry_ppl": _token_weighted_ppl(carry_rows),
+                "fresh_ppl": _token_weighted_ppl(fresh_rows),
+                "state_ratio_final": (carry_rows[-1][2]
+                                      if carry_rows else 0.0),
+                "carry_rows": carry_rows,
+                "fresh_rows": fresh_rows,
+            })
+    finally:
+        if was_training:
+            model.train()
+        for m in modules:
+            m.ttt_evolve = True
+            m.session_mode = train_session_mode
+        for m, (cd, nc) in zip(modules, snap):
+            m.carried_delta, m._next_carried = cd, nc
+
+    n = len(per_paper)
+    carry_mean = math.exp(sum(math.log(p["carry_ppl"]) for p in per_paper) / n)
+    fresh_mean = math.exp(sum(math.log(p["fresh_ppl"]) for p in per_paper) / n)
+    state_mean = sum(p["state_ratio_final"] for p in per_paper) / n
+
+    metrics = {
+        "eval/carry_ppl": carry_mean,
+        "eval/fresh_ppl": fresh_mean,
+        "eval/gap": fresh_mean - carry_mean,        # positive => carry helps
+        "eval/state_ratio_final": state_mean,
+    }
+    for i, p in enumerate(per_paper):
+        metrics[f"eval/paper_{i}/carry_ppl"] = p["carry_ppl"]
+        metrics[f"eval/paper_{i}/fresh_ppl"] = p["fresh_ppl"]
+        metrics[f"eval/paper_{i}/gap"] = p["fresh_ppl"] - p["carry_ppl"]
+        metrics[f"eval/paper_{i}/state_ratio_final"] = p["state_ratio_final"]
+    for s_idx in range(n_slices):
+        carry_logs, fresh_logs, state_vals = [], [], []
+        for p in per_paper:
+            if s_idx < len(p["carry_rows"]):
+                carry_logs.append(math.log(p["carry_rows"][s_idx][1]))
+                state_vals.append(p["carry_rows"][s_idx][2])
+            if s_idx < len(p["fresh_rows"]):
+                fresh_logs.append(math.log(p["fresh_rows"][s_idx][1]))
+        if carry_logs:
+            metrics[f"eval/carry_ppl_slice_{s_idx}"] = math.exp(
+                sum(carry_logs) / len(carry_logs)
+            )
+            metrics[f"eval/state_ratio_slice_{s_idx}"] = (
+                sum(state_vals) / len(state_vals)
+            )
+        if fresh_logs:
+            metrics[f"eval/fresh_ppl_slice_{s_idx}"] = math.exp(
+                sum(fresh_logs) / len(fresh_logs)
+            )
+    return metrics
+
+
 @app.function(image=image, volumes=VOLUMES, secrets=SECRETS,
               timeout=60 * 60)
 def build_reference_counts(
@@ -485,19 +607,8 @@ def build_reference_counts(
     out_name: str = "reference_wikitext103.pt",
     limit_docs: int = 0,
 ):
-    """Build a [vocab_size] unigram count tensor from a general-English
-    reference corpus, tokenized with Qwen3's BPE so token ids align
-    with the training run. Saved to /ckpt/loss_mask/<out_name> as a
-    pickled dict containing the counts plus metadata (tokenizer name,
-    dataset id, n_tokens, ...).
-
-    Run once per tokenizer change; the resulting counts are reusable
-    across all training runs. Cost: ~10-20 min on CPU for wikitext-103.
-
-    The fallback path in train() means a missing file does not block
-    training -- you can ship the in-corpus baseline first and add the
-    reference later when convenient.
-    """
+    """Build a [vocab_size] unigram count tensor from a reference corpus,
+    saved to /ckpt/loss_mask/<out_name>."""
     import torch
     from datasets import load_dataset
     from transformers import AutoConfig, AutoTokenizer
@@ -511,17 +622,13 @@ def build_reference_counts(
     print(f"loaded {len(ds)} rows; text column = {text_column!r}")
 
     tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
-    # Align on model.config.vocab_size (padded embedding, e.g. 151936)
-    # rather than tokenizer.vocab_size (BPE entries, e.g. 151669) so the
-    # saved counts tensor matches what train() validates against.
+    # Align on model.config.vocab_size (padded) rather than tokenizer.vocab_size
+    # so saved counts match what train() validates against.
     vocab_size = AutoConfig.from_pretrained(BASE_MODEL).vocab_size
     print(f"tokenizer vocab_size = {tokenizer.vocab_size}, "
           f"model.config.vocab_size = {vocab_size} (using padded)")
 
-    # Batched tokenization. Wikitext rows are short paragraph chunks,
-    # some are empty header lines; the tokenizer handles those fine.
-    # add_special_tokens=False so BOS/EOS don't pollute the unigram
-    # tally with artifacts that never appear at training time.
+    # add_special_tokens=False so BOS/EOS don't pollute the unigram tally.
     def tokenize(batch):
         out = tokenizer(batch[text_column],
                         add_special_tokens=False, truncation=False)
@@ -560,30 +667,17 @@ def build_reference_counts(
           f"to use this in training (default already points here).")
 
 
-# ---------------------------------------------------------------------------
-# Wiring check. Run this FIRST, before any training.
-# ---------------------------------------------------------------------------
 @app.function(image=image, gpu=GPU, volumes=VOLUMES, timeout=60 * 10)
 def sanity_check():
-    """Verifies the TTT wiring property: if W_target = 0, the TTT path
-    contributes exactly zero (V = conv(X0) @ 0 = 0, delta = V^T Z = 0,
-    ttt_out = eta * Z @ delta^T = 0). Single model load + on/off compare.
-
-    The default init is no longer zero (small randn breaks the zero-symmetry
-    trap on gradient), so we zero W_target temporarily for this test. We're
-    testing the math of the path, not the chosen init magnitude.
-
-    Also prints the diff at the actual init magnitudes so you can see how
-    much the TTT path contributes at start-of-training."""
+    """Verify TTT wiring: with W_target zeroed, TTT path must contribute zero."""
     import torch
     from transformers import AutoTokenizer
 
-    from inplace_ttt import iter_ttt_modules, set_ttt_evolve, set_ttt_stateful
+    from inplace_ttt import iter_ttt_modules
     from model_setup import build_model
 
     tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
-    # Need N > chunk_size so the scan path actually fires (the early
-    # return at N <= C would mask wiring bugs in the chunked math).
+    # Need N > chunk_size so the scan path fires (early-return at N <= C would mask bugs).
     ids = tokenizer(
         "Test-time training updates a subset of weights during inference. "
         * 20,
@@ -593,26 +687,25 @@ def sanity_check():
 
     model, _ = build_model(trainable=False)
     model.eval()
-    set_ttt_stateful(model, False)
+    modules = list(iter_ttt_modules(model))
+    for m in modules:
+        m.stateful = False
 
-    # First, the diff at the actual training-time init magnitudes. Should be
-    # small but nonzero -- this is what training starts from.
-    set_ttt_evolve(model, True)
+    for m in modules:
+        m.ttt_evolve = True
     with torch.no_grad():
         logits_on_real = model(ids).logits
-    set_ttt_evolve(model, False)
+    for m in modules:
+        m.ttt_evolve = False
     with torch.no_grad():
         logits_off = model(ids).logits
     diff_real = (logits_on_real - logits_off).abs().max().item()
     print(f"max |logit diff| at REAL init (small-randn W_target) = "
           f"{diff_real:.4f}")
 
-    # Now the strict wiring check: zero W_target and re-test. The diff must
-    # be exact-zero (modulo bf16 precision) or the wiring is broken.
-    for m in iter_ttt_modules(model):
+    for m in modules:
         m.w_target.data.zero_()
-
-    set_ttt_evolve(model, True)
+        m.ttt_evolve = True
     with torch.no_grad():
         logits_on_zero = model(ids).logits
 
@@ -622,57 +715,12 @@ def sanity_check():
     print("identity check passed")
 
 
-# ---------------------------------------------------------------------------
-# Loss-mask diagnostic. CPU-only; does not start training.
-#
-#     modal run train_modal.py::diagnose_loss_mask
-#     modal run train_modal.py::diagnose_loss_mask --limit-docs 400
-#     modal run train_modal.py::diagnose_loss_mask --keep-fraction 0.5
-#
-# Use this BEFORE a real run to verify that loss_mask_keep_fraction is
-# catching function words / punctuation rather than domain content words
-# you care about (e.g. "model", "training", "diffusion"). The chronological
-# prefix sweep surfaces date-driven drift -- a token that only enters the
-# mask once newer arxiv years are included is exactly the kind of failure
-# mode raw frequency masking has on a domain corpus.
-# ---------------------------------------------------------------------------
 @app.function(image=image, volumes=VOLUMES, secrets=SECRETS,
               timeout=60 * 30)
 def diagnose_loss_mask(limit_docs: int = 0, top_k: int = 80,
                        keep_fraction: float = 0.0,
                        use_reference: bool = False):
-    """Report what the content-token loss mask catches.
-
-    Two modes:
-
-      use_reference=False (default): build the mask from the
-        date-sorted training corpus, broken into cumulative
-        chronological prefixes (first 25%, 50%, 75%, 100%). This is
-        the diagnostic for the in-corpus fallback path.
-
-      use_reference=True: build the mask from the external reference
-        unigram distribution at
-        TRAIN_CFG.loss_mask_reference_counts_path. The reference is
-        fixed, so chronological slicing collapses to a single row;
-        the spot-check then reflects what training will actually use.
-
-    Sections (both modes):
-      1. Mask statistics (mask size, fraction of positions actually
-         kept). The kept fraction should land near keep_fraction;
-         deviation reveals discretization slack.
-      2. Top-K masked tokens, decoded back to strings. If this is all
-         function words / punctuation, the mask is doing its job.
-      3. Spot-check table: a curated list of (function | ML-glue |
-         domain-content) words, showing MASKED vs kept. Lets you see
-         at a glance which categories the mask eats.
-
-    Args:
-        limit_docs: cap on training docs (in-corpus mode only).
-        top_k: how many top-frequency masked tokens to decode/print.
-        keep_fraction: override TRAIN_CFG.loss_mask_keep_fraction
-                       (0.0 = use the value in config).
-        use_reference: see above.
-    """
+    """Report what the content-token loss mask catches (in-corpus or reference mode)."""
     import torch
     from transformers import AutoTokenizer
 
@@ -686,16 +734,10 @@ def diagnose_loss_mask(limit_docs: int = 0, top_k: int = 80,
           f"mode={'external-reference' if use_reference else 'in-corpus'}\n")
 
     tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
-    # tokenizer.vocab_size excludes added/special tokens; len(tokenizer)
-    # is the full table the model indexes into.
+    # len(tokenizer) is the full table the model indexes into.
     vocab_size = max(tokenizer.vocab_size, len(tokenizer))
 
     if use_reference:
-        # External reference path: load the precomputed counts and
-        # synthesize a single "snapshot" so the rest of the function
-        # (section 1/2/3) runs unchanged. Per-slice chronological
-        # bookkeeping is meaningless when the baseline is fixed, so
-        # we collapse to one row labeled with the reference's source.
         ref_counts, ref_meta = load_reference_counts(
             TRAIN_CFG.loss_mask_reference_counts_path, vocab_size,
         )
@@ -720,10 +762,7 @@ def diagnose_loss_mask(limit_docs: int = 0, top_k: int = 80,
                 f"need at least 4 docs for quartile slicing, got {n}"
             )
 
-        # Cumulative date-sorted prefixes. ds is the train split
-        # returned by split_holdout, which excludes the newest
-        # HOLDOUT_LAST_N rows; remaining rows are in arxiv-id order,
-        # i.e. oldest -> newest.
+        # ds is oldest -> newest (arxiv-id order) after split_holdout.
         cuts = [
             ("first 25%", n // 4),
             ("first 50%", n // 2),
@@ -732,10 +771,8 @@ def diagnose_loss_mask(limit_docs: int = 0, top_k: int = 80,
         ]
         cut_lookup = {k: label for label, k in cuts}
 
-        # Stream once; snapshot running counts at each cumulative
-        # boundary. Avoids re-tallying the prefix four times.
         print(f"counting tokens over {n} docs (one pass)...")
-        snapshots = []   # list of (label, k_docs, counts_tensor)
+        snapshots = []
         running = torch.zeros(vocab_size, dtype=torch.int64)
         for i in range(n):
             ids_list = ds[i]["input_ids"]
@@ -752,9 +789,7 @@ def diagnose_loss_mask(limit_docs: int = 0, top_k: int = 80,
                     (cut_lookup[i + 1], i + 1, running.clone())
                 )
 
-    # Build the mask at each snapshot and apply BOTH protect passes so
-    # the diagnostic reflects what the training loop will actually use.
-    slices = []   # list of dicts
+    slices = []
     for label, k, counts in snapshots:
         mask = common_mask_from_counts(counts, keep_fraction=kf)
         n_pre_protect = int(mask.sum())
@@ -780,7 +815,6 @@ def diagnose_loss_mask(limit_docs: int = 0, top_k: int = 80,
             "n_masked": n_masked, "kept_share": kept_share,
         })
 
-    # ------------------------------------------------- section 1: stats --
     header = ("Mask statistics (external reference)"
               if use_reference else
               "Per-slice mask statistics (post-protect passes)")
@@ -797,7 +831,6 @@ def diagnose_loss_mask(limit_docs: int = 0, top_k: int = 80,
     print("  free_t = protect-terms, free_n = protect-numeric, "
           "free_s = protect-symbols.")
 
-    # ----------------------------------- section 2: top-K masked tokens --
     where = "external ref" if use_reference else "full set"
     print(f"\n=== Top-{top_k} masked tokens ({where}, descending freq) ===")
     print(f"  {'rank':>4}  {'id':>6}  {'count':>14}  token")
@@ -813,11 +846,6 @@ def diagnose_loss_mask(limit_docs: int = 0, top_k: int = 80,
         s = tokenizer.decode([tid])
         print(f"  {rank:>4}  {tid:>6}  {val:>14,}  {s!r}")
 
-    # ------------------------------------------- section 3: spot check --
-    # Three groups so the user can see (a) the mask catches obvious glue,
-    # (b) whether it overcatches ML-glue, (c) whether it spares domain
-    # content. The leading-space form (' word') is the BPE convention for
-    # mid-sequence words; the bare form occasionally differs in id.
     spot_terms = [
         ("function-words",
          ["the", "of", "and", "is", "we", "in", "to", "a", "for", "with"]),
@@ -847,7 +875,6 @@ def diagnose_loss_mask(limit_docs: int = 0, top_k: int = 80,
             ids = tokenizer.encode(" " + term, add_special_tokens=False)
             if not ids:
                 continue
-            # Row 1: first-piece status across slices.
             cells = []
             for s in slices:
                 cells.append("MASKED" if bool(s["mask"][ids[0]])
@@ -855,7 +882,6 @@ def diagnose_loss_mask(limit_docs: int = 0, top_k: int = 80,
             cell_str = "  ".join(f"{c:>{col_w}s}" for c in cells)
             shown = f"' {term}' (1st id {ids[0]})"
             print(f"  {shown:<24}  {cell_str}")
-            # Row 2: per-piece breakdown in the full-set mask.
             piece_parts = []
             for tid in ids:
                 tid = int(tid)
