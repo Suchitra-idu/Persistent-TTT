@@ -97,6 +97,11 @@ def param_health(named_groups: dict, wdown_init: list,
     for i, m in enumerate(ttt_modules):
         out[f"health/w_target_L{i}"] = float(m.w_target.detach().norm())
         out[f"health/conv_L{i}"] = float(m.target_conv.weight.detach().norm())
+        # Sigmoid-gate diagnostic (only present when cfg.output_gate=True).
+        # See gate_stats() docstring for interpretation.
+        if getattr(m, "_gate_mean", None) is not None:
+            out[f"health/gate_mean_L{i}"] = m._gate_mean
+            out[f"health/gate_std_L{i}"] = m._gate_std
     out["health/lora_norm"] = float(torch.sqrt(sum(
         p.detach().float().pow(2).sum() for p in named_groups["lora"]
     )))

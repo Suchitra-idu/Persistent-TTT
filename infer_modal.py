@@ -52,11 +52,15 @@ def _ckpt_paths(ckpt: str):
 class TTTInference:
     ckpt: str = modal.parameter(default="")
 
+    load_ttt: bool = modal.parameter(default=True)
+
     @modal.enter()
     def load(self):
         from model_setup import build_model
 
         adapter, ttt_ckpt = _ckpt_paths(self.ckpt)
+        if not self.load_ttt:
+            ttt_ckpt = None
         self.model, self.tokenizer = build_model(
             adapter_path=adapter, ttt_ckpt_path=ttt_ckpt, trainable=False,
             attn_impl="sdpa",
@@ -427,19 +431,48 @@ def _print_session_results(carry: list, fresh: list,
               f"{c_ppl:>10.3f}  {f_ppl:>10.3f}  {gap:>+8.3f}")
 
 
+def _three_way_eval(base_engine, ckpt: str, texts: list,
+                    session_kwargs: dict):
+    """Print BASE / LORA-ONLY / FULL tables on the same texts. The three
+    configs share input so any per-slice number is directly comparable.
+    LORA-ONLY and FULL are skipped when ckpt is empty."""
+    def _run(engine, label):
+        print(f"=== {label} ===")
+        try:
+            carry = engine.session_perplexity.remote(
+                texts, evolve=True, **session_kwargs,
+            )
+            fresh = engine.session_perplexity.remote(
+                texts, evolve=False, **session_kwargs,
+            )
+            _print_session_results(carry, fresh)
+        except Exception as e:
+            print(f"[failed: {e}]")
+        print()
+
+    _run(base_engine, "BASE  (Qwen3, no LoRA, no TTT)")
+    if ckpt:
+        _run(TTTInference(ckpt=ckpt, load_ttt=False),
+             f"LORA-ONLY  (ckpt={ckpt}, TTT silent)")
+        _run(TTTInference(ckpt=ckpt, load_ttt=True),
+             f"FULL  (ckpt={ckpt}, LoRA + TTT)")
+
+
 @app.local_entrypoint()
 def holdout_eval(n_papers: int = 5, seed: int = 0, ckpt: str = "",
                  slice_papers: bool = True):
-    engine = TTTInference(ckpt=ckpt)
-    texts = engine.fetch_holdout_texts.remote(n_papers, seed)
+    """Three-way comparison in one run:
+      1. BASE       -- pure Qwen3 (no LoRA, no TTT). The pretraining baseline.
+      2. LORA-ONLY  -- trained LoRA on base, TTT silent (W_target=0).
+      3. FULL       -- trained LoRA + trained TTT. The full model.
+    Requires --ckpt for (2) and (3); with no --ckpt only BASE is shown."""
+    base_engine = TTTInference(ckpt="")
+    texts = base_engine.fetch_holdout_texts.remote(n_papers, seed)
     _print_paper_preview(texts, [f"holdout {i+1}" for i in range(len(texts))])
-    carry = engine.session_perplexity.remote(
-        texts, evolve=True, slice_papers=slice_papers, slice_seed=seed,
+    _three_way_eval(
+        base_engine, ckpt, texts,
+        session_kwargs={"slice_papers": slice_papers, "slice_seed": seed},
     )
-    fresh = engine.session_perplexity.remote(
-        texts, evolve=False, slice_papers=slice_papers, slice_seed=seed,
-    )
-    _print_session_results(carry, fresh)
 
 
 @app.local_entrypoint()
@@ -518,20 +551,19 @@ def holdout_generate(n_papers: int = 1, prefix_chars: int = 1200,
 
 @app.local_entrypoint()
 def single_paper_eval(n_slices: int = 8, ckpt: str = "", seed: int = 0):
-    """One held-out paper sliced into n equal-token parts, run as a single session."""
-    engine = TTTInference(ckpt=ckpt)
-    texts = engine.fetch_holdout_texts.remote(1, seed)
+    """One held-out paper sliced into n equal-token parts, run as a single
+    session. Prints the BASE / LORA-ONLY / FULL three-way comparison (see
+    holdout_eval docstring). --ckpt='' shows only BASE."""
+    base_engine = TTTInference(ckpt="")
+    texts = base_engine.fetch_holdout_texts.remote(1, seed)
     if not texts:
         print("no holdout papers available")
         return
     _print_paper_preview(texts, ["selected paper"])
-    carry = engine.session_perplexity.remote(
-        texts, evolve=True, equal_n_slices=n_slices,
+    _three_way_eval(
+        base_engine, ckpt, texts,
+        session_kwargs={"equal_n_slices": n_slices},
     )
-    fresh = engine.session_perplexity.remote(
-        texts, evolve=False, equal_n_slices=n_slices,
-    )
-    _print_session_results(carry, fresh)
 
 
 # Interactive chat lives in chat_client.py -- `modal run` doesn't forward stdin

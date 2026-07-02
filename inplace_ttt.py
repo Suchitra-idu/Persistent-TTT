@@ -89,6 +89,8 @@ class InPlaceTTTMLP(nn.Module):
             self.output_gate = None
 
         self._gate_l2: Optional[torch.Tensor] = None
+        self._gate_mean: Optional[float] = None
+        self._gate_std: Optional[float] = None
 
         self.ttt_evolve = True
         self.stateful = False
@@ -175,6 +177,13 @@ class InPlaceTTTMLP(nn.Module):
         gate = torch.sigmoid(self.output_gate(hidden_states))
         if self.training and torch.is_grad_enabled():
             self._gate_l2 = (gate ** 2).mean()
+        # Diagnostic stats stashed under no_grad so eval/inference
+        # captures them too. Mean tells you if gate is open vs closed;
+        # std tells you if it's actually modulating position-to-position
+        # (near-zero std = gate stuck at a constant, gate learning nothing).
+        with torch.no_grad():
+            self._gate_mean = float(gate.mean().detach())
+            self._gate_std = float(gate.std().detach())
         return gate * ttt_term
 
     def forward(self, hidden_states: torch.Tensor) -> torch.Tensor:
@@ -243,10 +252,12 @@ class InPlaceTTTMLP(nn.Module):
 
         if self.session_mode:
             # fp32 accum: bf16 drifts across many papers. detach = TBPTT boundary.
+            # carried_decay < 1.0 turns pure sum into an EMA -- bounds stored
+            # magnitude so direction stays in a useful subspace, per config docs.
             total = deltas.sum(dim=1).detach().float()
             self._next_carried = (
                 total if self.carried_delta is None
-                else self.carried_delta + total
+                else self.cfg.carried_decay * self.carried_delta + total
             )
 
         return base_out + self._gated(ttt_out, hidden_states)
@@ -385,6 +396,22 @@ def gate_reg_term(model) -> torch.Tensor | float:
         if m._gate_l2 is not None:
             accum = m._gate_l2 if accum is None else accum + m._gate_l2
     return accum if accum is not None else 0.0
+
+
+def gate_stats(model) -> dict:
+    """Per-TTT-layer sigmoid(gate) mean and std, keyed by base-model
+    layer index. Diagnostic: gate stuck near 0 => TTT term suppressed,
+    stuck near 1 => gate not modulating (identical to no gate at all),
+    healthy = mean in (0.1, 0.9) with std > 0.05."""
+    modules = list(iter_ttt_modules(model))
+    layer_indices = modules[0].cfg.layer_indices if modules else ()
+    out = {}
+    for layer_idx, m in zip(layer_indices, modules):
+        if m._gate_mean is None:
+            continue
+        out[f"gate_mean_L{layer_idx}"] = m._gate_mean
+        out[f"gate_std_L{layer_idx}"] = m._gate_std
+    return out
 
 
 def stream_pending_progress(model) -> tuple[int, int]:

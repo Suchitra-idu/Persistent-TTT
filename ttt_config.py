@@ -25,10 +25,10 @@ TOKENS_EST_COLUMN = "tokens_est"
 HOLDOUT_LAST_N = 200
 
 # TTT_BASE_MODEL fully overrides if you need a non-Qwen3 path.
-MODEL_SIZE = os.environ.get("TTT_MODEL_SIZE", "0.6B")
+MODEL_SIZE = os.environ.get("TTT_MODEL_SIZE", "8B")
 BASE_MODEL = os.environ.get("TTT_BASE_MODEL", f"Qwen/Qwen3-{MODEL_SIZE}")
 
-LAYER_STRIDE = int(os.environ.get("TTT_LAYER_STRIDE", "2"))
+LAYER_STRIDE = int(os.environ.get("TTT_LAYER_STRIDE", "4"))
 LAYER_START = int(os.environ.get("TTT_LAYER_START", "1"))
 
 
@@ -87,10 +87,10 @@ class TTTConfig:
     layer_indices: tuple | None = None
 
     # Tokens per fast-weight update. Changing requires retraining.
-    chunk_size: int = 512
+    chunk_size: int = 400
 
     # Inner-loop learning rate for W <- W + eta * V^T Z.
-    eta: float = 5e-2
+    eta: float = 7e-2
 
     # Divide each chunk delta by chunk_size so eta is roughly C-independent.
     normalize_delta_by_chunk: bool = True
@@ -124,6 +124,9 @@ class TTTConfig:
     clip_tau: float = 5.0
     clip_at_inference_only: bool = False
 
+
+    carried_decay: float = 0.95
+
     def __post_init__(self):
         if self.v_source not in ("embedding", "hidden_state"):
             raise ValueError(
@@ -143,7 +146,7 @@ class TrainConfig:
     num_epochs: int = 1
 
     # Three parameter groups, three learning rates.
-    lr_lora: float = 2e-5
+    lr_lora: float = 1e-5
     lr_wdown: float = 3e-5          # pretrained fast weight init, move gently
     lr_new_modules: float = 2e-5
 
