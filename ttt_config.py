@@ -25,10 +25,10 @@ TOKENS_EST_COLUMN = "tokens_est"
 HOLDOUT_LAST_N = 200
 
 # TTT_BASE_MODEL fully overrides if you need a non-Qwen3 path.
-MODEL_SIZE = os.environ.get("TTT_MODEL_SIZE", "8B")
+MODEL_SIZE = os.environ.get("TTT_MODEL_SIZE", "0.6B")
 BASE_MODEL = os.environ.get("TTT_BASE_MODEL", f"Qwen/Qwen3-{MODEL_SIZE}")
 
-LAYER_STRIDE = int(os.environ.get("TTT_LAYER_STRIDE", "4"))
+LAYER_STRIDE = int(os.environ.get("TTT_LAYER_STRIDE", "2"))
 LAYER_START = int(os.environ.get("TTT_LAYER_START", "1"))
 
 
@@ -87,7 +87,7 @@ class TTTConfig:
     layer_indices: tuple | None = None
 
     # Tokens per fast-weight update. Changing requires retraining.
-    chunk_size: int = 400
+    chunk_size: int = 100
 
     # Inner-loop learning rate for W <- W + eta * V^T Z.
     eta: float = 7e-2
