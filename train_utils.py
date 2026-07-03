@@ -3,6 +3,46 @@
 from dataclasses import dataclass
 
 
+# Domain terms force-unmasked by the content-token loss mask. Expanded into
+# multiple BPE variants at protect-time; only single-piece variants protect.
+# Kept here (not in ttt_config) so the config module stays scannable.
+LOSS_MASK_DEFAULT_PROTECT_TERMS = (
+    "transformer", "attention", "convolution", "convolutional",
+    "embedding", "encoder", "decoder", "autoencoder",
+    "perceptron", "mlp", "lstm", "rnn", "cnn", "gnn",
+    "gan", "vae", "diffusion", "residual", "recurrent",
+    "feedforward", "capsule",
+    "softmax", "sigmoid", "relu", "gelu", "tanh",
+    "activation", "normalization", "regularization", "dropout",
+    "layernorm", "batchnorm", "groupnorm", "rmsnorm",
+    "bert", "gpt", "llama", "qwen", "mistral", "claude",
+    "gemini", "palm", "llm", "vit", "clip", "deepseek",
+    "phi", "gemma", "falcon", "mixtral", "dalle",
+    "policy", "reward", "agent", "action", "trajectory",
+    "ppo", "dqn", "sac", "actor", "critic", "episode",
+    "bandit", "exploration", "exploitation", "rollout",
+    "bayesian", "markov", "gaussian", "kernel", "manifold",
+    "lipschitz", "convex", "lagrangian", "hessian", "jacobian",
+    "eigenvalue", "eigenvector", "tensor", "scalar",
+    "entropy", "divergence", "kullback", "leibler",
+    "wasserstein", "frobenius", "posterior", "prior",
+    "likelihood", "mcmc", "mle",
+    "alpha", "beta", "gamma", "delta", "epsilon", "zeta",
+    "eta", "theta", "iota", "kappa", "lambda", "mu", "nu",
+    "xi", "pi", "rho", "sigma", "tau", "upsilon",
+    "phi", "chi", "psi", "omega",
+    "optimizer", "logits", "perplexity", "checkpoint",
+    "pretraining", "finetuning", "adamw", "adam", "rmsprop",
+    "sgd", "momentum", "lora", "qlora", "rlhf", "dpo",
+    "classification", "regression", "segmentation",
+    "detection", "translation", "summarization",
+    "recognition", "captioning", "parsing",
+    "imagenet", "mnist", "cifar", "coco", "glue",
+    "squad", "bleu", "rouge", "wmt", "mmlu",
+    "gsm8k", "humaneval", "bigbench",
+)
+
+
 @dataclass(frozen=True)
 class SessionItem:
     """One unit of work in a session: a contiguous token range of a doc."""

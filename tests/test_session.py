@@ -93,6 +93,29 @@ def test_state_norms_reads_carried_delta(module_factory):
     assert state_norms(model, source="stream") == {0: 0.0}
 
 
+def test_state_norms_stream_source_only_reads_state_delta(module_factory):
+    m, _, tap = module_factory(randomize=True)
+    model = Wrap(m)
+    m.state.delta = torch.randn_like(m.down_proj.weight).float()
+    assert state_norms(model, source="stream")[0] > 0
+    assert state_norms(model, source="session")[0] == 0.0
+
+
+def test_state_norms_default_source_is_session(module_factory):
+    m, _, tap = module_factory(randomize=True)
+    model = Wrap(m)
+    _enable_session_mode(model, True)
+    scan(m, tap, torch.randn(2 * C, D))
+    advance_session_state(model)
+    assert state_norms(model) == state_norms(model, source="session")
+
+
+def test_state_norms_no_modules_returns_empty_dict():
+    empty_model = nn.Module()
+    assert state_norms(empty_model, source="session") == {}
+    assert state_norms(empty_model, source="stream") == {}
+
+
 # ---------- session schedule ----------
 
 def test_schedule_partitions_every_doc_exactly_once():

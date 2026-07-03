@@ -78,6 +78,9 @@ def load_token_dataset(tokenizer, limit_docs: int | None):
 
 
 def _apply_cli_overrides(num_epochs, grad_accum, session, single_paper):
+    """Only override TRAIN_CFG fields when the corresponding CLI value is set:
+    num_epochs/grad_accum use 0 as "unset"; session/single_paper use _UNSET
+    (or any value outside 0/1) as "unset"."""
     overrides = {}
     if num_epochs:
         overrides["num_epochs"] = num_epochs
@@ -184,11 +187,16 @@ def _make_epoch_sessions(cfg, num_docs, doc_lengths, rng):
     )
 
 
+# CLI-flag sentinel: Modal parameters can't easily carry Optional[bool], so
+# -1 means "leave TRAIN_CFG value unchanged"; 0/1 override.
+_UNSET = -1
+
+
 @app.function(image=image, gpu=GPU, volumes=VOLUMES, secrets=SECRETS,
               timeout=60 * 60 * 24)
 def train(limit_docs: int = 0, num_epochs: int = 0,
-          grad_accum: int = 0, session: int = -1,
-          single_paper: int = -1, resume_from: str = ""):
+          grad_accum: int = 0, session: int = _UNSET,
+          single_paper: int = _UNSET, resume_from: str = ""):
     import numpy as np
     import torch
     from transformers import get_cosine_schedule_with_warmup
@@ -305,9 +313,10 @@ def train(limit_docs: int = 0, num_epochs: int = 0,
     window_tokens, total_tokens, sessions_done, nonfinite = 0, 0, 0, 0
 
     for epoch in range(epochs):
-        for session in _make_epoch_sessions(cfg, len(ds), doc_lengths, rng):
+        for session_items in _make_epoch_sessions(cfg, len(ds), doc_lengths,
+                                                  rng):
             reset_session_state(model)
-            for pos, item in enumerate(session):
+            for pos, item in enumerate(session_items):
                 full_ids = ds[item.doc_idx]["input_ids"]
                 ids = torch.tensor(
                     [full_ids[item.start:item.end]], device="cuda"
@@ -352,7 +361,7 @@ def train(limit_docs: int = 0, num_epochs: int = 0,
                     "micro/paper_loss": loss.item(),
                     "micro/paper_tokens": n_tok,
                     "micro/session_pos": pos,
-                    "micro/session_n": len(session),
+                    "micro/session_n": len(session_items),
                     "micro/state_ratio_mean": state_ratio_mean,
                 }
                 if common_mask is not None:
@@ -487,8 +496,6 @@ def fetch_holdout_papers_ids(tokenizer, n_papers: int, seed: int):
 def _eval_paper(model, paper_ids, n_slices: int, evolve: bool) -> list:
     """Run one held-out paper as a single-paper session; return per-slice
     (n_tokens, ppl, state_ratio) rows."""
-    import math
-
     import torch
 
     from inplace_ttt import (
@@ -513,8 +520,6 @@ def _eval_paper(model, paper_ids, n_slices: int, evolve: bool) -> list:
 
 
 def _token_weighted_ppl(rows) -> float:
-    import math
-
     total_log = sum(math.log(p) * n for n, p, _ in rows)
     total_n = sum(n for n, _, _ in rows)
     return math.exp(total_log / total_n) if total_n else float("nan")
@@ -524,8 +529,6 @@ def run_holdout_eval(model, holdout_papers, n_slices: int,
                     train_session_mode: bool) -> dict:
     """Multi-paper carry-vs-fresh perplexity eval. Snapshots and restores
     TTT module state so this is a no-op against the training loop."""
-    import math
-
     from inplace_ttt import iter_ttt_modules
 
     modules = list(iter_ttt_modules(model))
@@ -911,8 +914,8 @@ def diagnose_loss_mask(limit_docs: int = 0, top_k: int = 80,
 
 @app.local_entrypoint()
 def main(limit_docs: int = 0, num_epochs: int = 0,
-         grad_accum: int = 0, session: int = -1,
-         single_paper: int = -1):
+         grad_accum: int = 0, session: int = _UNSET,
+         single_paper: int = _UNSET):
     train.remote(limit_docs=limit_docs, num_epochs=num_epochs,
                  grad_accum=grad_accum, session=session,
                  single_paper=single_paper)

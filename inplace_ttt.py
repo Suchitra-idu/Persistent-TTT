@@ -2,6 +2,28 @@
 In-Place Test-Time Training (In-Place TTT) for HuggingFace Qwen3 models.
 Drop-in replacement for the gated MLP block on a subset of layers.
 Model-size invariant; TTT layer schedule derived from num_hidden_layers.
+
+Reset ladder (what each helper clears vs preserves):
+
+    reset_fast_weights(model)     -- FULL reset. Clears state.delta,
+                                     pending chunk, and conv left-context on
+                                     every TTT module + the embedding tap.
+                                     Used at eval / batch boundaries and
+                                     inside chat_reset.
+
+    reset_v_left_context(model)   -- SOFT turn boundary. Clears the causal
+                                     conv left-context (hidden or embedding),
+                                     but state.delta and pending survive.
+                                     Used between chat turns so the next
+                                     turn's conv starts with zero context
+                                     while carry-based memory persists.
+
+    reset_session_state(model)    -- TBPTT boundary. Clears carried_delta
+                                     and the staged _next_carried on every
+                                     TTT module. Independent of state.delta.
+                                     Used at session boundaries in training.
+
+The three levels operate on different state families and can be combined.
 """
 
 from __future__ import annotations
@@ -389,13 +411,20 @@ def mean_state_ratio(norms: dict) -> float:
     return sum(norms.values()) / len(norms) if norms else 0.0
 
 
-def gate_reg_term(model) -> torch.Tensor | float:
-    """Returns 0.0 (float) when no gate value stashed, so callers can add unconditionally."""
+def gate_reg_term(model) -> torch.Tensor:
+    """Sum of stashed gate L2 penalties across TTT modules, or a zero scalar
+    tensor on the model's device when none are stashed. Always tensor-typed
+    so callers can add unconditionally without isinstance branching."""
     accum = None
+    device = None
     for m in iter_ttt_modules(model):
+        if device is None:
+            device = m.down_proj.weight.device
         if m._gate_l2 is not None:
             accum = m._gate_l2 if accum is None else accum + m._gate_l2
-    return accum if accum is not None else 0.0
+    if accum is not None:
+        return accum
+    return torch.zeros((), dtype=torch.float32, device=device)
 
 
 def gate_stats(model) -> dict:

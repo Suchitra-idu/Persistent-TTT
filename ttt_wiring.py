@@ -98,9 +98,20 @@ def load_ttt_state_dict(model, path: str):
     loaded = 0
     for name, p in model.named_parameters():
         key = strip_peft_prefix(name)
-        if key in by_suffix:
-            p.data.copy_(by_suffix[key].to(p.device, p.dtype))
-            loaded += 1
+        if key not in by_suffix:
+            continue
+        t = by_suffix[key]
+        # Shape-check BEFORE copy_ so a config change that alters w_target /
+        # target_conv dims raises a clear "checkpoint incompatible" error
+        # instead of a broadcast failure mid-load.
+        if tuple(t.shape) != tuple(p.shape):
+            raise RuntimeError(
+                f"TTT checkpoint tensor {key!r} shape {tuple(t.shape)} "
+                f"does not match model parameter shape {tuple(p.shape)}. "
+                f"Config change likely; rebuild the checkpoint."
+            )
+        p.data.copy_(t.to(p.device, p.dtype))
+        loaded += 1
     if loaded != len(saved):
         raise RuntimeError(
             f"TTT checkpoint mismatch, saved {len(saved)} tensors, "

@@ -455,7 +455,7 @@ def test_apply_protect_passes_all_disabled_is_noop():
 
 def test_protect_token_ids_default_list_is_non_empty():
     """Default list must be a non-empty tuple of stripped strings (catches the `("foo")` typo)."""
-    from ttt_config import LOSS_MASK_DEFAULT_PROTECT_TERMS
+    from train_utils import LOSS_MASK_DEFAULT_PROTECT_TERMS
     assert isinstance(LOSS_MASK_DEFAULT_PROTECT_TERMS, tuple)
     assert len(LOSS_MASK_DEFAULT_PROTECT_TERMS) > 30
     assert all(isinstance(t, str) and t for t in LOSS_MASK_DEFAULT_PROTECT_TERMS)

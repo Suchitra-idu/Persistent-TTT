@@ -15,10 +15,6 @@ def open_dataset():
     from datasets import load_dataset, load_from_disk
 
     src = DATASET_SOURCE
-    if "CHANGE_ME" in src:
-        raise RuntimeError(
-            "Set DATASET_SOURCE in ttt_config.py to your HF repo id."
-        )
     if os.path.isdir(src):
         shards = sorted(glob.glob(os.path.join(src, "**", "*.parquet"),
                                   recursive=True))

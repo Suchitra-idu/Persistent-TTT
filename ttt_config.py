@@ -25,9 +25,14 @@ TOKENS_EST_COLUMN = "tokens_est"
 HOLDOUT_LAST_N = 200
 
 # TTT_BASE_MODEL fully overrides if you need a non-Qwen3 path.
+# 0.6B is the proven size; see docs/scaling.md for 1.7B / 4B / 8B recipes
+# (bigger models need LR bumps, eta / chunk_size retuning, and LAYER_STRIDE=4
+# above 4B to keep the scan tensors inside 80 GB).
 MODEL_SIZE = os.environ.get("TTT_MODEL_SIZE", "0.6B")
 BASE_MODEL = os.environ.get("TTT_BASE_MODEL", f"Qwen/Qwen3-{MODEL_SIZE}")
 
+# LAYER_STRIDE=2 gives half the transformer layers a TTT MLP (proven at 0.6B
+# and 1.7B). Bump to 4 at 8B for a ~2x memory reduction on the scan tensors.
 LAYER_STRIDE = int(os.environ.get("TTT_LAYER_STRIDE", "2"))
 LAYER_START = int(os.environ.get("TTT_LAYER_START", "1"))
 
@@ -39,43 +44,11 @@ def derive_ttt_layer_indices(num_layers: int,
     return tuple(range(start, num_layers, stride))
 
 
-# Domain terms force-unmasked by the content-token loss mask. Expanded into
-# multiple BPE variants at protect-time; only single-piece variants protect.
-LOSS_MASK_DEFAULT_PROTECT_TERMS = (
-    "transformer", "attention", "convolution", "convolutional",
-    "embedding", "encoder", "decoder", "autoencoder",
-    "perceptron", "mlp", "lstm", "rnn", "cnn", "gnn",
-    "gan", "vae", "diffusion", "residual", "recurrent",
-    "feedforward", "capsule",
-    "softmax", "sigmoid", "relu", "gelu", "tanh",
-    "activation", "normalization", "regularization", "dropout",
-    "layernorm", "batchnorm", "groupnorm", "rmsnorm",
-    "bert", "gpt", "llama", "qwen", "mistral", "claude",
-    "gemini", "palm", "llm", "vit", "clip", "deepseek",
-    "phi", "gemma", "falcon", "mixtral", "dalle",
-    "policy", "reward", "agent", "action", "trajectory",
-    "ppo", "dqn", "sac", "actor", "critic", "episode",
-    "bandit", "exploration", "exploitation", "rollout",
-    "bayesian", "markov", "gaussian", "kernel", "manifold",
-    "lipschitz", "convex", "lagrangian", "hessian", "jacobian",
-    "eigenvalue", "eigenvector", "tensor", "scalar",
-    "entropy", "divergence", "kullback", "leibler",
-    "wasserstein", "frobenius", "posterior", "prior",
-    "likelihood", "mcmc", "mle",
-    "alpha", "beta", "gamma", "delta", "epsilon", "zeta",
-    "eta", "theta", "iota", "kappa", "lambda", "mu", "nu",
-    "xi", "pi", "rho", "sigma", "tau", "upsilon",
-    "phi", "chi", "psi", "omega",
-    "optimizer", "logits", "perplexity", "checkpoint",
-    "pretraining", "finetuning", "adamw", "adam", "rmsprop",
-    "sgd", "momentum", "lora", "qlora", "rlhf", "dpo",
-    "classification", "regression", "segmentation",
-    "detection", "translation", "summarization",
-    "recognition", "captioning", "parsing",
-    "imagenet", "mnist", "cifar", "coco", "glue",
-    "squad", "bleu", "rouge", "wmt", "mmlu",
-    "gsm8k", "humaneval", "bigbench",
-)
+def _default_protect_terms() -> tuple:
+    """Lazy import so ttt_config stays a leaf module (train_utils may add
+    heavier deps later without pulling them at config import time)."""
+    from train_utils import LOSS_MASK_DEFAULT_PROTECT_TERMS
+    return LOSS_MASK_DEFAULT_PROTECT_TERMS
 
 
 @dataclass
@@ -87,7 +60,7 @@ class TTTConfig:
     layer_indices: tuple | None = None
 
     # Tokens per fast-weight update. Changing requires retraining.
-    chunk_size: int = 100
+    chunk_size: int = 50
 
     # Inner-loop learning rate for W <- W + eta * V^T Z.
     eta: float = 7e-2
@@ -124,8 +97,12 @@ class TTTConfig:
     clip_tau: float = 5.0
     clip_at_inference_only: bool = False
 
-
-    carried_decay: float = 0.95
+    # EMA decay on the session-persistent carry:
+    #   carried_delta <- carried_decay * carried_delta + this_item_delta.
+    # 1.0 = pure sum (unbounded magnitude growth); 0.0 = last-item only (no
+    # session memory). 0.9-0.95 keeps state_ratio bounded across long sessions
+    # while still averaging across items. Session-training only.
+    carried_decay: float = 1.0
 
     def __post_init__(self):
         if self.v_source not in ("embedding", "hidden_state"):
@@ -177,8 +154,8 @@ class TrainConfig:
     # Single-paper sessions: one paper sliced into k random pieces.
     # When True, session_papers_* and slice_* above are IGNORED.
     single_paper_sessions: bool = False
-    single_paper_slices_min: int = 2
-    single_paper_slices_max: int = 6
+    single_paper_slices_min: int = 5
+    single_paper_slices_max: int = 10
 
     # Content-token loss masking. CE is computed only on positions whose
     # token_id is NOT among the most-frequent tokens accounting for
@@ -188,8 +165,9 @@ class TrainConfig:
     loss_mask_keep_fraction: float = 0.5
 
     # Force-unmask domain content. Pass () to disable the override.
+    # The default list lives in train_utils to keep this module scannable.
     loss_mask_protect_terms: tuple = field(
-        default_factory=lambda: LOSS_MASK_DEFAULT_PROTECT_TERMS
+        default_factory=lambda: _default_protect_terms()
     )
 
     # External-reference frequency baseline; falls back to in-corpus

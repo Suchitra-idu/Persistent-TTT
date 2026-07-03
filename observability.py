@@ -9,6 +9,20 @@ from __future__ import annotations
 
 import os
 import time
+import traceback
+
+
+_GB = 2 ** 30
+
+
+def _wandb_errors():
+    """The exception classes we consider 'expected wandb failures' to swallow.
+    Falls back to (Exception,) if wandb isn't importable yet."""
+    try:
+        import wandb
+        return (wandb.Error,)
+    except Exception:
+        return (Exception,)
 
 
 class Telemetry:
@@ -40,7 +54,10 @@ class Telemetry:
             for ns in ("train/*", "grad/*", "session/*", "health/*",
                        "perf/*", "gpu/*", "anomaly/*"):
                 self.run.define_metric(ns, step_metric="train/step")
-        except Exception as e:               # never kill training for telemetry
+        except _wandb_errors() as e:
+            # Never kill training for telemetry. Broader Exception hides
+            # programmer bugs (AttributeError, TypeError), so we scope to
+            # wandb's own errors.
             print(f"wandb init failed ({e}), continuing without telemetry")
             self.run = None
 
@@ -49,7 +66,7 @@ class Telemetry:
             return
         try:
             self.run.log(metrics)
-        except Exception as e:
+        except _wandb_errors() as e:
             print(f"wandb log failed ({e}), continuing")
 
     def alert(self, title: str, text: str):
@@ -61,15 +78,15 @@ class Telemetry:
 
             self.run.alert(title=title, text=text,
                            level=wandb.AlertLevel.WARN)
-        except Exception:
-            pass
+        except _wandb_errors():
+            traceback.print_exc()
 
     def finish(self):
         if self.run is not None:
             try:
                 self.run.finish()
-            except Exception:
-                pass
+            except _wandb_errors():
+                traceback.print_exc()
 
 
 def gpu_stats() -> dict:
@@ -78,9 +95,9 @@ def gpu_stats() -> dict:
     if not torch.cuda.is_available():
         return {}
     return {
-        "gpu/mem_alloc_gb": torch.cuda.memory_allocated() / 2**30,
-        "gpu/mem_reserved_gb": torch.cuda.memory_reserved() / 2**30,
-        "gpu/mem_peak_gb": torch.cuda.max_memory_allocated() / 2**30,
+        "gpu/mem_alloc_gb": torch.cuda.memory_allocated() / _GB,
+        "gpu/mem_reserved_gb": torch.cuda.memory_reserved() / _GB,
+        "gpu/mem_peak_gb": torch.cuda.max_memory_allocated() / _GB,
     }
 
 
