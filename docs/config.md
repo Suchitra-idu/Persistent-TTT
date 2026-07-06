@@ -1,7 +1,20 @@
 # Configuration Reference
 
 Every knob in [`ttt_config.py`](../ttt_config.py), plus the env-var
-level constants. Grouped by concern.
+level constants and CLI flags, with **what it does, when to tune it,
+and how it fails**. Grouped by concern.
+
+## Contents
+
+1. [Environment variables](#environment-variables-read-at-import-time)
+2. [Module-level constants](#module-level-constants)
+3. [`TTTConfig` (the mechanism)](#ttconfig-the-mechanism)
+4. [`TrainConfig` (the outer loop)](#trainconfig-the-outer-loop)
+5. [CLI flag overrides](#cli-flag--override-map)
+6. [Sensitivity notes](#sensitivity-notes)
+7. [Per-knob failure modes](#per-knob-failure-modes)
+8. [Recipe: minimal safe change](#recipe-minimal-safe-change)
+
 
 ## Environment variables (read at import time)
 
@@ -10,7 +23,7 @@ when `ttt_config` is imported.
 
 | var | default | effect |
 |---|---|---|
-| `TTT_MODEL_SIZE` | `"8B"` | Substitutes into `BASE_MODEL = f"Qwen/Qwen3-{SIZE}"`. Valid: `"0.6B"`, `"1.7B"`, `"4B"`, `"8B"`. |
+| `TTT_MODEL_SIZE` | `"0.6B"` | Substitutes into `BASE_MODEL = f"Qwen/Qwen3-{SIZE}"`. Valid: `"0.6B"`, `"1.7B"`, `"4B"`, `"8B"`. |
 | `TTT_BASE_MODEL` | (unset) | Full override for `BASE_MODEL`. Use for non-Qwen3 paths. |
 | `TTT_LAYER_STRIDE` | `2` | TTT layers = every stride-th layer. Bigger stride = fewer TTT layers (less memory, less capacity). |
 | `TTT_LAYER_START` | `1` | Index of the first TTT layer. Range: `[0, stride)`. |
@@ -43,7 +56,7 @@ Living in [`ttt_config.py`](../ttt_config.py) top-of-file:
 | field | default | notes |
 |---|---|---|
 | `layer_indices` | `None` (lazily populated) | Explicit tuple can be passed for tests. In production, populated from `derive_ttt_layer_indices` in `build_model`. |
-| `chunk_size` | `400` | Tokens per fast-weight update. Changing requires retraining. Smaller = finer resolution + more memory. At 8B, keep ≥400 to fit. |
+| `chunk_size` | `50` | Tokens per fast-weight update. Changing requires retraining. Smaller = finer temporal resolution + more chunks + more memory (`k=N/C` chunk-dim tensors); larger = coarser resolution but memory-friendly. Raise to ~200-400 at 8B to fit the scan tensors. |
 | `eta` | `7e-2` | Inner-loop learning rate: `W_eff = W_down + eta·S`. Scale ~inversely with model width. Do NOT bump like an LR. |
 | `normalize_delta_by_chunk` | `True` | Divide each chunk's delta by chunk size (uses actual token count, so last-chunk padding doesn't inflate). Makes `eta` roughly C-independent. |
 | `conv_kernel_size` | `8` | Causal Conv1D width for V = Conv1D(source) @ W_target. With `v_source="hidden_state"`, 4-8 is sweet spot; with `"embedding"`, 16-32. |
@@ -183,6 +196,154 @@ tighter decay for chat (many turns), looser for short paper-batch eval.
 **LoRA rank sensitivity:** `r=16` is enough to add several ppl of
 gain on Qwen3-0.6B ML papers. Bigger ranks marginally help; the
 dominant lever is training data.
+
+## Per-knob failure modes
+
+For every important knob, what "goes wrong" and how you'd see it in
+metrics.
+
+### `chunk_size`
+
+- **Too small (e.g. 8):** k = N/C explodes, scan-tensor memory (`k × d
+  × d_ff × 2`) blows the GPU. Also, the fast-weight update becomes
+  noisier per-chunk because there are only C tokens' worth of samples.
+- **Too big (e.g. 2048):** the update is coarse. Fewer chunks means
+  fewer opportunities for the fast weight to reflect what was just
+  read. State only updates ~8 times per 16k forward.
+- **Symptom of bad choice:** OOM (too small) or flat `state_ratio`
+  growth (too big).
+
+### `eta`
+
+- **Too small:** the fast weight barely moves the down-projection.
+  `gap ≈ 0` even though `state_ratio > 0`.
+- **Too big:** clip saturates immediately (`state_ratio` pegged at
+  `clip_tau / ||W_down||_F`). Direction-only regime kicks in fast, and
+  the model wasn't trained for that magnitude regime.
+- **Symptom:** `state_ratio` at bounded plateau, `gap` flat or
+  slightly negative.
+
+### `conv_kernel_size`
+
+- **`K = 1`:** conv becomes a per-position transformation, no temporal
+  context. V uses only the current position of X0.
+- **`K` bigger than useful window:** each V position sees a broader
+  temporal average, smoothing per-position information.
+- **With `v_source="hidden_state"`, sweet spot is 4-8.** With
+  `"embedding"`, 16-32 (embeddings are less temporally
+  differentiated).
+
+### `output_gate_bias_init`
+
+- **Too negative (e.g. `-5`):** initial gate ~0.007, TTT contribution
+  ~1% of raw at init. Dead basin barely receives gradient — hard
+  escape.
+- **Too positive (e.g. `+1`):** initial gate ~0.73, TTT contribution
+  ~73% of raw at init. `sanity_check` still passes (`W_target = 0`
+  gives `ttt_out = 0`), but as soon as `W_target` moves off zero, the
+  gate lets big TTT contributions through untamed. Loss can spike.
+- **Default `-2` (~0.12):** balances "let some signal through" with
+  "don't blow up at first optimizer step."
+
+### `clip_tau`
+
+- **Too small (e.g. 1):** most chunks are clipped. Direction-only
+  regime from the start. Gap may be flat because information-per-chunk
+  is truncated.
+- **Too big (e.g. 50):** clip almost never fires; `state_ratio` grows
+  unbounded within long sessions. Applied signal becomes huge; loss
+  destabilizes.
+- **Changing at inference:** don't. The model calibrates its
+  expectations to the training-time clip. Verified empirically.
+
+### `carried_decay`
+
+- **`1.0` (default):** pure accumulation. `state_ratio` grows without
+  bound over long sessions. Clip eventually bounds magnitude but keeps
+  state in direction-only regime.
+- **`0.90-0.95`:** bounded plateau ≈ `per_item_delta / (1 - decay)`.
+  Recommended for long sessions.
+- **`< 0.8`:** aggressive forgetting. State effectively lasts a few
+  items. Turns into "last-item-only" memory at `0.0`.
+
+### `session_training`
+
+- **`False`:** items are independent. Cross-item carry is not trained.
+  Model may still work in session-eval, but training never saw the
+  cross-item distribution.
+- **`True` in training but no session structure at eval:**
+  `session_perplexity` still works, but the carry never accumulates
+  because each session is one item.
+- **Recommended:** train with `True` when you plan to eval with
+  session mode.
+
+### `single_paper_sessions`
+
+- **`True`:** every session is one paper, sliced. Clean signal, but
+  training never sees "unrelated paper follows unrelated paper."
+- **`False`:** multi-paper sessions with `k ∼ U[papers_min,
+  papers_max]`. Noisier but distributionally-similar to `holdout_eval`
+  default.
+
+### `max_grad_norm`
+
+- **Too small (e.g. `1.0`):** clip fires every step during the
+  dead-basin-escape spike; `grad/new` gets scaled to ~zero and the
+  mechanism can't wake up.
+- **Too big (e.g. `100`):** ineffective as a safety net; a single bad
+  batch's large gradient pollutes momentum.
+- **`10.0`** (default) balances both.
+
+### `loss_mask_enabled`
+
+- **`False`:** all positions contribute. Slower per-step domain
+  learning (function words dominate gradient) but no risk of
+  mis-masking.
+- **`True` without reference file:** falls back to in-corpus frequency,
+  which will mask ML-glue words (model, training, layer, function).
+  Kills the training signal on the exact vocabulary the model is
+  supposed to learn.
+- **`True` with reference file and full protect list:** the intended
+  configuration. Concentrates gradient on content tokens.
+
+### `loss_mask_keep_fraction`
+
+- **`1.0`:** disables mask entirely (nothing masked).
+- **`0.5` (default):** mask covers the tokens accounting for 50% of
+  reference occurrences. Balanced.
+- **`< 0.3`:** aggressive. May mask domain terms even after protect
+  passes if the protect list is incomplete. Verify with
+  `diagnose_loss_mask`.
+
+### `loss_mask_first_tokens`
+
+- **`0`:** don't mask paper-start boilerplate. Loss on "# Introduction"
+  etc. counts.
+- **Too high (e.g. 500):** mask real content. Papers vary in how much
+  boilerplate they have; `16` is a safe conservative default.
+
+---
+
+## Recipe: minimal safe change
+
+For any config change, work through this checklist:
+
+1. **Identify the invariant.** Every change to `TTTConfig` breaks
+   backward-compat for old checkpoints unless the change is additive.
+   Renaming or removing a `TTT_CFG` field means old `ttt_params.pt`
+   files won't load without a shape-check failure.
+2. **Update the doc.** Every field with a code default has a table row
+   here. Keep them in sync — if you change the default, update this
+   file at the same commit.
+3. **Update the tests.** If the field affects behavior tested in
+   [tests/](../tests/), the test either needs to override the field
+   (via `dataclasses.replace(cfg, ...)`) or should be updated to match
+   the new default.
+4. **Run `sanity_check`.** Any config change that could affect the
+   identity property (W_target init, TTT layer set, conv init) must
+   pass `modal run train_modal.py::sanity_check` before you train.
+5. **Run the test suite.** `python -m pytest tests/ -q`. If it fails,
+   diagnose before proceeding.
 
 ## Related docs
 

@@ -67,6 +67,7 @@ nav:
       - Overview: architecture.md
       - Mechanism: mechanism.md
       - Configuration: config.md
+      - Glossary: glossary.md
   - Runtime:
       - Training: training.md
       - Inference: inference.md

@@ -10,6 +10,7 @@ these pages are the reference material.
 - [architecture.md](architecture.md) — module boundaries, import graph, dataflow
 - [mechanism.md](mechanism.md) — TTT math + code walkthrough, both execution paths
 - [config.md](config.md) — every config field + env var, defaults, sensitivity notes
+- [glossary.md](glossary.md) — vocabulary used across the docs
 
 **Runtime**
 - [training.md](training.md) — training loop, sessions, slicing, loss mask, in-loop eval
