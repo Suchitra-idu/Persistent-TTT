@@ -8,11 +8,22 @@ import os
 import modal
 
 from ttt_config import (
-    CKPT_MOUNT, CKPT_VOLUME_NAME, HF_CACHE_MOUNT, HF_CACHE_VOLUME_NAME,
-    TEXT_COLUMN, TRAIN_CFG,
+    CKPT_MOUNT, CKPT_VOLUME_NAME, DATASET_SPEC, HF_CACHE_MOUNT,
+    HF_CACHE_VOLUME_NAME, TRAIN_CFG,
 )
 
 app = modal.App("inplace-ttt-infer")
+
+# Forward TTT_* env vars from the local shell into the container so
+# that `TTT_DATASET=... modal run` picks the same spec at train and
+# eval time. See train_modal.py for the full rationale.
+_FORWARD_ENV_KEYS = ("TTT_DATASET", "TTT_MODEL_SIZE", "TTT_LAYER_STRIDE",
+                     "TTT_LAYER_START", "TTT_BASE_MODEL")
+_FORWARDED_ENV = {k: os.environ[k]
+                  for k in _FORWARD_ENV_KEYS if k in os.environ}
+if _FORWARDED_ENV:
+    print(f"[modal] forwarding env to container: "
+          f"{ {k: v for k, v in _FORWARDED_ENV.items()} }")
 
 image = (
     modal.Image.debian_slim(python_version="3.11")
@@ -23,7 +34,7 @@ image = (
         "accelerate>=1.0",
         "datasets>=3.0",
     )
-    .env({"HF_HOME": HF_CACHE_MOUNT})
+    .env({"HF_HOME": HF_CACHE_MOUNT, **_FORWARDED_ENV})
     .add_local_python_source("ttt_config", "inplace_ttt", "ttt_wiring",
                              "model_setup", "data_utils", "chat_utils",
                              "train_utils")
@@ -211,15 +222,30 @@ class TTTInference:
 
     @modal.method()
     def fetch_holdout_texts(self, n_papers: int, seed: int = 0) -> list:
-        """Sample n papers from the contamination-free holdout (newest HOLDOUT_LAST_N rows excluded from training)."""
+        """Sample n papers from the contamination-free holdout (newest
+        `spec.holdout_last_n` rows excluded from training).
+
+        Returns a list of dicts: `[{"text": str, "source": str}, ...]`.
+        `source` is "" when the active dataset has no source column;
+        otherwise it's the extracted source label (e.g. "RedPajamaC4").
+        """
         import random
 
-        from data_utils import open_dataset, split_holdout
+        from data_utils import apply_source_filter, open_dataset, split_holdout
 
-        _, holdout = split_holdout(open_dataset())
+        spec = DATASET_SPEC
+        _, holdout = split_holdout(open_dataset(spec), spec)
+        holdout = apply_source_filter(holdout, spec)
         rng = random.Random(seed)
-        idx = rng.sample(range(len(holdout)), min(n_papers, len(holdout)))
-        return [holdout[i][TEXT_COLUMN] for i in idx]
+        n = min(n_papers, len(holdout))
+        idx = rng.sample(range(len(holdout)), n)
+        text_col = spec.text_column
+        has_source = "source" in holdout.column_names
+        return [
+            {"text": holdout[i][text_col],
+             "source": (holdout[i]["source"] if has_source else "")}
+            for i in idx
+        ]
 
     @modal.method()
     def save_session(self, name: str):
@@ -386,8 +412,11 @@ def _print_paper_preview(texts: list, labels: list | None = None,
 
 
 def _print_session_results(carry: list, fresh: list,
-                           paper_labels: list = None):
-    """Per-item table + token-weighted per-paper summary. 'state' col is ||eta*carried_delta||_F / ||W_down||_F averaged across TTT layers."""
+                           paper_labels: list = None,
+                           paper_sources: list | None = None):
+    """Per-item table + token-weighted per-paper summary. 'state' col is
+    ||eta*carried_delta||_F / ||W_down||_F averaged across TTT layers.
+    When `paper_sources` is provided, also emits a per-source summary."""
     import math
 
     print(f"{'pos':>4}  {'p.s':<6} {'n_tok':>6}  "
@@ -430,12 +459,59 @@ def _print_session_results(carry: list, fresh: list,
         print(f"{label:<{label_width}}  {n_tok:>8}  "
               f"{c_ppl:>10.3f}  {f_ppl:>10.3f}  {gap:>+8.3f}")
 
+    if paper_sources and any(paper_sources):
+        _print_per_source_summary(carry, fresh, paper_sources)
+
+
+def _print_per_source_summary(carry: list, fresh: list,
+                              paper_sources: list):
+    """Token-weighted PPL per source label (e.g. RedPajamaC4). Shows the
+    core "which domain benefits most" table for a mixed-source dataset."""
+    import math
+    from collections import defaultdict
+
+    by_src_carry = defaultdict(list)
+    by_src_fresh = defaultdict(list)
+    for c in carry:
+        src = paper_sources[c['paper_idx']] if c['paper_idx'] < len(paper_sources) else ""
+        if src:
+            by_src_carry[src].append(c)
+    for f in fresh:
+        src = paper_sources[f['paper_idx']] if f['paper_idx'] < len(paper_sources) else ""
+        if src:
+            by_src_fresh[src].append(f)
+
+    if not by_src_carry:
+        return
+    print()
+    print("per-source (token-weighted):")
+    label_w = max(len(s) for s in by_src_carry)
+    label_w = max(label_w, len("source"))
+    print(f"{'source':<{label_w}}  {'n_papers':>9}  {'n_tok':>10}  "
+          f"{'ppl carry':>10}  {'ppl fresh':>10}  {'gap':>8}")
+    for src in sorted(by_src_carry):
+        c_items = by_src_carry[src]
+        f_items = by_src_fresh.get(src, [])
+        n_tok = sum(c['n_tokens'] for c in c_items)
+        if not n_tok:
+            continue
+        c_log = sum(math.log(c['ppl']) * c['n_tokens'] for c in c_items)
+        f_log = sum(math.log(f['ppl']) * f['n_tokens'] for f in f_items)
+        f_tok = sum(f['n_tokens'] for f in f_items) or n_tok
+        c_ppl = math.exp(c_log / n_tok)
+        f_ppl = math.exp(f_log / f_tok)
+        n_papers = len({c['paper_idx'] for c in c_items})
+        print(f"{src:<{label_w}}  {n_papers:>9d}  {n_tok:>10d}  "
+              f"{c_ppl:>10.3f}  {f_ppl:>10.3f}  {f_ppl - c_ppl:>+8.3f}")
+
 
 def _three_way_eval(base_engine, ckpt: str, texts: list,
-                    session_kwargs: dict):
+                    session_kwargs: dict,
+                    paper_sources: list | None = None):
     """Print BASE / LORA-ONLY / FULL tables on the same texts. The three
     configs share input so any per-slice number is directly comparable.
-    LORA-ONLY and FULL are skipped when ckpt is empty."""
+    LORA-ONLY and FULL are skipped when ckpt is empty. `paper_sources`
+    forwards a per-paper source label to the per-source summary."""
     def _run(engine, label):
         print(f"=== {label} ===")
         try:
@@ -445,7 +521,8 @@ def _three_way_eval(base_engine, ckpt: str, texts: list,
             fresh = engine.session_perplexity.remote(
                 texts, evolve=False, **session_kwargs,
             )
-            _print_session_results(carry, fresh)
+            _print_session_results(carry, fresh,
+                                   paper_sources=paper_sources)
         except Exception as e:
             print(f"[failed: {e}]")
         print()
@@ -467,11 +544,16 @@ def holdout_eval(n_papers: int = 5, seed: int = 0, ckpt: str = "",
       3. FULL       -- trained LoRA + trained TTT. The full model.
     Requires --ckpt for (2) and (3); with no --ckpt only BASE is shown."""
     base_engine = TTTInference(ckpt="")
-    texts = base_engine.fetch_holdout_texts.remote(n_papers, seed)
-    _print_paper_preview(texts, [f"holdout {i+1}" for i in range(len(texts))])
+    rows = base_engine.fetch_holdout_texts.remote(n_papers, seed)
+    texts = [r["text"] for r in rows]
+    sources = [r["source"] for r in rows]
+    labels = [f"holdout {i+1}" + (f" [{s}]" if s else "")
+              for i, s in enumerate(sources)]
+    _print_paper_preview(texts, labels)
     _three_way_eval(
         base_engine, ckpt, texts,
         session_kwargs={"slice_papers": slice_papers, "slice_seed": seed},
+        paper_sources=sources,
     )
 
 
@@ -516,10 +598,11 @@ def holdout_generate(n_papers: int = 1, prefix_chars: int = 1200,
                      top_p: float = 0.9, greedy: bool = False):
     """Side-by-side carry-on vs carry-off generation on held-out papers. Pass --greedy so the only differing factor is the carry."""
     engine = TTTInference(ckpt=ckpt)
-    texts = engine.fetch_holdout_texts.remote(n_papers, seed)
-    if not texts:
+    rows = engine.fetch_holdout_texts.remote(n_papers, seed)
+    if not rows:
         print("no holdout papers available")
         return
+    texts = [r["text"] for r in rows]
 
     do_sample = not greedy
     for i, text in enumerate(texts):
@@ -555,14 +638,18 @@ def single_paper_eval(n_slices: int = 8, ckpt: str = "", seed: int = 0):
     session. Prints the BASE / LORA-ONLY / FULL three-way comparison (see
     holdout_eval docstring). --ckpt='' shows only BASE."""
     base_engine = TTTInference(ckpt="")
-    texts = base_engine.fetch_holdout_texts.remote(1, seed)
-    if not texts:
+    rows = base_engine.fetch_holdout_texts.remote(1, seed)
+    if not rows:
         print("no holdout papers available")
         return
-    _print_paper_preview(texts, ["selected paper"])
+    texts = [r["text"] for r in rows]
+    sources = [r["source"] for r in rows]
+    label = "selected paper" + (f" [{sources[0]}]" if sources[0] else "")
+    _print_paper_preview(texts, [label])
     _three_way_eval(
         base_engine, ckpt, texts,
         session_kwargs={"equal_n_slices": n_slices},
+        paper_sources=sources,
     )
 
 

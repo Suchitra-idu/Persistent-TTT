@@ -146,6 +146,97 @@ def expected_items_per_doc(slice_prob: float, slice_min: int,
     return (1.0 - slice_prob) + slice_prob * 0.5 * (slice_min + slice_max)
 
 
+def derive_slice_count(doc_length: int, slice_min_tokens: int,
+                       slices_min: int, slices_max: int) -> int:
+    """How many slices a doc gets in hybrid mode.
+
+    Clamped to [slices_min, slices_max] under the constraint that every
+    slice has at least `slice_min_tokens`. Returns 1 for docs that can't
+    support even `slices_min` slices at the min-tokens threshold, since
+    forcing the k*n bound below the doc length would silently drop tokens.
+    """
+    if slices_min < 1 or slices_max < slices_min:
+        raise ValueError(
+            f"require 1 <= slices_min <= slices_max, "
+            f"got ({slices_min}, {slices_max})"
+        )
+    if slice_min_tokens < 1:
+        raise ValueError(
+            f"slice_min_tokens must be >= 1, got {slice_min_tokens}"
+        )
+    if doc_length < slice_min_tokens * slices_min:
+        return 1
+    k = min(slices_max, doc_length // slice_min_tokens)
+    return max(k, slices_min)
+
+
+def make_hybrid_sessions(
+    num_docs: int,
+    doc_lengths,
+    rng,
+    *,
+    carry_min_tokens: int,
+    slice_min_tokens: int,
+    slices_min: int,
+    slices_max: int,
+    shuffle: bool = True,
+) -> list:
+    """One-doc-per-session with a length-dependent split:
+
+    - `L < carry_min_tokens`: a single-item session (whole doc, no slice).
+      Session-training still calls `reset_session_state` at session start,
+      so the model sees the "S_0 = 0" case for these docs.
+    - `L >= carry_min_tokens`: a single-paper session sliced into k in
+      [slices_min, slices_max] pieces, each with >= slice_min_tokens
+      tokens. Carry propagates across the k slices via TBPTT.
+
+    Intended for pretraining mixes (SlimPajama et al.) where document
+    length varies wildly; the point of training with carry is to teach the
+    model to use a non-zero fast-weight initialization when it exists,
+    which is fine to skip on the short-doc tail.
+    """
+    if carry_min_tokens < slices_min * slice_min_tokens:
+        # A doc at the boundary would be forced through the multi-slice
+        # path but couldn't meet the minimum. Fail loudly instead of
+        # silently collapsing it back to k=1.
+        raise ValueError(
+            f"carry_min_tokens={carry_min_tokens} < slices_min * "
+            f"slice_min_tokens = {slices_min * slice_min_tokens}; "
+            f"raise carry_min_tokens or lower slices_min / slice_min_tokens"
+        )
+    order = (rng.permutation(num_docs).tolist() if shuffle
+             else list(range(num_docs)))
+    sessions = []
+    for doc_idx in order:
+        L = int(doc_lengths[doc_idx])
+        if L < carry_min_tokens:
+            sessions.append([SessionItem(int(doc_idx), 0, L)])
+            continue
+        k = derive_slice_count(L, slice_min_tokens, slices_min, slices_max)
+        sessions.append([
+            SessionItem(int(doc_idx), s, e)
+            for s, e in slice_doc(L, k, slice_min_tokens, rng)
+        ])
+    return sessions
+
+
+def total_hybrid_items(doc_lengths, *, carry_min_tokens: int,
+                       slice_min_tokens: int, slices_min: int,
+                       slices_max: int) -> int:
+    """Sum of SessionItems produced by `make_hybrid_sessions` over these
+    doc lengths; used by the training loop to size the LR schedule."""
+    total = 0
+    for L in doc_lengths:
+        L = int(L)
+        if L < carry_min_tokens:
+            total += 1
+        else:
+            total += derive_slice_count(
+                L, slice_min_tokens, slices_min, slices_max,
+            )
+    return total
+
+
 def count_unigrams(input_ids_iter, vocab_size: int):
     """Single-pass unigram tally over an input-ids iterable."""
     import torch

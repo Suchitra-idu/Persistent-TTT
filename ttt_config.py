@@ -14,16 +14,96 @@ HF_CACHE_VOLUME_NAME = "hf-hub-cache"
 CKPT_MOUNT = "/ckpt"
 HF_CACHE_MOUNT = "/hf-cache"
 
-# If the repo is PRIVATE: `modal secret create huggingface HF_TOKEN=hf_...`
+
+# --------------------------------------------------------------------------
+# Dataset selection
+# --------------------------------------------------------------------------
+# Datasets are described by a DatasetSpec + a small registry. The active spec
+# is chosen by the TTT_DATASET env var (default "arxiv"), so switching
+# datasets is one env var, not a code change. Every downstream module reads
+# DATASET_SPEC rather than the individual columns.
+#
+# If a repo is PRIVATE, `modal secret create huggingface HF_TOKEN=hf_...`
 # then uncomment the secrets=[...] lines in train_modal.py / infer_modal.py.
-DATASET_SOURCE = "suchitraIdu/arxiv-ml-16k"
 
-TEXT_COLUMN = "text"
-TOKENS_EST_COLUMN = "tokens_est"
 
-# Last n rows (newest arxiv ids) reserved as a contamination-free eval pool.
-HOLDOUT_LAST_N = 200
+@dataclass(frozen=True)
+class DatasetSpec:
+    """How to pull rows out of one dataset.
 
+    - `source` is the HF repo id or a local dir of parquet/arrow shards.
+    - `text_column` is the doc-text column name.
+    - `tokens_est_column`, when set and present, lets the loader do a cheap
+      pre-filter on token counts before tokenization.
+    - `source_meta_column` + `source_meta_key`, when both set, extract a
+      per-row source label into a top-level `source` column (see
+      data_utils._annotate_source). Datasets like SlimPajama carry the
+      RedPajama subset name inside a `meta` struct.
+    - `include_sources`, when set, keeps only rows whose extracted source
+      label is in this tuple (see data_utils.apply_source_filter). This is
+      how we exclude CommonCrawl on SlimPajama.
+    - `holdout_last_n` is the newest-row count reserved for eval only.
+    """
+
+    name: str
+    source: str
+    text_column: str = "text"
+    tokens_est_column: str | None = None
+    source_meta_column: str | None = None
+    source_meta_key: str | None = None
+    include_sources: tuple | None = None
+    holdout_last_n: int = 200
+
+
+DATASETS: dict = {
+    "arxiv": DatasetSpec(
+        name="arxiv",
+        source="suchitraIdu/arxiv-ml-16k",
+        text_column="text",
+        tokens_est_column="tokens_est",
+        holdout_last_n=200,
+    ),
+    # DKYoon/SlimPajama-6B is a 6B-token sample of SlimPajama-627B. The
+    # `meta` column is a struct with the RedPajama subset name; excluding
+    # CommonCrawl drops ~54% of rows but leaves ~2.5M docs with a diverse
+    # C4/Github/Books/ArXiv/Wikipedia/StackExchange mix -- enough to
+    # characterize per-domain TTT gaps at 0.6B scale.
+    "slimpajama-6b": DatasetSpec(
+        name="slimpajama-6b",
+        source="DKYoon/SlimPajama-6B",
+        text_column="text",
+        source_meta_column="meta",
+        source_meta_key="redpajama_set_name",
+        include_sources=(
+            "RedPajamaC4",
+            "RedPajamaGithub",
+            "RedPajamaBook",
+            "RedPajamaArXiv",
+            "RedPajamaWikipedia",
+            "RedPajamaStackExchange",
+        ),
+        # Bigger dataset -> larger holdout so per-source eval has enough rows
+        # per bucket after stratified sampling.
+        holdout_last_n=1000,
+    ),
+}
+
+
+def get_dataset_spec(name: str) -> DatasetSpec:
+    if name not in DATASETS:
+        raise KeyError(
+            f"Unknown TTT_DATASET {name!r}. Known: {sorted(DATASETS)}"
+        )
+    return DATASETS[name]
+
+
+DATASET_NAME = os.environ.get("TTT_DATASET", "arxiv")
+DATASET_SPEC = get_dataset_spec(DATASET_NAME)
+
+
+# --------------------------------------------------------------------------
+# Model selection
+# --------------------------------------------------------------------------
 # TTT_BASE_MODEL fully overrides if you need a non-Qwen3 path.
 # 0.6B is the proven size; see docs/scaling.md for 1.7B / 4B / 8B recipes
 # (bigger models need LR bumps, eta / chunk_size retuning, and LAYER_STRIDE=4
@@ -157,6 +237,24 @@ class TrainConfig:
     single_paper_slices_min: int = 5
     single_paper_slices_max: int = 10
 
+    # Hybrid session mode (per-doc split by length):
+    #   L < hybrid_carry_min_tokens  -> single-item session, no slicing.
+    #     Fast weight is still reset at session start; the model sees the
+    #     "S_0 = 0" case for these, which is the correct training signal
+    #     for short docs that shouldn't accumulate.
+    #   L >= hybrid_carry_min_tokens -> one-paper session sliced into
+    #     k in [slices_min, slices_max] pieces of >= slice_min_tokens each,
+    #     carry propagates across the k slices via TBPTT.
+    # When True, single_paper_sessions and session_papers_* / slice_*
+    # above are IGNORED. Intended for diverse pretraining mixes (SlimPajama)
+    # where document length varies wildly; unnecessary for arxiv-style
+    # corpora where every doc is long.
+    hybrid_sessions: bool = False
+    hybrid_carry_min_tokens: int = 3000
+    hybrid_slices_min: int = 2
+    hybrid_slices_max: int = 6
+    hybrid_slice_min_tokens: int = 800
+
     # Content-token loss masking. CE is computed only on positions whose
     # token_id is NOT among the most-frequent tokens accounting for
     # (1 - loss_mask_keep_fraction) of baseline occurrences.
@@ -198,11 +296,26 @@ class TrainConfig:
     param_log_every: int = 50
 
     # In-loop holdout eval: per-paper ppl_fresh - ppl_carry gap on
-    # eval_n_papers papers x eval_n_slices slices, twice (with/without
-    # carry). eval_every=0 disables.
+    # `n` papers x eval_n_slices slices, twice (with/without carry).
+    # eval_every=0 disables.
+    #
+    # Effective paper count `n`:
+    #   - When the active dataset has a `source` column (SlimPajama)
+    #     AND eval_n_papers_per_source > 0:
+    #         n = n_sources * eval_n_papers_per_source
+    #     Sampling is stratified: exactly `eval_n_papers_per_source`
+    #     papers per source. Ensures every domain is represented every
+    #     eval -- what per-source eval metrics need.
+    #   - Otherwise: n = eval_n_papers, sampled uniformly.
+    #
+    # eval_min_tokens filters holdout to docs with >= this many tokens
+    # BEFORE sampling. Guards against picking tiny StackExchange posts
+    # that can't be sliced into eval_n_slices meaningful pieces.
     eval_every: int = 100
     eval_n_papers: int = 3
+    eval_n_papers_per_source: int = 1
     eval_n_slices: int = 8
+    eval_min_tokens: int = 2048
     eval_holdout_seed: int = 0
 
 

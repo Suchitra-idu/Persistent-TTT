@@ -123,9 +123,14 @@ to compensate for smaller per-param gradients at scale. See
 | `slice_min` | `2` | Slice count lower bound when slicing triggers. |
 | `slice_max` | `6` | Slice count upper bound. |
 | `slice_min_tokens` | `1024` | Minimum tokens per slice (guards against sub-chunk-size slices). |
-| `single_paper_sessions` | `False` (config default) | Sessions = one paper cut into k pieces. CLI `--single-paper 1` overrides. |
+| `single_paper_sessions` | `False` (config default) | Sessions = one paper cut into k pieces. CLI `--mode single` overrides. |
 | `single_paper_slices_min` | `2` | When single-paper mode is on. |
 | `single_paper_slices_max` | `6` | When single-paper mode is on. |
+| `hybrid_sessions` | `False` | Per-doc split by length: short docs → single-item no-carry, long docs → k-slice carry. CLI `--mode hybrid` overrides. Takes precedence over `single_paper_sessions`. |
+| `hybrid_carry_min_tokens` | `3000` | X threshold: docs shorter than this get a single-item session; longer docs get sliced. |
+| `hybrid_slices_min` | `2` | y: min slices for the carry path. |
+| `hybrid_slices_max` | `6` | z: max slices for the carry path. |
+| `hybrid_slice_min_tokens` | `800` | n: min tokens per slice. Must satisfy `y*n <= hybrid_carry_min_tokens`. |
 
 ### Loss mask (all off by default)
 
@@ -156,8 +161,10 @@ to compensate for smaller per-param gradients at scale. See
 | field | default | notes |
 |---|---|---|
 | `eval_every` | `100` | Steps between in-loop eval. `0` disables. |
-| `eval_n_papers` | `3` | Papers per in-loop eval. |
+| `eval_n_papers` | `3` | Papers per in-loop eval when the dataset has no source column (arxiv). Ignored when `eval_n_papers_per_source > 0` and the dataset has a source column. |
+| `eval_n_papers_per_source` | `1` | With a multi-source dataset (SlimPajama): exactly N papers per source per eval. Effective total = `N * n_sources`. Set to 0 to fall back to the flat `eval_n_papers` behavior. |
 | `eval_n_slices` | `8` | Slices per paper. |
+| `eval_min_tokens` | `2048` | Filter eval holdout to docs with at least this many tokens before sampling. Guards against picking tiny StackExchange posts that can't be sliced. |
 | `eval_holdout_seed` | `0` | Deterministic paper selection. |
 
 ## CLI flag → override map
@@ -167,14 +174,58 @@ corresponding config field:
 
 | CLI flag | overrides |
 |---|---|
-| `--limit-docs N` | Not a config field. Slices training data to N docs. `0` = all. |
+| `--limit-docs N` | Not a config field. Slices training data to N docs after shuffle. `0` = all. |
 | `--num-epochs N` | `num_epochs` |
 | `--grad-accum N` | `grad_accum_steps` |
 | `--session 0\|1` | `session_training` |
-| `--single-paper 0\|1` | `single_paper_sessions` |
+| `--mode multi\|single\|hybrid` | `single_paper_sessions` + `hybrid_sessions` (mode dispatch). Empty string leaves defaults. Unknown mode raises. |
+| `--min-doc-tokens N` | `min_doc_tokens` |
+| `--hybrid-carry-min N` | `hybrid_carry_min_tokens` |
+| `--hybrid-slice-min N` | `hybrid_slice_min_tokens` |
+| `--hybrid-slices-min N` | `hybrid_slices_min` |
+| `--hybrid-slices-max N` | `hybrid_slices_max` |
+| `--eval-n-papers N` | `eval_n_papers` |
+| `--eval-n-papers-per-source N` | `eval_n_papers_per_source` |
+| `--eval-min-tokens N` | `eval_min_tokens` |
+| `--resume-from PATH` | Not a config field. `step_<n>` or `<other_run>/step_<n>`. |
+
+Any int flag == 0 means "leave the config default unchanged." `mode`
+uses the empty string as its "unchanged" sentinel; `session` uses -1.
 
 Any field NOT listed here can only be changed by editing
 `ttt_config.py`.
+
+## Env vars
+
+Set these in the shell that invokes `modal run` — the Modal image
+definition captures them from your local env and forwards them into
+the container. So:
+
+```bash
+TTT_DATASET=slimpajama-6b modal run --detach train_modal.py::train ...
+```
+
+works: `TTT_DATASET` is captured at image-definition time (which runs
+locally when you invoke `modal run`) and set as a container env var
+via `image.env(...)`. The container then reads it at `ttt_config`
+import time. Without this forwarding step, the container would fall
+back to the default because it doesn't inherit your laptop's env.
+
+The forwarded set is `_FORWARD_ENV_KEYS` in `train_modal.py` /
+`infer_modal.py` — currently `TTT_DATASET, TTT_MODEL_SIZE,
+TTT_LAYER_STRIDE, TTT_LAYER_START, TTT_BASE_MODEL`. To forward more,
+add them to that tuple.
+
+| var | default | meaning |
+|---|---|---|
+| `TTT_DATASET` | `"arxiv"` | One of the registered specs in `DATASETS`. Currently `"arxiv"` or `"slimpajama-6b"`. See [data.md](data.md#dataset-selection-dataset_spec). |
+| `TTT_MODEL_SIZE` | `"0.6B"` | Qwen3 size: `0.6B`, `1.7B`, `4B`, `8B`. |
+| `TTT_BASE_MODEL` | derived from `TTT_MODEL_SIZE` | Full override for the HF repo id (non-Qwen3 paths). |
+| `TTT_LAYER_STRIDE` | `2` | Every stride-th layer gets a TTT MLP. Bump to `4` at 8B for memory. |
+| `TTT_LAYER_START` | `1` | Index of the first TTT layer. |
+| `WANDB_API_KEY` | (Modal secret) | wandb telemetry. |
+| `HF_TOKEN` | (Modal secret) | HF token for gated repos. |
+| `HF_HOME` | `/hf-cache` | Set in the Modal image so downloads route to the shared volume. |
 
 ## Sensitivity notes
 

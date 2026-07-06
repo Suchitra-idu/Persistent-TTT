@@ -12,11 +12,25 @@ import time
 import modal
 
 from ttt_config import (
-    BASE_MODEL, CKPT_MOUNT, CKPT_VOLUME_NAME, HF_CACHE_MOUNT,
-    HF_CACHE_VOLUME_NAME, TEXT_COLUMN, TOKENS_EST_COLUMN, TRAIN_CFG, TTT_CFG,
+    BASE_MODEL, CKPT_MOUNT, CKPT_VOLUME_NAME, DATASET_SPEC, HF_CACHE_MOUNT,
+    HF_CACHE_VOLUME_NAME, TRAIN_CFG, TTT_CFG,
 )
 
 app = modal.App("inplace-ttt-train")
+
+# Forward TTT_* env vars from the local shell (where `modal run` is
+# invoked) into the container. Without this, `TTT_DATASET=slimpajama-6b
+# modal run ...` would silently fall back to the arxiv default inside
+# the container -- the env var lives on the laptop, not the Modal
+# machine. Captured at image-definition time, which runs locally in the
+# `modal run` process.
+_FORWARD_ENV_KEYS = ("TTT_DATASET", "TTT_MODEL_SIZE", "TTT_LAYER_STRIDE",
+                     "TTT_LAYER_START", "TTT_BASE_MODEL")
+_FORWARDED_ENV = {k: os.environ[k]
+                  for k in _FORWARD_ENV_KEYS if k in os.environ}
+if _FORWARDED_ENV:
+    print(f"[modal] forwarding env to container: "
+          f"{ {k: v for k, v in _FORWARDED_ENV.items()} }")
 
 image = (
     modal.Image.debian_slim(python_version="3.11")
@@ -33,7 +47,7 @@ image = (
     .pip_install(
         "flash-attn @ https://github.com/Dao-AILab/flash-attention/releases/download/v2.8.3.post1/flash_attn-2.8.3.post1%2Bcu12torch2.8cxx11abiTRUE-cp311-cp311-linux_x86_64.whl"
     )
-    .env({"HF_HOME": HF_CACHE_MOUNT})
+    .env({"HF_HOME": HF_CACHE_MOUNT, **_FORWARDED_ENV})
     .add_local_python_source("ttt_config", "inplace_ttt", "ttt_wiring",
                              "model_setup", "data_utils", "observability",
                              "train_utils")
@@ -48,39 +62,93 @@ GPU = "H100"
 SECRETS = [modal.Secret.from_name("wandb"), modal.Secret.from_name("huggingface")]
 
 
-def load_token_dataset(tokenizer, limit_docs: int | None):
-    from data_utils import open_dataset, split_holdout
+def load_token_dataset(tokenizer, cfg, limit_docs: int | None):
+    """Load holdout-split, source-filter, shuffle, cap, tokenize,
+    drop-short. Shuffling happens BEFORE --limit-docs and BEFORE
+    in-corpus unigram counting so the head of the pipeline is a uniform
+    sample across sources -- critical for mixed corpora like SlimPajama
+    where the natural order is grouped by source."""
+    from data_utils import apply_source_filter, open_dataset, split_holdout
 
-    cfg = TRAIN_CFG
-    ds, _ = split_holdout(open_dataset())
+    spec = DATASET_SPEC
+    ds, _ = split_holdout(open_dataset(spec), spec)
+    ds = apply_source_filter(ds, spec)
 
-    if TOKENS_EST_COLUMN in ds.column_names:
+    # Deterministic shuffle: .select over a permuted index list.
+    # No data copy; O(len(ds)) memory. Seeded by cfg.seed so reruns
+    # of the same config visit docs in the same order.
+    ds = _shuffle_by_index(ds, seed=cfg.seed)
+
+    tokens_est_col = spec.tokens_est_column
+    if tokens_est_col and tokens_est_col in ds.column_names:
         ds = ds.filter(
-            lambda ex: ex[TOKENS_EST_COLUMN] >= cfg.min_doc_tokens,
+            lambda ex: ex[tokens_est_col] >= cfg.min_doc_tokens,
             desc="pre-filter by tokens_est",
         )
     if limit_docs:
         ds = ds.select(range(min(limit_docs, len(ds))))
 
+    text_col = spec.text_column
+    # Preserve the source column through tokenization so the training loop
+    # can log per-source item counts even though loss uses only input_ids.
+    keep_cols = ["source"] if "source" in ds.column_names else []
+
     def tokenize(batch):
         out = tokenizer(
-            batch[TEXT_COLUMN], truncation=True, max_length=cfg.max_seq_len,
+            batch[text_col], truncation=True, max_length=cfg.max_seq_len,
             return_attention_mask=False,
         )
         return {"input_ids": out["input_ids"]}
 
-    ds = ds.map(tokenize, batched=True, remove_columns=ds.column_names,
+    remove = [c for c in ds.column_names if c not in keep_cols]
+    ds = ds.map(tokenize, batched=True, remove_columns=remove,
                 desc="tokenizing")
     ds = ds.filter(lambda ex: len(ex["input_ids"]) >= cfg.min_doc_tokens,
                    desc="dropping short docs (exact)")
-    print(f"dataset ready, {len(ds)} documents")
+    print(f"dataset ready, {len(ds)} documents "
+          f"(spec={spec.name!r}, seed={cfg.seed})")
+    if "source" in ds.column_names:
+        _print_source_breakdown(ds)
     return ds
 
 
-def _apply_cli_overrides(num_epochs, grad_accum, session, single_paper):
-    """Only override TRAIN_CFG fields when the corresponding CLI value is set:
-    num_epochs/grad_accum use 0 as "unset"; session/single_paper use _UNSET
-    (or any value outside 0/1) as "unset"."""
+def _shuffle_by_index(ds, *, seed: int):
+    """Random permutation via .select over a shuffled index list.
+    Deterministic per seed."""
+    import random
+    rng = random.Random(seed)
+    indices = list(range(len(ds)))
+    rng.shuffle(indices)
+    return ds.select(indices)
+
+
+def _print_source_breakdown(ds):
+    """Log the row count per source label so anyone can eyeball the mix."""
+    from collections import Counter
+    counts = Counter(ds["source"])
+    total = sum(counts.values())
+    if total == 0:
+        return
+    print("source breakdown:")
+    for src, n in sorted(counts.items(), key=lambda kv: -kv[1]):
+        print(f"  {src:<30s} {n:>10,d}  ({n / total:6.1%})")
+
+
+_MODE_TO_FLAGS = {
+    "multi":  {"single_paper_sessions": False, "hybrid_sessions": False},
+    "single": {"single_paper_sessions": True,  "hybrid_sessions": False},
+    "hybrid": {"single_paper_sessions": False, "hybrid_sessions": True},
+}
+
+
+def _apply_cli_overrides(*, num_epochs, grad_accum, session, mode,
+                         min_doc_tokens, hybrid_carry_min,
+                         hybrid_slice_min, hybrid_slices_min,
+                         hybrid_slices_max, eval_n_papers,
+                         eval_n_papers_per_source, eval_min_tokens):
+    """Merge CLI values into TRAIN_CFG. Any int arg == 0 means "unset";
+    session uses _UNSET (-1) for "unset"; mode "" means "unset".
+    Unknown mode raises."""
     overrides = {}
     if num_epochs:
         overrides["num_epochs"] = num_epochs
@@ -88,8 +156,29 @@ def _apply_cli_overrides(num_epochs, grad_accum, session, single_paper):
         overrides["grad_accum_steps"] = grad_accum
     if session in (0, 1):
         overrides["session_training"] = bool(session)
-    if single_paper in (0, 1):
-        overrides["single_paper_sessions"] = bool(single_paper)
+    if mode:
+        if mode not in _MODE_TO_FLAGS:
+            raise ValueError(
+                f"unknown --mode {mode!r}; expected one of "
+                f"{sorted(_MODE_TO_FLAGS)}"
+            )
+        overrides.update(_MODE_TO_FLAGS[mode])
+    if min_doc_tokens:
+        overrides["min_doc_tokens"] = min_doc_tokens
+    if hybrid_carry_min:
+        overrides["hybrid_carry_min_tokens"] = hybrid_carry_min
+    if hybrid_slice_min:
+        overrides["hybrid_slice_min_tokens"] = hybrid_slice_min
+    if hybrid_slices_min:
+        overrides["hybrid_slices_min"] = hybrid_slices_min
+    if hybrid_slices_max:
+        overrides["hybrid_slices_max"] = hybrid_slices_max
+    if eval_n_papers:
+        overrides["eval_n_papers"] = eval_n_papers
+    if eval_n_papers_per_source:
+        overrides["eval_n_papers_per_source"] = eval_n_papers_per_source
+    if eval_min_tokens:
+        overrides["eval_min_tokens"] = eval_min_tokens
     return dataclasses.replace(TRAIN_CFG, **overrides) if overrides else TRAIN_CFG
 
 
@@ -166,10 +255,18 @@ def _setup_loss_mask(cfg, ds, tokenizer, vocab_size):
 
 
 def _make_epoch_sessions(cfg, num_docs, doc_lengths, rng):
-    """Build the session schedule for one epoch. Dispatches on
-    cfg.single_paper_sessions."""
-    from train_utils import make_slice_sessions
+    """Build the session schedule for one epoch. Dispatches on the three
+    session modes; precedence hybrid > single_paper > multi_paper."""
+    from train_utils import make_hybrid_sessions, make_slice_sessions
 
+    if cfg.hybrid_sessions:
+        return make_hybrid_sessions(
+            num_docs, doc_lengths, rng,
+            carry_min_tokens=cfg.hybrid_carry_min_tokens,
+            slice_min_tokens=cfg.hybrid_slice_min_tokens,
+            slices_min=cfg.hybrid_slices_min,
+            slices_max=cfg.hybrid_slices_max,
+        )
     if cfg.single_paper_sessions:
         return make_slice_sessions(
             num_docs, doc_lengths, rng,
@@ -187,6 +284,51 @@ def _make_epoch_sessions(cfg, num_docs, doc_lengths, rng):
     )
 
 
+def _items_per_epoch(cfg, doc_lengths):
+    """Number of SessionItems the loop will visit in one epoch, used to
+    size the cosine LR schedule. Exact for hybrid/single-paper modes;
+    an expectation for multi-paper."""
+    from train_utils import expected_items_per_doc, total_hybrid_items
+
+    n = len(doc_lengths)
+    if cfg.hybrid_sessions:
+        return total_hybrid_items(
+            doc_lengths,
+            carry_min_tokens=cfg.hybrid_carry_min_tokens,
+            slice_min_tokens=cfg.hybrid_slice_min_tokens,
+            slices_min=cfg.hybrid_slices_min,
+            slices_max=cfg.hybrid_slices_max,
+        )
+    if cfg.single_paper_sessions:
+        return math.ceil(
+            n * 0.5 * (cfg.single_paper_slices_min
+                       + cfg.single_paper_slices_max)
+        )
+    return math.ceil(n * expected_items_per_doc(
+        cfg.slice_prob, cfg.slice_min, cfg.slice_max
+    ))
+
+
+def _mode_line(cfg) -> str:
+    """One-line description of the active session mode for the boot log."""
+    if cfg.hybrid_sessions:
+        return (f"hybrid_sessions=True "
+                f"carry_min={cfg.hybrid_carry_min_tokens} "
+                f"slices in [{cfg.hybrid_slices_min}, "
+                f"{cfg.hybrid_slices_max}] "
+                f"min_tok={cfg.hybrid_slice_min_tokens}")
+    if cfg.single_paper_sessions:
+        return (f"single_paper_sessions=True "
+                f"k in [{cfg.single_paper_slices_min}, "
+                f"{cfg.single_paper_slices_max}] "
+                f"min_tok={cfg.slice_min_tokens}")
+    return (f"n_papers in [{cfg.session_papers_min}, "
+            f"{cfg.session_papers_max}]; "
+            f"slice_prob={cfg.slice_prob} "
+            f"k in [{cfg.slice_min}, {cfg.slice_max}] "
+            f"min_tok={cfg.slice_min_tokens}")
+
+
 # CLI-flag sentinel: Modal parameters can't easily carry Optional[bool], so
 # -1 means "leave TRAIN_CFG value unchanged"; 0/1 override.
 _UNSET = -1
@@ -196,7 +338,16 @@ _UNSET = -1
               timeout=60 * 60 * 24)
 def train(limit_docs: int = 0, num_epochs: int = 0,
           grad_accum: int = 0, session: int = _UNSET,
-          single_paper: int = _UNSET, resume_from: str = ""):
+          mode: str = "",
+          min_doc_tokens: int = 0,
+          hybrid_carry_min: int = 0,
+          hybrid_slice_min: int = 0,
+          hybrid_slices_min: int = 0,
+          hybrid_slices_max: int = 0,
+          eval_n_papers: int = 0,
+          eval_n_papers_per_source: int = 0,
+          eval_min_tokens: int = 0,
+          resume_from: str = ""):
     import numpy as np
     import torch
     from transformers import get_cosine_schedule_with_warmup
@@ -208,9 +359,19 @@ def train(limit_docs: int = 0, num_epochs: int = 0,
     from ttt_wiring import build_param_groups
     from model_setup import build_model
     from observability import Telemetry, gpu_stats, param_health
-    from train_utils import apply_loss_mask, expected_items_per_doc
+    from train_utils import apply_loss_mask
 
-    cfg = _apply_cli_overrides(num_epochs, grad_accum, session, single_paper)
+    cfg = _apply_cli_overrides(
+        num_epochs=num_epochs, grad_accum=grad_accum, session=session,
+        mode=mode, min_doc_tokens=min_doc_tokens,
+        hybrid_carry_min=hybrid_carry_min,
+        hybrid_slice_min=hybrid_slice_min,
+        hybrid_slices_min=hybrid_slices_min,
+        hybrid_slices_max=hybrid_slices_max,
+        eval_n_papers=eval_n_papers,
+        eval_n_papers_per_source=eval_n_papers_per_source,
+        eval_min_tokens=eval_min_tokens,
+    )
     epochs = cfg.num_epochs
     torch.manual_seed(cfg.seed)
 
@@ -258,32 +419,31 @@ def train(limit_docs: int = 0, num_epochs: int = 0,
     import bitsandbytes as bnb
     optimizer = bnb.optim.PagedAdamW8bit(optim_groups, betas=(0.9, 0.95))
 
-    ds = load_token_dataset(tokenizer, limit_docs or None)
+    ds = load_token_dataset(tokenizer, cfg, limit_docs or None)
     hf_vol.commit()
 
     eval_papers = []
+    eval_sources = []
     if cfg.eval_every > 0:
-        eval_papers = fetch_holdout_papers_ids(
-            tokenizer, cfg.eval_n_papers, cfg.eval_holdout_seed
-        )
+        rows = fetch_holdout_papers_ids(tokenizer, cfg)
+        eval_papers = [ids for ids, _ in rows]
+        eval_sources = [src for _, src in rows]
         if not eval_papers:
             print("no holdout papers available, in-loop eval disabled")
         else:
             lens = ", ".join(str(len(p)) for p in eval_papers)
             print(f"in-loop eval ON, {len(eval_papers)} papers ({lens} tokens), "
                   f"{cfg.eval_n_slices} slices each, every {cfg.eval_every} steps")
+            if any(eval_sources):
+                from collections import Counter
+                src_counts = Counter(eval_sources)
+                mix = ", ".join(f"{k}:{v}" for k, v in
+                                sorted(src_counts.items(), key=lambda kv: -kv[1]))
+                print(f"  eval source mix: {mix}")
     doc_lengths = [len(ex["input_ids"]) for ex in ds]
 
     common_mask = _setup_loss_mask(cfg, ds, tokenizer, model.config.vocab_size)
-    if cfg.single_paper_sessions:
-        items_per_doc = 0.5 * (
-            cfg.single_paper_slices_min + cfg.single_paper_slices_max
-        )
-    else:
-        items_per_doc = expected_items_per_doc(
-            cfg.slice_prob, cfg.slice_min, cfg.slice_max
-        )
-    items_per_epoch = math.ceil(len(ds) * items_per_doc)
+    items_per_epoch = _items_per_epoch(cfg, doc_lengths)
     steps_per_epoch = math.ceil(items_per_epoch / cfg.grad_accum_steps)
     total_steps = steps_per_epoch * epochs
     scheduler = get_cosine_schedule_with_warmup(
@@ -291,17 +451,7 @@ def train(limit_docs: int = 0, num_epochs: int = 0,
         num_warmup_steps=max(cfg.warmup_min_steps, int(cfg.warmup_ratio * total_steps)),
         num_training_steps=total_steps,
     )
-    if cfg.single_paper_sessions:
-        mode_line = (f"single_paper_sessions=True "
-                     f"k in [{cfg.single_paper_slices_min}, "
-                     f"{cfg.single_paper_slices_max}] "
-                     f"min_tok={cfg.slice_min_tokens}")
-    else:
-        mode_line = (f"n_papers in [{cfg.session_papers_min}, "
-                     f"{cfg.session_papers_max}]; "
-                     f"slice_prob={cfg.slice_prob} "
-                     f"k in [{cfg.slice_min}, {cfg.slice_max}] "
-                     f"min_tok={cfg.slice_min_tokens}")
+    mode_line = _mode_line(cfg)
     print(f"{total_steps} optimizer steps "
           f"({len(ds)} docs x {epochs} epochs / accum {cfg.grad_accum_steps}); "
           f"session_training={cfg.session_training}; {mode_line}")
@@ -448,6 +598,7 @@ def train(limit_docs: int = 0, num_epochs: int = 0,
                     eval_metrics = run_holdout_eval(
                         model, eval_papers, cfg.eval_n_slices,
                         train_session_mode=cfg.session_training,
+                        paper_sources=eval_sources,
                     )
                     telemetry.log({"train/step": step, **eval_metrics})
                     print(
@@ -475,22 +626,136 @@ def save_checkpoint(model, run_dir: str, step: int):
     print(f"saved checkpoint -> {path}")
 
 
-def fetch_holdout_papers_ids(tokenizer, n_papers: int, seed: int):
+def fetch_holdout_papers_ids(tokenizer, cfg):
+    """Sample holdout papers as (input_ids, source_label) pairs.
+
+    Sampling policy:
+      1. Filter to docs with >= cfg.eval_min_tokens tokens (uses
+         `tokens_est_column` if the spec has one; otherwise falls back
+         to a char-based proxy len(text) / 4 -- cheap and doesn't need
+         a tokenizer pass).
+      2. If the dataset has a `source` column and
+         cfg.eval_n_papers_per_source > 0:
+           n_papers = n_sources * eval_n_papers_per_source
+           Sample exactly eval_n_papers_per_source per source.
+         Otherwise: sample cfg.eval_n_papers uniformly from the pool.
+      3. Tokenize the picked docs, return [(ids, source), ...].
+
+    Falls back to unfiltered holdout if the min-tokens filter empties
+    the pool (with a warning) so eval never fails silently.
+    """
     import random
 
-    from data_utils import open_dataset, split_holdout
+    from data_utils import apply_source_filter, open_dataset, split_holdout
 
-    _, holdout = split_holdout(open_dataset())
+    spec = DATASET_SPEC
+    _, holdout = split_holdout(open_dataset(spec), spec)
+    holdout = apply_source_filter(holdout, spec)
     if len(holdout) == 0:
         return []
-    rng = random.Random(seed)
-    n = min(n_papers, len(holdout))
-    indices = rng.sample(range(len(holdout)), n)
-    return [
-        tokenizer(holdout[i][TEXT_COLUMN], truncation=True,
-                  max_length=TRAIN_CFG.max_seq_len).input_ids
-        for i in indices
-    ]
+
+    filtered = _filter_holdout_by_min_tokens(
+        holdout, spec, cfg.eval_min_tokens,
+    )
+    if len(filtered) == 0:
+        print(f"warning: no holdout doc has >= "
+              f"{cfg.eval_min_tokens} tokens (est); using unfiltered "
+              f"holdout for eval sampling")
+    else:
+        holdout = filtered
+
+    rng = random.Random(cfg.eval_holdout_seed)
+    has_source = "source" in holdout.column_names
+
+    if has_source and cfg.eval_n_papers_per_source > 0:
+        indices = _n_per_source_indices(
+            [holdout[i]["source"] for i in range(len(holdout))],
+            cfg.eval_n_papers_per_source, rng,
+        )
+    elif has_source:
+        indices = _stratified_sample_indices(
+            [holdout[i]["source"] for i in range(len(holdout))],
+            cfg.eval_n_papers, rng,
+        )
+    else:
+        n = min(cfg.eval_n_papers, len(holdout))
+        indices = rng.sample(range(len(holdout)), n)
+
+    text_col = spec.text_column
+    out = []
+    for i in indices:
+        row = holdout[i]
+        ids = tokenizer(row[text_col], truncation=True,
+                        max_length=cfg.max_seq_len).input_ids
+        src = row["source"] if has_source else ""
+        out.append((ids, src))
+    return out
+
+
+def _filter_holdout_by_min_tokens(ds, spec, min_tokens: int):
+    """Keep only rows likely to have >= min_tokens tokens. Uses the
+    spec's tokens_est_column when present; otherwise a rough
+    character-count proxy (~4 chars/token for English BPE)."""
+    if min_tokens <= 0:
+        return ds
+    tokens_est_col = spec.tokens_est_column
+    if tokens_est_col and tokens_est_col in ds.column_names:
+        return ds.filter(
+            lambda ex: ex[tokens_est_col] >= min_tokens,
+            desc=f"eval: keep tokens_est >= {min_tokens}",
+        )
+    text_col = spec.text_column
+    char_threshold = 4 * min_tokens
+    return ds.filter(
+        lambda ex: len(ex[text_col]) >= char_threshold,
+        desc=f"eval: keep len(text) >= {char_threshold} chars",
+    )
+
+
+def _n_per_source_indices(source_labels, n_per_source: int, rng) -> list:
+    """Sample up to `n_per_source` distinct indices from each source
+    group. Sources with fewer than n_per_source rows contribute
+    everything they have."""
+    from collections import defaultdict
+    by_src = defaultdict(list)
+    for i, s in enumerate(source_labels):
+        by_src[s].append(i)
+    picked = []
+    for src in sorted(by_src):
+        pool = by_src[src]
+        rng.shuffle(pool)
+        picked.extend(pool[:n_per_source])
+    return picked
+
+
+def _stratified_sample_indices(source_labels, n_target: int, rng) -> list:
+    """Round-robin one index per source until we hit n_target; then fill
+    with uniform random draws from the pool. Preserves per-source
+    representation without hard-failing on undersized buckets."""
+    from collections import defaultdict
+    by_src = defaultdict(list)
+    for i, s in enumerate(source_labels):
+        by_src[s].append(i)
+    for pool in by_src.values():
+        rng.shuffle(pool)
+    order = sorted(by_src.keys())
+    picked, taken = [], set()
+    # Round-robin one per source, then a second pass, etc.
+    while len(picked) < n_target and any(by_src[k] for k in order):
+        for k in order:
+            if not by_src[k]:
+                continue
+            picked.append(by_src[k].pop())
+            taken.add(picked[-1])
+            if len(picked) >= n_target:
+                break
+    # If we've exhausted every bucket and still need more, top up randomly
+    # from the whole pool.
+    if len(picked) < n_target:
+        remaining = [i for i in range(len(source_labels)) if i not in taken]
+        rng.shuffle(remaining)
+        picked.extend(remaining[:n_target - len(picked)])
+    return picked
 
 
 def _eval_paper(model, paper_ids, n_slices: int, evolve: bool) -> list:
@@ -525,10 +790,48 @@ def _token_weighted_ppl(rows) -> float:
     return math.exp(total_log / total_n) if total_n else float("nan")
 
 
+def _per_source_eval_metrics(per_paper: list, paper_sources: list) -> dict:
+    """Token-weighted per-source carry/fresh/gap. Only sources represented
+    in the eval sample get keys emitted."""
+    from collections import defaultdict
+    by_src = defaultdict(list)
+    for p, src in zip(per_paper, paper_sources):
+        if not src:
+            continue
+        by_src[src].append(p)
+
+    out = {}
+    for src, papers in by_src.items():
+        total_carry_log, total_fresh_log, total_tok = 0.0, 0.0, 0
+        for p in papers:
+            c_tok = sum(n for n, _, _ in p["carry_rows"])
+            f_tok = sum(n for n, _, _ in p["fresh_rows"])
+            if c_tok:
+                total_carry_log += math.log(p["carry_ppl"]) * c_tok
+                total_tok += c_tok
+            if f_tok:
+                total_fresh_log += math.log(p["fresh_ppl"]) * f_tok
+        if not total_tok:
+            continue
+        c_ppl = math.exp(total_carry_log / total_tok)
+        f_ppl = math.exp(total_fresh_log / total_tok)
+        out[f"eval/{src}/carry_ppl"] = c_ppl
+        out[f"eval/{src}/fresh_ppl"] = f_ppl
+        out[f"eval/{src}/gap"] = f_ppl - c_ppl
+        out[f"eval/{src}/n_papers"] = len(papers)
+    return out
+
+
 def run_holdout_eval(model, holdout_papers, n_slices: int,
-                    train_session_mode: bool) -> dict:
+                    train_session_mode: bool,
+                    paper_sources: list | None = None) -> dict:
     """Multi-paper carry-vs-fresh perplexity eval. Snapshots and restores
-    TTT module state so this is a no-op against the training loop."""
+    TTT module state so this is a no-op against the training loop.
+
+    When `paper_sources` is provided (parallel list to holdout_papers,
+    each a source label), the metric dict also includes per-source
+    aggregates keyed `eval/<source>/carry_ppl` etc. -- exactly the split
+    we care about for characterizing which document domains benefit most."""
     from inplace_ttt import iter_ttt_modules
 
     modules = list(iter_ttt_modules(model))
@@ -578,6 +881,8 @@ def run_holdout_eval(model, holdout_papers, n_slices: int,
         metrics[f"eval/paper_{i}/fresh_ppl"] = p["fresh_ppl"]
         metrics[f"eval/paper_{i}/gap"] = p["fresh_ppl"] - p["carry_ppl"]
         metrics[f"eval/paper_{i}/state_ratio_final"] = p["state_ratio_final"]
+    if paper_sources and any(paper_sources):
+        metrics.update(_per_source_eval_metrics(per_paper, paper_sources))
     for s_idx in range(n_slices):
         carry_logs, fresh_logs, state_vals = [], [], []
         for p in per_paper:
@@ -757,7 +1062,7 @@ def diagnose_loss_mask(limit_docs: int = 0, top_k: int = 80,
               f"{ref_meta.get('n_docs', 0)} rows")
         snapshots = [(label, ref_meta.get("n_docs", 0), ref_counts)]
     else:
-        ds = load_token_dataset(tokenizer, limit_docs or None)
+        ds = load_token_dataset(tokenizer, TRAIN_CFG, limit_docs or None)
         hf_vol.commit()
         n = len(ds)
         if n < 4:
@@ -915,7 +1220,24 @@ def diagnose_loss_mask(limit_docs: int = 0, top_k: int = 80,
 @app.local_entrypoint()
 def main(limit_docs: int = 0, num_epochs: int = 0,
          grad_accum: int = 0, session: int = _UNSET,
-         single_paper: int = _UNSET):
-    train.remote(limit_docs=limit_docs, num_epochs=num_epochs,
-                 grad_accum=grad_accum, session=session,
-                 single_paper=single_paper)
+         mode: str = "",
+         min_doc_tokens: int = 0,
+         hybrid_carry_min: int = 0,
+         hybrid_slice_min: int = 0,
+         hybrid_slices_min: int = 0,
+         hybrid_slices_max: int = 0,
+         eval_n_papers: int = 0,
+         eval_n_papers_per_source: int = 0,
+         eval_min_tokens: int = 0):
+    train.remote(
+        limit_docs=limit_docs, num_epochs=num_epochs,
+        grad_accum=grad_accum, session=session, mode=mode,
+        min_doc_tokens=min_doc_tokens,
+        hybrid_carry_min=hybrid_carry_min,
+        hybrid_slice_min=hybrid_slice_min,
+        hybrid_slices_min=hybrid_slices_min,
+        hybrid_slices_max=hybrid_slices_max,
+        eval_n_papers=eval_n_papers,
+        eval_n_papers_per_source=eval_n_papers_per_source,
+        eval_min_tokens=eval_min_tokens,
+    )

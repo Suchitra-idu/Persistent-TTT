@@ -26,11 +26,12 @@ tests/
 ├── test_scan_math.py      scan vs sequential reference implementation
 ├── test_mechanism.py      identity, causality, stream/scan, evolve, clip
 ├── test_wiring.py         LoRA regex, param groups, checkpoint I/O
-├── test_session.py        carry lifecycle, staging idempotence, schedule, slicing
+├── test_session.py        carry lifecycle, staging idempotence, schedule, slicing, hybrid
 ├── test_loss_mask.py      loss-mask build, protect helpers, reference-count loader
 ├── test_chat_utils.py     sampling, prompt format, stop-token assembly
 ├── test_observability.py  telemetry safety, metric collectors
-└── test_train_modal_utils.py  resume-path resolver, token-weighted ppl math
+├── test_dataset_spec.py   DatasetSpec registry, source extraction, meta handling
+└── test_train_modal_utils.py  resume-path resolver, ppl math, stratified sampling, per-source eval
 ```
 
 ## Fixtures (`conftest.py`)
@@ -204,10 +205,35 @@ Tests:
   `FileNotFoundError`.
 - **`_token_weighted_ppl`** — matches the token-weighted geometric
   mean of the per-slice perplexities; empty input returns NaN.
+- **`_stratified_sample_indices`** — round-robin covers every source
+  when there are enough rows; undersized buckets fall through to random
+  fill without dropping the target count; determinism per RNG seed.
+- **`_per_source_eval_metrics`** — token-weighted per-source PPL for
+  the multi-domain eval table; skips empty source labels; matches the
+  geometric mean formula.
 
 Invariant: resume paths never silently point at a nonexistent ckpt;
 per-slice ppls aggregate to a token-count-weighted geometric mean, not
 a simple average.
+
+## `test_dataset_spec.py` — dataset abstraction
+
+**Purpose:** pin the `DatasetSpec` registry and pure source-extraction
+logic without pulling in the `datasets` library.
+
+Tests:
+- **Registry** — `arxiv` and `slimpajama-6b` are registered;
+  `get_dataset_spec` raises on unknown names; SlimPajama spec
+  explicitly excludes `RedPajamaCommonCrawl` and includes the other
+  six source names.
+- **`extract_source_from_row`** — struct-typed meta, JSON-string
+  meta, missing meta column, malformed JSON, wrong meta type, missing
+  key — all handled without raising, returning `""` on failure.
+- **`DatasetSpec` is frozen and hashable.**
+
+Invariant: extracting a source label never crashes on unexpected row
+shapes; the extractor tolerates both dict and JSON-string forms
+because HF `datasets` returns whichever the parquet schema declared.
 
 ## What's NOT tested (deliberate)
 

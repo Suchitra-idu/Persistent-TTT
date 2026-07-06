@@ -59,6 +59,12 @@ When True, `_scan_forward` reads `S_0 = carried_delta` at start and
 stages `_next_carried` at end. When False, per-forward `S_0 = 0` and
 nothing carries.
 
+**Hybrid sessions (`hybrid_sessions`).** Session-building mode where
+short docs (< `hybrid_carry_min_tokens`) become single-item sessions
+with no slicing/carry, and long docs get sliced into k pieces with
+carry. Intended for diverse-length pretraining mixes (SlimPajama).
+See [training.md#hybrid-sessions](training.md#hybrid---for-diverse-length-pretraining-mixes).
+
 **Streaming mode (`stateful`).** Toggle on each TTT module + the tap.
 When True, `_stream_forward` runs instead of `_scan_forward`. The
 mechanism accumulates `state.delta` across forward calls.
@@ -193,7 +199,38 @@ with or without PEFT wrap.
 **`reference_wikitext103.pt`.** Precomputed unigram counts + metadata
 for the loss mask. Built by `build_reference_counts`.
 
+## Dataset terms
+
+**`DatasetSpec`.** Frozen dataclass in `ttt_config.py` describing one
+dataset: `source` (HF repo id or local dir), `text_column`, optional
+`tokens_est_column`, optional `source_meta_column` + `source_meta_key`
++ `include_sources` for per-row source labeling and filtering, and
+`holdout_last_n` for the eval split. Everything downstream reads
+`DATASET_SPEC` rather than individual column names.
+
+**`DATASET_SPEC`.** The active spec, selected by the `TTT_DATASET`
+env var at import time. `DATASETS[TTT_DATASET]`. Currently `"arxiv"`
+or `"slimpajama-6b"`.
+
+**Source column.** A top-level `source` column added by
+`_annotate_source` when the spec declares `source_meta_column` +
+`source_meta_key`. For SlimPajama it holds the RedPajama subset name
+(`"RedPajamaC4"`, `"RedPajamaGithub"`, ...). Used for per-source eval
+aggregation and stratified holdout sampling.
+
+**`include_sources`.** Tuple on `DatasetSpec`; keeps only rows whose
+extracted source label is in this set. How we exclude CommonCrawl
+from SlimPajama training.
+
+**Per-source eval.** In `run_holdout_eval` and
+`_print_per_source_summary`, per-domain token-weighted PPL keyed by
+source label. The `eval/<source>/gap` numbers are the "which domain
+benefits most from TTT" signal.
+
 ## Env-var terms
+
+**`TTT_DATASET`.** Chooses which registered dataset to use. Default
+`"arxiv"`. Env var read at `ttt_config` import.
 
 **`TTT_MODEL_SIZE`.** Chooses which Qwen3 size to load. Default
 `"0.6B"`. Env var read at `ttt_config` import.

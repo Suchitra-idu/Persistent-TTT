@@ -62,24 +62,59 @@ Flags (override the corresponding `TRAIN_CFG` field):
 | `--num-epochs N` | `num_epochs` | Full passes over the training split. |
 | `--grad-accum N` | `grad_accum_steps` | Micro-steps per optimizer step. |
 | `--session 0\|1` | `session_training` | Master switch for cross-item carry at training time. |
-| `--single-paper 0\|1` | `single_paper_sessions` | Sessions = one paper cut into k pieces. |
+| `--mode multi\|single\|hybrid` | `single_paper_sessions` + `hybrid_sessions` | Session-building strategy. `multi` = 2–6 random papers per session. `single` = one paper per session cut into k pieces. `hybrid` = short docs → single-item no-carry, long docs → k-slice carry (for diverse-length mixes like SlimPajama). Empty string leaves the config defaults. |
+| `--min-doc-tokens N` | `min_doc_tokens` | Filter docs shorter than this many tokens before training. Set to `256` when running hybrid on SlimPajama. `0` leaves default. |
+| `--hybrid-carry-min N` | `hybrid_carry_min_tokens` | Hybrid X threshold: below this length, no carry/no slice. `0` leaves default. |
+| `--hybrid-slice-min N` | `hybrid_slice_min_tokens` | Hybrid n: min tokens per slice. `0` leaves default. |
+| `--hybrid-slices-min N` | `hybrid_slices_min` | Hybrid y: min slice count for long docs. `0` leaves default. |
+| `--hybrid-slices-max N` | `hybrid_slices_max` | Hybrid z: max slice count for long docs. `0` leaves default. |
+| `--eval-n-papers N` | `eval_n_papers` | Number of eval papers when the dataset has no source column. `0` leaves default. |
+| `--eval-n-papers-per-source N` | `eval_n_papers_per_source` | With a multi-source dataset: exactly N eval papers per source. Total = `N * n_sources`. `0` leaves default (`1`). |
+| `--eval-min-tokens N` | `eval_min_tokens` | Filter eval holdout to docs with at least this many tokens before sampling. Guards against picking tiny StackExchange posts. `0` leaves default. |
 | `--resume-from PATH` | (not a config field) | Resume from `step_<n>` (same-run) or `other_run/step_<n>` (cross-run). Optimizer momentum is NOT preserved. |
 
 Env vars (read at `ttt_config` import time, **before** `modal run`
 executes):
 
+- `TTT_DATASET` (default `"arxiv"`) — one of the registered specs
+  in `DATASETS`. Currently `"arxiv"` or `"slimpajama-6b"`. See
+  [data.md](data.md#dataset-selection-dataset_spec).
 - `TTT_MODEL_SIZE` (default `"0.6B"`) — one of `0.6B, 1.7B, 4B, 8B`.
 - `TTT_LAYER_STRIDE` (default `2`) — every stride-th layer is TTT.
 - `TTT_LAYER_START` (default `1`) — index of the first TTT layer.
 - `TTT_BASE_MODEL` — full override for `BASE_MODEL`.
+
+Recommended pattern for a test run (2000 papers, one epoch):
+
+```bash
+modal run --detach train_modal.py::train \
+    --limit-docs 2000 --num-epochs 1 --session 1 --mode single
+```
 
 Recommended pattern for a scale-up run:
 
 ```bash
 TTT_MODEL_SIZE=4B TTT_LAYER_STRIDE=2 \
     modal run --detach train_modal.py::train \
-    --limit-docs 3000 --num-epochs 1 --session 1 --single-paper 1
+    --limit-docs 3000 --num-epochs 1 --session 1 --mode single
 ```
+
+Recommended pattern for a diverse-mix pretraining run:
+
+```bash
+TTT_DATASET=slimpajama-6b \
+    modal run --detach train_modal.py::train \
+    --limit-docs 20000 --num-epochs 1 --session 1 --mode hybrid \
+    --min-doc-tokens 256 --eval-n-papers-per-source 2
+```
+
+`--mode hybrid` routes short docs (< `hybrid_carry_min_tokens`, default
+3000) through a single-item no-carry path and long docs through a
+k-slice carry path — avoiding the "must be at least min_doc_tokens
+long" cliff that the arxiv-style modes assume. Pair it with
+`--min-doc-tokens 256` (SlimPajama has short docs you want to admit)
+and `--eval-n-papers-per-source 2` so every source contributes two
+holdout papers per eval.
 
 ---
 
@@ -204,20 +239,36 @@ Config logged to wandb includes `TRAIN_CFG` + `TTT_CFG` (as dicts),
 ### 8. Dataset load
 
 ```python
-ds = load_token_dataset(tokenizer, limit_docs or None)
+ds = load_token_dataset(tokenizer, cfg, limit_docs or None)
 ```
 
-- `open_dataset()` from HF Hub (or local dir if `DATASET_SOURCE` is a
-  path).
-- `split_holdout(ds)` reserves the newest `HOLDOUT_LAST_N` (default
-  200) papers for eval.
-- Filter by `tokens_est >= min_doc_tokens` (cheap heuristic).
-- Slice by `limit_docs` if set.
-- Tokenize with `max_length=max_seq_len` truncation.
-- Drop docs with actual token count `< min_doc_tokens` (exact
-  post-tokenize filter).
+1. `open_dataset(spec)` from HF Hub (or local dir). If the spec
+   declares `source_meta_column`, a top-level `source` column is
+   added here.
+2. `split_holdout(ds, spec)` reserves the newest `spec.holdout_last_n`
+   rows for eval.
+3. `apply_source_filter(ds, spec)` drops rows whose source isn't in
+   `spec.include_sources` (SlimPajama uses this to drop CommonCrawl).
+4. **Deterministic shuffle** — `_shuffle_by_index(ds, seed=cfg.seed)`
+   permutes row order via `.select(shuffled_indices)`. Runs *before*
+   `--limit-docs` and *before* the in-corpus unigram count for the
+   loss mask, so:
+   - `--limit-docs N` samples uniformly across sources instead of
+     picking the natural head (SlimPajama ships grouped by source, so
+     an unshuffled head is all-C4).
+   - Interrupting mid-epoch still leaves every source touched
+     roughly proportionally.
+   - In-corpus loss-mask counts reflect the whole mix.
+5. Filter by `tokens_est >= min_doc_tokens` (cheap heuristic if the
+   spec declares a `tokens_est_column`).
+6. Slice by `limit_docs` if set.
+7. Tokenize with `max_length=max_seq_len` truncation. The `source`
+   column is preserved.
+8. Drop docs with actual token count `< min_doc_tokens` (exact
+   post-tokenize filter).
 
-Output: HF Datasets object with `input_ids` column.
+Output: HF Datasets object with `input_ids` (+ `source` when the spec
+has one).
 
 ### 9. Loss mask setup
 
@@ -238,19 +289,21 @@ See [Loss mask](#loss-mask) below for details on what each pass does.
 ### 10. Session count and LR schedule
 
 ```python
-if cfg.single_paper_sessions:
-    items_per_doc = 0.5 * (cfg.single_paper_slices_min + cfg.single_paper_slices_max)
-else:
-    items_per_doc = expected_items_per_doc(cfg.slice_prob, cfg.slice_min, cfg.slice_max)
-items_per_epoch = math.ceil(len(ds) * items_per_doc)
+items_per_epoch = _items_per_epoch(cfg, doc_lengths)
 steps_per_epoch = math.ceil(items_per_epoch / cfg.grad_accum_steps)
 total_steps = steps_per_epoch * epochs
 ```
 
-`expected_items_per_doc` computes the average number of items per doc:
-`(1 - slice_prob) + slice_prob · 0.5 · (slice_min + slice_max)`.
-Overestimates in the tail (short docs decrement k toward feasibility)
-but close enough for sizing the LR schedule.
+`_items_per_epoch` dispatches on the active mode:
+
+- **Hybrid mode**: exact sum of `derive_slice_count(L, ...)` over all
+  doc lengths — no estimation error.
+- **Single-paper mode**: `len(ds) · 0.5 · (slice_min + slice_max)` —
+  an expectation.
+- **Multi-paper mode**: `len(ds) · expected_items_per_doc(...)`, i.e.
+  `(1 - slice_prob) + slice_prob · 0.5 · (slice_min + slice_max)`.
+  Overestimates in the tail (short docs decrement k toward
+  feasibility) but close enough for sizing the schedule.
 
 ```python
 scheduler = get_cosine_schedule_with_warmup(
@@ -427,7 +480,7 @@ the Frobenius clip faster and quietly kills the mechanism.
 `_make_epoch_sessions(cfg, ...)` returns a list of "sessions," each a
 list of `SessionItem(doc_idx, start, end)` triples.
 
-### Multi-paper (`--single-paper 0`, config default)
+### Multi-paper (`--mode multi`, config default)
 
 `make_slice_sessions(session_papers=(cfg.session_papers_min, cfg.session_papers_max), ...)`
 produces sessions of `k ∼ Uniform(session_papers_min, session_papers_max)`
@@ -439,7 +492,7 @@ Within each session, each paper is optionally sliced into
 `slice_prob`. Slices are contiguous and each is `≥ slice_min_tokens`;
 `k` decrements toward feasibility if the paper is too short.
 
-### Single-paper (`--single-paper 1`)
+### Single-paper (`--mode single`)
 
 `make_slice_sessions(session_papers=(1, 1), slice_prob=1.0,
 slice_range=(single_paper_slices_min, single_paper_slices_max), ...)`
@@ -447,15 +500,54 @@ produces one session per paper, each session cutting the paper into
 `k ∼ Uniform(single_paper_slices_min, single_paper_slices_max)`
 consecutive pieces.
 
+### Hybrid (`--mode hybrid`) — for diverse-length pretraining mixes
+
+`make_hybrid_sessions(...)` routes each doc based on its length:
+
+- **`L < hybrid_carry_min_tokens`** → single-item session, whole doc,
+  no slicing. Session-training still calls `reset_session_state` at
+  session start, so the model sees the "S_0 = 0" case for these — a
+  correct training signal for short docs that shouldn't accumulate.
+- **`L >= hybrid_carry_min_tokens`** → single-paper session sliced
+  into `k = derive_slice_count(L, ...)` pieces, each `>= hybrid_slice_min_tokens`
+  tokens. `k` is clamped to `[hybrid_slices_min, hybrid_slices_max]`.
+  Carry propagates across the k slices via TBPTT.
+
+Config knobs (all `hybrid_*` fields on `TrainConfig`):
+
+| knob | default | meaning |
+|---|---|---|
+| `hybrid_carry_min_tokens` | 3000 | Below this length: no slicing, no carry. |
+| `hybrid_slices_min` | 2 | Long docs: minimum slice count. |
+| `hybrid_slices_max` | 6 | Long docs: maximum slice count. |
+| `hybrid_slice_min_tokens` | 800 | Long docs: minimum tokens per slice. |
+
+Constraint (enforced at builder call time):
+`hybrid_carry_min_tokens ≥ hybrid_slices_min · hybrid_slice_min_tokens`.
+Otherwise a doc at the boundary would be forced through the
+multi-slice path but couldn't meet the minimum.
+
+Intended for datasets like SlimPajama-6B where document length varies
+wildly (from short tweets to book chapters). The point of training
+with carry is to teach the model to use a non-zero fast-weight
+initialization when it exists — it's fine to skip carry on the
+short-doc tail rather than force-slice into sub-min-token pieces.
+Docs shorter than `min_doc_tokens` are still filtered out at
+tokenization time; you'll typically lower `min_doc_tokens` (e.g. to
+256) when running hybrid on SlimPajama.
+
 ### When to pick which
 
-- **Single-paper:** cleanest signal. Every item shares content with the
-  session's other items, so the carry is always "relevant." No
-  cross-paper noise. Best when the goal is "carry within a paper."
+- **Single-paper:** cleanest signal for arxiv-style corpora where
+  every doc is long. Every item shares content with the session's
+  other items, so the carry is always "relevant." No cross-paper noise.
 - **Multi-paper:** teaches the model to handle cross-paper carry. This
   is the distribution `holdout_eval` (default form) actually tests. But
   the training signal is noisier because each new paper's content is
   uncorrelated with prior papers' carry.
+- **Hybrid:** diverse-length pretraining mixes. Preserves the
+  "learn to use a non-zero S_0" signal on long docs while cleanly
+  handling short docs without slicing artifacts.
 
 Empirically at 0.6B, single-paper training generalized to cross-paper
 eval better than expected — the Frobenius clip keeps applied magnitude
@@ -743,41 +835,90 @@ Logged every `eval_every` (default 100) optimizer steps.
 ## In-loop eval
 
 Every `eval_every` (default 100) optimizer steps, `run_holdout_eval` is
-invoked:
+invoked. Uses whatever dataset `TTT_DATASET` selected — the eval
+holdout is always drawn from the same spec you're training on, not
+some fixed arxiv snapshot.
+
+### How eval papers are chosen
+
+`fetch_holdout_papers_ids(tokenizer, cfg)` picks the eval sample:
+
+1. **Load holdout.** `split_holdout(open_dataset(spec), spec)` returns
+   the newest `spec.holdout_last_n` rows. Then `apply_source_filter`
+   drops sources not in `spec.include_sources` (SlimPajama drops
+   CommonCrawl).
+2. **Filter by min tokens.** `_filter_holdout_by_min_tokens(...,
+   cfg.eval_min_tokens)` keeps docs likely to have at least this many
+   tokens. Uses the spec's `tokens_est_column` when present; otherwise
+   `len(text) >= 4 * eval_min_tokens` (rough char-to-token proxy).
+   Default `eval_min_tokens = 2048` guards against picking tiny
+   StackExchange posts that can't be sliced into `eval_n_slices`
+   meaningful pieces.
+3. **Sample.** Three sampling policies, dispatched by config:
+   - **`n-per-source`** (default when `eval_n_papers_per_source > 0`
+     and the dataset has a source column): pick exactly
+     `eval_n_papers_per_source` papers per source. Total =
+     `n_sources * eval_n_papers_per_source`. Every domain represented
+     every eval — required for per-source metrics to be non-noisy.
+   - **`stratified round-robin`** (when there's a source column but
+     `eval_n_papers_per_source = 0`): round-robin one-per-source until
+     `eval_n_papers` is hit, then fill from what's left.
+   - **`uniform`** (no source column): plain random draw of
+     `eval_n_papers` papers.
+4. **Tokenize** the picked docs, return `[(input_ids, source_label), ...]`.
+
+Set `--eval-min-tokens 4096` if your `eval_n_slices` is 8 and you
+want each slice to have >= 512 tokens on average.
+
+### What each eval run does
 
 ```python
 run_holdout_eval(model, eval_papers, cfg.eval_n_slices,
-                 train_session_mode=cfg.session_training)
+                 train_session_mode=cfg.session_training,
+                 paper_sources=eval_sources)
 ```
-
-**What it does:**
 
 1. Snapshot every TTT module's `carried_delta` and `_next_carried`.
 2. Set `model.eval()`, `session_mode = True`, `ttt_evolve = ...`.
-3. For each of the `eval_n_papers` (default 3) papers:
+3. For each of the sampled papers:
    - Split into `eval_n_slices` (default 8) equal token slices.
-   - Run twice: `evolve=True` (carry accumulates) and `evolve=False`
-     (`state.delta` never updates but the current carry is still
-     applied — reset at start of each paper's eval).
+   - Run twice: `evolve=True` (carry accumulates within the paper) and
+     `evolve=False` (`state.delta` never updates — fresh baseline).
 4. Compute per-paper token-weighted ppls (geometric mean weighted by
    slice token count).
-5. Aggregate to `eval/carry_ppl`, `eval/fresh_ppl`, `eval/gap`.
+5. Aggregate to `eval/carry_ppl`, `eval/fresh_ppl`, `eval/gap`, plus
+   the per-source dictionary when sources are provided.
 6. Restore `model.train()`, `session_mode = train_session_mode`, and
    the snapshotted `carried_delta` / `_next_carried`. Restore
    `ttt_evolve = True`.
 
 **Zero side-effect on the training loop:** the snapshot + restore
-ensures the carry state that resumes training is identical to what it
-was pre-eval.
-
-**Not a substitute for offline eval.** In-loop uses 3 fixed papers,
-each ~10-100k tokens (paper size is variable). Per-paper variance is
-high; use it as a "moving in the right direction" signal rather than a
-final metric. The `holdout_eval` local entrypoint runs the same math
-on many more papers.
+ensures the carry state that resumes training is identical to what
+it was pre-eval.
 
 **Set `eval_every = 0` to disable.** The extra forward passes add
 20-30% to per-step time; disable if you're throughput-bound.
+
+### Per-source eval
+
+When the sample has source labels, `run_holdout_eval` also emits:
+
+- `eval/<source>/carry_ppl` — token-weighted geometric mean over
+  papers of this source.
+- `eval/<source>/fresh_ppl` — same, `evolve=False`.
+- `eval/<source>/gap` — `fresh_ppl - carry_ppl` per source.
+- `eval/<source>/n_papers` — how many holdout papers of this
+  source were sampled.
+
+This is the "which document domains benefit most from TTT" signal —
+the bar chart across sources is the central figure for a diverse-mix
+training run. Reads directly into a wandb panel grouped by source
+prefix.
+
+The inference-side `holdout_eval` local entrypoint prints the same
+information as a `per-source (token-weighted)` table under
+`_print_per_source_summary`. See
+[inference.md#per-source-eval-table](inference.md#per-source-eval-table).
 
 ---
 

@@ -10,8 +10,9 @@ from inplace_ttt import (
     advance_session_state, iter_ttt_modules, reset_session_state, state_norms,
 )
 from train_utils import (
-    SessionItem, equal_token_slices, expected_items_per_doc,
-    make_session_schedule, make_slice_sessions, slice_doc,
+    SessionItem, derive_slice_count, equal_token_slices,
+    expected_items_per_doc, make_hybrid_sessions, make_session_schedule,
+    make_slice_sessions, slice_doc, total_hybrid_items,
 )
 
 
@@ -315,3 +316,144 @@ def test_equal_token_slices_rejects_zero_or_negative_n():
 def test_expected_items_per_doc_matches_linear_expectation():
     # Halfway between not-sliced (1.0) and full slice range midpoint (3.0).
     assert expected_items_per_doc(0.5, 2, 4) == 2.0
+
+
+# ---------- derive_slice_count ----------
+
+def test_derive_slice_count_short_returns_one():
+    # 500 < 2 * 800, so we can't fit even slices_min slices.
+    assert derive_slice_count(500, 800, 2, 6) == 1
+
+
+def test_derive_slice_count_hits_min_at_lower_boundary():
+    # 1600 == 2 * 800 -> exactly slices_min.
+    assert derive_slice_count(1600, 800, 2, 6) == 2
+
+
+def test_derive_slice_count_grows_with_length():
+    # 3200 / 800 = 4 -> clamped inside [2, 6].
+    assert derive_slice_count(3200, 800, 2, 6) == 4
+
+
+def test_derive_slice_count_hits_upper_ceiling():
+    # Huge doc -> capped at slices_max.
+    assert derive_slice_count(1_000_000, 800, 2, 6) == 6
+
+
+def test_derive_slice_count_rejects_bad_range():
+    with pytest.raises(ValueError):
+        derive_slice_count(1000, 100, 0, 5)
+    with pytest.raises(ValueError):
+        derive_slice_count(1000, 100, 5, 2)
+    with pytest.raises(ValueError):
+        derive_slice_count(1000, 0, 2, 5)
+
+
+# ---------- make_hybrid_sessions ----------
+
+def _hybrid(num_docs, doc_lengths, rng,
+            carry_min_tokens=3000, slice_min_tokens=800,
+            slices_min=2, slices_max=6, shuffle=True):
+    return make_hybrid_sessions(
+        num_docs, doc_lengths, rng,
+        carry_min_tokens=carry_min_tokens,
+        slice_min_tokens=slice_min_tokens,
+        slices_min=slices_min, slices_max=slices_max,
+        shuffle=shuffle,
+    )
+
+
+def test_hybrid_short_doc_yields_single_item_session():
+    rng = np.random.default_rng(7)
+    sessions = _hybrid(1, [500], rng)
+    assert len(sessions) == 1
+    assert len(sessions[0]) == 1
+    assert (sessions[0][0].start, sessions[0][0].end) == (0, 500)
+
+
+def test_hybrid_long_doc_yields_carry_session():
+    rng = np.random.default_rng(7)
+    sessions = _hybrid(1, [10_000], rng, slices_min=2, slices_max=6)
+    assert len(sessions) == 1
+    items = sessions[0]
+    assert len(items) >= 2 and len(items) <= 6
+    # Contiguous coverage of [0, 10000]:
+    assert items[0].start == 0
+    assert items[-1].end == 10_000
+    for prev, curr in zip(items, items[1:]):
+        assert prev.end == curr.start
+    # Every slice meets the min-tokens threshold:
+    assert all(it.end - it.start >= 800 for it in items)
+
+
+def test_hybrid_every_doc_appears_exactly_once():
+    rng = np.random.default_rng(7)
+    doc_lengths = [500, 10_000, 800, 6000, 200, 4000]
+    sessions = _hybrid(len(doc_lengths), doc_lengths, rng)
+    seen = {}
+    for s in sessions:
+        for it in s:
+            seen.setdefault(it.doc_idx, []).append((it.start, it.end))
+    assert set(seen.keys()) == set(range(len(doc_lengths)))
+    for d, ranges in seen.items():
+        ranges.sort()
+        assert ranges[0][0] == 0
+        assert ranges[-1][1] == doc_lengths[d]
+        for (_, b), (c, _) in zip(ranges, ranges[1:]):
+            assert b == c
+
+
+def test_hybrid_shuffle_false_preserves_order():
+    rng = np.random.default_rng(0)
+    doc_lengths = [10_000] * 5
+    sessions = _hybrid(5, doc_lengths, rng, shuffle=False)
+    order = [s[0].doc_idx for s in sessions]
+    assert order == [0, 1, 2, 3, 4]
+
+
+def test_hybrid_deterministic_per_seed():
+    doc_lengths = [500, 10_000, 4000, 200]
+    a = _hybrid(4, doc_lengths, np.random.default_rng(11))
+    b = _hybrid(4, doc_lengths, np.random.default_rng(11))
+    c = _hybrid(4, doc_lengths, np.random.default_rng(12))
+    assert a == b
+    assert a != c
+
+
+def test_hybrid_rejects_incoherent_thresholds():
+    rng = np.random.default_rng(0)
+    # carry_min_tokens (500) < slices_min * slice_min_tokens (2*800=1600)
+    with pytest.raises(ValueError, match="carry_min_tokens"):
+        _hybrid(1, [1_000_000], rng,
+                carry_min_tokens=500, slices_min=2, slice_min_tokens=800)
+
+
+def test_hybrid_single_item_session_starts_at_zero():
+    """Short-doc items must have start == 0 so the first-token loss mask
+    fires on them (they're paper-start items)."""
+    rng = np.random.default_rng(0)
+    sessions = _hybrid(3, [200, 500, 900], rng)
+    for s in sessions:
+        assert s[0].start == 0
+
+
+# ---------- total_hybrid_items ----------
+
+def test_total_hybrid_items_matches_session_length_sum():
+    rng = np.random.default_rng(7)
+    doc_lengths = [500, 10_000, 800, 6000, 200, 4000, 20_000]
+    sessions = _hybrid(len(doc_lengths), doc_lengths, rng)
+    expected = sum(len(s) for s in sessions)
+    got = total_hybrid_items(
+        doc_lengths, carry_min_tokens=3000,
+        slice_min_tokens=800, slices_min=2, slices_max=6,
+    )
+    assert got == expected
+
+
+def test_total_hybrid_items_all_short():
+    got = total_hybrid_items(
+        [500, 200, 900], carry_min_tokens=3000,
+        slice_min_tokens=800, slices_min=2, slices_max=6,
+    )
+    assert got == 3

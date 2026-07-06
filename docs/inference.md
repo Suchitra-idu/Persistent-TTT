@@ -576,6 +576,34 @@ Aggregation: `log(ppl_per_paper) = sum(log(ppl_slice) · n_tok_slice) /
 sum(n_tok_slice)`. This is the geometric mean weighted by slice token
 count — the correct aggregation for perplexity.
 
+### Per-source eval table
+
+When the active dataset carries a source label (SlimPajama's
+`meta.redpajama_set_name`, etc.), `_print_per_source_summary`
+appends a per-source token-weighted table under the per-paper table:
+
+```
+per-source (token-weighted):
+source                    n_papers      n_tok   ppl carry   ppl fresh      gap
+RedPajamaArXiv                   2      42019      19.844      21.310    +1.466
+RedPajamaBook                    2      31842      27.402      28.011    +0.609
+RedPajamaC4                      3      27441      42.318      42.550    +0.232
+RedPajamaGithub                  2      18022      12.911      15.844    +2.933
+RedPajamaStackExchange           2      21001      31.415      31.982    +0.567
+RedPajamaWikipedia               2      15804      26.113      26.559    +0.446
+```
+
+Read the `gap` column: this is where the "which domain benefits most
+from TTT" signal lives. Positive means TTT helps; larger positive
+means it helps more. Interpret with the number of papers and total
+tokens per source — a big gap on a tiny sample isn't statistically
+solid.
+
+`fetch_holdout_texts` samples the holdout stratified by source
+(round-robin one per source until `n_papers` is hit) so no domain is
+starved of representation in the eval. When your dataset has no
+source column, this table is silently omitted.
+
 ### `holdout_generate` output
 
 Not a table — free-form generations. What to look for:
