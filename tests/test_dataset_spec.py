@@ -102,3 +102,54 @@ def test_active_dataset_spec_matches_env_default():
     """When TTT_DATASET is unset (test env), the active spec is arxiv."""
     from ttt_config import DATASET_NAME, DATASET_SPEC
     assert DATASET_NAME == DATASET_SPEC.name
+
+
+# ---------- source presets ----------
+
+def test_slim_paper_preset_matches_advertised_proportions():
+    from ttt_config import get_source_preset
+    p = get_source_preset("slim-paper")
+    # SlimPajama-627B advertised: C4 62%, Github 9%, Books 8%,
+    # ArXiv 7%, Wikipedia 7%, StackExchange 6% (of non-CC subset).
+    assert p["RedPajamaC4"] == 62
+    assert p["RedPajamaGithub"] == 9
+    assert p["RedPajamaBook"] == 8
+    assert p["RedPajamaArXiv"] == 7
+    assert p["RedPajamaWikipedia"] == 7
+    assert p["RedPajamaStackExchange"] == 6
+
+
+def test_slim_research_preset_downweights_c4():
+    from ttt_config import get_source_preset
+    p = get_source_preset("slim-research")
+    # Rare/structured domains boosted, C4 downweighted vs paper.
+    assert p["RedPajamaC4"] < p["RedPajamaGithub"] + p["RedPajamaArXiv"]
+    assert p["RedPajamaArXiv"] >= 15
+    assert p["RedPajamaGithub"] >= 15
+
+
+def test_get_source_preset_unknown_raises():
+    from ttt_config import get_source_preset
+    with pytest.raises(KeyError, match="Unknown source preset"):
+        get_source_preset("does-not-exist")
+
+
+def test_slim_presets_dont_include_commoncrawl():
+    """Presets should never include CommonCrawl since the slim spec
+    filters it out at load time -- listing it would trigger the
+    'source not present in dataset' warning path unnecessarily."""
+    from ttt_config import get_source_preset
+    for name in ("slim-paper", "slim-research"):
+        assert "RedPajamaCommonCrawl" not in get_source_preset(name)
+
+
+def test_slimpajama_has_default_source_preset():
+    """SlimPajama defaults to a balanced preset so `--limit-docs`
+    doesn't silently train on the raw C4-heavy head. Arxiv (single-source)
+    should not have one."""
+    from ttt_config import DATASETS, get_source_preset
+    slim = DATASETS["slimpajama-6b"]
+    assert slim.default_source_preset, "slim spec should carry a default preset"
+    # Value should be a registered preset name.
+    get_source_preset(slim.default_source_preset)
+    assert DATASETS["arxiv"].default_source_preset is None

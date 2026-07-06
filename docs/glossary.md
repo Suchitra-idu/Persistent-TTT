@@ -128,13 +128,20 @@ signal is entirely in its direction, not magnitude.
 
 ## Eval terms
 
-**Carry / fresh.** In `session_perplexity`, the same items are run
-twice: once with `evolve=True` (fast weights update — "carry"), once
-with `evolve=False` (fast weights don't update — "fresh"). Their
-per-item perplexity difference is the "gap."
+**Carry / carry-off / fresh.** Three modes in `session_perplexity` and
+`run_holdout_eval`, all run on the same items:
+- **carry** — `evolve=True`, fast weight persists across items (full TTT).
+- **carry-off** — `evolve=True`, `reset_session_state` called between
+  items. Chunk-scan still fires *within* an item's forward, but nothing
+  carries across item boundaries. Isolates within-item adaptation.
+- **fresh** — `evolve=False`, fast weight = 0 throughout. TTT completely
+  silent.
 
-**Gap.** `fresh_ppl - carry_ppl` per position. Positive means carry
-helps. The primary metric for "is TTT doing anything."
+**Δwithin / Δbetween / Δtotal.** Three ways to read the three-mode
+output. `Δwithin = fresh - carry-off` is the within-item chunk-scan
+benefit. `Δbetween = carry-off - carry` is the cross-item persistence
+benefit. `Δtotal = fresh - carry = Δwithin + Δbetween`. Positive = TTT
+helping. The decomposition tells you *where* the benefit comes from.
 
 **Three-way eval.** BASE (no adapter, no TTT) / LORA-ONLY (adapter +
 `load_ttt=False`) / FULL (adapter + TTT). Three separate model loads,
@@ -221,6 +228,14 @@ aggregation and stratified holdout sampling.
 **`include_sources`.** Tuple on `DatasetSpec`; keeps only rows whose
 extracted source label is in this set. How we exclude CommonCrawl
 from SlimPajama training.
+
+**Source preset (`source_preset`, `SOURCE_PRESETS`).** Named
+per-source ratio dict used to rebalance the training pool at load
+time. `slim-paper` restores SlimPajama-627B's advertised
+proportions; `slim-research` downweights C4 for cleaner per-domain
+gap signal. Applied by `_balance_by_source_preset` in
+`train_modal.py` before `--limit-docs` takes effect. See
+[training.md#source-balancing](training.md#source-balancing---source-preset).
 
 **Per-source eval.** In `run_holdout_eval` and
 `_print_per_source_summary`, per-domain token-weighted PPL keyed by

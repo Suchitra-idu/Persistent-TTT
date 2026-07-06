@@ -71,6 +71,7 @@ Flags (override the corresponding `TRAIN_CFG` field):
 | `--eval-n-papers N` | `eval_n_papers` | Number of eval papers when the dataset has no source column. `0` leaves default. |
 | `--eval-n-papers-per-source N` | `eval_n_papers_per_source` | With a multi-source dataset: exactly N eval papers per source. Total = `N * n_sources`. `0` leaves default (`1`). |
 | `--eval-min-tokens N` | `eval_min_tokens` | Filter eval holdout to docs with at least this many tokens before sampling. Guards against picking tiny StackExchange posts. `0` leaves default. |
+| `--source-preset NAME` | `source_preset` | Rebalance the training mix by source. Empty falls back to the spec's `default_source_preset` (SlimPajama defaults to `slim-research`); pass `none` to disable balancing entirely; pass `slim-paper` (SlimPajama-627B advertised proportions) or `slim-research` (downweights C4, boosts structured domains) to override. Fails fast on unknown name. |
 | `--resume-from PATH` | (not a config field) | Resume from `step_<n>` (same-run) or `other_run/step_<n>` (cross-run). Optimizer momentum is NOT preserved. |
 
 Env vars (read at `ttt_config` import time, **before** `modal run`
@@ -105,7 +106,8 @@ Recommended pattern for a diverse-mix pretraining run:
 TTT_DATASET=slimpajama-6b \
     modal run --detach train_modal.py::train \
     --limit-docs 20000 --num-epochs 1 --session 1 --mode hybrid \
-    --min-doc-tokens 256 --eval-n-papers-per-source 2
+    --min-doc-tokens 256 --eval-n-papers-per-source 2 \
+    --source-preset slim-research
 ```
 
 `--mode hybrid` routes short docs (< `hybrid_carry_min_tokens`, default
@@ -115,6 +117,14 @@ long" cliff that the arxiv-style modes assume. Pair it with
 `--min-doc-tokens 256` (SlimPajama has short docs you want to admit)
 and `--eval-n-papers-per-source 2` so every source contributes two
 holdout papers per eval.
+
+`--source-preset slim-research` **is critical for SlimPajama-6B** —
+the DKYoon subsample ships with C4 at ~77% and Books at ~0.1%, so the
+natural mix would bury per-domain gap signals under C4 noise. The
+preset rebalances to 25/20/15/20/10/10 across C4/GH/Book/ArXiv/Wiki/SE,
+which gives every domain enough exposure to characterize. Use
+`slim-paper` (62/9/8/7/7/6) instead if you want to say "we trained on
+the SlimPajama mix" without asterisks.
 
 ---
 
@@ -563,6 +573,68 @@ dataset → same schedule. Verified in
 
 ---
 
+## Source balancing (`--source-preset`)
+
+Multi-source datasets don't necessarily arrive with the mix you want.
+`DKYoon/SlimPajama-6B` — despite being sampled from `SlimPajama-627B`
+which advertises a well-designed 62%/9%/8%/7%/7%/6% split across
+C4/Github/Books/ArXiv/Wikipedia/StackExchange — actually ships as
+roughly **77% C4, 10% StackExchange, 7% Wiki, 5% Github, 1% ArXiv,
+0.1% Books** because it was subsampled from `chunk1/10` of the
+parent, and that chunk didn't preserve the design proportions.
+
+For a "which domain benefits most from TTT" characterization, that
+skew is fatal — ArXiv/Books eval numbers would be based on 1–10
+training-time examples per epoch, i.e. noise.
+
+**Applied by default on multi-source specs.** `DatasetSpec` carries a
+`default_source_preset` field; the SlimPajama spec sets it to
+`slim-research` so `TTT_DATASET=slimpajama-6b modal run ...` without a
+`--source-preset` flag still gets balanced. Pass `--source-preset none`
+to disable the balancer explicitly; pass `--source-preset slim-paper`
+(or any other name) to override. The boot log prints the effective
+preset (and whether it came from the spec default) so you can eyeball
+it.
+
+`--source-preset NAME` fixes this at load time. `_balance_by_source_preset`:
+
+1. Loads the source label for every row (cheap — just one column).
+2. Groups indices by source.
+3. Computes target counts per source from the preset weights,
+   normalized to sum to `target_total` (which equals `--limit-docs`
+   when set, else the full pool size).
+4. Takes the head of each per-source index list up to its target.
+   Sources that don't have enough rows contribute what they have
+   ("shorts" are logged).
+5. Sorts the combined index list so the output preserves the
+   shuffled order across sources (no source-1-block then
+   source-2-block artifact).
+
+Two presets ship:
+
+| preset | C4 | Github | Books | ArXiv | Wiki | SE | intended use |
+|---|---|---|---|---|---|---|---|
+| `slim-paper` | 62 | 9 | 8 | 7 | 7 | 6 | Restores SlimPajama-627B advertised proportions. Defensible in a paper without asterisks. |
+| `slim-research` | 25 | 20 | 15 | 20 | 10 | 10 | Downweights C4, boosts structured domains. Cleaner per-domain TTT gap signal. Use this if your figure-of-merit is "does TTT help more on Github than on C4?". |
+
+Add a new preset by editing `SOURCE_PRESETS` in `ttt_config.py` — any
+positive numbers work as weights (they get normalized). Sources not
+listed in the preset are dropped from training entirely.
+
+Verified in
+[`test_train_modal_utils.py`](../tests/test_train_modal_utils.py) —
+target ratios hit exactly on a large pool; undersized buckets take
+everything available; unknown source labels raise loudly.
+
+**Interaction with `--limit-docs`:** when both are set,
+`--limit-docs` is the aspirational total for the balancer, not a
+post-balance cap. So `--source-preset slim-research --limit-docs
+2000` gives you ≤2000 rows across sources in the preset ratio
+(subject to availability), not "balance the pool, then take the
+first 2000".
+
+---
+
 ## Loss mask
 
 **Purpose:** during pretraining, most CE loss comes from very common
@@ -817,18 +889,33 @@ Logged on demand.
 
 Logged every `eval_every` (default 100) optimizer steps.
 
-- `eval/carry_ppl` — token-weighted geometric mean of per-slice ppls
-  with `evolve=True`.
-- `eval/fresh_ppl` — same with `evolve=False`.
-- `eval/gap` — `fresh_ppl - carry_ppl`. **Positive means carry helps.**
+Three ppl modes, run on the FULL trained model only (no BASE / LORA-ONLY
+in the loop — that's what the CLI `holdout_eval` entrypoint is for):
+
+- `eval/carry_ppl` — `evolve=True`, fast weight persists across slices
+  within a paper (full TTT).
+- `eval/carry_off_ppl` — `evolve=True`, fast weight reset between slices
+  (isolates within-slice chunk-scan adaptation).
+- `eval/fresh_ppl` — `evolve=False`, fast weight = 0 throughout.
+
+Two derived gaps + total:
+
+- `eval/gap_within` = `fresh_ppl - carry_off_ppl` — benefit of the
+  chunk-scan mechanism within one forward pass.
+- `eval/gap_between` = `carry_off_ppl - carry_ppl` — benefit of the
+  cross-slice session carry on top of that.
+- `eval/gap_total` = `fresh_ppl - carry_ppl` — total TTT benefit
+  (= `gap_within + gap_between`).
+
+Plus:
+
 - `eval/state_ratio_final` — mean state ratio at the end of each paper.
-- `eval/paper_<i>/carry_ppl`, `eval/paper_<i>/fresh_ppl`,
-  `eval/paper_<i>/gap`, `eval/paper_<i>/state_ratio_final` — per-paper
-  breakdown.
-- `eval/carry_ppl_slice_<j>`, `eval/fresh_ppl_slice_<j>`,
-  `eval/state_ratio_slice_<j>` — per-slice-position aggregates across
-  papers (so you can see if the gap grows with position within the
-  paper).
+
+**Only aggregates are emitted** — no `eval/paper_<i>/*` or
+`eval/*_slice_<j>` keys. Per-slice / per-paper breakdowns bloat the
+wandb payload and the aggregate + per-source view is what the training
+loop needs. Use the CLI `holdout_eval` (below) for the fine-grained
+table.
 
 ---
 
@@ -882,12 +969,18 @@ run_holdout_eval(model, eval_papers, cfg.eval_n_slices,
 2. Set `model.eval()`, `session_mode = True`, `ttt_evolve = ...`.
 3. For each of the sampled papers:
    - Split into `eval_n_slices` (default 8) equal token slices.
-   - Run twice: `evolve=True` (carry accumulates within the paper) and
-     `evolve=False` (`state.delta` never updates — fresh baseline).
+   - Run three times through the slices:
+     - **carry**: `evolve=True`, `advance_session_state` between slices
+       (fast weight carries within the paper)
+     - **carry-off**: `evolve=True`, `reset_session_state` between slices
+       (chunk-scan fires inside each slice but nothing persists across
+       slice boundaries)
+     - **fresh**: `evolve=False`, fast weight = 0 throughout
 4. Compute per-paper token-weighted ppls (geometric mean weighted by
-   slice token count).
-5. Aggregate to `eval/carry_ppl`, `eval/fresh_ppl`, `eval/gap`, plus
-   the per-source dictionary when sources are provided.
+   slice token count) for each of the three modes.
+5. Aggregate to `eval/carry_ppl`, `eval/carry_off_ppl`, `eval/fresh_ppl`,
+   two gap decompositions (`gap_within`, `gap_between`) + `gap_total`,
+   plus per-source dicts when sources are provided.
 6. Restore `model.train()`, `session_mode = train_session_mode`, and
    the snapshotted `carried_delta` / `_next_carried`. Restore
    `ttt_evolve = True`.
@@ -896,17 +989,24 @@ run_holdout_eval(model, eval_papers, cfg.eval_n_slices,
 ensures the carry state that resumes training is identical to what
 it was pre-eval.
 
-**Set `eval_every = 0` to disable.** The extra forward passes add
-20-30% to per-step time; disable if you're throughput-bound.
+**Set `eval_every = 0` to disable.** The three modes triple the eval
+cost vs. the old two-mode setup (~40-50% per-step time hit at
+`eval_every=100`); disable if you're throughput-bound, or push
+`eval_every` higher.
 
 ### Per-source eval
 
 When the sample has source labels, `run_holdout_eval` also emits:
 
-- `eval/<source>/carry_ppl` — token-weighted geometric mean over
-  papers of this source.
-- `eval/<source>/fresh_ppl` — same, `evolve=False`.
-- `eval/<source>/gap` — `fresh_ppl - carry_ppl` per source.
+- `eval/<source>/carry_ppl`, `eval/<source>/carry_off_ppl`,
+  `eval/<source>/fresh_ppl` — token-weighted geometric means over
+  papers of this source for each of the three modes.
+- `eval/<source>/gap_within` = `fresh_ppl - carry_off_ppl` —
+  within-slice chunk-adaptation benefit.
+- `eval/<source>/gap_between` = `carry_off_ppl - carry_ppl` —
+  cross-slice session-carry benefit.
+- `eval/<source>/gap_total` = `fresh_ppl - carry_ppl` — total TTT
+  benefit for this domain.
 - `eval/<source>/n_papers` — how many holdout papers of this
   source were sampled.
 
@@ -1014,8 +1114,10 @@ The healthiest possible run at 0.6B looks like:
   < 1`) or grows unboundedly (`carried_decay = 1`).
 - `session/state_ratio_max` (max across layers) may be 2-5× the mean
   and can hit the clip.
-- `eval/gap` (in-loop): flat or slightly positive early; grows to
-  +3-5 ppl by step 200-400.
+- `eval/gap_total` (in-loop): flat or slightly positive early; grows to
+  +3-5 ppl by step 200-400. `gap_within` typically dominates early
+  (chunk-scan wakes up first); `gap_between` grows later as the model
+  learns to carry useful state across slices.
 - `train/grad_clip_ratio` stays near 1.0 (no clip active). Occasional
   dips are fine.
 - `anomaly/nonfinite_count` stays at 0.
@@ -1027,9 +1129,11 @@ Warning signs:
 - `session/state_ratio_mean` hits `clip_tau` and stays there →
   saturation regime. See
   [failure-modes.md#state-saturation](failure-modes.md#state-saturation).
-- `eval/gap` stays flat despite `state_ratio > 0` → mechanism is
+- `eval/gap_total` stays flat despite `state_ratio > 0` → mechanism is
   active but not producing useful adaptation. Check `gate_mean`; if
-  stuck near 0, the model has learned to ignore TTT.
+  stuck near 0, the model has learned to ignore TTT. If `gap_within`
+  is positive but `gap_between` is ~0, the chunk mechanism works but
+  cross-slice carry isn't landing — check `carried_decay` and clip.
 - `anomaly/nonfinite_count` rising → LR too high, or a specific
   malformed input. Inspect the recent items via micro-step wandb view.
 - `train/grad_clip_ratio << 1` sustainedly → grad clip is firing every

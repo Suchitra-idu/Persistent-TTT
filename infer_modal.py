@@ -50,12 +50,14 @@ SECRETS = [modal.Secret.from_name("wandb"), modal.Secret.from_name("huggingface"
 def _ckpt_paths(ckpt: str):
     """Checkpoint forms: 'step_600' (under TRAIN_CFG.run_name) or 'other_run/step_600' (explicit run). Empty string runs the untrained patched model."""
     if not ckpt:
-        return None, None
+        return None, None, None
     if "/" in ckpt:
         base = os.path.join(CKPT_MOUNT, ckpt)
     else:
         base = os.path.join(CKPT_MOUNT, TRAIN_CFG.run_name, ckpt)
-    return os.path.join(base, "adapter"), os.path.join(base, "ttt_params.pt")
+    return (os.path.join(base, "adapter"),
+            os.path.join(base, "ttt_params.pt"),
+            os.path.join(base, "per_source_carries.pt"))
 
 
 @app.cls(image=image,gpu=["H100", "A100-80GB"], volumes=VOLUMES, timeout=60 * 60,
@@ -68,8 +70,9 @@ class TTTInference:
     @modal.enter()
     def load(self):
         from model_setup import build_model
+        from ttt_wiring import load_per_source_carries
 
-        adapter, ttt_ckpt = _ckpt_paths(self.ckpt)
+        adapter, ttt_ckpt, per_source_pc = _ckpt_paths(self.ckpt)
         if not self.load_ttt:
             ttt_ckpt = None
         self.model, self.tokenizer = build_model(
@@ -78,6 +81,32 @@ class TTTInference:
         )
         self.model.eval()
         self.model.config.use_cache = True
+
+        # Everlasting-carry: load the per-source persistent carriers if the
+        # checkpoint has them. `session_perplexity(use_everlasting_carry=True)`
+        # installs `per_source_carries[doc.source]` before each doc's forward.
+        # Empty dict when the file is absent -- backward compatible with
+        # pre-everlasting checkpoints.
+        self.per_source_carries = {}
+        self.per_source_meta = {}
+        if per_source_pc and self.load_ttt:
+            loaded, meta = load_per_source_carries(per_source_pc)
+            import torch as _torch
+            for src, per_layer in loaded.items():
+                self.per_source_carries[src] = {
+                    int(k): v.to(device="cuda", dtype=_torch.float32)
+                    for k, v in per_layer.items()
+                }
+            self.per_source_meta = meta
+            if self.per_source_carries:
+                n_updates = meta.get("n_updates", {})
+                summary = ", ".join(
+                    f"{s}:{n_updates.get(s, '?')}"
+                    for s in sorted(self.per_source_carries)
+                )
+                print(f"loaded per-source carriers "
+                      f"({len(self.per_source_carries)} sources, "
+                      f"n_updates={{{summary}}})")
 
     def _set_mode(self, evolve: bool, stateful: bool, fresh: bool = True):
         from inplace_ttt import iter_ttt_modules, reset_fast_weights
@@ -108,16 +137,48 @@ class TTTInference:
     def session_perplexity(self, texts: list, evolve: bool = True,
                            slice_papers: bool = True,
                            slice_seed: int = 0,
-                           equal_n_slices: int = 0) -> list:
-        """Per-slice perplexity with fast weights persisting across the session."""
+                           equal_n_slices: int = 0,
+                           reset_between_items: bool = False,
+                           reset_between_docs: bool = True,
+                           use_everlasting_carry: bool = False,
+                           force_source: str = "",
+                           sources: list | None = None) -> list:
+        """Per-item perplexity with the fast weight persisting across items
+        by default. Reset behavior:
+          - `reset_between_docs=True` (default): fast weight resets when
+            `item.doc_idx` changes. Matches training-side semantics
+            (each doc starts with a fresh state) and is what you want for
+            most eval flows -- otherwise paper 1's state leaks into
+            paper 2 and the reported state_ratio grows unboundedly across
+            the multi-paper eval.
+          - `reset_between_items=True`: fast weight resets before every
+            item, including slices within a single doc. Combined with
+            `evolve=True`, this is the "carry-off" mode -- isolates
+            within-item chunk adaptation from cross-item persistence.
+        Both flags can coexist; `reset_between_items` implies stronger
+        resetting than `reset_between_docs`.
+
+        Everlasting-carry:
+          - `use_everlasting_carry=True` (only meaningful when the
+            checkpoint carried `per_source_carries.pt`): after the reset
+            at each doc boundary, install `per_source_carries[source]` as
+            the fast-weight seed. Cold sources (not in the dict) still
+            start from zero, matching training.
+          - `force_source="RedPajamaC4"`: install THAT source's carrier
+            regardless of the doc's actual source. Swap test: a source-
+            specific benefit should degrade under a mismatched install.
+          - `sources`: per-doc source labels, aligned with `texts`. When
+            None but everlasting-carry is requested, all docs are treated
+            as unlabeled (cold-start each doc unless `force_source` is set).
+        """
         import math
 
         import numpy as np
         import torch
 
         from inplace_ttt import (
-            advance_session_state, iter_ttt_modules, mean_state_ratio,
-            reset_session_state, state_norms,
+            advance_session_state, install_carried_delta, iter_ttt_modules,
+            mean_state_ratio, reset_session_state, state_norms,
         )
         from train_utils import (
             SessionItem, equal_token_slices, make_slice_sessions,
@@ -157,10 +218,38 @@ class TTTInference:
             items = [SessionItem(i, 0, doc_lengths[i])
                      for i in range(len(texts))]
 
+        # Resolve which per-source carry to install for each doc.
+        # `force_source` overrides the doc's own label (swap test).
+        installable_carries = (getattr(self, "per_source_carries", {})
+                               if use_everlasting_carry else {})
+        forced_key = force_source if force_source else None
+
+        def _install_for_doc(doc_idx: int) -> str:
+            """Install this doc's per-source carrier (or `force_source`'s).
+            Returns the label actually installed, or "" if nothing installed."""
+            if not use_everlasting_carry:
+                return ""
+            src = (forced_key if forced_key is not None
+                   else (sources[doc_idx] if sources
+                         and doc_idx < len(sources) else ""))
+            if src and src in installable_carries:
+                install_carried_delta(self.model, installable_carries[src])
+                return src
+            return ""
+
         slice_in_paper = [0] * len(texts)
+        prev_doc_idx = None
         out = []
         try:
+            # First doc: install its carrier from the start.
+            if items:
+                _install_for_doc(items[0].doc_idx)
             for pos, item in enumerate(items):
+                if (reset_between_docs and prev_doc_idx is not None
+                        and item.doc_idx != prev_doc_idx):
+                    reset_session_state(self.model)
+                    _install_for_doc(item.doc_idx)
+                prev_doc_idx = item.doc_idx
                 ids = torch.tensor(
                     [paper_token_ids[item.doc_idx][item.start:item.end]],
                     device="cuda",
@@ -170,6 +259,12 @@ class TTTInference:
                 advance_session_state(self.model)
                 norms = state_norms(self.model, source="session")
                 state_ratio = mean_state_ratio(norms)
+                if reset_between_items:
+                    reset_session_state(self.model)
+                    # Reinstall so within-item chunk adaptation still
+                    # starts from the per-source seed on the next item of
+                    # the same doc.
+                    _install_for_doc(item.doc_idx)
                 out.append({
                     "paper_idx": int(item.doc_idx),
                     "slice_in_paper": slice_in_paper[item.doc_idx],
@@ -221,13 +316,23 @@ class TTTInference:
         return {"text": text, "fast_weights": snapshot}
 
     @modal.method()
-    def fetch_holdout_texts(self, n_papers: int, seed: int = 0) -> list:
-        """Sample n papers from the contamination-free holdout (newest
+    def fetch_holdout_texts(self, n_papers: int, seed: int = 0,
+                            n_papers_per_source: int = 0,
+                            min_tokens_est: int = 0) -> list:
+        """Sample papers from the contamination-free holdout (newest
         `spec.holdout_last_n` rows excluded from training).
 
-        Returns a list of dicts: `[{"text": str, "source": str}, ...]`.
-        `source` is "" when the active dataset has no source column;
-        otherwise it's the extracted source label (e.g. "RedPajamaC4").
+        - `n_papers_per_source > 0` and the dataset has a source column
+          -> pick exactly that many per source (total =
+          n_sources * n_papers_per_source). Ensures every domain
+          contributes to the eval table.
+        - Otherwise: sample `n_papers` uniformly.
+
+        `min_tokens_est > 0` filters to docs whose `tokens_est` (or
+        char-length proxy) meets the threshold, so eval doesn't pick
+        tiny StackExchange posts.
+
+        Returns `[{"text": str, "source": str}, ...]`.
         """
         import random
 
@@ -236,15 +341,45 @@ class TTTInference:
         spec = DATASET_SPEC
         _, holdout = split_holdout(open_dataset(spec), spec)
         holdout = apply_source_filter(holdout, spec)
+
+        if min_tokens_est > 0:
+            tokens_est_col = spec.tokens_est_column
+            if tokens_est_col and tokens_est_col in holdout.column_names:
+                holdout = holdout.filter(
+                    lambda ex: ex[tokens_est_col] >= min_tokens_est,
+                )
+            else:
+                char_threshold = 4 * min_tokens_est
+                text_col_local = spec.text_column
+                holdout = holdout.filter(
+                    lambda ex: len(ex[text_col_local]) >= char_threshold,
+                )
+
+        if len(holdout) == 0:
+            return []
+
         rng = random.Random(seed)
-        n = min(n_papers, len(holdout))
-        idx = rng.sample(range(len(holdout)), n)
-        text_col = spec.text_column
         has_source = "source" in holdout.column_names
+        text_col = spec.text_column
+
+        if has_source and n_papers_per_source > 0:
+            from collections import defaultdict
+            by_src = defaultdict(list)
+            for i, s in enumerate(holdout["source"]):
+                by_src[s].append(i)
+            indices = []
+            for src in sorted(by_src):
+                pool = by_src[src]
+                rng.shuffle(pool)
+                indices.extend(pool[:n_papers_per_source])
+        else:
+            n = min(n_papers, len(holdout))
+            indices = rng.sample(range(len(holdout)), n)
+
         return [
             {"text": holdout[i][text_col],
              "source": (holdout[i]["source"] if has_source else "")}
-            for i in idx
+            for i in indices
         ]
 
     @modal.method()
@@ -411,24 +546,34 @@ def _print_paper_preview(texts: list, labels: list | None = None,
     print()
 
 
-def _print_session_results(carry: list, fresh: list,
+def _print_session_results(carry: list, carry_off: list, fresh: list,
                            paper_labels: list = None,
                            paper_sources: list | None = None):
-    """Per-item table + token-weighted per-paper summary. 'state' col is
-    ||eta*carried_delta||_F / ||W_down||_F averaged across TTT layers.
-    When `paper_sources` is provided, also emits a per-source summary."""
+    """Per-item table + token-weighted per-paper summary. Three ppl columns:
+      carry     -- TTT on, fast weight carries across items
+      carry-off -- TTT on, fast weight reset between items
+                   (isolates within-item chunk adaptation)
+      fresh     -- TTT off (fast weight = 0 throughout)
+    Two gap columns:
+      Δwithin  = fresh - carry-off  (within-item chunk-scan benefit)
+      Δbetween = carry-off - carry  (cross-item session-carry benefit)
+    Sum = Δtotal = fresh - carry."""
     import math
 
     print(f"{'pos':>4}  {'p.s':<6} {'n_tok':>6}  "
-          f"{'ppl carry':>10}  {'ppl fresh':>10}  {'gap':>8}  "
-          f"{'state':>10}")
-    for c, f in zip(carry, fresh):
+          f"{'carry':>9}  {'carry-off':>9}  {'fresh':>9}  "
+          f"{'Δwithin':>9}  {'Δbetween':>9}  "
+          f"{'state c':>9}  {'state co':>9}")
+    for c, co, f in zip(carry, carry_off, fresh):
         label = f"{c['paper_idx'] + 1}.{c['slice_in_paper'] + 1}"
-        gap = f['ppl'] - c['ppl']
-        state = c.get('state_ratio_mean', 0.0)
+        d_within = f['ppl'] - co['ppl']
+        d_between = co['ppl'] - c['ppl']
+        state_c = c.get('state_ratio_mean', 0.0)
+        state_co = co.get('state_ratio_mean', 0.0)
         print(f"{c['session_pos']:>4}  {label:<6} {c['n_tokens']:>6}  "
-              f"{c['ppl']:>10.3f}  {f['ppl']:>10.3f}  {gap:>+8.3f}  "
-              f"{state:>10.2e}")
+              f"{c['ppl']:>9.3f}  {co['ppl']:>9.3f}  {f['ppl']:>9.3f}  "
+              f"{d_within:>+9.3f}  {d_between:>+9.3f}  "
+              f"{state_c:>9.2e}  {state_co:>9.2e}")
 
     if not carry:
         return
@@ -443,39 +588,51 @@ def _print_session_results(carry: list, fresh: list,
     print()
     print("per-paper (token-weighted):")
     print(f"{'paper':<{label_width}}  {'n_tok':>8}  "
-          f"{'ppl carry':>10}  {'ppl fresh':>10}  {'gap':>8}")
+          f"{'carry':>9}  {'carry-off':>9}  {'fresh':>9}  "
+          f"{'Δwithin':>9}  {'Δbetween':>9}")
     for p in range(n_papers):
         c_log_tok = sum(math.log(c['ppl']) * c['n_tokens']
                         for c in carry if c['paper_idx'] == p)
+        co_log_tok = sum(math.log(co['ppl']) * co['n_tokens']
+                         for co in carry_off if co['paper_idx'] == p)
         f_log_tok = sum(math.log(f['ppl']) * f['n_tokens']
                         for f in fresh if f['paper_idx'] == p)
         n_tok = sum(c['n_tokens'] for c in carry if c['paper_idx'] == p)
         if not n_tok:
             continue
         c_ppl = math.exp(c_log_tok / n_tok)
+        co_ppl = math.exp(co_log_tok / n_tok)
         f_ppl = math.exp(f_log_tok / n_tok)
         label = str(paper_labels[p]) if paper_labels else str(p + 1)
-        gap = f_ppl - c_ppl
+        d_within = f_ppl - co_ppl
+        d_between = co_ppl - c_ppl
         print(f"{label:<{label_width}}  {n_tok:>8}  "
-              f"{c_ppl:>10.3f}  {f_ppl:>10.3f}  {gap:>+8.3f}")
+              f"{c_ppl:>9.3f}  {co_ppl:>9.3f}  {f_ppl:>9.3f}  "
+              f"{d_within:>+9.3f}  {d_between:>+9.3f}")
 
     if paper_sources and any(paper_sources):
-        _print_per_source_summary(carry, fresh, paper_sources)
+        _print_per_source_summary(carry, carry_off, fresh, paper_sources)
 
 
-def _print_per_source_summary(carry: list, fresh: list,
+def _print_per_source_summary(carry: list, carry_off: list, fresh: list,
                               paper_sources: list):
-    """Token-weighted PPL per source label (e.g. RedPajamaC4). Shows the
-    core "which domain benefits most" table for a mixed-source dataset."""
+    """Token-weighted PPL per source label (e.g. RedPajamaC4). Same three
+    modes and two gaps as `_print_session_results`. Shows the core "which
+    domain benefits most" table for a mixed-source dataset."""
     import math
     from collections import defaultdict
 
     by_src_carry = defaultdict(list)
+    by_src_carry_off = defaultdict(list)
     by_src_fresh = defaultdict(list)
     for c in carry:
         src = paper_sources[c['paper_idx']] if c['paper_idx'] < len(paper_sources) else ""
         if src:
             by_src_carry[src].append(c)
+    for co in carry_off:
+        src = paper_sources[co['paper_idx']] if co['paper_idx'] < len(paper_sources) else ""
+        if src:
+            by_src_carry_off[src].append(co)
     for f in fresh:
         src = paper_sources[f['paper_idx']] if f['paper_idx'] < len(paper_sources) else ""
         if src:
@@ -488,63 +645,122 @@ def _print_per_source_summary(carry: list, fresh: list,
     label_w = max(len(s) for s in by_src_carry)
     label_w = max(label_w, len("source"))
     print(f"{'source':<{label_w}}  {'n_papers':>9}  {'n_tok':>10}  "
-          f"{'ppl carry':>10}  {'ppl fresh':>10}  {'gap':>8}")
+          f"{'carry':>9}  {'carry-off':>9}  {'fresh':>9}  "
+          f"{'Δwithin':>9}  {'Δbetween':>9}")
     for src in sorted(by_src_carry):
         c_items = by_src_carry[src]
+        co_items = by_src_carry_off.get(src, [])
         f_items = by_src_fresh.get(src, [])
         n_tok = sum(c['n_tokens'] for c in c_items)
         if not n_tok:
             continue
         c_log = sum(math.log(c['ppl']) * c['n_tokens'] for c in c_items)
+        co_log = sum(math.log(co['ppl']) * co['n_tokens'] for co in co_items)
         f_log = sum(math.log(f['ppl']) * f['n_tokens'] for f in f_items)
+        co_tok = sum(co['n_tokens'] for co in co_items) or n_tok
         f_tok = sum(f['n_tokens'] for f in f_items) or n_tok
         c_ppl = math.exp(c_log / n_tok)
+        co_ppl = math.exp(co_log / co_tok)
         f_ppl = math.exp(f_log / f_tok)
         n_papers = len({c['paper_idx'] for c in c_items})
         print(f"{src:<{label_w}}  {n_papers:>9d}  {n_tok:>10d}  "
-              f"{c_ppl:>10.3f}  {f_ppl:>10.3f}  {f_ppl - c_ppl:>+8.3f}")
+              f"{c_ppl:>9.3f}  {co_ppl:>9.3f}  {f_ppl:>9.3f}  "
+              f"{f_ppl - co_ppl:>+9.3f}  {co_ppl - c_ppl:>+9.3f}")
 
 
 def _three_way_eval(base_engine, ckpt: str, texts: list,
                     session_kwargs: dict,
-                    paper_sources: list | None = None):
+                    paper_sources: list | None = None,
+                    use_everlasting_carry: bool = False,
+                    force_source: str = ""):
     """Print BASE / LORA-ONLY / FULL tables on the same texts. The three
     configs share input so any per-slice number is directly comparable.
     LORA-ONLY and FULL are skipped when ckpt is empty. `paper_sources`
-    forwards a per-paper source label to the per-source summary."""
-    def _run(engine, label):
+    forwards a per-paper source label to the per-source summary.
+
+    `use_everlasting_carry` and `force_source` only affect FULL (the only
+    config that has the trained per-source carriers)."""
+    def _run(engine, label, everlasting: bool):
         print(f"=== {label} ===")
+        ec_kwargs = (
+            {"use_everlasting_carry": True,
+             "force_source": force_source,
+             "sources": paper_sources or []}
+            if everlasting else {}
+        )
         try:
             carry = engine.session_perplexity.remote(
-                texts, evolve=True, **session_kwargs,
+                texts, evolve=True, **session_kwargs, **ec_kwargs,
+            )
+            carry_off = engine.session_perplexity.remote(
+                texts, evolve=True, reset_between_items=True,
+                **session_kwargs, **ec_kwargs,
             )
             fresh = engine.session_perplexity.remote(
-                texts, evolve=False, **session_kwargs,
+                texts, evolve=False, **session_kwargs, **ec_kwargs,
             )
-            _print_session_results(carry, fresh,
+            _print_session_results(carry, carry_off, fresh,
                                    paper_sources=paper_sources)
         except Exception as e:
             print(f"[failed: {e}]")
         print()
 
-    _run(base_engine, "BASE  (Qwen3, no LoRA, no TTT)")
+    _run(base_engine, "BASE  (Qwen3, no LoRA, no TTT)", everlasting=False)
     if ckpt:
         _run(TTTInference(ckpt=ckpt, load_ttt=False),
-             f"LORA-ONLY  (ckpt={ckpt}, TTT silent)")
+             f"LORA-ONLY  (ckpt={ckpt}, TTT silent)",
+             everlasting=False)
+        full_tag = ""
+        if use_everlasting_carry:
+            full_tag = " + everlasting-carry"
+            if force_source:
+                full_tag += f" (force_source={force_source!r})"
         _run(TTTInference(ckpt=ckpt, load_ttt=True),
-             f"FULL  (ckpt={ckpt}, LoRA + TTT)")
+             f"FULL  (ckpt={ckpt}, LoRA + TTT{full_tag})",
+             everlasting=use_everlasting_carry)
 
 
 @app.local_entrypoint()
 def holdout_eval(n_papers: int = 5, seed: int = 0, ckpt: str = "",
-                 slice_papers: bool = True):
+                 slice_papers: bool = True,
+                 equal_n_slices: int = 4,
+                 n_papers_per_source: int = 2,
+                 min_tokens_est: int = 0,
+                 use_everlasting_carry: bool = False,
+                 force_source: str = ""):
     """Three-way comparison in one run:
       1. BASE       -- pure Qwen3 (no LoRA, no TTT). The pretraining baseline.
       2. LORA-ONLY  -- trained LoRA on base, TTT silent (W_target=0).
       3. FULL       -- trained LoRA + trained TTT. The full model.
-    Requires --ckpt for (2) and (3); with no --ckpt only BASE is shown."""
+    Requires --ckpt for (2) and (3); with no --ckpt only BASE is shown.
+
+    Each of (1)-(3) runs the same texts three times: carry (TTT + cross-item
+    carry), carry-off (TTT within item only, reset between items), fresh
+    (TTT silent). Δwithin = fresh - carry-off; Δbetween = carry-off - carry.
+
+    Pass `--equal-n-slices 4` to force every paper into 4 equal slices
+    (session_pos labels become 1.1, 1.2, 1.3, 1.4, 2.1, ...). Without it,
+    each paper is one item.
+
+    For a multi-source dataset (SlimPajama), pass
+    `--n-papers-per-source 2` for a per-source table; also pass
+    `--min-tokens-est 2048` to skip tiny StackExchange posts.
+
+    Everlasting-carry (requires a checkpoint trained with --mode everlasting):
+      --use-everlasting-carry              Install per-source carriers as
+                                            the fast-weight seed on FULL.
+      --force-source RedPajamaC4           Install THAT source's carrier
+                                            for every doc regardless of its
+                                            actual source (swap test)."""
     base_engine = TTTInference(ckpt="")
-    rows = base_engine.fetch_holdout_texts.remote(n_papers, seed)
+    rows = base_engine.fetch_holdout_texts.remote(
+        n_papers=n_papers, seed=seed,
+        n_papers_per_source=n_papers_per_source,
+        min_tokens_est=min_tokens_est,
+    )
+    if not rows:
+        print("no holdout papers available")
+        return
     texts = [r["text"] for r in rows]
     sources = [r["source"] for r in rows]
     labels = [f"holdout {i+1}" + (f" [{s}]" if s else "")
@@ -552,8 +768,11 @@ def holdout_eval(n_papers: int = 5, seed: int = 0, ckpt: str = "",
     _print_paper_preview(texts, labels)
     _three_way_eval(
         base_engine, ckpt, texts,
-        session_kwargs={"slice_papers": slice_papers, "slice_seed": seed},
+        session_kwargs={"slice_papers": slice_papers, "slice_seed": seed,
+                        "equal_n_slices": equal_n_slices},
         paper_sources=sources,
+        use_everlasting_carry=use_everlasting_carry,
+        force_source=force_source,
     )
 
 
@@ -571,11 +790,15 @@ def session_eval(papers_dir: str, ckpt: str = "",
     carry = engine.session_perplexity.remote(
         texts, evolve=True, slice_papers=slice_papers, slice_seed=slice_seed,
     )
+    carry_off = engine.session_perplexity.remote(
+        texts, evolve=True, reset_between_items=True,
+        slice_papers=slice_papers, slice_seed=slice_seed,
+    )
     fresh = engine.session_perplexity.remote(
         texts, evolve=False, slice_papers=slice_papers, slice_seed=slice_seed,
     )
     _print_session_results(
-        carry, fresh,
+        carry, carry_off, fresh,
         paper_labels=labels,
     )
 
@@ -598,7 +821,7 @@ def holdout_generate(n_papers: int = 1, prefix_chars: int = 1200,
                      top_p: float = 0.9, greedy: bool = False):
     """Side-by-side carry-on vs carry-off generation on held-out papers. Pass --greedy so the only differing factor is the carry."""
     engine = TTTInference(ckpt=ckpt)
-    rows = engine.fetch_holdout_texts.remote(n_papers, seed)
+    rows = engine.fetch_holdout_texts.remote(n_papers=n_papers, seed=seed)
     if not rows:
         print("no holdout papers available")
         return
@@ -638,7 +861,7 @@ def single_paper_eval(n_slices: int = 8, ckpt: str = "", seed: int = 0):
     session. Prints the BASE / LORA-ONLY / FULL three-way comparison (see
     holdout_eval docstring). --ckpt='' shows only BASE."""
     base_engine = TTTInference(ckpt="")
-    rows = base_engine.fetch_holdout_texts.remote(1, seed)
+    rows = base_engine.fetch_holdout_texts.remote(n_papers=1, seed=seed)
     if not rows:
         print("no holdout papers available")
         return

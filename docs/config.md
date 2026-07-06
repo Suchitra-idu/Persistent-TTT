@@ -131,6 +131,7 @@ to compensate for smaller per-param gradients at scale. See
 | `hybrid_slices_min` | `2` | y: min slices for the carry path. |
 | `hybrid_slices_max` | `6` | z: max slices for the carry path. |
 | `hybrid_slice_min_tokens` | `800` | n: min tokens per slice. Must satisfy `y*n <= hybrid_carry_min_tokens`. |
+| `source_preset` | `""` | If set, rebalance training rows by source using the named preset (`SOURCE_PRESETS`). Empty = keep natural dataset mix. See [training.md#source-balancing](training.md#source-balancing---source-preset). Presets that ship: `slim-paper`, `slim-research`. |
 
 ### Loss mask (all off by default)
 
@@ -187,6 +188,7 @@ corresponding config field:
 | `--eval-n-papers N` | `eval_n_papers` |
 | `--eval-n-papers-per-source N` | `eval_n_papers_per_source` |
 | `--eval-min-tokens N` | `eval_min_tokens` |
+| `--source-preset NAME` | `source_preset` (validated at parse time; unknown name raises fast). |
 | `--resume-from PATH` | Not a config field. `step_<n>` or `<other_run>/step_<n>`. |
 
 Any int flag == 0 means "leave the config default unchanged." `mode`

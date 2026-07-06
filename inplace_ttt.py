@@ -390,6 +390,45 @@ def advance_session_state(model):
             m._next_carried = None
 
 
+def snapshot_carried_delta(model, to_cpu: bool = True) -> dict:
+    """Return `{layer_idx: fp32 tensor}` copies of every TTT module's
+    `carried_delta`. Layer indices are the base-model indices (not module
+    enumeration order), so a snapshot survives an unrelated change to the
+    TTT layer schedule (shapes still have to match on load).
+
+    `to_cpu=False` keeps snapshots on device -- the hot everlasting-carry
+    training loop reuses this per doc, and CPU round-trips would dominate
+    wall time. Callers persisting to disk pass `to_cpu=True`.
+    Modules whose carry is None are omitted."""
+    modules = list(iter_ttt_modules(model))
+    layer_indices = modules[0].cfg.layer_indices if modules else ()
+    out = {}
+    for layer_idx, m in zip(layer_indices, modules):
+        if m.carried_delta is None:
+            continue
+        t = m.carried_delta.detach().float().clone()
+        out[int(layer_idx)] = t.cpu() if to_cpu else t
+    return out
+
+
+def install_carried_delta(model, snapshot: dict):
+    """Load a `{layer_idx: Tensor}` snapshot into modules' `carried_delta`.
+    Missing entries leave the module's carry as-is; callers should call
+    `reset_session_state` first if a clean install is required.
+
+    Placed on the module's device in fp32 -- matches how `_scan_forward`
+    stages `_next_carried`."""
+    modules = list(iter_ttt_modules(model))
+    layer_indices = modules[0].cfg.layer_indices if modules else ()
+    for layer_idx, m in zip(layer_indices, modules):
+        t = snapshot.get(int(layer_idx))
+        if t is None:
+            continue
+        m.carried_delta = t.to(
+            device=m.down_proj.weight.device, dtype=torch.float32
+        )
+
+
 def state_norms(model, source: str = "session") -> dict:
     """||eta * delta||_F / ||W0||_F keyed by base-model layer index.
     source="session" reads carried_delta (TBPTT), "stream" reads state.delta."""

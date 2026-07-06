@@ -18,14 +18,15 @@ import pytest
 # ---------- _apply_cli_overrides ----------
 
 def _defaults():
-    """Everything-unset kwargs: 0 for int knobs, "" for mode,
+    """Everything-unset kwargs: 0 for int knobs, "" for str knobs,
     _UNSET (-1) for session."""
     from train_modal import _UNSET
     return dict(num_epochs=0, grad_accum=0, session=_UNSET, mode="",
                 min_doc_tokens=0, hybrid_carry_min=0,
                 hybrid_slice_min=0, hybrid_slices_min=0,
                 hybrid_slices_max=0, eval_n_papers=0,
-                eval_n_papers_per_source=0, eval_min_tokens=0)
+                eval_n_papers_per_source=0, eval_min_tokens=0,
+                eval_every=0, source_preset="")
 
 
 def test_apply_overrides_all_unset_returns_train_cfg_identity():
@@ -95,6 +96,30 @@ def test_apply_overrides_session_flag_toggles_training():
     assert _apply_cli_overrides(**kw).session_training is True
     kw["session"] = 0
     assert _apply_cli_overrides(**kw).session_training is False
+
+
+def test_apply_overrides_source_preset_flows_through():
+    from train_modal import _apply_cli_overrides
+    kw = _defaults(); kw["source_preset"] = "slim-paper"
+    assert _apply_cli_overrides(**kw).source_preset == "slim-paper"
+
+
+def test_apply_overrides_unknown_source_preset_fails_fast():
+    """Bad preset name should fail in the local entrypoint, before
+    the container spins up."""
+    from train_modal import _apply_cli_overrides
+    kw = _defaults(); kw["source_preset"] = "does-not-exist"
+    with pytest.raises(KeyError, match="Unknown source preset"):
+        _apply_cli_overrides(**kw)
+
+
+def test_apply_overrides_source_preset_none_bypasses_validation():
+    """'none' is an explicit opt-out that skips preset-name validation
+    (so users can disable the spec's default without knowing what's
+    registered)."""
+    from train_modal import _apply_cli_overrides
+    kw = _defaults(); kw["source_preset"] = "none"
+    assert _apply_cli_overrides(**kw).source_preset == "none"
 
 
 def test_resolve_resume_none_returns_none_pair(monkeypatch, tmp_path):
@@ -202,13 +227,15 @@ def _row(n_tok, ppl):
     return (n_tok, ppl, 0.0)
 
 
-def _paper(carry_ppl, fresh_ppl, carry_tok, fresh_tok):
+def _paper(carry_ppl, carry_off_ppl, fresh_ppl, n_tok):
     return {
         "carry_ppl": carry_ppl,
+        "carry_off_ppl": carry_off_ppl,
         "fresh_ppl": fresh_ppl,
         "state_ratio_final": 0.0,
-        "carry_rows": [_row(carry_tok, carry_ppl)],
-        "fresh_rows": [_row(fresh_tok, fresh_ppl)],
+        "carry_rows": [_row(n_tok, carry_ppl)],
+        "carry_off_rows": [_row(n_tok, carry_off_ppl)],
+        "fresh_rows": [_row(n_tok, fresh_ppl)],
     }
 
 
@@ -216,42 +243,60 @@ def test_per_source_eval_groups_by_source():
     from train_modal import _per_source_eval_metrics
 
     per_paper = [
-        _paper(carry_ppl=10.0, fresh_ppl=12.0, carry_tok=100, fresh_tok=100),
-        _paper(carry_ppl=20.0, fresh_ppl=25.0, carry_tok=200, fresh_tok=200),
-        _paper(carry_ppl=8.0,  fresh_ppl=8.5,  carry_tok=100, fresh_tok=100),
+        _paper(carry_ppl=10.0, carry_off_ppl=11.0, fresh_ppl=12.0, n_tok=100),
+        _paper(carry_ppl=20.0, carry_off_ppl=22.0, fresh_ppl=25.0, n_tok=200),
+        _paper(carry_ppl=8.0,  carry_off_ppl=8.2,  fresh_ppl=8.5,  n_tok=100),
     ]
     sources = ["C4", "Github", "C4"]
     out = _per_source_eval_metrics(per_paper, sources)
 
     assert "eval/C4/carry_ppl" in out
-    assert "eval/Github/carry_ppl" in out
+    assert "eval/C4/carry_off_ppl" in out
+    assert "eval/Github/fresh_ppl" in out
     assert out["eval/C4/n_papers"] == 2
     assert out["eval/Github/n_papers"] == 1
-    # gap = fresh - carry
-    assert out["eval/Github/gap"] == pytest.approx(25.0 - 20.0)
+    # single-paper Github: within = fresh - carry_off; between = carry_off - carry
+    assert out["eval/Github/gap_within"] == pytest.approx(25.0 - 22.0)
+    assert out["eval/Github/gap_between"] == pytest.approx(22.0 - 20.0)
+    assert out["eval/Github/gap_total"] == pytest.approx(25.0 - 20.0)
 
 
 def test_per_source_eval_token_weighted():
-    """C4: two papers with weights 100 and 100, ppl 10 and 8 respectively.
-    Expected carry ppl = exp((log(10)*100 + log(8)*100) / 200) = sqrt(80)."""
+    """C4: two papers, equal weight 100. carry ppls 10 and 8 -> geo mean sqrt(80).
+    All three modes are token-weighted geo means over the same token counts."""
     from train_modal import _per_source_eval_metrics
 
     per_paper = [
-        _paper(carry_ppl=10.0, fresh_ppl=12.0, carry_tok=100, fresh_tok=100),
-        _paper(carry_ppl=8.0,  fresh_ppl=9.0,  carry_tok=100, fresh_tok=100),
+        _paper(carry_ppl=10.0, carry_off_ppl=11.0, fresh_ppl=12.0, n_tok=100),
+        _paper(carry_ppl=8.0,  carry_off_ppl=8.5,  fresh_ppl=9.0,  n_tok=100),
     ]
     out = _per_source_eval_metrics(per_paper, ["C4", "C4"])
-    expected = math.exp((math.log(10.0) + math.log(8.0)) / 2)  # geo mean
-    assert out["eval/C4/carry_ppl"] == pytest.approx(expected)
+    expected_carry = math.exp((math.log(10.0) + math.log(8.0)) / 2)
+    expected_carry_off = math.exp((math.log(11.0) + math.log(8.5)) / 2)
+    expected_fresh = math.exp((math.log(12.0) + math.log(9.0)) / 2)
+    assert out["eval/C4/carry_ppl"] == pytest.approx(expected_carry)
+    assert out["eval/C4/carry_off_ppl"] == pytest.approx(expected_carry_off)
+    assert out["eval/C4/fresh_ppl"] == pytest.approx(expected_fresh)
 
 
 def test_per_source_eval_skips_empty_sources():
     from train_modal import _per_source_eval_metrics
 
-    per_paper = [_paper(10.0, 12.0, 100, 100),
-                 _paper(20.0, 25.0, 200, 200)]
+    per_paper = [_paper(10.0, 11.0, 12.0, 100),
+                 _paper(20.0, 22.0, 25.0, 200)]
     out = _per_source_eval_metrics(per_paper, ["", ""])
     assert out == {}
+
+
+def test_per_source_eval_gap_decomposition_sums():
+    """gap_within + gap_between == gap_total for every source (by construction)."""
+    from train_modal import _per_source_eval_metrics
+
+    per_paper = [_paper(carry_ppl=5.0, carry_off_ppl=6.0, fresh_ppl=8.0,
+                        n_tok=250)]
+    out = _per_source_eval_metrics(per_paper, ["Wiki"])
+    assert out["eval/Wiki/gap_within"] + out["eval/Wiki/gap_between"] == \
+        pytest.approx(out["eval/Wiki/gap_total"])
 
 
 # ---------- _n_per_source_indices ----------
@@ -295,3 +340,127 @@ def test_n_per_source_deterministic_per_rng():
     a = _n_per_source_indices(labels, 2, random.Random(42))
     b = _n_per_source_indices(labels, 2, random.Random(42))
     assert a == b
+
+
+# ---------- _balance_by_source_preset ----------
+
+class _FakeDS:
+    """Minimal duck-typed stand-in for a HF datasets.Dataset.
+
+    Supports the two operations the balancer uses: `len(ds)`,
+    `ds["source"]` (returns the source column as a list), and
+    `ds.select(indices)` (returns a new _FakeDS restricted to those
+    indices)."""
+
+    def __init__(self, sources):
+        self._sources = list(sources)
+
+    def __len__(self):
+        return len(self._sources)
+
+    def __getitem__(self, key):
+        if key == "source":
+            return list(self._sources)
+        raise KeyError(key)
+
+    @property
+    def column_names(self):
+        return ["source"]
+
+    def select(self, indices):
+        return _FakeDS([self._sources[i] for i in indices])
+
+
+def _slim_ds(counts: dict):
+    """Build a fake ds with the given per-source counts."""
+    sources = []
+    for src, n in counts.items():
+        sources.extend([src] * n)
+    return _FakeDS(sources)
+
+
+def test_balance_by_preset_hits_ratios_when_pool_is_large():
+    from collections import Counter
+    from train_modal import _balance_by_source_preset
+
+    # Big pool: 6 sources, 10000 rows each. Any preset can be honored.
+    ds = _slim_ds({
+        "RedPajamaC4": 10000, "RedPajamaGithub": 10000,
+        "RedPajamaBook": 10000, "RedPajamaArXiv": 10000,
+        "RedPajamaWikipedia": 10000, "RedPajamaStackExchange": 10000,
+    })
+    out = _balance_by_source_preset(ds, "slim-paper", target_total=10000)
+    counts = Counter(out["source"])
+
+    # slim-paper: C4 62/99, GH 9/99, Book 8/99, ArXiv 7/99, Wiki 7/99, SE 6/99
+    total_w = 62 + 9 + 8 + 7 + 7 + 6
+    assert counts["RedPajamaC4"] == int(10000 * 62 / total_w)
+    assert counts["RedPajamaGithub"] == int(10000 * 9 / total_w)
+    assert counts["RedPajamaBook"] == int(10000 * 8 / total_w)
+
+
+def test_balance_by_preset_undersized_bucket_takes_all_available():
+    from collections import Counter
+    from train_modal import _balance_by_source_preset
+
+    # Books has only 3 rows -- should take all 3 rather than pad with
+    # something else.
+    ds = _slim_ds({
+        "RedPajamaC4": 10000, "RedPajamaGithub": 10000,
+        "RedPajamaBook": 3,   "RedPajamaArXiv": 10000,
+        "RedPajamaWikipedia": 10000, "RedPajamaStackExchange": 10000,
+    })
+    out = _balance_by_source_preset(ds, "slim-paper", target_total=10000)
+    counts = Counter(out["source"])
+    assert counts["RedPajamaBook"] == 3
+
+
+def test_balance_by_preset_raises_when_no_source_matches():
+    from train_modal import _balance_by_source_preset
+
+    # Dataset labels don't match preset -- fail loudly.
+    ds = _slim_ds({"totally_different_source": 100})
+    with pytest.raises(ValueError, match="none match"):
+        _balance_by_source_preset(ds, "slim-paper", target_total=100)
+
+
+def test_balance_by_preset_preserves_shuffled_order():
+    """The returned ds should keep the pre-shuffled order of picked
+    indices, not group by source. Verified by checking that adjacent
+    positions in the output span multiple sources."""
+    from train_modal import _balance_by_source_preset
+
+    # Interleave sources so any window has multiple.
+    sources = []
+    for _ in range(200):
+        for src in ("RedPajamaC4", "RedPajamaGithub", "RedPajamaBook",
+                    "RedPajamaArXiv", "RedPajamaWikipedia",
+                    "RedPajamaStackExchange"):
+            sources.append(src)
+    ds = _FakeDS(sources)
+    out = _balance_by_source_preset(ds, "slim-paper", target_total=600)
+
+    # The output should NOT be all one source in a block; a window of
+    # 20 near the start should have at least 3 distinct sources.
+    window = out["source"][:20]
+    assert len(set(window)) >= 3
+
+
+def test_balance_by_preset_target_scaling():
+    """Doubling target_total should roughly double per-source picks
+    (up to available-pool bottlenecks)."""
+    from collections import Counter
+    from train_modal import _balance_by_source_preset
+
+    ds = _slim_ds({
+        "RedPajamaC4": 100000, "RedPajamaGithub": 100000,
+        "RedPajamaBook": 100000, "RedPajamaArXiv": 100000,
+        "RedPajamaWikipedia": 100000, "RedPajamaStackExchange": 100000,
+    })
+    a = Counter(_balance_by_source_preset(ds, "slim-research",
+                                          target_total=1000)["source"])
+    b = Counter(_balance_by_source_preset(ds, "slim-research",
+                                          target_total=2000)["source"])
+    for src in a:
+        # Allow a small off-by-one from int truncation of the ratio.
+        assert abs(b[src] - 2 * a[src]) <= 2

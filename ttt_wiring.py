@@ -92,6 +92,46 @@ def save_ttt_state_dict(model, path: str, cfg: TTTConfig):
     torch.save(out, path)
 
 
+def save_per_source_carries(carries: dict, path: str, meta: dict | None = None):
+    """Persist the everlasting-carry per-source carrier dict.
+
+    Structure on disk:
+      {
+        "carries": {source_label: {layer_idx: fp32 cpu tensor}},
+        "n_updates": {source_label: int},  # docs consumed per source
+        "meta": {...caller supplied...},
+      }
+    """
+    payload = {
+        "carries": {
+            src: {int(k): v.detach().float().cpu().clone()
+                  for k, v in per_layer.items()}
+            for src, per_layer in carries.items()
+        },
+        "n_updates": {src: int(n) for src, n
+                      in (meta or {}).get("n_updates", {}).items()},
+        "meta": {k: v for k, v in (meta or {}).items() if k != "n_updates"},
+    }
+    torch.save(payload, path)
+
+
+def load_per_source_carries(path: str) -> tuple[dict, dict]:
+    """Load a per-source carry file; returns (`{src: {layer_idx: Tensor}}`,
+    metadata dict). Callers install via `install_carried_delta(model, ...)`.
+    Missing file returns ({}, {})."""
+    import os
+    if not path or not os.path.exists(path):
+        return {}, {}
+    blob = torch.load(path, map_location="cpu", weights_only=False)
+    carries = blob.get("carries", {})
+    normalized = {
+        src: {int(k): v for k, v in per_layer.items()}
+        for src, per_layer in carries.items()
+    }
+    meta = {"n_updates": blob.get("n_updates", {}), **blob.get("meta", {})}
+    return normalized, meta
+
+
 def load_ttt_state_dict(model, path: str):
     saved = torch.load(path, map_location="cpu")
     by_suffix = dict(saved)

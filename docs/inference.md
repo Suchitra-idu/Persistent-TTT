@@ -155,7 +155,8 @@ carrying across the session.
 
 ```python
 def session_perplexity(self, texts, evolve=True, slice_papers=True,
-                       slice_seed=0, equal_n_slices=0) -> list:
+                       slice_seed=0, equal_n_slices=0,
+                       reset_between_items=False) -> list:
     self._set_mode(evolve=evolve, stateful=False)
     for m in iter_ttt_modules(self.model):
         m.session_mode = True
@@ -168,6 +169,9 @@ def session_perplexity(self, texts, evolve=True, slice_papers=True,
         with torch.no_grad():
             loss = self.model(input_ids=ids, labels=ids).loss
         advance_session_state(self.model)
+        # state_ratio read here reflects THIS item's accumulated fast weight
+        if reset_between_items:
+            reset_session_state(self.model)  # carry-off mode
         # record ppl, state_ratio, session_pos, ...
 
     # finally:
@@ -177,6 +181,22 @@ def session_perplexity(self, texts, evolve=True, slice_papers=True,
 
     return per_item_results
 ```
+
+### Three eval modes
+
+Combining `evolve` and `reset_between_items` gives three well-defined
+regimes; the eval entrypoints run all three back-to-back:
+
+| Mode        | `evolve` | `reset_between_items` | What adapts                                    |
+|-------------|:--------:|:---------------------:|------------------------------------------------|
+| `carry`     | True     | False                 | chunk-scan within a forward + carry between items |
+| `carry-off` | True     | True                  | chunk-scan within a forward only                  |
+| `fresh`     | False    | (irrelevant)          | nothing (fast weight = 0 throughout)              |
+
+Two natural gaps:
+- `Δwithin = fresh - carry-off` — chunk-scan benefit within one forward
+- `Δbetween = carry-off - carry` — cross-item carry benefit on top
+- Total TTT benefit = `fresh - carry = Δwithin + Δbetween`
 
 ### Slicing modes (precedence order)
 
@@ -384,19 +404,46 @@ which runs on Modal.
 ### `holdout_eval` — three-way holdout comparison
 
 ```
+# Single-source dataset (arxiv): plain N-paper draw
 modal run infer_modal.py::holdout_eval --n-papers 5 --ckpt step_400
+
+# Multi-source dataset (SlimPajama): stratified per-source draw
+TTT_DATASET=slimpajama-6b modal run infer_modal.py::holdout_eval \
+    --ckpt step_400 --n-papers-per-source 2 --min-tokens-est 2048 \
+    --equal-n-slices 4
 ```
 
-Runs `_three_way_eval` on `n_papers` random papers from the holdout.
-Prints BASE / LORA-ONLY / FULL tables. See
-[Three-way eval](#three-way-eval-base--lora-only--full) below.
+Runs `_three_way_eval` on holdout papers. Each of BASE / LORA-ONLY /
+FULL runs the same texts three times: `carry` (TTT + cross-item carry),
+`carry-off` (TTT within item, reset between items), `fresh` (TTT
+silent). The printed table has three ppl columns and two Δ columns
+(`Δwithin`, `Δbetween`). When the dataset has a source column, a
+`per-source (token-weighted)` summary is printed underneath. See
+[Three-way eval](#three-way-eval-base--lora-only--full) and
+[Per-source eval table](#per-source-eval-table) below.
 
 **Args:**
-- `--n-papers N` (default 5) — how many holdout papers.
+- `--n-papers N` (default 5) — number of holdout papers when the
+  dataset has no source column (arxiv). Ignored when
+  `--n-papers-per-source > 0` and the dataset has a source column.
+- `--n-papers-per-source N` (default 0) — with a multi-source
+  dataset, pick exactly N papers per source. Total picked =
+  `N × n_sources`. Every domain contributes; the per-source table
+  becomes statistically usable.
+- `--min-tokens-est N` (default 0) — skip docs shorter than this
+  (uses `tokens_est_column` if present, else 4-chars-per-token
+  proxy). Use `2048` on SlimPajama so eval doesn't pick tiny
+  StackExchange posts that can't be sliced meaningfully.
+- `--equal-n-slices N` (default 0) — force each paper into N equal
+  slices (session_pos becomes `1.1, 1.2, ..., 1.N, 2.1, ...`).
+  Without it, each paper is one item (labels `1.1, 2.1, 3.1, ...`)
+  since `TRAIN_CFG.slice_prob = 0` by default. Set 4-8 to see
+  within-paper adaptation ramp up slice by slice.
 - `--seed S` (default 0) — deterministic paper selection.
 - `--ckpt X` (default `""`) — checkpoint. `""` prints only BASE.
 - `--slice-papers` / `--no-slice-papers` — whether to slice papers
-  within sessions per `TRAIN_CFG.slice_prob`.
+  within sessions per `TRAIN_CFG.slice_prob`. Overridden by
+  `--equal-n-slices > 0`.
 
 ### `single_paper_eval` — clean within-paper carry
 
@@ -468,29 +515,36 @@ same texts through three configurations and prints three tables:
 `TTTInference(ckpt="")` — pure Qwen3, no adapter, no TTT weights. The
 pretraining floor.
 
-- Every row: `ppl carry == ppl fresh`, `state == 0.00e+00`.
-- This is the wiring check: BASE with evolve=True should behave
-  identically to evolve=False because `W_target = 0` means the TTT
-  path contributes nothing. If they differ, the TTT patch is broken.
+- Every row: `carry == carry-off == fresh`, `state == 0.00e+00`.
+- This is the wiring check: BASE with any TTT toggle should behave
+  identically because `W_target = 0` means the TTT path contributes
+  nothing. If they differ, the TTT patch is broken.
 
 ### 2. LORA-ONLY
 
 `TTTInference(ckpt=ckpt, load_ttt=False)` — trained LoRA loaded, TTT
-tensors deliberately NOT loaded. `W_target = 0` and `output_gate` at
-init.
+tensors (including the TTT-layer `down_proj`) deliberately NOT loaded.
+`W_target = 0` and `output_gate` at init.
 
 - Isolates the LoRA contribution.
-- Same wiring property: `ppl carry == ppl fresh`, `state == 0`.
+- Same wiring property: `carry == carry-off == fresh`, `state == 0`.
 - At 0.6B on arxiv ML: BASE ppl ≈ 37 → LoRA-ONLY ppl ≈ 31.
+- **Note:** LORA-ONLY `fresh` ≠ FULL `fresh`. FULL loads the trained
+  TTT-layer `down_proj` (a slow weight in the `wdown` param group); the
+  mechanism itself is silent when the fast weight = 0 but the trained
+  `down_proj` still shifts ppl. This delta is "what SGD-updated
+  `down_proj` on TTT layers buys you, mechanism aside."
 
 ### 3. FULL
 
 `TTTInference(ckpt=ckpt, load_ttt=True)` — LoRA + TTT tensors both
 loaded.
 
-- `state_ratio` grows across positions.
-- `gap = fresh - carry` measures TTT contribution beyond LoRA.
-- At 0.6B best: per-paper gap +3 to +7 ppl, mean +4.5.
+- `state_ratio` grows across positions in the `carry` run; is reset to
+  zero between items in `carry-off`; stays at 0 in `fresh`.
+- `Δwithin` = `fresh - carry-off` = within-item chunk-scan benefit
+- `Δbetween` = `carry-off - carry` = cross-item persistence benefit
+- Total = `fresh - carry` ≈ +3 to +7 ppl at 0.6B best.
 
 ### Why 3 model loads
 
@@ -515,49 +569,70 @@ BASE and FULL to still print.
 The per-item table columns:
 
 ```
-pos    p.s     n_tok      ppl carry     ppl fresh       gap        state
+pos    p.s    n_tok    carry   carry-off   fresh    Δwithin   Δbetween    state
 ```
 
 - `pos`: session-position index (0-indexed).
-- `p.s`: paper.slice, e.g. `2.3` = paper 2, slice 3.
+- `p.s`: paper.slice, e.g. `2.3` = paper 2, slice 3. Note: with
+  `--equal-n-slices 0` (default) each paper is one item and you see
+  `1.1, 2.1, 3.1, ...`. Pass `--equal-n-slices 4` for `1.1..1.4, 2.1..2.4, ...`.
 - `n_tok`: token count of this item.
-- `ppl carry`: perplexity with `evolve=True` at this position.
-- `ppl fresh`: perplexity with `evolve=False` at this position.
-- `gap`: `ppl fresh - ppl carry`. Positive means carry helps.
+- `carry`: ppl with `evolve=True`, fast weight carries across items.
+- `carry-off`: ppl with `evolve=True`, fast weight reset between items
+  (chunk-scan still fires inside each forward).
+- `fresh`: ppl with `evolve=False`, fast weight = 0 throughout.
+- `Δwithin`: `fresh - carry-off`. Within-item chunk-scan benefit.
+- `Δbetween`: `carry-off - carry`. Cross-item persistence benefit.
 - `state`: mean `||eta · carried_delta||_F / ||W_down||_F` across TTT
-  layers, captured **after** `advance_session_state` for this position.
+  layers, captured **after** the item's forward. In `carry-off` mode
+  the state is read before the reset, so it still reflects what got
+  accumulated during that item's chunks.
 
 ### The `state` column, interpreted
 
+`session_perplexity` resets the fast weight at every document boundary
+by default (`reset_between_docs=True`), matching training-side
+semantics. So state should **grow within a paper's slices, then drop
+back to a small value** at each `p.s = X.1` row.
+
 - `0.00e+00` throughout → carry never staged. In BASE and LORA-ONLY
   this is expected. In FULL this indicates the mechanism is broken.
-- Grows monotonically → carry is accumulating. Mechanism engaged.
-- **Growth slope:** linear = pure accumulation (`carried_decay=1.0`).
-  Plateauing/asymptoting = EMA taking effect (`carried_decay < 1.0`).
-- **Big magnitudes (state > 5):** clip is active. Applied signal is
-  direction-only. See
+- Grows within paper, resets at doc boundary → mechanism engaged and
+  working as intended.
+- Grows monotonically **across** papers (state at paper 2 slice 1 ≫
+  state at paper 1 slice 1) → doc-boundary reset was disabled; you're
+  measuring cross-paper carry, which is usually not what you want.
+- **Growth slope within a paper:** linear = pure accumulation
+  (`carried_decay=1.0`). Plateauing/asymptoting = EMA taking effect
+  (`carried_decay < 1.0`).
+- **Big magnitudes (state > 5) even within one paper's slices:** clip is
+  active. Applied signal is direction-only. See
   [mechanism.md#the-frobenius-clip](mechanism.md#the-frobenius-clip)
   and
   [failure-modes.md#state-saturation](failure-modes.md#state-saturation).
 
-### The `gap` column, interpreted
+### The Δ columns, interpreted
 
-Positive gap means carry is helping. Ranges (at 0.6B best):
+Both Δs are positive when TTT helps. The decomposition tells you *how*:
 
-- Per-slice gap: `+2 ppl` (small positive) to `+9 ppl` (strong
-  positive).
-- Per-paper mean: `+4.5 ppl`.
-- Overall (all-papers mean): `+3 to +5 ppl` depending on paper mix.
+- **Δwithin dominates, Δbetween ≈ 0**: chunk-scan wakes up but nothing
+  useful survives across item boundaries. Common early in training and
+  in short-item eval. Not necessarily broken — chunk-scan alone gives
+  meaningful improvement on long documents.
+- **Both positive, similar magnitude**: healthy full-TTT operation.
+  Cross-item carry adds on top of within-item adaptation.
+- **Δbetween ≥ Δwithin**: the carry state is doing heavy lifting —
+  usually seen on tightly-related sequential items (same paper sliced,
+  multi-turn conversation).
+- **Δwithin < 0** (carry-off *worse* than fresh): chunk-scan is
+  actively harmful within an item. Usually means the trained state was
+  poorly regularized; suspect very high `state_ratio` and clip
+  saturation.
+- **Δbetween < 0** (carry *worse* than carry-off): accumulated carry
+  drifts OOD by the end of the session. Retrain with matched session
+  length, or add `carried_decay < 1`.
 
-If gap flips **negative** on later positions of a session, the carry
-has accumulated OOD magnitude that the model wasn't trained for.
-Two mitigations:
-
-1. Retrain with matched session length (train sessions as long as your
-   eval sessions).
-2. Add `carried_decay < 1` to bound stored magnitude.
-
-If gap stays near zero throughout, `state_ratio > 0` → the mechanism
+If both Δs are near zero throughout while `state_ratio > 0`, mechanism
 is active but its direction isn't useful. Suspect gate stuck near zero
 (check `health/gate_mean_L<i>`) or `W_target` insufficiently trained.
 
@@ -566,15 +641,15 @@ is active but its direction isn't useful. Suspect gate stuck near zero
 Below the per-item table, a token-weighted per-paper table:
 
 ```
-paper     n_tok      ppl carry     ppl fresh       gap
-1          8532        22.4          25.7        +3.3
-2         14001        18.9          21.1        +2.2
+paper     n_tok    carry   carry-off   fresh    Δwithin   Δbetween
+1          8532     22.4      24.1      25.7     +1.6       +1.7
+2         14001     18.9      20.0      21.1     +1.1       +1.1
 ...
 ```
 
 Aggregation: `log(ppl_per_paper) = sum(log(ppl_slice) · n_tok_slice) /
-sum(n_tok_slice)`. This is the geometric mean weighted by slice token
-count — the correct aggregation for perplexity.
+sum(n_tok_slice)`. Geometric mean weighted by slice token count — the
+correct aggregation for perplexity.
 
 ### Per-source eval table
 
@@ -584,20 +659,21 @@ appends a per-source token-weighted table under the per-paper table:
 
 ```
 per-source (token-weighted):
-source                    n_papers      n_tok   ppl carry   ppl fresh      gap
-RedPajamaArXiv                   2      42019      19.844      21.310    +1.466
-RedPajamaBook                    2      31842      27.402      28.011    +0.609
-RedPajamaC4                      3      27441      42.318      42.550    +0.232
-RedPajamaGithub                  2      18022      12.911      15.844    +2.933
-RedPajamaStackExchange           2      21001      31.415      31.982    +0.567
-RedPajamaWikipedia               2      15804      26.113      26.559    +0.446
+source                   n_papers    n_tok    carry   carry-off   fresh    Δwithin   Δbetween
+RedPajamaArXiv                  2    42019    19.844   20.577    21.310    +0.733    +0.733
+RedPajamaBook                   2    31842    27.402   27.706    28.011    +0.305    +0.305
+RedPajamaC4                     3    27441    42.318   42.434    42.550    +0.116    +0.116
+RedPajamaGithub                 2    18022    12.911   14.377    15.844    +1.467    +1.467
+RedPajamaStackExchange          2    21001    31.415   31.698    31.982    +0.284    +0.284
+RedPajamaWikipedia              2    15804    26.113   26.336    26.559    +0.223    +0.223
 ```
 
-Read the `gap` column: this is where the "which domain benefits most
-from TTT" signal lives. Positive means TTT helps; larger positive
-means it helps more. Interpret with the number of papers and total
-tokens per source — a big gap on a tiny sample isn't statistically
-solid.
+Read the Δ columns: `Δtotal = Δwithin + Δbetween` is where "which
+domain benefits most from TTT" lives. Splitting into `Δwithin` and
+`Δbetween` tells you whether each domain benefits from within-item
+adaptation, cross-item persistence, or both. Interpret with the number
+of papers and total tokens per source — a big gap on a tiny sample
+isn't statistically solid.
 
 `fetch_holdout_texts` samples the holdout stratified by source
 (round-robin one per source until `n_papers` is hit) so no domain is

@@ -42,6 +42,10 @@ class DatasetSpec:
     - `include_sources`, when set, keeps only rows whose extracted source
       label is in this tuple (see data_utils.apply_source_filter). This is
       how we exclude CommonCrawl on SlimPajama.
+    - `default_source_preset`, when set, is the SOURCE_PRESETS entry
+      applied by default when `cfg.source_preset` is empty. Prevents the
+      raw dataset ratio (heavily C4-skewed on DKYoon SlimPajama-6B) from
+      being used silently. Pass `--source-preset none` to bypass.
     - `holdout_last_n` is the newest-row count reserved for eval only.
     """
 
@@ -52,6 +56,7 @@ class DatasetSpec:
     source_meta_column: str | None = None
     source_meta_key: str | None = None
     include_sources: tuple | None = None
+    default_source_preset: str | None = None
     holdout_last_n: int = 200
 
 
@@ -82,9 +87,16 @@ DATASETS: dict = {
             "RedPajamaWikipedia",
             "RedPajamaStackExchange",
         ),
-        # Bigger dataset -> larger holdout so per-source eval has enough rows
-        # per bucket after stratified sampling.
-        holdout_last_n=1000,
+        # Bigger dataset AND rare sources are severely under-represented
+        # in the DKYoon subsample (Books ~0.1%, ArXiv ~0.9%) -- so
+        # holdout needs to be wide enough that per-source eval sampling
+        # still finds a few Books/ArXiv rows.
+        holdout_last_n=5000,
+        # Enforce a balanced training mix by default. Without this, --limit-docs
+        # would just take the raw C4-heavy head (~77% C4) and the per-source
+        # gap signal would be dominated by web text. Override with
+        # --source-preset slim-paper or pass --source-preset none to disable.
+        default_source_preset="slim-research",
     ),
 }
 
@@ -99,6 +111,56 @@ def get_dataset_spec(name: str) -> DatasetSpec:
 
 DATASET_NAME = os.environ.get("TTT_DATASET", "arxiv")
 DATASET_SPEC = get_dataset_spec(DATASET_NAME)
+
+
+# --------------------------------------------------------------------------
+# Training-time source-balancing presets
+# --------------------------------------------------------------------------
+# The DKYoon/SlimPajama-6B subsample is heavily skewed vs the parent
+# SlimPajama-627B advertised proportions -- Books/ArXiv/Github are
+# structurally rare, C4/StackExchange overrepresented. When a preset is
+# selected via `--source-preset <name>`, load_token_dataset takes rows
+# per source in the given ratio, so the training mix is what you
+# actually want to study rather than what the subsample happens to
+# contain.
+#
+# Values are unnormalized weights (they sum to 100 here for readability
+# but the balancer normalizes at apply-time, so any positive numbers work).
+# Sources not listed in a preset are dropped from the training pool for
+# that preset.
+SOURCE_PRESETS: dict = {
+    # Restores SlimPajama-627B design proportions from the paper. Use
+    # this for papers where you want to say "we trained on the
+    # SlimPajama mix" without asterisks.
+    "slim-paper": {
+        "RedPajamaC4": 62,
+        "RedPajamaGithub": 9,
+        "RedPajamaBook": 8,
+        "RedPajamaArXiv": 7,
+        "RedPajamaWikipedia": 7,
+        "RedPajamaStackExchange": 6,
+    },
+    # Tuned for the "which domain benefits most from TTT" story: C4
+    # downweighted so rare/structured domains (Github, ArXiv, Books)
+    # get enough per-domain training signal to produce a legible gap.
+    "slim-research": {
+        "RedPajamaC4": 25,
+        "RedPajamaGithub": 20,
+        "RedPajamaBook": 15,
+        "RedPajamaArXiv": 20,
+        "RedPajamaWikipedia": 10,
+        "RedPajamaStackExchange": 10,
+    },
+}
+
+
+def get_source_preset(name: str) -> dict:
+    if name not in SOURCE_PRESETS:
+        raise KeyError(
+            f"Unknown source preset {name!r}. "
+            f"Known: {sorted(SOURCE_PRESETS)}"
+        )
+    return SOURCE_PRESETS[name]
 
 
 # --------------------------------------------------------------------------
@@ -140,7 +202,7 @@ class TTTConfig:
     layer_indices: tuple | None = None
 
     # Tokens per fast-weight update. Changing requires retraining.
-    chunk_size: int = 50
+    chunk_size: int = 200
 
     # Inner-loop learning rate for W <- W + eta * V^T Z.
     eta: float = 7e-2
@@ -182,7 +244,7 @@ class TTTConfig:
     # 1.0 = pure sum (unbounded magnitude growth); 0.0 = last-item only (no
     # session memory). 0.9-0.95 keeps state_ratio bounded across long sessions
     # while still averaging across items. Session-training only.
-    carried_decay: float = 1.0
+    carried_decay: float = 0.9
 
     def __post_init__(self):
         if self.v_source not in ("embedding", "hidden_state"):
@@ -237,6 +299,13 @@ class TrainConfig:
     single_paper_slices_min: int = 5
     single_paper_slices_max: int = 10
 
+    # Rebalance training rows by source at load time. When set, looks
+    # up the preset in SOURCE_PRESETS and takes rows per source in that
+    # ratio (see load_token_dataset). Empty string = keep the natural
+    # dataset mix. Intended for wildly-skewed pretraining subsamples
+    # like DKYoon/SlimPajama-6B where C4 is 77% and Books is 0.1%.
+    source_preset: str = ""
+
     # Hybrid session mode (per-doc split by length):
     #   L < hybrid_carry_min_tokens  -> single-item session, no slicing.
     #     Fast weight is still reset at session start; the model sees the
@@ -250,10 +319,25 @@ class TrainConfig:
     # where document length varies wildly; unnecessary for arxiv-style
     # corpora where every doc is long.
     hybrid_sessions: bool = False
-    hybrid_carry_min_tokens: int = 3000
+    hybrid_carry_min_tokens: int = 2100
     hybrid_slices_min: int = 2
     hybrid_slices_max: int = 6
-    hybrid_slice_min_tokens: int = 800
+    hybrid_slice_min_tokens: int = 1000
+
+    # Everlasting (per-source) carry: instead of per-session TBPTT, maintain
+    # 6 persistent per-source fast-weight carriers that get loaded before a
+    # doc's forward and snapshotted back after. Tests whether accumulated
+    # per-domain fast weights give a domain-specific adaptation benefit that
+    # per-session carry (Δbetween ≈ 0 in the standard mode) does not.
+    # When True:
+    #   - Every doc is a whole-doc, single-item session (no slicing).
+    #   - session_training is forced True; carry lives in a dict keyed
+    #     by source label, not in a single session-scoped slot.
+    #   - Requires the active dataset to have a `source` column.
+    #   - Recommend bumping carried_decay to 0.9 - 0.95 so the accumulated
+    #     carry stays bounded across hundreds of doc updates.
+    #   - Precedence over hybrid_sessions / single_paper_sessions.
+    everlasting_carry: bool = False
 
     # Content-token loss masking. CE is computed only on positions whose
     # token_id is NOT among the most-frequent tokens accounting for

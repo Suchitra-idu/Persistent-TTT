@@ -85,7 +85,28 @@ def load_token_dataset(tokenizer, cfg, limit_docs: int | None):
             lambda ex: ex[tokens_est_col] >= cfg.min_doc_tokens,
             desc="pre-filter by tokens_est",
         )
-    if limit_docs:
+
+    # Effective preset: explicit --source-preset value overrides; empty
+    # value falls back to the spec's default_source_preset (so multi-source
+    # datasets don't silently train on their raw skew). Explicit "none"
+    # disables the balancer even when the spec has a default.
+    effective_preset = cfg.source_preset or (spec.default_source_preset or "")
+    if effective_preset.lower() == "none":
+        effective_preset = ""
+
+    # If a source preset is active, rebalance the training pool by source
+    # BEFORE --limit-docs takes over. Rebalance targets `limit_docs` when
+    # set (so the CLI value still bounds the final size), or the full
+    # filtered pool otherwise.
+    if effective_preset:
+        if "source" not in ds.column_names:
+            raise ValueError(
+                f"source_preset={effective_preset!r} set, but the "
+                f"active dataset spec {spec.name!r} has no source column"
+            )
+        target = limit_docs if limit_docs else len(ds)
+        ds = _balance_by_source_preset(ds, effective_preset, target)
+    elif limit_docs:
         ds = ds.select(range(min(limit_docs, len(ds))))
 
     text_col = spec.text_column
@@ -105,8 +126,13 @@ def load_token_dataset(tokenizer, cfg, limit_docs: int | None):
                 desc="tokenizing")
     ds = ds.filter(lambda ex: len(ex["input_ids"]) >= cfg.min_doc_tokens,
                    desc="dropping short docs (exact)")
+    preset_note = ""
+    if effective_preset:
+        preset_note = f", source_preset={effective_preset!r}"
+        if not cfg.source_preset and spec.default_source_preset:
+            preset_note += " (spec default)"
     print(f"dataset ready, {len(ds)} documents "
-          f"(spec={spec.name!r}, seed={cfg.seed})")
+          f"(spec={spec.name!r}, seed={cfg.seed}{preset_note})")
     if "source" in ds.column_names:
         _print_source_breakdown(ds)
     return ds
@@ -122,6 +148,60 @@ def _shuffle_by_index(ds, *, seed: int):
     return ds.select(indices)
 
 
+def _balance_by_source_preset(ds, preset_name: str, target_total: int):
+    """Rebalance the pool so per-source counts match the preset ratios,
+    with `target_total` as the aspirational total. Sources that don't
+    have enough rows take everything they have (logged as "short"), so
+    the actual output may be smaller than target_total.
+
+    Requires that `ds` already has a `source` column and is
+    already shuffled (this function takes the head of each per-source
+    index list, so pre-shuffling is what makes the sample random)."""
+    from collections import defaultdict
+    from ttt_config import get_source_preset
+
+    weights = get_source_preset(preset_name)
+    # Group shuffled-ds indices by source label. `ds["source"]` loads
+    # only the source column into memory -- cheap even for millions
+    # of rows.
+    src_indices = defaultdict(list)
+    for i, s in enumerate(ds["source"]):
+        src_indices[s].append(i)
+
+    present = [s for s in weights if s in src_indices]
+    if not present:
+        raise ValueError(
+            f"source_preset {preset_name!r} lists sources "
+            f"{sorted(weights)}, but the dataset has "
+            f"{sorted(src_indices)} -- none match"
+        )
+    total_weight = sum(weights[s] for s in present)
+
+    keep = []
+    breakdown = []
+    for src in sorted(present):
+        target = int(target_total * weights[src] / total_weight)
+        pool = src_indices[src]
+        take = min(target, len(pool))
+        keep.extend(pool[:take])
+        breakdown.append((src, take, target, len(pool)))
+
+    # Preserve the interleaved shuffled order rather than emitting
+    # source1-block, source2-block, ... (which would give the training
+    # loop long runs of one source in a row).
+    keep.sort()
+
+    print(f"source_preset={preset_name!r} rebalance "
+          f"(target total {target_total:,d}):")
+    total_taken = 0
+    for src, take, target, avail in breakdown:
+        note = "" if take == target else f"  <-- short ({avail:,d} avail)"
+        print(f"  {src:<30s} took {take:>7,d} / target {target:>7,d}{note}")
+        total_taken += take
+    print(f"  {'TOTAL':<30s} took {total_taken:>7,d}")
+    return ds.select(keep)
+
+
 def _print_source_breakdown(ds):
     """Log the row count per source label so anyone can eyeball the mix."""
     from collections import Counter
@@ -135,9 +215,17 @@ def _print_source_breakdown(ds):
 
 
 _MODE_TO_FLAGS = {
-    "multi":  {"single_paper_sessions": False, "hybrid_sessions": False},
-    "single": {"single_paper_sessions": True,  "hybrid_sessions": False},
-    "hybrid": {"single_paper_sessions": False, "hybrid_sessions": True},
+    "multi":  {"single_paper_sessions": False, "hybrid_sessions": False,
+               "everlasting_carry": False},
+    "single": {"single_paper_sessions": True,  "hybrid_sessions": False,
+               "everlasting_carry": False},
+    "hybrid": {"single_paper_sessions": False, "hybrid_sessions": True,
+               "everlasting_carry": False},
+    # Everlasting-carry: whole-doc sessions, per-source persistent carriers.
+    # session_training is enforced True at cfg-validation time below.
+    "everlasting": {"single_paper_sessions": False,
+                    "hybrid_sessions": False,
+                    "everlasting_carry": True},
 }
 
 
@@ -145,7 +233,8 @@ def _apply_cli_overrides(*, num_epochs, grad_accum, session, mode,
                          min_doc_tokens, hybrid_carry_min,
                          hybrid_slice_min, hybrid_slices_min,
                          hybrid_slices_max, eval_n_papers,
-                         eval_n_papers_per_source, eval_min_tokens):
+                         eval_n_papers_per_source, eval_min_tokens,
+                         source_preset, eval_every=0):
     """Merge CLI values into TRAIN_CFG. Any int arg == 0 means "unset";
     session uses _UNSET (-1) for "unset"; mode "" means "unset".
     Unknown mode raises."""
@@ -163,6 +252,17 @@ def _apply_cli_overrides(*, num_epochs, grad_accum, session, mode,
                 f"{sorted(_MODE_TO_FLAGS)}"
             )
         overrides.update(_MODE_TO_FLAGS[mode])
+        # Everlasting-carry relies on the session-mode staging path
+        # (_next_carried -> carried_delta); force it on unless the user
+        # explicitly set --session 0.
+        if mode == "everlasting" and session not in (0,):
+            overrides["session_training"] = True
+        # Everlasting mode has ~10x fewer optimizer steps per epoch than
+        # slice modes (one whole-doc item per session vs many slices),
+        # so eval_every=100 fires too rarely. Default it to 25 unless
+        # the user overrode --eval-every explicitly.
+        if mode == "everlasting" and not eval_every:
+            overrides["eval_every"] = 25
     if min_doc_tokens:
         overrides["min_doc_tokens"] = min_doc_tokens
     if hybrid_carry_min:
@@ -179,6 +279,16 @@ def _apply_cli_overrides(*, num_epochs, grad_accum, session, mode,
         overrides["eval_n_papers_per_source"] = eval_n_papers_per_source
     if eval_min_tokens:
         overrides["eval_min_tokens"] = eval_min_tokens
+    if eval_every:
+        overrides["eval_every"] = eval_every
+    if source_preset:
+        # "none" is an explicit opt-out that bypasses the spec's default
+        # preset; any other value must be a known preset (validated now,
+        # in the entrypoint, so bad names fail fast before container spin-up).
+        if source_preset.lower() != "none":
+            from ttt_config import get_source_preset
+            get_source_preset(source_preset)
+        overrides["source_preset"] = source_preset
     return dataclasses.replace(TRAIN_CFG, **overrides) if overrides else TRAIN_CFG
 
 
@@ -255,10 +365,18 @@ def _setup_loss_mask(cfg, ds, tokenizer, vocab_size):
 
 
 def _make_epoch_sessions(cfg, num_docs, doc_lengths, rng):
-    """Build the session schedule for one epoch. Dispatches on the three
-    session modes; precedence hybrid > single_paper > multi_paper."""
-    from train_utils import make_hybrid_sessions, make_slice_sessions
+    """Build the session schedule for one epoch. Dispatches on the four
+    session modes; precedence everlasting > hybrid > single_paper > multi."""
+    from train_utils import (
+        SessionItem, make_hybrid_sessions, make_slice_sessions,
+    )
 
+    if cfg.everlasting_carry:
+        # Whole-doc, one-item-per-session. Order is shuffled so the
+        # per-source carrier sees an interleaved stream of updates rather
+        # than long same-source runs.
+        order = rng.permutation(num_docs).tolist()
+        return [[SessionItem(int(i), 0, int(doc_lengths[i]))] for i in order]
     if cfg.hybrid_sessions:
         return make_hybrid_sessions(
             num_docs, doc_lengths, rng,
@@ -286,11 +404,13 @@ def _make_epoch_sessions(cfg, num_docs, doc_lengths, rng):
 
 def _items_per_epoch(cfg, doc_lengths):
     """Number of SessionItems the loop will visit in one epoch, used to
-    size the cosine LR schedule. Exact for hybrid/single-paper modes;
-    an expectation for multi-paper."""
+    size the cosine LR schedule. Exact for everlasting / hybrid /
+    single-paper modes; an expectation for multi-paper."""
     from train_utils import expected_items_per_doc, total_hybrid_items
 
     n = len(doc_lengths)
+    if cfg.everlasting_carry:
+        return n
     if cfg.hybrid_sessions:
         return total_hybrid_items(
             doc_lengths,
@@ -309,8 +429,113 @@ def _items_per_epoch(cfg, doc_lengths):
     ))
 
 
+def _print_session_composition(cfg, ds, doc_lengths):
+    """Per-source breakdown of how docs will be scheduled: as no-carry
+    (single item, no cross-slice adaptation) vs carry (multiple items in
+    a session with fast-weight persistence). Only hybrid mode produces a
+    per-doc split; single/multi modes put every doc into a carrying
+    session, so `no-carry docs` is 0 there."""
+    from collections import defaultdict
+
+    from train_utils import derive_slice_count, expected_items_per_doc
+
+    sources = (list(ds["source"]) if "source" in ds.column_names
+               else [""] * len(doc_lengths))
+    per_src = defaultdict(lambda: {"no_carry": 0, "carry": 0, "items": 0.0})
+
+    if cfg.everlasting_carry:
+        # Each doc is one whole-doc item; "carry" here means the doc's
+        # gradient update flows into that source's persistent carrier.
+        for src in sources:
+            per_src[src]["carry"] += 1
+            per_src[src]["items"] += 1
+    elif cfg.hybrid_sessions:
+        for L, src in zip(doc_lengths, sources):
+            b = per_src[src]
+            if L < cfg.hybrid_carry_min_tokens:
+                b["no_carry"] += 1
+                b["items"] += 1
+            else:
+                k = derive_slice_count(L, cfg.hybrid_slice_min_tokens,
+                                       cfg.hybrid_slices_min,
+                                       cfg.hybrid_slices_max)
+                b["carry"] += 1
+                b["items"] += k
+    elif cfg.single_paper_sessions:
+        k_avg = 0.5 * (cfg.single_paper_slices_min
+                       + cfg.single_paper_slices_max)
+        for src in sources:
+            per_src[src]["carry"] += 1
+            per_src[src]["items"] += k_avg
+    else:
+        e = expected_items_per_doc(cfg.slice_prob, cfg.slice_min,
+                                   cfg.slice_max)
+        for src in sources:
+            per_src[src]["carry"] += 1
+            per_src[src]["items"] += e
+
+    if not per_src:
+        return
+    label_w = max((len(s or "-") for s in per_src), default=6)
+    label_w = max(label_w, len("source"))
+    print("session composition (per source):")
+    print(f"{'source':<{label_w}}  {'no-carry docs':>13}  "
+          f"{'carry docs':>10}  {'total items':>11}")
+    tot_nc = tot_c = 0
+    tot_items = 0.0
+    for src in sorted(per_src):
+        b = per_src[src]
+        tot_nc += b["no_carry"]
+        tot_c += b["carry"]
+        tot_items += b["items"]
+        print(f"{(src or '-'):<{label_w}}  {b['no_carry']:>13d}  "
+              f"{b['carry']:>10d}  {int(round(b['items'])):>11d}")
+    print(f"{'TOTAL':<{label_w}}  {tot_nc:>13d}  "
+          f"{tot_c:>10d}  {int(round(tot_items)):>11d}")
+
+
+def _print_in_loop_per_source(eval_metrics: dict) -> None:
+    """Console-print the same per-source `eval/<source>/*` block that
+    already goes to wandb. Without this, an in-loop eval hides *which*
+    sources are contributing to the aggregate gap (or degrading) --
+    the aggregate can look flat while one domain steadily improves and
+    another regresses."""
+    from collections import defaultdict
+
+    by_src: dict = defaultdict(dict)
+    for key, val in eval_metrics.items():
+        if not key.startswith("eval/") or key.count("/") != 2:
+            continue
+        _, src, metric = key.split("/")
+        if metric not in (
+            "carry_ppl", "carry_off_ppl", "fresh_ppl",
+            "gap_within", "gap_between", "gap_total", "n_papers",
+        ):
+            continue
+        by_src[src][metric] = val
+
+    if not by_src:
+        return
+    label_w = max((len(s) for s in by_src), default=6)
+    label_w = max(label_w, len("source"))
+    print(f"    {'source':<{label_w}}  {'n':>3}  "
+          f"{'carry':>7}  {'carry-off':>9}  {'fresh':>7}  "
+          f"{'Δwithin':>8}  {'Δbetween':>9}")
+    for src in sorted(by_src):
+        b = by_src[src]
+        print(f"    {src:<{label_w}}  {int(b.get('n_papers', 0)):>3d}  "
+              f"{b.get('carry_ppl', 0):>7.2f}  "
+              f"{b.get('carry_off_ppl', 0):>9.2f}  "
+              f"{b.get('fresh_ppl', 0):>7.2f}  "
+              f"{b.get('gap_within', 0):>+8.3f}  "
+              f"{b.get('gap_between', 0):>+9.3f}")
+
+
 def _mode_line(cfg) -> str:
     """One-line description of the active session mode for the boot log."""
+    if cfg.everlasting_carry:
+        return (f"everlasting_carry=True (whole-doc, per-source persistent "
+                f"carriers; carried_decay={TTT_CFG.carried_decay})")
     if cfg.hybrid_sessions:
         return (f"hybrid_sessions=True "
                 f"carry_min={cfg.hybrid_carry_min_tokens} "
@@ -347,14 +572,17 @@ def train(limit_docs: int = 0, num_epochs: int = 0,
           eval_n_papers: int = 0,
           eval_n_papers_per_source: int = 0,
           eval_min_tokens: int = 0,
+          eval_every: int = 0,
+          source_preset: str = "",
           resume_from: str = ""):
     import numpy as np
     import torch
     from transformers import get_cosine_schedule_with_warmup
 
     from inplace_ttt import (
-        advance_session_state, gate_reg_term, iter_ttt_modules,
-        mean_state_ratio, reset_session_state, state_norms,
+        advance_session_state, gate_reg_term, install_carried_delta,
+        iter_ttt_modules, mean_state_ratio, reset_session_state,
+        snapshot_carried_delta, state_norms,
     )
     from ttt_wiring import build_param_groups
     from model_setup import build_model
@@ -371,6 +599,8 @@ def train(limit_docs: int = 0, num_epochs: int = 0,
         eval_n_papers=eval_n_papers,
         eval_n_papers_per_source=eval_n_papers_per_source,
         eval_min_tokens=eval_min_tokens,
+        eval_every=eval_every,
+        source_preset=source_preset,
     )
     epochs = cfg.num_epochs
     torch.manual_seed(cfg.seed)
@@ -441,6 +671,36 @@ def train(limit_docs: int = 0, num_epochs: int = 0,
                                 sorted(src_counts.items(), key=lambda kv: -kv[1]))
                 print(f"  eval source mix: {mix}")
     doc_lengths = [len(ex["input_ids"]) for ex in ds]
+    doc_sources = (list(ds["source"]) if "source" in ds.column_names
+                   else [""] * len(ds))
+    _print_session_composition(cfg, ds, doc_lengths)
+
+    # Everlasting-carry state: per-source persistent fast-weight carriers
+    # (GPU fp32) plus a per-source update counter. On resume, warm-load
+    # from the resume checkpoint's per_source_carries.pt if it exists.
+    per_source_carries: dict = {}
+    per_source_n_updates: dict = {}
+    if cfg.everlasting_carry:
+        if not any(doc_sources):
+            raise ValueError(
+                "everlasting_carry=True requires the active dataset to "
+                "have a `source` column; the current spec doesn't."
+            )
+        if adapter_path:
+            from ttt_wiring import load_per_source_carries
+            resume_pc = os.path.join(os.path.dirname(adapter_path),
+                                     "per_source_carries.pt")
+            loaded, meta = load_per_source_carries(resume_pc)
+            for src, per_layer in loaded.items():
+                per_source_carries[src] = {
+                    int(k): v.to(device="cuda", dtype=torch.float32)
+                    for k, v in per_layer.items()
+                }
+            per_source_n_updates.update(meta.get("n_updates", {}))
+            if per_source_carries:
+                print(f"resumed per-source carriers for "
+                      f"{len(per_source_carries)} source(s): "
+                      f"{sorted(per_source_carries)}")
 
     common_mask = _setup_loss_mask(cfg, ds, tokenizer, model.config.vocab_size)
     items_per_epoch = _items_per_epoch(cfg, doc_lengths)
@@ -466,6 +726,14 @@ def train(limit_docs: int = 0, num_epochs: int = 0,
         for session_items in _make_epoch_sessions(cfg, len(ds), doc_lengths,
                                                   rng):
             reset_session_state(model)
+            # Everlasting-carry: install THIS session's source carrier as
+            # the fast-weight seed (whole-doc sessions => one source per
+            # session). Missing sources start from zero (natural cold-start).
+            if cfg.everlasting_carry and session_items:
+                current_src = doc_sources[session_items[0].doc_idx]
+                if current_src in per_source_carries:
+                    install_carried_delta(model,
+                                          per_source_carries[current_src])
             for pos, item in enumerate(session_items):
                 full_ids = ds[item.doc_idx]["input_ids"]
                 ids = torch.tensor(
@@ -500,6 +768,17 @@ def train(limit_docs: int = 0, num_epochs: int = 0,
 
                 (loss / cfg.grad_accum_steps).backward()
                 advance_session_state(model)
+                # Everlasting-carry: snapshot the updated carry back into
+                # this doc's source slot. Kept on GPU (no CPU round-trip
+                # per step); moved to CPU only at checkpoint time.
+                if cfg.everlasting_carry:
+                    src = doc_sources[item.doc_idx]
+                    per_source_carries[src] = snapshot_carried_delta(
+                        model, to_cpu=False,
+                    )
+                    per_source_n_updates[src] = (
+                        per_source_n_updates.get(src, 0) + 1
+                    )
                 step_loss += loss.item() / cfg.grad_accum_steps
                 n_tok = ids.numel()
                 window_tokens += n_tok
@@ -591,7 +870,11 @@ def train(limit_docs: int = 0, num_epochs: int = 0,
                     running = 0.0
 
                 if step % cfg.save_every == 0 or step == total_steps:
-                    save_checkpoint(model, run_dir, step)
+                    save_checkpoint(
+                        model, run_dir, step,
+                        per_source_carries=per_source_carries,
+                        per_source_n_updates=per_source_n_updates,
+                    )
                     ckpt_vol.commit()
 
                 if eval_papers and step % cfg.eval_every == 0:
@@ -603,26 +886,47 @@ def train(limit_docs: int = 0, num_epochs: int = 0,
                     telemetry.log({"train/step": step, **eval_metrics})
                     print(
                         f"  [eval, {len(eval_papers)} papers] "
-                        f"carry_ppl {eval_metrics['eval/carry_ppl']:.2f} "
-                        f"fresh_ppl {eval_metrics['eval/fresh_ppl']:.2f} "
-                        f"gap {eval_metrics['eval/gap']:+.2f} "
+                        f"carry {eval_metrics['eval/carry_ppl']:.2f} "
+                        f"carry-off {eval_metrics['eval/carry_off_ppl']:.2f} "
+                        f"fresh {eval_metrics['eval/fresh_ppl']:.2f} "
+                        f"Δwithin {eval_metrics['eval/gap_within']:+.2f} "
+                        f"Δbetween {eval_metrics['eval/gap_between']:+.2f} "
                         f"state/W0 {eval_metrics['eval/state_ratio_final']:.2e}"
                     )
+                    _print_in_loop_per_source(eval_metrics)
             sessions_done += 1
 
-    save_checkpoint(model, run_dir, step)
+    save_checkpoint(
+        model, run_dir, step,
+        per_source_carries=per_source_carries,
+        per_source_n_updates=per_source_n_updates,
+    )
     ckpt_vol.commit()
     telemetry.finish()
     print("done")
 
 
-def save_checkpoint(model, run_dir: str, step: int):
-    from ttt_wiring import save_ttt_state_dict
+def save_checkpoint(model, run_dir: str, step: int,
+                    per_source_carries: dict | None = None,
+                    per_source_n_updates: dict | None = None):
+    """Persist trained params + (optionally) per-source everlasting carriers.
+
+    `per_source_carries` is `{src: {layer_idx: gpu fp32 Tensor}}` -- the
+    live GPU state. Saved as CPU fp32 alongside `adapter/` and
+    `ttt_params.pt`. Skipped if the dict is empty, so non-everlasting
+    checkpoints stay compatible with existing tooling."""
+    from ttt_wiring import save_per_source_carries, save_ttt_state_dict
 
     path = os.path.join(run_dir, f"step_{step}")
     os.makedirs(path, exist_ok=True)
     model.save_pretrained(os.path.join(path, "adapter"))
     save_ttt_state_dict(model, os.path.join(path, "ttt_params.pt"), TTT_CFG)
+    if per_source_carries:
+        save_per_source_carries(
+            per_source_carries,
+            os.path.join(path, "per_source_carries.pt"),
+            meta={"n_updates": per_source_n_updates or {}, "step": step},
+        )
     print(f"saved checkpoint -> {path}")
 
 
@@ -758,9 +1062,14 @@ def _stratified_sample_indices(source_labels, n_target: int, rng) -> list:
     return picked
 
 
-def _eval_paper(model, paper_ids, n_slices: int, evolve: bool) -> list:
+def _eval_paper(model, paper_ids, n_slices: int, evolve: bool,
+                reset_between_slices: bool = False) -> list:
     """Run one held-out paper as a single-paper session; return per-slice
-    (n_tokens, ppl, state_ratio) rows."""
+    (n_tokens, ppl, state_ratio) rows.
+
+    `reset_between_slices=True` clears the fast weight between slices, so
+    only within-slice chunk adaptation contributes to each slice's ppl.
+    Combined with `evolve=True`, this is the "carry-off" mode."""
     import torch
 
     from inplace_ttt import (
@@ -780,6 +1089,8 @@ def _eval_paper(model, paper_ids, n_slices: int, evolve: bool) -> list:
             loss = model(input_ids=ids, labels=ids).loss
         advance_session_state(model)
         state_ratio = mean_state_ratio(state_norms(model, source="session"))
+        if reset_between_slices:
+            reset_session_state(model)
         rows.append((e - s, math.exp(loss.item()), state_ratio))
     return rows
 
@@ -791,8 +1102,8 @@ def _token_weighted_ppl(rows) -> float:
 
 
 def _per_source_eval_metrics(per_paper: list, paper_sources: list) -> dict:
-    """Token-weighted per-source carry/fresh/gap. Only sources represented
-    in the eval sample get keys emitted."""
+    """Token-weighted per-source carry / carry_off / fresh, plus two gaps.
+    Only sources represented in the eval sample get keys emitted."""
     from collections import defaultdict
     by_src = defaultdict(list)
     for p, src in zip(per_paper, paper_sources):
@@ -802,22 +1113,28 @@ def _per_source_eval_metrics(per_paper: list, paper_sources: list) -> dict:
 
     out = {}
     for src, papers in by_src.items():
-        total_carry_log, total_fresh_log, total_tok = 0.0, 0.0, 0
+        total_carry_log = 0.0
+        total_carry_off_log = 0.0
+        total_fresh_log = 0.0
+        total_tok = 0
         for p in papers:
             c_tok = sum(n for n, _, _ in p["carry_rows"])
-            f_tok = sum(n for n, _, _ in p["fresh_rows"])
             if c_tok:
                 total_carry_log += math.log(p["carry_ppl"]) * c_tok
+                total_carry_off_log += math.log(p["carry_off_ppl"]) * c_tok
+                total_fresh_log += math.log(p["fresh_ppl"]) * c_tok
                 total_tok += c_tok
-            if f_tok:
-                total_fresh_log += math.log(p["fresh_ppl"]) * f_tok
         if not total_tok:
             continue
         c_ppl = math.exp(total_carry_log / total_tok)
+        co_ppl = math.exp(total_carry_off_log / total_tok)
         f_ppl = math.exp(total_fresh_log / total_tok)
         out[f"eval/{src}/carry_ppl"] = c_ppl
+        out[f"eval/{src}/carry_off_ppl"] = co_ppl
         out[f"eval/{src}/fresh_ppl"] = f_ppl
-        out[f"eval/{src}/gap"] = f_ppl - c_ppl
+        out[f"eval/{src}/gap_within"] = f_ppl - co_ppl
+        out[f"eval/{src}/gap_between"] = co_ppl - c_ppl
+        out[f"eval/{src}/gap_total"] = f_ppl - c_ppl
         out[f"eval/{src}/n_papers"] = len(papers)
     return out
 
@@ -825,13 +1142,17 @@ def _per_source_eval_metrics(per_paper: list, paper_sources: list) -> dict:
 def run_holdout_eval(model, holdout_papers, n_slices: int,
                     train_session_mode: bool,
                     paper_sources: list | None = None) -> dict:
-    """Multi-paper carry-vs-fresh perplexity eval. Snapshots and restores
-    TTT module state so this is a no-op against the training loop.
+    """Three-mode perplexity eval on FULL trained model. Snapshots and
+    restores TTT module state so this is a no-op against the training loop.
 
-    When `paper_sources` is provided (parallel list to holdout_papers,
-    each a source label), the metric dict also includes per-source
-    aggregates keyed `eval/<source>/carry_ppl` etc. -- exactly the split
-    we care about for characterizing which document domains benefit most."""
+    Modes:
+      carry     -- evolve=True,  fast weight persists across slices
+      carry_off -- evolve=True,  fast weight reset between slices
+                   (isolates within-slice chunk adaptation)
+      fresh     -- evolve=False  (fast weight = 0 throughout)
+
+    Emits only aggregate + per-source metrics; no per-paper or per-slice
+    keys go to the observer to keep the wandb payload lean."""
     from inplace_ttt import iter_ttt_modules
 
     modules = list(iter_ttt_modules(model))
@@ -847,13 +1168,18 @@ def run_holdout_eval(model, holdout_papers, n_slices: int,
     try:
         for paper_ids in holdout_papers:
             carry_rows = _eval_paper(model, paper_ids, n_slices, evolve=True)
+            carry_off_rows = _eval_paper(model, paper_ids, n_slices,
+                                         evolve=True,
+                                         reset_between_slices=True)
             fresh_rows = _eval_paper(model, paper_ids, n_slices, evolve=False)
             per_paper.append({
                 "carry_ppl": _token_weighted_ppl(carry_rows),
+                "carry_off_ppl": _token_weighted_ppl(carry_off_rows),
                 "fresh_ppl": _token_weighted_ppl(fresh_rows),
                 "state_ratio_final": (carry_rows[-1][2]
                                       if carry_rows else 0.0),
                 "carry_rows": carry_rows,
+                "carry_off_rows": carry_off_rows,
                 "fresh_rows": fresh_rows,
             })
     finally:
@@ -867,41 +1193,23 @@ def run_holdout_eval(model, holdout_papers, n_slices: int,
 
     n = len(per_paper)
     carry_mean = math.exp(sum(math.log(p["carry_ppl"]) for p in per_paper) / n)
+    carry_off_mean = math.exp(
+        sum(math.log(p["carry_off_ppl"]) for p in per_paper) / n
+    )
     fresh_mean = math.exp(sum(math.log(p["fresh_ppl"]) for p in per_paper) / n)
     state_mean = sum(p["state_ratio_final"] for p in per_paper) / n
 
     metrics = {
         "eval/carry_ppl": carry_mean,
+        "eval/carry_off_ppl": carry_off_mean,
         "eval/fresh_ppl": fresh_mean,
-        "eval/gap": fresh_mean - carry_mean,        # positive => carry helps
+        "eval/gap_within": fresh_mean - carry_off_mean,   # within-slice TTT
+        "eval/gap_between": carry_off_mean - carry_mean,  # cross-slice carry
+        "eval/gap_total": fresh_mean - carry_mean,        # positive => TTT helps
         "eval/state_ratio_final": state_mean,
     }
-    for i, p in enumerate(per_paper):
-        metrics[f"eval/paper_{i}/carry_ppl"] = p["carry_ppl"]
-        metrics[f"eval/paper_{i}/fresh_ppl"] = p["fresh_ppl"]
-        metrics[f"eval/paper_{i}/gap"] = p["fresh_ppl"] - p["carry_ppl"]
-        metrics[f"eval/paper_{i}/state_ratio_final"] = p["state_ratio_final"]
     if paper_sources and any(paper_sources):
         metrics.update(_per_source_eval_metrics(per_paper, paper_sources))
-    for s_idx in range(n_slices):
-        carry_logs, fresh_logs, state_vals = [], [], []
-        for p in per_paper:
-            if s_idx < len(p["carry_rows"]):
-                carry_logs.append(math.log(p["carry_rows"][s_idx][1]))
-                state_vals.append(p["carry_rows"][s_idx][2])
-            if s_idx < len(p["fresh_rows"]):
-                fresh_logs.append(math.log(p["fresh_rows"][s_idx][1]))
-        if carry_logs:
-            metrics[f"eval/carry_ppl_slice_{s_idx}"] = math.exp(
-                sum(carry_logs) / len(carry_logs)
-            )
-            metrics[f"eval/state_ratio_slice_{s_idx}"] = (
-                sum(state_vals) / len(state_vals)
-            )
-        if fresh_logs:
-            metrics[f"eval/fresh_ppl_slice_{s_idx}"] = math.exp(
-                sum(fresh_logs) / len(fresh_logs)
-            )
     return metrics
 
 
@@ -1228,8 +1536,15 @@ def main(limit_docs: int = 0, num_epochs: int = 0,
          hybrid_slices_max: int = 0,
          eval_n_papers: int = 0,
          eval_n_papers_per_source: int = 0,
-         eval_min_tokens: int = 0):
-    train.remote(
+         eval_min_tokens: int = 0,
+         eval_every: int = 0,
+         source_preset: str = "",
+         wait: bool = False):
+    """`.spawn` (fire-and-forget) by default so `--detach` actually detaches:
+    the client returns after enqueueing and Ctrl+C on the terminal doesn't
+    cancel the server-side input. Pass `--wait` for the old blocking
+    behavior (streams stdout locally, cancels on client disconnect)."""
+    kwargs = dict(
         limit_docs=limit_docs, num_epochs=num_epochs,
         grad_accum=grad_accum, session=session, mode=mode,
         min_doc_tokens=min_doc_tokens,
@@ -1240,4 +1555,14 @@ def main(limit_docs: int = 0, num_epochs: int = 0,
         eval_n_papers=eval_n_papers,
         eval_n_papers_per_source=eval_n_papers_per_source,
         eval_min_tokens=eval_min_tokens,
+        eval_every=eval_every,
+        source_preset=source_preset,
     )
+    if wait:
+        train.remote(**kwargs)
+        return
+    call = train.spawn(**kwargs)
+    print(f"training spawned, function call id: {call.object_id}")
+    print(f"stream logs: modal app logs <app-id shown above>")
+    print(f"stop:        modal call cancel {call.object_id}   "
+          f"# or `modal app stop <app-id>`")
