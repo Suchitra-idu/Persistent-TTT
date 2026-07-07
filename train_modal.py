@@ -62,12 +62,30 @@ GPU = "H100"
 SECRETS = [modal.Secret.from_name("wandb"), modal.Secret.from_name("huggingface")]
 
 
+# Over-fetch multiplier when a preset+limit_docs is set: we rebalance to
+# limit_docs * PRESET_OVERSAMPLE BEFORE tokenizing so the exact drop-short
+# pass (which trims different sources at different rates) leaves enough
+# headroom to re-rebalance to the exact target ratios afterwards. 2x is a
+# rough upper bound on drop-short loss for SlimPajama's short-doc-heavy
+# sources (C4, StackExchange) at min_doc_tokens=2048.
+PRESET_OVERSAMPLE = 2
+
+
 def load_token_dataset(tokenizer, cfg, limit_docs: int | None):
     """Load holdout-split, source-filter, shuffle, cap, tokenize,
     drop-short. Shuffling happens BEFORE --limit-docs and BEFORE
     in-corpus unigram counting so the head of the pipeline is a uniform
     sample across sources -- critical for mixed corpora like SlimPajama
-    where the natural order is grouped by source."""
+    where the natural order is grouped by source.
+
+    For multi-source presets with a limit, we OVER-FETCH by
+    PRESET_OVERSAMPLE before tokenize, then re-rebalance AFTER exact
+    drop-short so the final per-source ratios honor the preset. Doing the
+    rebalance only once (pre-tokenize) would let the source-biased
+    drop-short pass silently wreck the mix -- e.g. Books survive
+    drop-short well because they're long, C4 dies because it has many
+    short docs, so a "balanced" pre-tokenize pool ends up Books-heavy
+    after drop-short."""
     from data_utils import apply_source_filter, open_dataset, split_holdout
 
     spec = DATASET_SPEC
@@ -80,11 +98,27 @@ def load_token_dataset(tokenizer, cfg, limit_docs: int | None):
     ds = _shuffle_by_index(ds, seed=cfg.seed)
 
     tokens_est_col = spec.tokens_est_column
+    before_prefilter = len(ds)
     if tokens_est_col and tokens_est_col in ds.column_names:
         ds = ds.filter(
             lambda ex: ex[tokens_est_col] >= cfg.min_doc_tokens,
             desc="pre-filter by tokens_est",
         )
+    else:
+        # Char-based fallback for specs without a tokens_est column
+        # (SlimPajama). chars/token ~= 4 for English BPE; using 3.5x is
+        # slightly permissive so we don't false-negative docs that would
+        # tokenize just above min_doc_tokens. Without this fallback the
+        # whole 3.5M-row pool falls through to tokenize -- wasteful when
+        # C4/StackExchange are ~70% short docs.
+        char_threshold = int(3.5 * cfg.min_doc_tokens)
+        text_col = spec.text_column
+        ds = ds.filter(
+            lambda ex: len(ex[text_col]) >= char_threshold,
+            desc=f"pre-filter by len(text) >= {char_threshold} chars",
+        )
+    print(f"pre-filter: kept {len(ds):,d} / {before_prefilter:,d} "
+          f"(min_doc_tokens={cfg.min_doc_tokens})")
 
     # Effective preset: explicit --source-preset value overrides; empty
     # value falls back to the spec's default_source_preset (so multi-source
@@ -115,15 +149,24 @@ def load_token_dataset(tokenizer, cfg, limit_docs: int | None):
         print(f"only-sources filter: kept {len(ds):,d} / {before:,d} "
               f"({sorted(picks)})")
     elif effective_preset:
-        # Multi-source preset: rebalance by weights, targeting limit_docs
-        # (or the full filtered pool) as the aspirational total.
+        # Multi-source preset: over-fetch by PRESET_OVERSAMPLE targeting
+        # limit_docs (or the full filtered pool). The exact ratios are
+        # re-applied post drop-short so this pre-tokenize pass just bounds
+        # how much we tokenize.
         if "source" not in ds.column_names:
             raise ValueError(
                 f"source_preset={effective_preset!r} set, but the "
                 f"active dataset spec {spec.name!r} has no source column"
             )
-        target = limit_docs if limit_docs else len(ds)
-        ds = _balance_by_source_preset(ds, effective_preset, target)
+        if limit_docs:
+            over = min(limit_docs * PRESET_OVERSAMPLE, len(ds))
+            print(f"pre-tokenize over-fetch: {over:,d} = "
+                  f"{limit_docs:,d} * {PRESET_OVERSAMPLE} (leaves headroom "
+                  f"for post-tokenize drop-short + rebalance)")
+        else:
+            over = len(ds)
+        ds = _balance_by_source_preset(ds, effective_preset, over,
+                                        stage="pre-tokenize over-fetch")
     elif limit_docs:
         ds = ds.select(range(min(limit_docs, len(ds))))
 
@@ -142,8 +185,19 @@ def load_token_dataset(tokenizer, cfg, limit_docs: int | None):
     remove = [c for c in ds.column_names if c not in keep_cols]
     ds = ds.map(tokenize, batched=True, remove_columns=remove,
                 desc="tokenizing")
+    before_drop = len(ds)
     ds = ds.filter(lambda ex: len(ex["input_ids"]) >= cfg.min_doc_tokens,
                    desc="dropping short docs (exact)")
+    print(f"drop-short exact: kept {len(ds):,d} / {before_drop:,d} "
+          f"(min_doc_tokens={cfg.min_doc_tokens})")
+
+    if effective_preset and not only_mode:
+        # Post drop-short: re-rebalance to hit the preset ratios EXACTLY.
+        # Without this, the source-biased drop-short pass would collapse
+        # the mix (see docstring).
+        final_target = limit_docs if limit_docs else len(ds)
+        ds = _balance_by_source_preset(ds, effective_preset, final_target,
+                                        stage="post-drop-short rebalance")
 
     # only-sources: cap AFTER exact drop-short so limit_docs is honored
     # against the true final count (see comment above).
@@ -175,7 +229,8 @@ def _shuffle_by_index(ds, *, seed: int):
     return ds.select(indices)
 
 
-def _balance_by_source_preset(ds, preset_name: str, target_total: int):
+def _balance_by_source_preset(ds, preset_name: str, target_total: int,
+                              stage: str = "rebalance"):
     """Rebalance the pool so per-source counts match the preset ratios,
     with `target_total` as the aspirational total. Sources that don't
     have enough rows take everything they have (logged as "short"), so
@@ -183,7 +238,10 @@ def _balance_by_source_preset(ds, preset_name: str, target_total: int):
 
     Requires that `ds` already has a `source` column and is
     already shuffled (this function takes the head of each per-source
-    index list, so pre-shuffling is what makes the sample random)."""
+    index list, so pre-shuffling is what makes the sample random).
+
+    `stage` is a label for the log line so callers can distinguish the
+    pre-tokenize over-fetch pass from the post-drop-short exact pass."""
     from collections import defaultdict
     from ttt_config import get_source_preset
 
@@ -218,7 +276,7 @@ def _balance_by_source_preset(ds, preset_name: str, target_total: int):
     # loop long runs of one source in a row).
     keep.sort()
 
-    print(f"source_preset={preset_name!r} rebalance "
+    print(f"source_preset={preset_name!r} {stage} "
           f"(target total {target_total:,d}):")
     total_taken = 0
     for src, take, target, avail in breakdown:
@@ -1118,16 +1176,27 @@ def _filter_holdout_by_min_tokens(ds, spec, min_tokens: int):
 def _n_per_source_indices(source_labels, n_per_source: int, rng) -> list:
     """Sample up to `n_per_source` distinct indices from each source
     group. Sources with fewer than n_per_source rows contribute
-    everything they have."""
+    everything they have (logged as under-populated so anyone reading
+    eval numbers knows a source is scarce in the holdout -- e.g. Books
+    at 0.1% of DKYoon SlimPajama gives ~5 in a 5000-row holdout)."""
     from collections import defaultdict
     by_src = defaultdict(list)
     for i, s in enumerate(source_labels):
         by_src[s].append(i)
     picked = []
+    under = []
     for src in sorted(by_src):
         pool = by_src[src]
         rng.shuffle(pool)
-        picked.extend(pool[:n_per_source])
+        take = min(n_per_source, len(pool))
+        picked.extend(pool[:take])
+        if take < n_per_source:
+            under.append((src, take, n_per_source))
+    if under:
+        print("eval: some sources are under-populated in the holdout:")
+        for src, take, want in under:
+            print(f"  {src:<30s} got {take:>3d} / wanted {want} "
+                  f"<-- enlarge spec.holdout_last_n or drop eval_min_tokens")
     return picked
 
 
