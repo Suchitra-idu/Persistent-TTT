@@ -94,11 +94,29 @@ def load_token_dataset(tokenizer, cfg, limit_docs: int | None):
     if effective_preset.lower() == "none":
         effective_preset = ""
 
-    # If a source preset is active, rebalance the training pool by source
-    # BEFORE --limit-docs takes over. Rebalance targets `limit_docs` when
-    # set (so the CLI value still bounds the final size), or the full
-    # filtered pool otherwise.
-    if effective_preset:
+    # Ephemeral `_only_*` preset (from --only-sources): drop non-picked
+    # sources UPFRONT and defer --limit-docs to after exact drop-short so
+    # the CLI value bounds the actual final count, not the pre-tokenize
+    # estimate. Otherwise on a rare source (Books ~0.1%) an approximate
+    # tokens_est filter loses ~15% post-tokenization and we finish well
+    # under limit_docs with no clean way to backfill.
+    only_mode = effective_preset.startswith("_only_")
+    if only_mode:
+        if "source" not in ds.column_names:
+            raise ValueError(
+                f"source_preset={effective_preset!r} set, but the "
+                f"active dataset spec {spec.name!r} has no source column"
+            )
+        from ttt_config import get_source_preset
+        picks = set(get_source_preset(effective_preset).keys())
+        before = len(ds)
+        ds = ds.filter(lambda ex: ex["source"] in picks,
+                       desc="only-sources filter")
+        print(f"only-sources filter: kept {len(ds):,d} / {before:,d} "
+              f"({sorted(picks)})")
+    elif effective_preset:
+        # Multi-source preset: rebalance by weights, targeting limit_docs
+        # (or the full filtered pool) as the aspirational total.
         if "source" not in ds.column_names:
             raise ValueError(
                 f"source_preset={effective_preset!r} set, but the "
@@ -126,6 +144,15 @@ def load_token_dataset(tokenizer, cfg, limit_docs: int | None):
                 desc="tokenizing")
     ds = ds.filter(lambda ex: len(ex["input_ids"]) >= cfg.min_doc_tokens,
                    desc="dropping short docs (exact)")
+
+    # only-sources: cap AFTER exact drop-short so limit_docs is honored
+    # against the true final count (see comment above).
+    if only_mode and limit_docs:
+        if len(ds) > limit_docs:
+            ds = ds.select(range(limit_docs))
+        else:
+            print(f"only-sources: pool has {len(ds):,d} docs post drop-short, "
+                  f"below --limit-docs {limit_docs:,d}; taking all")
     preset_note = ""
     if effective_preset:
         preset_note = f", source_preset={effective_preset!r}"
@@ -234,7 +261,7 @@ def _apply_cli_overrides(*, num_epochs, grad_accum, session, mode,
                          hybrid_slice_min, hybrid_slices_min,
                          hybrid_slices_max, eval_n_papers,
                          eval_n_papers_per_source, eval_min_tokens,
-                         source_preset, eval_every=0):
+                         source_preset, eval_every=0, only_sources=""):
     """Merge CLI values into TRAIN_CFG. Any int arg == 0 means "unset";
     session uses _UNSET (-1) for "unset"; mode "" means "unset".
     Unknown mode raises."""
@@ -289,6 +316,31 @@ def _apply_cli_overrides(*, num_epochs, grad_accum, session, mode,
             from ttt_config import get_source_preset
             get_source_preset(source_preset)
         overrides["source_preset"] = source_preset
+    if only_sources:
+        if source_preset:
+            raise ValueError(
+                "--only-sources conflicts with --source-preset; pass one"
+            )
+        from ttt_config import DATASET_SPEC, SOURCE_PRESETS
+        picks = [s.strip() for s in only_sources.split(",") if s.strip()]
+        if not picks:
+            raise ValueError(
+                f"--only-sources parsed empty from {only_sources!r}; "
+                f"expected e.g. 'RedPajamaBook' or 'RedPajamaBook,RedPajamaC4'"
+            )
+        allowed = set(DATASET_SPEC.include_sources or ())
+        if allowed:
+            unknown = [s for s in picks if s not in allowed]
+            if unknown:
+                raise ValueError(
+                    f"--only-sources: unknown source(s) {unknown} for "
+                    f"dataset {DATASET_SPEC.name!r}; allowed: {sorted(allowed)}"
+                )
+        preset_name = "_only_" + "_".join(sorted(picks))
+        SOURCE_PRESETS[preset_name] = {s: 1 for s in picks}
+        overrides["source_preset"] = preset_name
+        print(f"--only-sources: training pool restricted to {picks} "
+              f"(registered as ephemeral preset {preset_name!r})")
     return dataclasses.replace(TRAIN_CFG, **overrides) if overrides else TRAIN_CFG
 
 
@@ -600,6 +652,7 @@ def train(limit_docs: int = 0, num_epochs: int = 0,
           eval_min_tokens: int = 0,
           eval_every: int = 0,
           source_preset: str = "",
+          only_sources: str = "",
           resume_from: str = ""):
     import numpy as np
     import torch
@@ -627,6 +680,7 @@ def train(limit_docs: int = 0, num_epochs: int = 0,
         eval_min_tokens=eval_min_tokens,
         eval_every=eval_every,
         source_preset=source_preset,
+        only_sources=only_sources,
     )
     epochs = cfg.num_epochs
     torch.manual_seed(cfg.seed)
@@ -1703,6 +1757,7 @@ def main(limit_docs: int = 0, num_epochs: int = 0,
          eval_min_tokens: int = 0,
          eval_every: int = 0,
          source_preset: str = "",
+         only_sources: str = "",
          wait: bool = False):
     """`.spawn` (fire-and-forget) by default so `--detach` actually detaches:
     the client returns after enqueueing and Ctrl+C on the terminal doesn't
@@ -1721,6 +1776,7 @@ def main(limit_docs: int = 0, num_epochs: int = 0,
         eval_min_tokens=eval_min_tokens,
         eval_every=eval_every,
         source_preset=source_preset,
+        only_sources=only_sources,
     )
     if wait:
         train.remote(**kwargs)
