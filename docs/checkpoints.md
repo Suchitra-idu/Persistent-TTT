@@ -11,7 +11,8 @@ ttt-checkpoints Modal volume
 │   │   ├── adapter/                  PEFT LoRA adapter (via save_pretrained)
 │   │   │   ├── adapter_config.json
 │   │   │   └── adapter_model.safetensors
-│   │   └── ttt_params.pt             torch.save dict — TTT trainables
+│   │   ├── ttt_params.pt             torch.save dict — TTT trainables
+│   │   └── per_source_carries.pt     (everlasting-carry runs only)
 │   ├── step_400/ ...
 │   └── sessions/
 │       └── <name>.pt                 exported fast-weight snapshots
@@ -70,6 +71,49 @@ catches:
 - Config changes that removed/added a TTT trainable (e.g., toggling
   `output_gate`)
 
+### `per_source_carries.pt` — everlasting-carry per-source state
+
+Written by `save_per_source_carries()` in
+[`ttt_wiring.py`](../ttt_wiring.py) — only present in checkpoints from
+runs with `--mode everlasting`. Layout:
+
+```python
+{
+    "carries":   {source_label: {layer_idx: fp32 CPU Tensor}},
+    "n_updates": {source_label: int},   # docs of this source consumed
+    "meta":      {"step": int, ...},
+}
+```
+
+`layer_idx` is the **base-model layer index** (not the module
+enumeration order), so a snapshot survives an unrelated change to the
+TTT layer schedule — the shapes still have to match on load. Each
+`Tensor` has shape `[B=1, hidden_size, intermediate_size]` — same shape
+as `_next_carried` staged by `_scan_forward`.
+
+**Size on disk.** For Qwen3-0.6B with `LAYER_STRIDE=2`
+(14 TTT layers) × 6 sources × `[1, 1024, 3072]` fp32 ≈ **1 GB per
+checkpoint** on top of `adapter/` + `ttt_params.pt`. Bigger models
+scale ~ `hidden² · n_ttt_layers · n_sources`.
+
+**Semantics per checkpoint tick.** At step `X` the carriers reflect
+all doc-updates through step `X` — including any updates that happened
+between the previous eval tick and this save. Sanity check:
+`n_updates[src]` totals should match the `source breakdown` printed at
+dataset load.
+
+**Load behavior:**
+- `TTTInference.load()` calls `load_per_source_carries()` on
+  `per_source_carries.pt` in the ckpt dir and stores `{src → GPU fp32
+  Tensors}` on `self.per_source_carries` + metadata on
+  `self.per_source_meta`. Absent file → empty dict, no error.
+- `session_perplexity(use_everlasting_carry=True)` installs
+  `per_source_carries[doc.source]` as the fast-weight seed before each
+  doc's forward. Cold sources fall back to zero.
+- Training-side `--resume-from` warm-loads the persistent dict into
+  GPU fp32 so accumulated carriers survive across runs. Absent file →
+  each source starts from cold at resume.
+
 ### `sessions/<name>.pt` — fast-weight snapshot
 
 Dict from `export_fast_weights()` in
@@ -105,13 +149,25 @@ From `build_reference_counts` in
 ### Training-side save (`train_modal.py`)
 
 ```python
-def save_checkpoint(model, run_dir, step):
+def save_checkpoint(model, run_dir, step,
+                    per_source_carries=None,
+                    per_source_n_updates=None):
     save_dir = os.path.join(run_dir, f"step_{step}")
     os.makedirs(save_dir, exist_ok=True)
     # LoRA adapter
     model.save_pretrained(os.path.join(save_dir, "adapter"))
     # TTT trainables
     save_ttt_state_dict(model, os.path.join(save_dir, "ttt_params.pt"), TTT_CFG)
+    # Everlasting-carry per-source state (only when the training mode
+    # is populating the dict). Non-everlasting runs pass empty dicts
+    # and the file is not written -- backward compatible with existing
+    # tooling that doesn't know about per_source_carries.pt.
+    if per_source_carries:
+        save_per_source_carries(
+            per_source_carries,
+            os.path.join(save_dir, "per_source_carries.pt"),
+            meta={"n_updates": per_source_n_updates or {}, "step": step},
+        )
     ckpt_vol.commit()   # push to Modal volume
 ```
 
@@ -200,15 +256,19 @@ snapshot. Note the env vars used at training time.
 ## Ckpt name resolution
 
 At inference, `_ckpt_paths(ckpt)` in
-[`infer_modal.py`](../infer_modal.py):
+[`infer_modal.py`](../infer_modal.py) returns a triple
+`(adapter_path, ttt_ckpt_path, per_source_carries_path)`:
 
 | input | resolves to |
 |---|---|
-| `""` | `(None, None)` — base model, no LoRA loaded from disk, no TTT weights |
-| `"step_400"` | `<CKPT_MOUNT>/<run_name>/step_400/adapter`, `<CKPT_MOUNT>/<run_name>/step_400/ttt_params.pt` |
-| `"other_run/step_400"` | `<CKPT_MOUNT>/other_run/step_400/adapter`, `<CKPT_MOUNT>/other_run/step_400/ttt_params.pt` |
+| `""` | `(None, None, None)` — base model, no LoRA loaded from disk, no TTT weights |
+| `"step_400"` | `<CKPT_MOUNT>/<run_name>/step_400/{adapter, ttt_params.pt, per_source_carries.pt}` |
+| `"other_run/step_400"` | `<CKPT_MOUNT>/other_run/step_400/{adapter, ttt_params.pt, per_source_carries.pt}` |
 
-`<run_name>` is `TRAIN_CFG.run_name` (default `"ttt-v1.1"`).
+`<run_name>` is `TRAIN_CFG.run_name` (default `"ttt-v1.1"`). The
+`per_source_carries.pt` path is optional at load time — missing file
+just leaves `TTTInference.per_source_carries = {}` and
+`use_everlasting_carry` becomes a no-op.
 
 ## Related docs
 

@@ -198,6 +198,61 @@ Two natural gaps:
 - `Δbetween = carry-off - carry` — cross-item carry benefit on top
 - Total TTT benefit = `fresh - carry = Δwithin + Δbetween`
 
+### Everlasting-carry eval
+
+`session_perplexity` gains three parameters for evaluating a checkpoint
+that was trained with `--mode everlasting` (see
+[training.md#everlasting-carry-mode](training.md#everlasting-carry-mode)):
+
+| param | default | what it does |
+|---|---|---|
+| `use_everlasting_carry` | `False` | Before each doc's first item install `per_source_carries[doc.source]` as the fast-weight seed. After each `reset_between_items` (in `carry-off` mode) reinstall the seed so within-item chunk-scan still starts from the trained state. Cold sources (label not in the loaded dict) start from zero — matches training. |
+| `force_source` | `""` | If non-empty, install THAT source's carrier for every doc regardless of the doc's actual label. **Swap test:** a domain-specific carrier should degrade when mismatched. If ppls are indistinguishable across choices of `force_source`, the carrier is generic conditioning, not per-domain adaptation. |
+| `sources` | `None` | Per-doc source labels (aligned with `texts`). `holdout_eval` fills this in automatically from the dataset's `source` column. |
+
+When `use_everlasting_carry=True` **and** `include_cold_carry=True`,
+`_three_way_eval` runs **two extra passes** (cold-carry and
+cold-carry-off, both with the seed NOT installed). Together with the
+three seeded modes this gives a 5-column table with **regime-clean
+deltas** that additively decompose the total TTT benefit.
+
+**The 5 modes:**
+
+| column | starts from | reset between items |
+|---|---|---|
+| `carry` | trained seed | no |
+| `cold-c` (cold-carry) | zero | no |
+| `carry-off` | trained seed, reinstalled each item | yes |
+| `cold-co` (cold-carry-off) | zero, reset each item | yes |
+| `fresh` | (evolve=False, TTT off entirely) | n/a |
+
+**Clean deltas — each measures ONE mechanism, no cross-contamination:**
+
+| delta | formula | measures |
+|---|---|---|
+| `Δwithin` | `fresh − cold-carry-off` | pure within-item chunk-scan (from zero) |
+| `Δbetween` | `cold-carry-off − cold-carry` | pure cross-item accumulation (from zero) |
+| `Δseed` | `cold-carry − carry` | trained per-source seed's isolated contribution |
+| `Δtotal` | `fresh − carry` | = `Δwithin + Δbetween + Δseed` |
+
+**Why this decomposition matters — the old Δs conflated regimes.**
+Before adding cold-carry-off, `Δwithin = fresh − carry-off` in the
+seeded regime silently contained the seed's baseline lift (because
+`carry-off` had the seed installed on every item). It looked like
+"within-item chunk-scan is doing great" when what you were actually
+measuring was "the seed is helping". Now `Δwithin` always compares
+against **cold-carry-off** — a genuinely seed-free within-item
+measurement — regardless of whether the seed is installed. `Δbetween`
+always compares two cold states, so it always means "pure cross-item
+accumulation from zero". And `Δseed` cleanly isolates the seed's
+value. The three add up to `Δtotal`.
+
+**Non-everlasting eval (no `--use-everlasting-carry`)** keeps the old
+3-column table with `Δwithin = fresh − carry-off` and `Δbetween =
+carry-off − carry` — both computed on zero-seed passes anyway
+(since no seed is installed), so the formula coincides with the clean
+version there. No behavior change on that path.
+
 ### Slicing modes (precedence order)
 
 1. **`equal_n_slices > 0`**: each paper cut into `n` equal-token
@@ -403,6 +458,27 @@ which runs on Modal.
 
 ### `holdout_eval` — three-way holdout comparison
 
+> **⚠ Correct command for a SlimPajama everlasting-carry checkpoint.**
+> The eval that shows the per-source everlasting-carry signal requires
+> BOTH `--use-everlasting-carry` AND `--include-cold-carry`. Without
+> them, the "FULL" section runs the trained model but does NOT install
+> the trained per-source seeds — so `carry` starts from zero and the
+> whole point of the experiment is missed. Silent skip: just passing
+> `--include-cold-carry` alone is a no-op (a warning now prints).
+>
+> ```bash
+> TTT_DATASET=slimpajama-6b modal run infer_modal.py::holdout_eval \
+>     --ckpt step_200 \
+>     --n-papers-per-source 2 --min-tokens-est 2048 \
+>     --equal-n-slices 4 \
+>     --use-everlasting-carry --include-cold-carry
+> ```
+>
+> **Without** `--use-everlasting-carry`, `carry` behaves exactly like
+> the in-loop training-side eval (zero-seed chunk-scan accumulation)
+> and Δbetween measures "zero→accumulate vs zero→reset-each" — that
+> gap can be large but is unrelated to the everlasting mechanism.
+
 ```
 # Single-source dataset (arxiv): plain N-paper draw
 modal run infer_modal.py::holdout_eval --n-papers 5 --ckpt step_400
@@ -444,6 +520,27 @@ silent). The printed table has three ppl columns and two Δ columns
 - `--slice-papers` / `--no-slice-papers` — whether to slice papers
   within sessions per `TRAIN_CFG.slice_prob`. Overridden by
   `--equal-n-slices > 0`.
+- `--use-everlasting-carry` (default False) — only affects the FULL
+  block. Before each doc's first item install `per_source_carries[src]`
+  as the fast-weight seed; after each `reset_between_items` reinstall
+  the seed. No-op if the checkpoint has no `per_source_carries.pt`.
+  See [Everlasting-carry eval](#everlasting-carry-eval).
+- `--force-source LABEL` (default `""`) — with `--use-everlasting-carry`
+  on, install THAT source's carrier for every doc regardless of the
+  doc's actual source. The domain-specificity swap test: if the trained
+  carrier is domain-specific, mismatched installs should be worse than
+  matched. If ppls are the same regardless of source, the carrier is
+  generic conditioning, not per-domain adaptation.
+- `--include-cold-carry` (default False) — adds **two** extra eval
+  passes on FULL (`cold-carry` and `cold-carry-off`) when combined
+  with `--use-everlasting-carry`, giving a 5-column table with
+  regime-clean deltas: `Δwithin = fresh − cold-carry-off` (pure
+  within-item, seed-free), `Δbetween = cold-carry-off − cold-carry`
+  (pure cross-item, seed-free), `Δseed = cold-carry − carry` (seed
+  contribution). Additive: `Δtotal = Δwithin + Δbetween + Δseed`.
+  Prints a warning and skips the extra passes when
+  `--use-everlasting-carry` is off (`carry` already IS cold-carry
+  when no seed is installed).
 
 ### `single_paper_eval` — clean within-paper carry
 

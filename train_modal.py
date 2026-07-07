@@ -495,25 +495,32 @@ def _print_session_composition(cfg, ds, doc_lengths):
 
 
 def _print_in_loop_per_source(eval_metrics: dict) -> None:
-    """Console-print the same per-source `eval/<source>/*` block that
-    already goes to wandb. Without this, an in-loop eval hides *which*
-    sources are contributing to the aggregate gap (or degrading) --
-    the aggregate can look flat while one domain steadily improves and
-    another regresses."""
+    """Console-print the per-source `eval/<source>/*` block that already
+    goes to wandb. Without this, an in-loop eval hides *which* sources
+    are contributing to the aggregate gap (or degrading) -- the
+    aggregate can look flat while one domain steadily improves and
+    another regresses.
+
+    When `eval_seed/<source>/*` keys exist (everlasting-carry training),
+    a second per-source table is printed showing carry / carry-off from
+    the seeded pass and Δseed = cold_carry - seed_carry per source."""
     from collections import defaultdict
 
-    by_src: dict = defaultdict(dict)
-    for key, val in eval_metrics.items():
-        if not key.startswith("eval/") or key.count("/") != 2:
-            continue
-        _, src, metric = key.split("/")
-        if metric not in (
-            "carry_ppl", "carry_off_ppl", "fresh_ppl",
-            "gap_within", "gap_between", "gap_total", "n_papers",
-        ):
-            continue
-        by_src[src][metric] = val
+    def _extract(prefix: str, metrics: tuple) -> dict:
+        out: dict = defaultdict(dict)
+        for key, val in eval_metrics.items():
+            if not key.startswith(f"{prefix}/") or key.count("/") != 2:
+                continue
+            _, src, metric = key.split("/")
+            if metric not in metrics:
+                continue
+            out[src][metric] = val
+        return out
 
+    by_src = _extract("eval", (
+        "carry_ppl", "carry_off_ppl", "fresh_ppl",
+        "gap_within", "gap_between", "gap_total", "n_papers",
+    ))
     if not by_src:
         return
     label_w = max((len(s) for s in by_src), default=6)
@@ -529,6 +536,25 @@ def _print_in_loop_per_source(eval_metrics: dict) -> None:
               f"{b.get('fresh_ppl', 0):>7.2f}  "
               f"{b.get('gap_within', 0):>+8.3f}  "
               f"{b.get('gap_between', 0):>+9.3f}")
+
+    # Seeded pass (everlasting-carry): only present when the training
+    # loop passed `per_source_carries` to run_holdout_eval.
+    by_src_seed = _extract("eval_seed", (
+        "carry_ppl", "carry_off_ppl", "gap_between", "gap_seed",
+        "n_papers",
+    ))
+    if not by_src_seed:
+        return
+    print(f"    {'source [+seed]':<{label_w}}  {'n':>3}  "
+          f"{'carry':>7}  {'carry-off':>9}  "
+          f"{'Δbetween':>9}  {'Δseed':>8}")
+    for src in sorted(by_src_seed):
+        b = by_src_seed[src]
+        print(f"    {src:<{label_w}}  {int(b.get('n_papers', 0)):>3d}  "
+              f"{b.get('carry_ppl', 0):>7.2f}  "
+              f"{b.get('carry_off_ppl', 0):>9.2f}  "
+              f"{b.get('gap_between', 0):>+9.3f}  "
+              f"{b.get('gap_seed', 0):>+8.3f}")
 
 
 def _mode_line(cfg) -> str:
@@ -882,6 +908,12 @@ def train(limit_docs: int = 0, num_epochs: int = 0,
                         model, eval_papers, cfg.eval_n_slices,
                         train_session_mode=cfg.session_training,
                         paper_sources=eval_sources,
+                        # Everlasting-carry: pass the live per-source
+                        # dict so the eval installs the trained seed on
+                        # a second pass and reports `eval_seed/*`.
+                        per_source_carries=(per_source_carries
+                                            if cfg.everlasting_carry
+                                            else None),
                     )
                     telemetry.log({"train/step": step, **eval_metrics})
                     print(
@@ -893,6 +925,19 @@ def train(limit_docs: int = 0, num_epochs: int = 0,
                         f"Δbetween {eval_metrics['eval/gap_between']:+.2f} "
                         f"state/W0 {eval_metrics['eval/state_ratio_final']:.2e}"
                     )
+                    if "eval_seed/carry_ppl" in eval_metrics:
+                        print(
+                            f"  [eval seed] "
+                            f"carry {eval_metrics['eval_seed/carry_ppl']:.2f} "
+                            f"carry-off "
+                            f"{eval_metrics['eval_seed/carry_off_ppl']:.2f} "
+                            f"Δbetween "
+                            f"{eval_metrics['eval_seed/gap_between']:+.2f} "
+                            f"Δseed "
+                            f"{eval_metrics['eval_seed/gap_seed']:+.2f} "
+                            f"({eval_metrics['eval_seed/n_seeded_papers']}"
+                            f"/{len(eval_papers)} papers)"
+                        )
                     _print_in_loop_per_source(eval_metrics)
             sessions_done += 1
 
@@ -1063,18 +1108,25 @@ def _stratified_sample_indices(source_labels, n_target: int, rng) -> list:
 
 
 def _eval_paper(model, paper_ids, n_slices: int, evolve: bool,
-                reset_between_slices: bool = False) -> list:
+                reset_between_slices: bool = False,
+                seed_snapshot: dict | None = None) -> list:
     """Run one held-out paper as a single-paper session; return per-slice
     (n_tokens, ppl, state_ratio) rows.
 
     `reset_between_slices=True` clears the fast weight between slices, so
     only within-slice chunk adaptation contributes to each slice's ppl.
-    Combined with `evolve=True`, this is the "carry-off" mode."""
+    Combined with `evolve=True`, this is the "carry-off" mode.
+
+    `seed_snapshot`, when provided, is installed as `carried_delta`
+    before the first slice AND re-installed after every
+    `reset_between_slices`. This is the everlasting-carry variant: each
+    slice starts from the trained per-source seed instead of zero.
+    `None` (default) preserves the historical zero-seed behavior."""
     import torch
 
     from inplace_ttt import (
-        advance_session_state, iter_ttt_modules, mean_state_ratio,
-        reset_session_state, state_norms,
+        advance_session_state, install_carried_delta, iter_ttt_modules,
+        mean_state_ratio, reset_session_state, state_norms,
     )
     from train_utils import equal_token_slices
 
@@ -1082,6 +1134,8 @@ def _eval_paper(model, paper_ids, n_slices: int, evolve: bool,
         m.ttt_evolve = evolve
         m.session_mode = True
     reset_session_state(model)
+    if seed_snapshot:
+        install_carried_delta(model, seed_snapshot)
     rows = []
     for s, e in equal_token_slices(len(paper_ids), n_slices):
         ids = torch.tensor([paper_ids[s:e]], device="cuda")
@@ -1091,6 +1145,8 @@ def _eval_paper(model, paper_ids, n_slices: int, evolve: bool,
         state_ratio = mean_state_ratio(state_norms(model, source="session"))
         if reset_between_slices:
             reset_session_state(model)
+            if seed_snapshot:
+                install_carried_delta(model, seed_snapshot)
         rows.append((e - s, math.exp(loss.item()), state_ratio))
     return rows
 
@@ -1101,9 +1157,16 @@ def _token_weighted_ppl(rows) -> float:
     return math.exp(total_log / total_n) if total_n else float("nan")
 
 
-def _per_source_eval_metrics(per_paper: list, paper_sources: list) -> dict:
-    """Token-weighted per-source carry / carry_off / fresh, plus two gaps.
-    Only sources represented in the eval sample get keys emitted."""
+def _per_source_eval_metrics(per_paper: list, paper_sources: list,
+                             prefix: str = "eval",
+                             include_fresh: bool = True) -> dict:
+    """Token-weighted per-source carry / carry_off / fresh (+ two gaps)
+    keys under `<prefix>/<src>/...`. Only sources represented in the
+    eval sample get keys emitted.
+
+    `include_fresh=False` in the seed pass skips fresh (which is
+    identical to the zero-seed pass -- evolve=False bypasses TTT
+    entirely so the seed can't affect it)."""
     from collections import defaultdict
     by_src = defaultdict(list)
     for p, src in zip(per_paper, paper_sources):
@@ -1122,37 +1185,54 @@ def _per_source_eval_metrics(per_paper: list, paper_sources: list) -> dict:
             if c_tok:
                 total_carry_log += math.log(p["carry_ppl"]) * c_tok
                 total_carry_off_log += math.log(p["carry_off_ppl"]) * c_tok
-                total_fresh_log += math.log(p["fresh_ppl"]) * c_tok
+                if include_fresh:
+                    total_fresh_log += math.log(p["fresh_ppl"]) * c_tok
                 total_tok += c_tok
         if not total_tok:
             continue
         c_ppl = math.exp(total_carry_log / total_tok)
         co_ppl = math.exp(total_carry_off_log / total_tok)
-        f_ppl = math.exp(total_fresh_log / total_tok)
-        out[f"eval/{src}/carry_ppl"] = c_ppl
-        out[f"eval/{src}/carry_off_ppl"] = co_ppl
-        out[f"eval/{src}/fresh_ppl"] = f_ppl
-        out[f"eval/{src}/gap_within"] = f_ppl - co_ppl
-        out[f"eval/{src}/gap_between"] = co_ppl - c_ppl
-        out[f"eval/{src}/gap_total"] = f_ppl - c_ppl
-        out[f"eval/{src}/n_papers"] = len(papers)
+        out[f"{prefix}/{src}/carry_ppl"] = c_ppl
+        out[f"{prefix}/{src}/carry_off_ppl"] = co_ppl
+        out[f"{prefix}/{src}/gap_between"] = co_ppl - c_ppl
+        out[f"{prefix}/{src}/n_papers"] = len(papers)
+        if include_fresh:
+            f_ppl = math.exp(total_fresh_log / total_tok)
+            out[f"{prefix}/{src}/fresh_ppl"] = f_ppl
+            out[f"{prefix}/{src}/gap_within"] = f_ppl - co_ppl
+            out[f"{prefix}/{src}/gap_total"] = f_ppl - c_ppl
     return out
 
 
 def run_holdout_eval(model, holdout_papers, n_slices: int,
                     train_session_mode: bool,
-                    paper_sources: list | None = None) -> dict:
+                    paper_sources: list | None = None,
+                    per_source_carries: dict | None = None) -> dict:
     """Three-mode perplexity eval on FULL trained model. Snapshots and
     restores TTT module state so this is a no-op against the training loop.
 
-    Modes:
-      carry     -- evolve=True,  fast weight persists across slices
-      carry_off -- evolve=True,  fast weight reset between slices
-                   (isolates within-slice chunk adaptation)
+    Zero-seed pass (always run) -- `eval/*` keys:
+      carry     -- evolve=True,  fast weight persists across slices,
+                   starts from zero
+      carry_off -- evolve=True,  fast weight reset between slices,
+                   starts from zero
       fresh     -- evolve=False  (fast weight = 0 throughout)
 
-    Emits only aggregate + per-source metrics; no per-paper or per-slice
-    keys go to the observer to keep the wandb payload lean."""
+    Seeded pass (only when `per_source_carries` is provided and the
+    doc's source is in it) -- `eval_seed/*` keys:
+      carry     -- same as above but starts from
+                   per_source_carries[doc.source]; carrier is
+                   reinstalled after each between-slice reset in
+                   carry-off. Skips `fresh` (which is seed-independent
+                   -- evolve=False bypasses the TTT branch entirely).
+
+    Cross-pass gap `gap_seed = eval/carry - eval_seed/carry` -- how
+    much better does starting from the trained per-source seed make
+    inference-time accumulation? Positive => the seed helps; ~0 =>
+    inference-time accumulation already recovers what the seed offers.
+
+    Emits only aggregate + per-source metrics; no per-paper or
+    per-slice keys go to the observer to keep the wandb payload lean."""
     from inplace_ttt import iter_ttt_modules
 
     modules = list(iter_ttt_modules(model))
@@ -1164,9 +1244,12 @@ def run_holdout_eval(model, holdout_papers, n_slices: int,
     ]
 
     per_paper = []
+    per_paper_seed = []
+    seed_sources = per_source_carries or {}
     model.eval()
     try:
-        for paper_ids in holdout_papers:
+        for i, paper_ids in enumerate(holdout_papers):
+            # Zero-seed pass -- the classical 3-mode.
             carry_rows = _eval_paper(model, paper_ids, n_slices, evolve=True)
             carry_off_rows = _eval_paper(model, paper_ids, n_slices,
                                          evolve=True,
@@ -1182,6 +1265,31 @@ def run_holdout_eval(model, holdout_papers, n_slices: int,
                 "carry_off_rows": carry_off_rows,
                 "fresh_rows": fresh_rows,
             })
+            # Seeded pass -- only when the paper's source has a carrier.
+            src = paper_sources[i] if paper_sources else ""
+            seed = seed_sources.get(src) if src else None
+            if seed:
+                s_carry_rows = _eval_paper(
+                    model, paper_ids, n_slices, evolve=True,
+                    seed_snapshot=seed,
+                )
+                s_carry_off_rows = _eval_paper(
+                    model, paper_ids, n_slices, evolve=True,
+                    reset_between_slices=True, seed_snapshot=seed,
+                )
+                per_paper_seed.append({
+                    "carry_ppl": _token_weighted_ppl(s_carry_rows),
+                    "carry_off_ppl": _token_weighted_ppl(s_carry_off_rows),
+                    # `fresh` shared with the zero-seed pass by design.
+                    "fresh_ppl": per_paper[-1]["fresh_ppl"],
+                    "state_ratio_final": (s_carry_rows[-1][2]
+                                          if s_carry_rows else 0.0),
+                    "carry_rows": s_carry_rows,
+                    "carry_off_rows": s_carry_off_rows,
+                    "fresh_rows": fresh_rows,
+                })
+            else:
+                per_paper_seed.append(None)
     finally:
         if was_training:
             model.train()
@@ -1210,6 +1318,62 @@ def run_holdout_eval(model, holdout_papers, n_slices: int,
     }
     if paper_sources and any(paper_sources):
         metrics.update(_per_source_eval_metrics(per_paper, paper_sources))
+
+    # Seeded-pass aggregate + Δseed on the sources that had a carrier.
+    seeded = [(p, s) for p, s in zip(per_paper_seed, paper_sources or [])
+              if p is not None]
+    if seeded:
+        seed_papers = [p for p, _ in seeded]
+        seed_srcs = [s for _, s in seeded]
+        ns = len(seed_papers)
+        s_carry = math.exp(sum(math.log(p["carry_ppl"])
+                               for p in seed_papers) / ns)
+        s_carry_off = math.exp(sum(math.log(p["carry_off_ppl"])
+                                   for p in seed_papers) / ns)
+        s_state = sum(p["state_ratio_final"] for p in seed_papers) / ns
+        # Zero-seed aggregate over the SAME papers so `gap_seed` compares
+        # like-for-like.
+        cold_matched = [per_paper[i] for i in range(len(per_paper))
+                        if per_paper_seed[i] is not None]
+        c_carry = math.exp(sum(math.log(p["carry_ppl"])
+                               for p in cold_matched) / ns)
+        metrics.update({
+            "eval_seed/carry_ppl": s_carry,
+            "eval_seed/carry_off_ppl": s_carry_off,
+            "eval_seed/gap_between": s_carry_off - s_carry,
+            "eval_seed/state_ratio_final": s_state,
+            # Positive => trained seed lowers ppl vs cold-start accumulation.
+            "eval_seed/gap_seed": c_carry - s_carry,
+            "eval_seed/n_seeded_papers": ns,
+        })
+        if paper_sources and any(paper_sources):
+            metrics.update(_per_source_eval_metrics(
+                seed_papers, seed_srcs, prefix="eval_seed",
+                include_fresh=False,
+            ))
+            # Per-source Δseed = cold carry - seeded carry (both on the
+            # same papers), emitted only for sources with a seeded pass.
+            from collections import defaultdict
+            cold_by_src = defaultdict(list)
+            seed_by_src = defaultdict(list)
+            for i, p_cold in enumerate(per_paper):
+                if per_paper_seed[i] is None:
+                    continue
+                src = paper_sources[i]
+                if not src:
+                    continue
+                cold_by_src[src].append(p_cold)
+                seed_by_src[src].append(per_paper_seed[i])
+            for src in cold_by_src:
+                if not cold_by_src[src]:
+                    continue
+                cold_c = math.exp(sum(math.log(p["carry_ppl"])
+                                      for p in cold_by_src[src])
+                                  / len(cold_by_src[src]))
+                seed_c = math.exp(sum(math.log(p["carry_ppl"])
+                                      for p in seed_by_src[src])
+                                  / len(seed_by_src[src]))
+                metrics[f"eval_seed/{src}/gap_seed"] = cold_c - seed_c
     return metrics
 
 

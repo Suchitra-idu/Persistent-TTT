@@ -56,7 +56,7 @@ Living in [`ttt_config.py`](../ttt_config.py) top-of-file:
 | field | default | notes |
 |---|---|---|
 | `layer_indices` | `None` (lazily populated) | Explicit tuple can be passed for tests. In production, populated from `derive_ttt_layer_indices` in `build_model`. |
-| `chunk_size` | `50` | Tokens per fast-weight update. Changing requires retraining. Smaller = finer temporal resolution + more chunks + more memory (`k=N/C` chunk-dim tensors); larger = coarser resolution but memory-friendly. Raise to ~200-400 at 8B to fit the scan tensors. |
+| `chunk_size` | `500` | Tokens per fast-weight update. Changing requires retraining. Smaller = finer temporal resolution + more chunks + more memory (`k=N/C` chunk-dim tensors); larger = coarser resolution but memory-friendly. Historical default was `50`; bumped to `500` for the everlasting-carry experiments at 16k contexts to keep the intermediate scan tensor `[B, N/C, C, d_ff]` manageable. 200 is a middle-ground for finer adaptation on rare sources without blowing memory. |
 | `eta` | `7e-2` | Inner-loop learning rate: `W_eff = W_down + eta·S`. Scale ~inversely with model width. Do NOT bump like an LR. |
 | `normalize_delta_by_chunk` | `True` | Divide each chunk's delta by chunk size (uses actual token count, so last-chunk padding doesn't inflate). Makes `eta` roughly C-independent. |
 | `conv_kernel_size` | `8` | Causal Conv1D width for V = Conv1D(source) @ W_target. With `v_source="hidden_state"`, 4-8 is sweet spot; with `"embedding"`, 16-32. |
@@ -68,7 +68,7 @@ Living in [`ttt_config.py`](../ttt_config.py) top-of-file:
 | `clip_enabled` | `True` | Frobenius clip on `||eta * cum||_F` per chunk. |
 | `clip_tau` | `5.0` | Clip threshold. When active, applied delta magnitude is capped at 5, direction preserved. |
 | `clip_at_inference_only` | `False` | When True, clip is off during training. Currently off so training and inference are consistent — recommended to leave off. |
-| `carried_decay` | `1.0` | EMA staging: `carried ← decay·carried + this_item_total`. `1.0` (default) = pure accumulation, state grows unbounded — set `0.9-0.95` for bounded long sessions. `0.9` = ~10-item half-life. `0.8` = ~5-item. Steady-state plateau ≈ per_item_delta / (1 - decay). |
+| `carried_decay` | `0.9` | EMA staging: `carried ← decay·carried + this_item_total`. `1.0` = pure accumulation, state grows unbounded. Current default `0.9` gives ~10-item half-life (steady-state ≈ 10× per-item delta). Lower to `0.5` (steady-state ≈ 2×) for everlasting-carry mode, where the persistent carrier accumulates across hundreds of docs and can otherwise saturate the Frobenius clip. |
 
 ## `TrainConfig` (the outer loop)
 
@@ -131,7 +131,8 @@ to compensate for smaller per-param gradients at scale. See
 | `hybrid_slices_min` | `2` | y: min slices for the carry path. |
 | `hybrid_slices_max` | `6` | z: max slices for the carry path. |
 | `hybrid_slice_min_tokens` | `800` | n: min tokens per slice. Must satisfy `y*n <= hybrid_carry_min_tokens`. |
-| `source_preset` | `""` | If set, rebalance training rows by source using the named preset (`SOURCE_PRESETS`). Empty = keep natural dataset mix. See [training.md#source-balancing](training.md#source-balancing---source-preset). Presets that ship: `slim-paper`, `slim-research`. |
+| `source_preset` | `""` | If set, rebalance training rows by source using the named preset (`SOURCE_PRESETS`). Empty = keep natural dataset mix. See [training.md#source-balancing](training.md#source-balancing---source-preset). Presets that ship: `slim-paper`, `slim-research`. Pass `--source-preset none` to explicitly bypass a spec's default preset. |
+| `everlasting_carry` | `False` | Everlasting-carry training mode: whole-doc sessions (no slicing) with per-source persistent fast-weight carriers. Loop maintains `Dict[source_label, Dict[layer_idx, Tensor]]`; before each doc install `per_source_carries[src]`, after `advance_session_state` snapshot back. Requires the active dataset to have a `source` column. CLI `--mode everlasting` sets this. Force-enables `session_training` unless `--session 0` is explicit. Takes precedence over `hybrid_sessions` / `single_paper_sessions`. See [training.md#everlasting-carry-mode](training.md#everlasting-carry-mode). |
 
 ### Loss mask (all off by default)
 
@@ -179,7 +180,7 @@ corresponding config field:
 | `--num-epochs N` | `num_epochs` |
 | `--grad-accum N` | `grad_accum_steps` |
 | `--session 0\|1` | `session_training` |
-| `--mode multi\|single\|hybrid` | `single_paper_sessions` + `hybrid_sessions` (mode dispatch). Empty string leaves defaults. Unknown mode raises. |
+| `--mode multi\|single\|hybrid\|everlasting` | `single_paper_sessions` + `hybrid_sessions` + `everlasting_carry` (mode dispatch). Empty string leaves defaults. Unknown mode raises. `everlasting` also force-enables `session_training` unless `--session 0` is explicit, and defaults `eval_every` to 25 (whole-doc sessions produce ~10× fewer optimizer steps per epoch than slice modes). |
 | `--min-doc-tokens N` | `min_doc_tokens` |
 | `--hybrid-carry-min N` | `hybrid_carry_min_tokens` |
 | `--hybrid-slice-min N` | `hybrid_slice_min_tokens` |
@@ -188,8 +189,10 @@ corresponding config field:
 | `--eval-n-papers N` | `eval_n_papers` |
 | `--eval-n-papers-per-source N` | `eval_n_papers_per_source` |
 | `--eval-min-tokens N` | `eval_min_tokens` |
-| `--source-preset NAME` | `source_preset` (validated at parse time; unknown name raises fast). |
-| `--resume-from PATH` | Not a config field. `step_<n>` or `<other_run>/step_<n>`. |
+| `--eval-every N` | `eval_every`. `0` = leave config default (or the everlasting-mode auto-default of 25). |
+| `--source-preset NAME` | `source_preset` (validated at parse time; unknown name raises fast). `none` bypasses a spec's default preset without triggering validation. |
+| `--resume-from PATH` | Not a config field. `step_<n>` or `<other_run>/step_<n>`. In everlasting mode also warm-loads `per_source_carries.pt` from the resume dir. |
+| `--wait` | Not a config field. `main()` uses `.spawn()` (fire-and-forget) by default so `--detach` truly detaches; pass `--wait` for the old blocking `.remote()` behavior (streams stdout locally, cancels on client disconnect). |
 
 Any int flag == 0 means "leave the config default unchanged." `mode`
 uses the empty string as its "unchanged" sentinel; `session` uses -1.

@@ -548,32 +548,67 @@ def _print_paper_preview(texts: list, labels: list | None = None,
 
 def _print_session_results(carry: list, carry_off: list, fresh: list,
                            paper_labels: list = None,
-                           paper_sources: list | None = None):
-    """Per-item table + token-weighted per-paper summary. Three ppl columns:
-      carry     -- TTT on, fast weight carries across items
-      carry-off -- TTT on, fast weight reset between items
-                   (isolates within-item chunk adaptation)
+                           paper_sources: list | None = None,
+                           cold_carry: list | None = None,
+                           cold_carry_off: list | None = None):
+    """Per-item table + token-weighted per-paper summary.
+
+    Non-everlasting eval (3 modes, both Δs measured from zero-seed state):
+      carry     -- TTT on, fast weight carries across items, starts from 0
+      carry-off -- TTT on, fast weight reset between items, starts from 0
       fresh     -- TTT off (fast weight = 0 throughout)
-    Two gap columns:
-      Δwithin  = fresh - carry-off  (within-item chunk-scan benefit)
-      Δbetween = carry-off - carry  (cross-item session-carry benefit)
-    Sum = Δtotal = fresh - carry."""
+      Δwithin   = fresh - carry-off     (pure within-item chunk-scan)
+      Δbetween  = carry-off - carry     (pure cross-item carry)
+
+    Everlasting eval (5 modes, deltas are regime-clean and additive):
+      carry           -- seed installed, accumulates across items
+      cold-carry      -- seed OFF, accumulates across items
+      carry-off       -- seed reinstalled each item, no cross-item accum
+      cold-carry-off  -- seed OFF, reset each item, no cross-item accum
+      fresh           -- TTT off entirely
+      Δwithin  = fresh          - cold-carry-off  (within-item, seed-free)
+      Δbetween = cold-carry-off - cold-carry      (cross-item, seed-free)
+      Δseed    = cold-carry     - carry           (seed benefit at full carry)
+      Δtotal   = fresh - carry                    = Δwithin+Δbetween+Δseed
+    Both are non-negative if each mechanism helps. Each column measures
+    ONE mechanism -- no cross-contamination between seed and chunk-scan."""
     import math
 
-    print(f"{'pos':>4}  {'p.s':<6} {'n_tok':>6}  "
-          f"{'carry':>9}  {'carry-off':>9}  {'fresh':>9}  "
-          f"{'Δwithin':>9}  {'Δbetween':>9}  "
-          f"{'state c':>9}  {'state co':>9}")
-    for c, co, f in zip(carry, carry_off, fresh):
+    show_cold = cold_carry is not None and cold_carry_off is not None
+    if show_cold:
+        header = (f"{'pos':>4}  {'p.s':<6} {'n_tok':>6}  "
+                  f"{'carry':>9}  {'cold-c':>8}  {'carry-off':>9}  "
+                  f"{'cold-co':>8}  {'fresh':>9}  "
+                  f"{'Δwithin':>9}  {'Δbetween':>9}  {'Δseed':>9}  "
+                  f"{'state c':>9}  {'state co':>9}")
+    else:
+        header = (f"{'pos':>4}  {'p.s':<6} {'n_tok':>6}  "
+                  f"{'carry':>9}  {'carry-off':>9}  {'fresh':>9}  "
+                  f"{'Δwithin':>9}  {'Δbetween':>9}  "
+                  f"{'state c':>9}  {'state co':>9}")
+    print(header)
+    for pos, (c, co, f) in enumerate(zip(carry, carry_off, fresh)):
         label = f"{c['paper_idx'] + 1}.{c['slice_in_paper'] + 1}"
-        d_within = f['ppl'] - co['ppl']
-        d_between = co['ppl'] - c['ppl']
         state_c = c.get('state_ratio_mean', 0.0)
         state_co = co.get('state_ratio_mean', 0.0)
-        print(f"{c['session_pos']:>4}  {label:<6} {c['n_tokens']:>6}  "
-              f"{c['ppl']:>9.3f}  {co['ppl']:>9.3f}  {f['ppl']:>9.3f}  "
-              f"{d_within:>+9.3f}  {d_between:>+9.3f}  "
-              f"{state_c:>9.2e}  {state_co:>9.2e}")
+        if show_cold:
+            cc = cold_carry[pos]
+            cco = cold_carry_off[pos]
+            d_within = f['ppl'] - cco['ppl']    # pure within-item (seed-free)
+            d_between = cco['ppl'] - cc['ppl']  # pure cross-item (seed-free)
+            d_seed = cc['ppl'] - c['ppl']       # seed contribution
+            print(f"{c['session_pos']:>4}  {label:<6} {c['n_tokens']:>6}  "
+                  f"{c['ppl']:>9.3f}  {cc['ppl']:>8.3f}  {co['ppl']:>9.3f}  "
+                  f"{cco['ppl']:>8.3f}  {f['ppl']:>9.3f}  "
+                  f"{d_within:>+9.3f}  {d_between:>+9.3f}  {d_seed:>+9.3f}  "
+                  f"{state_c:>9.2e}  {state_co:>9.2e}")
+        else:
+            d_within = f['ppl'] - co['ppl']
+            d_between = co['ppl'] - c['ppl']
+            print(f"{c['session_pos']:>4}  {label:<6} {c['n_tokens']:>6}  "
+                  f"{c['ppl']:>9.3f}  {co['ppl']:>9.3f}  {f['ppl']:>9.3f}  "
+                  f"{d_within:>+9.3f}  {d_between:>+9.3f}  "
+                  f"{state_c:>9.2e}  {state_co:>9.2e}")
 
     if not carry:
         return
@@ -587,9 +622,15 @@ def _print_session_results(carry: list, carry_off: list, fresh: list,
 
     print()
     print("per-paper (token-weighted):")
-    print(f"{'paper':<{label_width}}  {'n_tok':>8}  "
-          f"{'carry':>9}  {'carry-off':>9}  {'fresh':>9}  "
-          f"{'Δwithin':>9}  {'Δbetween':>9}")
+    if show_cold:
+        print(f"{'paper':<{label_width}}  {'n_tok':>8}  "
+              f"{'carry':>9}  {'cold-c':>8}  {'carry-off':>9}  "
+              f"{'cold-co':>8}  {'fresh':>9}  "
+              f"{'Δwithin':>9}  {'Δbetween':>9}  {'Δseed':>9}")
+    else:
+        print(f"{'paper':<{label_width}}  {'n_tok':>8}  "
+              f"{'carry':>9}  {'carry-off':>9}  {'fresh':>9}  "
+              f"{'Δwithin':>9}  {'Δbetween':>9}")
     for p in range(n_papers):
         c_log_tok = sum(math.log(c['ppl']) * c['n_tokens']
                         for c in carry if c['paper_idx'] == p)
@@ -604,82 +645,140 @@ def _print_session_results(carry: list, carry_off: list, fresh: list,
         co_ppl = math.exp(co_log_tok / n_tok)
         f_ppl = math.exp(f_log_tok / n_tok)
         label = str(paper_labels[p]) if paper_labels else str(p + 1)
-        d_within = f_ppl - co_ppl
-        d_between = co_ppl - c_ppl
-        print(f"{label:<{label_width}}  {n_tok:>8}  "
-              f"{c_ppl:>9.3f}  {co_ppl:>9.3f}  {f_ppl:>9.3f}  "
-              f"{d_within:>+9.3f}  {d_between:>+9.3f}")
+        if show_cold:
+            cc_log_tok = sum(math.log(cc['ppl']) * cc['n_tokens']
+                             for cc in cold_carry if cc['paper_idx'] == p)
+            cco_log_tok = sum(math.log(cco['ppl']) * cco['n_tokens']
+                              for cco in cold_carry_off
+                              if cco['paper_idx'] == p)
+            cc_ppl = math.exp(cc_log_tok / n_tok)
+            cco_ppl = math.exp(cco_log_tok / n_tok)
+            d_within = f_ppl - cco_ppl     # pure within-item, seed-free
+            d_between = cco_ppl - cc_ppl   # pure cross-item, seed-free
+            d_seed = cc_ppl - c_ppl        # seed contribution
+            print(f"{label:<{label_width}}  {n_tok:>8}  "
+                  f"{c_ppl:>9.3f}  {cc_ppl:>8.3f}  {co_ppl:>9.3f}  "
+                  f"{cco_ppl:>8.3f}  {f_ppl:>9.3f}  "
+                  f"{d_within:>+9.3f}  {d_between:>+9.3f}  {d_seed:>+9.3f}")
+        else:
+            d_within = f_ppl - co_ppl
+            d_between = co_ppl - c_ppl
+            print(f"{label:<{label_width}}  {n_tok:>8}  "
+                  f"{c_ppl:>9.3f}  {co_ppl:>9.3f}  {f_ppl:>9.3f}  "
+                  f"{d_within:>+9.3f}  {d_between:>+9.3f}")
 
     if paper_sources and any(paper_sources):
-        _print_per_source_summary(carry, carry_off, fresh, paper_sources)
+        _print_per_source_summary(carry, carry_off, fresh, paper_sources,
+                                  cold_carry=cold_carry,
+                                  cold_carry_off=cold_carry_off)
 
 
 def _print_per_source_summary(carry: list, carry_off: list, fresh: list,
-                              paper_sources: list):
-    """Token-weighted PPL per source label (e.g. RedPajamaC4). Same three
-    modes and two gaps as `_print_session_results`. Shows the core "which
-    domain benefits most" table for a mixed-source dataset."""
+                              paper_sources: list,
+                              cold_carry: list | None = None,
+                              cold_carry_off: list | None = None):
+    """Token-weighted PPL per source label (e.g. RedPajamaC4). Shows the
+    core "which domain benefits most" table for a mixed-source dataset.
+
+    Non-everlasting (`cold_carry=None`): 3-mode table with Δwithin =
+    fresh - carry-off, Δbetween = carry-off - carry.
+
+    Everlasting (both `cold_carry` and `cold_carry_off` provided):
+    5-mode table with regime-clean deltas that add up to Δtotal:
+      Δwithin  = fresh          - cold-carry-off  (pure within-item)
+      Δbetween = cold-carry-off - cold-carry      (pure cross-item)
+      Δseed    = cold-carry     - carry           (seed benefit)"""
     import math
     from collections import defaultdict
 
-    by_src_carry = defaultdict(list)
-    by_src_carry_off = defaultdict(list)
-    by_src_fresh = defaultdict(list)
-    for c in carry:
-        src = paper_sources[c['paper_idx']] if c['paper_idx'] < len(paper_sources) else ""
-        if src:
-            by_src_carry[src].append(c)
-    for co in carry_off:
-        src = paper_sources[co['paper_idx']] if co['paper_idx'] < len(paper_sources) else ""
-        if src:
-            by_src_carry_off[src].append(co)
-    for f in fresh:
-        src = paper_sources[f['paper_idx']] if f['paper_idx'] < len(paper_sources) else ""
-        if src:
-            by_src_fresh[src].append(f)
+    show_cold = cold_carry is not None and cold_carry_off is not None
+
+    def _group(items):
+        out = defaultdict(list)
+        for it in items:
+            src = paper_sources[it['paper_idx']] if it['paper_idx'] < len(paper_sources) else ""
+            if src:
+                out[src].append(it)
+        return out
+
+    by_src_carry = _group(carry)
+    by_src_carry_off = _group(carry_off)
+    by_src_fresh = _group(fresh)
+    by_src_cold = _group(cold_carry) if show_cold else {}
+    by_src_cold_off = _group(cold_carry_off) if show_cold else {}
 
     if not by_src_carry:
         return
+
+    def _agg_ppl(items, fallback: float) -> float:
+        """Token-weighted ppl over `items`; returns `fallback` when the
+        list is empty. Never returns None -- callers rely on arithmetic
+        working, and `_agg` returning (None, None) previously slipped
+        through `... or (fallback,)` because non-empty tuples are truthy
+        in Python."""
+        n_tok = sum(it['n_tokens'] for it in items)
+        if not n_tok:
+            return fallback
+        log = sum(math.log(it['ppl']) * it['n_tokens'] for it in items)
+        return math.exp(log / n_tok)
+
     print()
     print("per-source (token-weighted):")
     label_w = max(len(s) for s in by_src_carry)
     label_w = max(label_w, len("source"))
-    print(f"{'source':<{label_w}}  {'n_papers':>9}  {'n_tok':>10}  "
-          f"{'carry':>9}  {'carry-off':>9}  {'fresh':>9}  "
-          f"{'Δwithin':>9}  {'Δbetween':>9}")
+    if show_cold:
+        print(f"{'source':<{label_w}}  {'n_papers':>9}  {'n_tok':>10}  "
+              f"{'carry':>9}  {'cold-c':>8}  {'carry-off':>9}  "
+              f"{'cold-co':>8}  {'fresh':>9}  "
+              f"{'Δwithin':>9}  {'Δbetween':>9}  {'Δseed':>9}")
+    else:
+        print(f"{'source':<{label_w}}  {'n_papers':>9}  {'n_tok':>10}  "
+              f"{'carry':>9}  {'carry-off':>9}  {'fresh':>9}  "
+              f"{'Δwithin':>9}  {'Δbetween':>9}")
     for src in sorted(by_src_carry):
         c_items = by_src_carry[src]
-        co_items = by_src_carry_off.get(src, [])
-        f_items = by_src_fresh.get(src, [])
-        n_tok = sum(c['n_tokens'] for c in c_items)
+        n_tok = sum(it['n_tokens'] for it in c_items)
         if not n_tok:
             continue
-        c_log = sum(math.log(c['ppl']) * c['n_tokens'] for c in c_items)
-        co_log = sum(math.log(co['ppl']) * co['n_tokens'] for co in co_items)
-        f_log = sum(math.log(f['ppl']) * f['n_tokens'] for f in f_items)
-        co_tok = sum(co['n_tokens'] for co in co_items) or n_tok
-        f_tok = sum(f['n_tokens'] for f in f_items) or n_tok
-        c_ppl = math.exp(c_log / n_tok)
-        co_ppl = math.exp(co_log / co_tok)
-        f_ppl = math.exp(f_log / f_tok)
+        c_ppl = _agg_ppl(c_items, fallback=float("nan"))
+        co_ppl = _agg_ppl(by_src_carry_off.get(src, []), fallback=c_ppl)
+        f_ppl = _agg_ppl(by_src_fresh.get(src, []), fallback=c_ppl)
         n_papers = len({c['paper_idx'] for c in c_items})
-        print(f"{src:<{label_w}}  {n_papers:>9d}  {n_tok:>10d}  "
-              f"{c_ppl:>9.3f}  {co_ppl:>9.3f}  {f_ppl:>9.3f}  "
-              f"{f_ppl - co_ppl:>+9.3f}  {co_ppl - c_ppl:>+9.3f}")
+        if show_cold:
+            cc_ppl = _agg_ppl(by_src_cold.get(src, []), fallback=c_ppl)
+            cco_ppl = _agg_ppl(by_src_cold_off.get(src, []), fallback=c_ppl)
+            d_within = f_ppl - cco_ppl     # pure within-item, seed-free
+            d_between = cco_ppl - cc_ppl   # pure cross-item, seed-free
+            d_seed = cc_ppl - c_ppl        # seed contribution
+            print(f"{src:<{label_w}}  {n_papers:>9d}  {n_tok:>10d}  "
+                  f"{c_ppl:>9.3f}  {cc_ppl:>8.3f}  {co_ppl:>9.3f}  "
+                  f"{cco_ppl:>8.3f}  {f_ppl:>9.3f}  "
+                  f"{d_within:>+9.3f}  {d_between:>+9.3f}  {d_seed:>+9.3f}")
+        else:
+            print(f"{src:<{label_w}}  {n_papers:>9d}  {n_tok:>10d}  "
+                  f"{c_ppl:>9.3f}  {co_ppl:>9.3f}  {f_ppl:>9.3f}  "
+                  f"{f_ppl - co_ppl:>+9.3f}  {co_ppl - c_ppl:>+9.3f}")
 
 
 def _three_way_eval(base_engine, ckpt: str, texts: list,
                     session_kwargs: dict,
                     paper_sources: list | None = None,
                     use_everlasting_carry: bool = False,
-                    force_source: str = ""):
+                    force_source: str = "",
+                    include_cold_carry: bool = False):
     """Print BASE / LORA-ONLY / FULL tables on the same texts. The three
     configs share input so any per-slice number is directly comparable.
     LORA-ONLY and FULL are skipped when ckpt is empty. `paper_sources`
     forwards a per-paper source label to the per-source summary.
 
     `use_everlasting_carry` and `force_source` only affect FULL (the only
-    config that has the trained per-source carriers)."""
+    config that has the trained per-source carriers).
+
+    `include_cold_carry` (only meaningful when everlasting is on) runs a
+    4th pass with `use_everlasting_carry=False` on FULL -- carry across
+    items but starting from zero instead of the trained per-source seed.
+    Tests whether the seed is doing useful work vs the accumulation
+    fixing it up during inference (Δseed = cold_carry - carry)."""
     def _run(engine, label, everlasting: bool):
         print(f"=== {label} ===")
         ec_kwargs = (
@@ -699,8 +798,26 @@ def _three_way_eval(base_engine, ckpt: str, texts: list,
             fresh = engine.session_perplexity.remote(
                 texts, evolve=False, **session_kwargs, **ec_kwargs,
             )
+            # Cold pass (only when everlasting is on): identical session
+            # semantics as `carry`/`carry-off` but WITHOUT the seed. Both
+            # variants are needed to give regime-clean Δs -- Δwithin uses
+            # cold-carry-off (pure within-slice, no seed), Δbetween uses
+            # cold-carry - cold-carry-off (pure cross-slice, no seed),
+            # Δseed uses cold-carry - carry (seed's isolated contribution).
+            cold_carry = None
+            cold_carry_off = None
+            if everlasting and include_cold_carry:
+                cold_carry = engine.session_perplexity.remote(
+                    texts, evolve=True, **session_kwargs,
+                )
+                cold_carry_off = engine.session_perplexity.remote(
+                    texts, evolve=True, reset_between_items=True,
+                    **session_kwargs,
+                )
             _print_session_results(carry, carry_off, fresh,
-                                   paper_sources=paper_sources)
+                                   paper_sources=paper_sources,
+                                   cold_carry=cold_carry,
+                                   cold_carry_off=cold_carry_off)
         except Exception as e:
             print(f"[failed: {e}]")
         print()
@@ -715,6 +832,8 @@ def _three_way_eval(base_engine, ckpt: str, texts: list,
             full_tag = " + everlasting-carry"
             if force_source:
                 full_tag += f" (force_source={force_source!r})"
+            if include_cold_carry:
+                full_tag += " [+cold-carry ablation]"
         _run(TTTInference(ckpt=ckpt, load_ttt=True),
              f"FULL  (ckpt={ckpt}, LoRA + TTT{full_tag})",
              everlasting=use_everlasting_carry)
@@ -727,7 +846,8 @@ def holdout_eval(n_papers: int = 5, seed: int = 0, ckpt: str = "",
                  n_papers_per_source: int = 2,
                  min_tokens_est: int = 0,
                  use_everlasting_carry: bool = False,
-                 force_source: str = ""):
+                 force_source: str = "",
+                 include_cold_carry: bool = False):
     """Three-way comparison in one run:
       1. BASE       -- pure Qwen3 (no LoRA, no TTT). The pretraining baseline.
       2. LORA-ONLY  -- trained LoRA on base, TTT silent (W_target=0).
@@ -751,7 +871,15 @@ def holdout_eval(n_papers: int = 5, seed: int = 0, ckpt: str = "",
                                             the fast-weight seed on FULL.
       --force-source RedPajamaC4           Install THAT source's carrier
                                             for every doc regardless of its
-                                            actual source (swap test)."""
+                                            actual source (swap test).
+      --include-cold-carry                 Add a 4th eval pass: carry with
+                                            NO seed (starts from zero, still
+                                            accumulates across items). New
+                                            column Δseed = cold_carry -
+                                            carry. Positive => trained seed
+                                            helps; ~0 => the model is just
+                                            using accumulation, seed doesn't
+                                            matter."""
     base_engine = TTTInference(ckpt="")
     rows = base_engine.fetch_holdout_texts.remote(
         n_papers=n_papers, seed=seed,
@@ -766,6 +894,12 @@ def holdout_eval(n_papers: int = 5, seed: int = 0, ckpt: str = "",
     labels = [f"holdout {i+1}" + (f" [{s}]" if s else "")
               for i, s in enumerate(sources)]
     _print_paper_preview(texts, labels)
+    if include_cold_carry and not use_everlasting_carry:
+        print("note: --include-cold-carry is a no-op without "
+              "--use-everlasting-carry -- with no seed installed, "
+              "'carry' already IS cold-carry. Add --use-everlasting-carry "
+              "to install the trained per-source seed for the 'carry' "
+              "column so the 4th cold-carry column is meaningful.\n")
     _three_way_eval(
         base_engine, ckpt, texts,
         session_kwargs={"slice_papers": slice_papers, "slice_seed": seed,
@@ -773,6 +907,7 @@ def holdout_eval(n_papers: int = 5, seed: int = 0, ckpt: str = "",
         paper_sources=sources,
         use_everlasting_carry=use_everlasting_carry,
         force_source=force_source,
+        include_cold_carry=include_cold_carry,
     )
 
 

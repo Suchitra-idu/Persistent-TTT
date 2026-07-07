@@ -62,7 +62,7 @@ Flags (override the corresponding `TRAIN_CFG` field):
 | `--num-epochs N` | `num_epochs` | Full passes over the training split. |
 | `--grad-accum N` | `grad_accum_steps` | Micro-steps per optimizer step. |
 | `--session 0\|1` | `session_training` | Master switch for cross-item carry at training time. |
-| `--mode multi\|single\|hybrid` | `single_paper_sessions` + `hybrid_sessions` | Session-building strategy. `multi` = 2–6 random papers per session. `single` = one paper per session cut into k pieces. `hybrid` = short docs → single-item no-carry, long docs → k-slice carry (for diverse-length mixes like SlimPajama). Empty string leaves the config defaults. |
+| `--mode multi\|single\|hybrid\|everlasting` | `single_paper_sessions` + `hybrid_sessions` + `everlasting_carry` | Session-building strategy. `multi` = 2–6 random papers per session. `single` = one paper per session cut into k pieces. `hybrid` = short docs → single-item no-carry, long docs → k-slice carry (for diverse-length mixes like SlimPajama). `everlasting` = whole-doc sessions (no slicing) with per-source persistent carriers loaded/snapshotted around each doc (see [Everlasting-carry mode](#everlasting-carry-mode)). Empty string leaves the config defaults. |
 | `--min-doc-tokens N` | `min_doc_tokens` | Filter docs shorter than this many tokens before training. Set to `256` when running hybrid on SlimPajama. `0` leaves default. |
 | `--hybrid-carry-min N` | `hybrid_carry_min_tokens` | Hybrid X threshold: below this length, no carry/no slice. `0` leaves default. |
 | `--hybrid-slice-min N` | `hybrid_slice_min_tokens` | Hybrid n: min tokens per slice. `0` leaves default. |
@@ -71,8 +71,10 @@ Flags (override the corresponding `TRAIN_CFG` field):
 | `--eval-n-papers N` | `eval_n_papers` | Number of eval papers when the dataset has no source column. `0` leaves default. |
 | `--eval-n-papers-per-source N` | `eval_n_papers_per_source` | With a multi-source dataset: exactly N eval papers per source. Total = `N * n_sources`. `0` leaves default (`1`). |
 | `--eval-min-tokens N` | `eval_min_tokens` | Filter eval holdout to docs with at least this many tokens before sampling. Guards against picking tiny StackExchange posts. `0` leaves default. |
+| `--eval-every N` | `eval_every` | Optimizer steps between in-loop eval firings. `0` leaves default (100 for slice modes, auto-defaults to **25 in everlasting mode** — whole-doc sessions produce ~10× fewer optimizer steps per epoch, so `100` fires too rarely). |
 | `--source-preset NAME` | `source_preset` | Rebalance the training mix by source. Empty falls back to the spec's `default_source_preset` (SlimPajama defaults to `slim-research`); pass `none` to disable balancing entirely; pass `slim-paper` (SlimPajama-627B advertised proportions) or `slim-research` (downweights C4, boosts structured domains) to override. Fails fast on unknown name. |
-| `--resume-from PATH` | (not a config field) | Resume from `step_<n>` (same-run) or `other_run/step_<n>` (cross-run). Optimizer momentum is NOT preserved. |
+| `--resume-from PATH` | (not a config field) | Resume from `step_<n>` (same-run) or `other_run/step_<n>` (cross-run). Optimizer momentum is NOT preserved. In everlasting mode also warm-loads `per_source_carries.pt` from the resume dir. |
+| `--wait` | (not a config field) | `main()` uses `train.spawn()` (fire-and-forget) by default so `--detach` truly detaches — the client returns after enqueueing and Ctrl+C on the terminal doesn't cancel the server-side input. Pass `--wait` to use `train.remote()` (blocking, streams stdout, cancels on client disconnect) — the old behavior. |
 
 Env vars (read at `ttt_config` import time, **before** `modal run`
 executes):
@@ -125,6 +127,103 @@ preset rebalances to 25/20/15/20/10/10 across C4/GH/Book/ArXiv/Wiki/SE,
 which gives every domain enough exposure to characterize. Use
 `slim-paper` (62/9/8/7/7/6) instead if you want to say "we trained on
 the SlimPajama mix" without asterisks.
+
+### Everlasting-carry mode
+
+**Motivation.** Standard session training accumulates the fast-weight
+across items *within a session*, then throws it away at the session
+boundary. In-loop and holdout eval consistently show `Δbetween ≈ 0` on
+`slimpajama-6b` (cross-item persistence contributes almost nothing on
+top of within-item chunk-scan). Two candidate explanations:
+
+1. **Redundancy** — chunk-scan saturates within a slice, so upstream
+   accumulated state carries little marginal information.
+2. **No domain conditioning** — a shared per-session carrier can't
+   specialize to a domain because the session mixes sources.
+
+Everlasting-carry tests hypothesis 2: instead of a per-session carrier,
+maintain **6 persistent per-source carriers** that accumulate across
+hundreds of docs of the same domain over the entire training run.
+Snapshot them into the checkpoint so inference can seed the fast weight
+with the trained domain state.
+
+**Mechanics** (`--mode everlasting`):
+
+- Sessions become one item each: the whole doc, no slicing.
+- Force-enables `session_training` (the module-level staging path
+  `_next_carried → carried_delta` is what everlasting-carry
+  hijacks; passing `--session 0` still bypasses).
+- Auto-defaults `eval_every` to 25 (whole-doc sessions produce ~10×
+  fewer optimizer steps per epoch than slice modes).
+- Requires the active dataset to have a `source` column
+  (SlimPajama does; arxiv does not).
+
+Per-doc training-loop shape:
+
+```python
+per_source_carries: Dict[str, Dict[int, Tensor]] = {}   # GPU fp32
+per_source_n_updates: Dict[str, int] = {}
+
+for doc in shuffled_docs:
+    src = doc_sources[doc.idx]
+    reset_session_state(model)
+    if src in per_source_carries:
+        install_carried_delta(model, per_source_carries[src])
+    loss = model(input_ids=ids, labels=labels).loss
+    (loss / grad_accum).backward()
+    advance_session_state(model)                   # _next -> carried
+    per_source_carries[src] = snapshot_carried_delta(model, to_cpu=False)
+    per_source_n_updates[src] += 1
+```
+
+`carried_delta` accumulates across every doc of that source (via the
+`carried_decay` EMA), so with `decay=0.9` the steady-state per-source
+carrier magnitude is ~10× per-doc delta. Bounded by the Frobenius clip
+inside `_scan_forward`. For everlasting mode consider lowering
+`carried_decay` to `0.5` (steady state ~2×) so the persistent carrier
+survives the clip with its trained direction intact.
+
+**Checkpoint format.** Every `save_every` steps, `save_checkpoint`
+writes `per_source_carries.pt` next to `adapter/` and `ttt_params.pt`.
+Layout on disk:
+
+```
+{
+  "carries":   {src_label: {layer_idx: fp32 cpu Tensor}},
+  "n_updates": {src_label: int},
+  "meta":      {"step": int, ...},
+}
+```
+
+`n_updates[src]` is the number of docs of that source consumed since
+the training run started (or since the resume point). Sanity-check it
+against the `source breakdown` printed at dataset load — they should
+match.
+
+**Recommended run:**
+
+```bash
+TTT_DATASET=slimpajama-6b \
+    modal run --detach train_modal.py::train \
+    --limit-docs 6000 --num-epochs 1 --mode everlasting \
+    --source-preset slim-research \
+    --min-doc-tokens 256
+```
+
+Watch for:
+
+- **Balanced n_updates per source** at checkpoint. If ArXiv has 400
+  updates and StackExchange has 10, the rare-source carriers are
+  undertrained and will hurt on their own domain (see
+  [failure-modes.md](failure-modes.md#undertrained-per-source-carriers)).
+- **`state/W0` in the log** — with `carried_decay=0.9` it can drift
+  toward the clip (~10×). If pinned at ~10 for many steps, the clip
+  is discarding most of the carrier's magnitude; lower `carried_decay`.
+- **Δbetween in the in-loop eval stays near 0** — expected, since
+  the in-loop eval doesn't install the persistent carriers (it
+  measures the standard chunk-scan). The everlasting-carry signal
+  appears in the *inference-time* holdout_eval with
+  `--use-everlasting-carry` (see [inference.md](inference.md)).
 
 ---
 

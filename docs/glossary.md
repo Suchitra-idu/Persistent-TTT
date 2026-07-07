@@ -65,6 +65,25 @@ with no slicing/carry, and long docs get sliced into k pieces with
 carry. Intended for diverse-length pretraining mixes (SlimPajama).
 See [training.md#hybrid-sessions](training.md#hybrid---for-diverse-length-pretraining-mixes).
 
+**Everlasting-carry (`everlasting_carry`, `--mode everlasting`).**
+Training mode where the fast weight is not per-session but
+**per-source**. The training loop maintains
+`Dict[source_label, Dict[layer_idx, Tensor]]` of persistent carriers,
+installed before each doc's forward and snapshotted back after
+`advance_session_state`. Each doc is a whole-doc, one-item session (no
+slicing). Requires a `source` column in the dataset. Persisted to
+`per_source_carries.pt` at every save tick so inference can seed the
+fast weight with the trained per-domain state.
+See [training.md#everlasting-carry-mode](training.md#everlasting-carry-mode).
+
+**Per-source carrier.** One `carried_delta` per source label, stored
+in the everlasting-carry dict. Same shape as any other `carried_delta`
+(`[1, hidden, intermediate]` fp32) — the "per-source" is about *which*
+carrier gets loaded before a given doc's forward, not about the layer
+having 6 separate weights. `W_target`, `target_conv`, `output_gate`
+remain **shared** across sources; only the runtime accumulated state is
+per-source.
+
 **Streaming mode (`stateful`).** Toggle on each TTT module + the tap.
 When True, `_stream_forward` runs instead of `_scan_forward`. The
 mechanism accumulates `state.delta` across forward calls.
@@ -137,11 +156,44 @@ signal is entirely in its direction, not magnitude.
 - **fresh** — `evolve=False`, fast weight = 0 throughout. TTT completely
   silent.
 
-**Δwithin / Δbetween / Δtotal.** Three ways to read the three-mode
-output. `Δwithin = fresh - carry-off` is the within-item chunk-scan
-benefit. `Δbetween = carry-off - carry` is the cross-item persistence
-benefit. `Δtotal = fresh - carry = Δwithin + Δbetween`. Positive = TTT
-helping. The decomposition tells you *where* the benefit comes from.
+**Δwithin / Δbetween / Δseed / Δtotal.** Regime-clean decomposition of
+the total TTT benefit. In the classical 3-mode eval (no seed):
+`Δwithin = fresh - carry-off` (within-item chunk-scan from zero),
+`Δbetween = carry-off - carry` (cross-item accumulation from zero),
+`Δtotal = fresh - carry = Δwithin + Δbetween`.
+
+In the 5-mode everlasting eval (`--include-cold-carry
+--use-everlasting-carry`), Δwithin and Δbetween are always computed
+against the **cold** (seed-free) states so they measure the mechanisms
+in isolation, not conflated with seed baseline:
+`Δwithin = fresh - cold-carry-off`,
+`Δbetween = cold-carry-off - cold-carry`,
+`Δseed = cold-carry - carry` (the seed's contribution on top),
+`Δtotal = fresh - carry = Δwithin + Δbetween + Δseed`.
+
+Positive = mechanism helping. Each column measures one mechanism —
+adding cold-carry-off (5th mode) was the fix that made this true. See
+[inference.md#everlasting-carry-eval](inference.md#everlasting-carry-eval).
+
+**Cold-carry.** A 4th eval mode enabled by `--include-cold-carry` on
+`holdout_eval`. Same session semantics as `carry` (evolve=True, no
+reset between items) but with **no seed installed** — starts from
+`carried_delta = None` and only accumulates during inference. Only
+runs when `--use-everlasting-carry` is also set; otherwise `carry`
+already IS cold-carry and the second pass would be redundant (a
+warning is printed).
+
+**Δseed.** `cold_carry - carry` under `--include-cold-carry`.
+Positive → the trained per-source seed helps vs starting from zero.
+Near-zero → the seed adds nothing beyond inference-time accumulation.
+Negative → the seed is actively harmful (consider lower `carried_decay`
+during training or a warmup for undertrained sources).
+
+**Force-source (`force_source`, `--force-source`).** Install a
+specific source's carrier for every doc regardless of the doc's actual
+label. The domain-specificity swap test: matched > mismatched implies
+the carrier encodes per-domain knowledge; matched ≈ mismatched implies
+the carrier is generic conditioning, not adaptation.
 
 **Three-way eval.** BASE (no adapter, no TTT) / LORA-ONLY (adapter +
 `load_ttt=False`) / FULL (adapter + TTT). Three separate model loads,

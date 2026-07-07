@@ -202,7 +202,7 @@ class TTTConfig:
     layer_indices: tuple | None = None
 
     # Tokens per fast-weight update. Changing requires retraining.
-    chunk_size: int = 200
+    chunk_size: int = 50
 
     # Inner-loop learning rate for W <- W + eta * V^T Z.
     eta: float = 7e-2
