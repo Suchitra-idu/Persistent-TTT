@@ -1500,6 +1500,212 @@ def run_holdout_eval(model, holdout_papers, n_slices: int,
     return metrics
 
 
+@app.function(image=image, gpu=GPU, volumes=VOLUMES, secrets=SECRETS,
+              timeout=60 * 60)
+def compounding_pilot(
+    resume_from: str,
+    source: str = "RedPajamaArXiv",
+    n_docs: int = 10,
+    max_tokens_per_doc: int = 4096,
+    min_tokens_per_doc: int = 2048,
+    docs_seed: int = 1337,
+    out_name: str = "",
+):
+    """Pilot: per-document NLL as a function of position in a synthetic
+    session, on a single source, under three regimes.
+
+    Regimes (same `n_docs`-long doc sequence in all three):
+      cold    -- reset TTT state before each doc. No cross-doc carry, no
+                 seed. Baseline: each doc starts fresh.
+      persist -- no reset, no seed. Session-persistent carry compounds
+                 across docs starting from zero.
+      seeded  -- session-persistent starting from the meta-learned
+                 per-source seed loaded from per_source_carries.pt.
+
+    Answers three questions from one plot:
+      1. Do `persist` and `cold` curves diverge as session length grows?
+      2. Is `seeded` an offset of `persist` or a different shape?
+      3. (Run again with source={code source} to compare compounding
+         rates across domains.)
+
+    resume_from -- REQUIRED. Cross-run form "run_name/step_N". Must point
+                   at a step dir containing adapter/ and ttt_params.pt.
+                   For the seeded regime, per_source_carries.pt in the
+                   same dir must include the requested source; otherwise
+                   the seeded regime is skipped with a warning.
+
+    Emits JSON at /ckpt/pilot/<out_name>.json. Plot locally with
+    `python plot_pilot.py <path>`.
+    """
+    import json
+    import random
+    import time as _time
+
+    import torch
+
+    from data_utils import apply_source_filter, open_dataset, split_holdout
+    from inplace_ttt import (
+        advance_session_state, install_carried_delta, iter_ttt_modules,
+        mean_state_ratio, reset_session_state, state_norms,
+    )
+    from model_setup import build_model
+    from ttt_wiring import load_per_source_carries
+
+    # 1) Model + optional seed. Bare `step_N` resolves against
+    # TRAIN_CFG.run_name (same behavior as train()); `run_name/step_N`
+    # picks a cross-run checkpoint explicitly.
+    adapter_path, ttt_ckpt_path = _resolve_resume(
+        resume_from, TRAIN_CFG.run_name,
+    )
+    model, tokenizer = build_model(
+        adapter_path=adapter_path, ttt_ckpt_path=ttt_ckpt_path,
+        trainable=False,
+    )
+    model.config.use_cache = False
+    model.eval()
+
+    resume_dir = os.path.dirname(adapter_path)
+    per_source_carries, meta = load_per_source_carries(
+        os.path.join(resume_dir, "per_source_carries.pt"),
+    )
+    seed_snapshot = per_source_carries.get(source)
+    if seed_snapshot is None:
+        avail = sorted(per_source_carries) if per_source_carries else "(none)"
+        print(f"warning: no per-source carrier for source={source!r} "
+              f"in checkpoint (available: {avail}); "
+              f"seeded regime will be skipped")
+    else:
+        seed_snapshot = {int(k): v.cuda() for k, v in seed_snapshot.items()}
+        n_updates = meta.get("n_updates", {}).get(source, "?")
+        print(f"loaded per-source seed for {source!r} "
+              f"(n_updates={n_updates}, layers={sorted(seed_snapshot)})")
+
+    # 2) Sample n_docs from the holdout for this source, deterministically.
+    spec = DATASET_SPEC
+    _, holdout = split_holdout(open_dataset(spec), spec)
+    holdout = apply_source_filter(holdout, spec)
+    if "source" not in holdout.column_names:
+        raise ValueError(
+            f"holdout has no `source` column -- the active DATASET_SPEC "
+            f"({spec.name!r}) is single-source. The pilot needs a "
+            f"multi-source spec. Prefix your invocation with e.g. "
+            f"TTT_DATASET=slimpajama-6b to pick the multi-source spec "
+            f"the checkpoint was trained on."
+        )
+    src_indices = [i for i in range(len(holdout))
+                   if holdout[i]["source"] == source]
+    print(f"holdout: {len(src_indices)} rows in source={source!r} "
+          f"of {len(holdout)} total")
+    if not src_indices:
+        raise RuntimeError(f"no holdout rows for source={source!r}")
+
+    text_col = spec.text_column
+    rng = random.Random(docs_seed)
+    rng.shuffle(src_indices)
+
+    picked_docs = []  # [(input_ids, n_tokens, holdout_idx), ...]
+    for idx in src_indices:
+        ids = tokenizer(holdout[idx][text_col], truncation=True,
+                        max_length=max_tokens_per_doc).input_ids
+        if len(ids) < min_tokens_per_doc:
+            continue
+        picked_docs.append((ids, len(ids), idx))
+        if len(picked_docs) >= n_docs:
+            break
+    if len(picked_docs) < n_docs:
+        print(f"warning: only {len(picked_docs)} docs met "
+              f"min_tokens_per_doc={min_tokens_per_doc}; using what we have")
+    if not picked_docs:
+        raise RuntimeError(
+            f"no docs met min_tokens_per_doc={min_tokens_per_doc} "
+            f"for source={source!r}"
+        )
+
+    lengths = [n for _, n, _ in picked_docs]
+    print(f"session: {len(picked_docs)} docs, "
+          f"lengths {min(lengths)}..{max(lengths)} tokens, "
+          f"total {sum(lengths):,d} tokens")
+
+    # 3) Three regimes over the SAME doc sequence. Snapshot module state
+    # so regimes don't contaminate each other -- reset_session_state at
+    # entry handles session state; params aren't modified (eval + no_grad).
+    def _run_regime(name: str, seed, reset_between_docs: bool):
+        for m in iter_ttt_modules(model):
+            m.ttt_evolve = True
+            m.session_mode = True
+            m.stateful = False  # scan path, matches training/eval
+        reset_session_state(model)
+        if seed:
+            install_carried_delta(model, seed)
+        rows = []
+        for pos, (doc_ids, n_tok, h_idx) in enumerate(picked_docs):
+            ids = torch.tensor([doc_ids], device="cuda")
+            with torch.no_grad():
+                loss = model(input_ids=ids, labels=ids).loss
+            advance_session_state(model)
+            state_ratio = mean_state_ratio(
+                state_norms(model, source="session")
+            )
+            nll = float(loss.item())
+            rows.append({
+                "pos": pos,
+                "holdout_idx": h_idx,
+                "n_tokens": n_tok,
+                "nll": nll,
+                "ppl": math.exp(nll),
+                "state_ratio": float(state_ratio),
+            })
+            print(f"  [{name:>7s}] doc {pos:>2d} "
+                  f"(n_tok={n_tok:>5d}) nll={nll:.4f} "
+                  f"ppl={math.exp(nll):.3f} sr={state_ratio:.3f}")
+            if reset_between_docs:
+                reset_session_state(model)
+                if seed:
+                    install_carried_delta(model, seed)
+        return rows
+
+    results = {}
+    print("--- regime: cold (reset per doc, no seed) ---")
+    results["cold"] = _run_regime("cold", None, reset_between_docs=True)
+    print("--- regime: persist (compounding, no seed) ---")
+    results["persist"] = _run_regime("persist", None, reset_between_docs=False)
+    if seed_snapshot:
+        print("--- regime: seeded (compounding, per-source seed) ---")
+        results["seeded"] = _run_regime(
+            "seeded", seed_snapshot, reset_between_docs=False,
+        )
+    else:
+        results["seeded"] = None
+
+    # 4) Persist.
+    out_dir = os.path.join(CKPT_MOUNT, "pilot")
+    os.makedirs(out_dir, exist_ok=True)
+    if not out_name:
+        out_name = (f"compounding_{source}_"
+                    f"n{len(picked_docs)}_{int(_time.time())}.json")
+    if not out_name.endswith(".json"):
+        out_name += ".json"
+    out_path = os.path.join(out_dir, out_name)
+    payload = {
+        "source": source,
+        "resume_from": resume_from,
+        "n_docs": len(picked_docs),
+        "docs_seed": docs_seed,
+        "min_tokens_per_doc": min_tokens_per_doc,
+        "max_tokens_per_doc": max_tokens_per_doc,
+        "seeded_available": seed_snapshot is not None,
+        "docs": [{"pos": i, "holdout_idx": h, "n_tokens": n}
+                 for i, (_, n, h) in enumerate(picked_docs)],
+        "regimes": results,
+    }
+    with open(out_path, "w") as f:
+        json.dump(payload, f, indent=2)
+    ckpt_vol.commit()
+    print(f"saved -> {out_path}")
+    print(f"plot locally: python plot_pilot.py <download of {out_path}>")
+    return out_path
+
+
 @app.function(image=image, volumes=VOLUMES, secrets=SECRETS,
               timeout=60 * 60)
 def build_reference_counts(
