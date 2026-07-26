@@ -73,10 +73,9 @@ PRESET_OVERSAMPLE = 2
 
 def load_token_dataset(tokenizer, cfg, limit_docs: int | None):
     """Load holdout-split, source-filter, shuffle, cap, tokenize,
-    drop-short. Shuffling happens BEFORE --limit-docs and BEFORE
-    in-corpus unigram counting so the head of the pipeline is a uniform
-    sample across sources -- critical for mixed corpora like SlimPajama
-    where the natural order is grouped by source.
+    drop-short. Shuffling happens BEFORE --limit-docs so the head of the
+    pipeline is a uniform sample across sources -- critical for mixed
+    corpora like SlimPajama where the natural order is grouped by source.
 
     For multi-source presets with a limit, we OVER-FETCH by
     PRESET_OVERSAMPLE before tokenize, then re-rebalance AFTER exact
@@ -423,57 +422,6 @@ def _resolve_resume(resume_from: str, run_name: str):
     return adapter_path, ttt_ckpt_path
 
 
-def _setup_loss_mask(cfg, ds, tokenizer, vocab_size):
-    """Build the content-token loss mask and move it to GPU. Returns None if disabled."""
-    from train_utils import (
-        apply_protect_passes, common_mask_from_counts, count_unigrams,
-        load_reference_counts,
-    )
-
-    if not cfg.loss_mask_enabled:
-        return None
-
-    ref_counts, ref_meta = load_reference_counts(
-        cfg.loss_mask_reference_counts_path, vocab_size,
-    )
-    if ref_counts is not None:
-        print(f"loss mask: using external reference from "
-              f"{ref_meta.get('dataset_id', '?')}/"
-              f"{ref_meta.get('dataset_config', '?')} "
-              f"({ref_meta.get('n_tokens', 0):,} tokens)")
-        common_mask = common_mask_from_counts(
-            ref_counts, keep_fraction=cfg.loss_mask_keep_fraction,
-        )
-    else:
-        if cfg.loss_mask_reference_counts_path:
-            print(f"loss mask: reference path "
-                  f"{cfg.loss_mask_reference_counts_path!r} not "
-                  f"found, falling back to in-corpus frequency. "
-                  f"Run build_reference_counts to populate.")
-        counts = count_unigrams(
-            (ex["input_ids"] for ex in ds), vocab_size=vocab_size,
-        )
-        common_mask = common_mask_from_counts(
-            counts, keep_fraction=cfg.loss_mask_keep_fraction,
-        )
-    n_before = int(common_mask.sum())
-    freed = apply_protect_passes(
-        common_mask, tokenizer,
-        cfg.loss_mask_protect_terms,
-        cfg.loss_mask_protect_numeric,
-        cfg.loss_mask_protect_symbols,
-    )
-    common_mask = common_mask.cuda()
-    print(f"loss mask: {int(common_mask.sum())}/{vocab_size} token ids "
-          f"masked (kf={cfg.loss_mask_keep_fraction:.2f}, "
-          f"protect-terms freed {freed[0]}, "
-          f"protect-numeric freed {freed[1]}, "
-          f"protect-symbols freed {freed[2]}, "
-          f"initial {n_before}); "
-          f"first_tokens={cfg.loss_mask_first_tokens} at paper-start items")
-    return common_mask
-
-
 def _make_epoch_sessions(cfg, num_docs, doc_lengths, rng):
     """Build the session schedule for one epoch. Dispatches on the four
     session modes; precedence everlasting > hybrid > single_paper > multi."""
@@ -724,7 +672,6 @@ def train(limit_docs: int = 0, num_epochs: int = 0,
     from ttt_wiring import build_param_groups
     from model_setup import build_model
     from observability import Telemetry, gpu_stats, param_health
-    from train_utils import apply_loss_mask
 
     cfg = _apply_cli_overrides(
         num_epochs=num_epochs, grad_accum=grad_accum, session=session,
@@ -840,7 +787,6 @@ def train(limit_docs: int = 0, num_epochs: int = 0,
                       f"{len(per_source_carries)} source(s): "
                       f"{sorted(per_source_carries)}")
 
-    common_mask = _setup_loss_mask(cfg, ds, tokenizer, model.config.vocab_size)
     items_per_epoch = _items_per_epoch(cfg, doc_lengths)
     steps_per_epoch = math.ceil(items_per_epoch / cfg.grad_accum_steps)
     total_steps = steps_per_epoch * epochs
@@ -877,14 +823,7 @@ def train(limit_docs: int = 0, num_epochs: int = 0,
                 ids = torch.tensor(
                     [full_ids[item.start:item.end]], device="cuda"
                 )
-                # Leading-token mask applies ONLY at paper-start items; mid-paper
-                # slices (start > 0) are real content, not shared boilerplate.
-                first_n = (
-                    cfg.loss_mask_first_tokens if item.start == 0 else 0
-                )
-                labels = apply_loss_mask(ids, common_mask,
-                                         first_tokens=first_n)
-                loss = model(input_ids=ids, labels=labels).loss
+                loss = model(input_ids=ids, labels=ids).loss
                 if TTT_CFG.output_gate and TTT_CFG.gate_reg_weight > 0:
                     loss = loss + TTT_CFG.gate_reg_weight * gate_reg_term(model)
 
@@ -931,10 +870,6 @@ def train(limit_docs: int = 0, num_epochs: int = 0,
                     "micro/session_n": len(session_items),
                     "micro/state_ratio_mean": state_ratio_mean,
                 }
-                if common_mask is not None:
-                    micro_log["micro/unmasked_token_frac"] = (
-                        float((labels != -100).float().mean())
-                    )
                 telemetry.log(micro_log)
                 micro += 1
 
@@ -1706,76 +1641,6 @@ def compounding_pilot(
     return out_path
 
 
-@app.function(image=image, volumes=VOLUMES, secrets=SECRETS,
-              timeout=60 * 60)
-def build_reference_counts(
-    dataset_id: str = "Salesforce/wikitext",
-    dataset_config: str = "wikitext-103-raw-v1",
-    split: str = "train",
-    text_column: str = "text",
-    out_name: str = "reference_wikitext103.pt",
-    limit_docs: int = 0,
-):
-    """Build a [vocab_size] unigram count tensor from a reference corpus,
-    saved to /ckpt/loss_mask/<out_name>."""
-    import torch
-    from datasets import load_dataset
-    from transformers import AutoConfig, AutoTokenizer
-
-    from train_utils import count_unigrams
-
-    print(f"loading {dataset_id} / {dataset_config} / {split} from HF Hub")
-    ds = load_dataset(dataset_id, dataset_config, split=split)
-    if limit_docs:
-        ds = ds.select(range(min(limit_docs, len(ds))))
-    print(f"loaded {len(ds)} rows; text column = {text_column!r}")
-
-    tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
-    # Align on model.config.vocab_size (padded) rather than tokenizer.vocab_size
-    # so saved counts match what train() validates against.
-    vocab_size = AutoConfig.from_pretrained(BASE_MODEL).vocab_size
-    print(f"tokenizer vocab_size = {tokenizer.vocab_size}, "
-          f"model.config.vocab_size = {vocab_size} (using padded)")
-
-    # add_special_tokens=False so BOS/EOS don't pollute the unigram tally.
-    def tokenize(batch):
-        out = tokenizer(batch[text_column],
-                        add_special_tokens=False, truncation=False)
-        return {"input_ids": out["input_ids"]}
-
-    print("tokenizing (batched)...")
-    tokens_ds = ds.map(tokenize, batched=True, batch_size=1000,
-                       remove_columns=ds.column_names, desc="tokenize")
-
-    print("counting unigrams (one pass)...")
-    counts = count_unigrams(
-        (ex["input_ids"] for ex in tokens_ds), vocab_size=vocab_size,
-    )
-    n_tokens = int(counts.sum().item())
-    n_unique = int((counts > 0).sum().item())
-    print(f"counted {n_tokens:,} tokens across {len(tokens_ds)} rows; "
-          f"{n_unique} unique token ids observed")
-
-    out_dir = os.path.join(CKPT_MOUNT, "loss_mask")
-    os.makedirs(out_dir, exist_ok=True)
-    out_path = os.path.join(out_dir, out_name)
-    torch.save({
-        "counts": counts,
-        "tokenizer_name": BASE_MODEL,
-        "dataset_id": dataset_id,
-        "dataset_config": dataset_config,
-        "split": split,
-        "n_docs": len(tokens_ds),
-        "n_tokens": n_tokens,
-        "n_unique": n_unique,
-        "vocab_size": vocab_size,
-    }, out_path)
-    ckpt_vol.commit()
-    print(f"saved -> {out_path}")
-    print(f"set TRAIN_CFG.loss_mask_reference_counts_path = {out_path!r} "
-          f"to use this in training (default already points here).")
-
-
 @app.function(image=image, gpu=GPU, volumes=VOLUMES, timeout=60 * 10)
 def sanity_check():
     """Verify TTT wiring: with W_target zeroed, TTT path must contribute zero."""
@@ -1822,200 +1687,6 @@ def sanity_check():
     print(f"max |logit diff| at ZEROED W_target = {diff_zero:.6f}")
     assert diff_zero < 1e-3, "TTT path not exact-zero at W_target=0, wiring broken"
     print("identity check passed")
-
-
-@app.function(image=image, volumes=VOLUMES, secrets=SECRETS,
-              timeout=60 * 30)
-def diagnose_loss_mask(limit_docs: int = 0, top_k: int = 80,
-                       keep_fraction: float = 0.0,
-                       use_reference: bool = False):
-    """Report what the content-token loss mask catches (in-corpus or reference mode)."""
-    import torch
-    from transformers import AutoTokenizer
-
-    from train_utils import (
-        apply_protect_passes, common_mask_from_counts,
-        load_reference_counts,
-    )
-
-    kf = keep_fraction if keep_fraction > 0 else TRAIN_CFG.loss_mask_keep_fraction
-    print(f"loss_mask diagnostic: keep_fraction={kf:.3f}, "
-          f"mode={'external-reference' if use_reference else 'in-corpus'}\n")
-
-    tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
-    # len(tokenizer) is the full table the model indexes into.
-    vocab_size = max(tokenizer.vocab_size, len(tokenizer))
-
-    if use_reference:
-        ref_counts, ref_meta = load_reference_counts(
-            TRAIN_CFG.loss_mask_reference_counts_path, vocab_size,
-        )
-        if ref_counts is None:
-            raise RuntimeError(
-                f"use_reference=True but "
-                f"{TRAIN_CFG.loss_mask_reference_counts_path!r} not "
-                f"found; run build_reference_counts first"
-            )
-        label = (f"ref:{ref_meta.get('dataset_id', '?')}/"
-                 f"{ref_meta.get('dataset_config', '?')}")
-        print(f"reference: {label}, "
-              f"{ref_meta.get('n_tokens', 0):,} tokens across "
-              f"{ref_meta.get('n_docs', 0)} rows")
-        snapshots = [(label, ref_meta.get("n_docs", 0), ref_counts)]
-    else:
-        ds = load_token_dataset(tokenizer, TRAIN_CFG, limit_docs or None)
-        hf_vol.commit()
-        n = len(ds)
-        if n < 4:
-            raise RuntimeError(
-                f"need at least 4 docs for quartile slicing, got {n}"
-            )
-
-        # ds is oldest -> newest (arxiv-id order) after split_holdout.
-        cuts = [
-            ("first 25%", n // 4),
-            ("first 50%", n // 2),
-            ("first 75%", 3 * n // 4),
-            ("full set",  n),
-        ]
-        cut_lookup = {k: label for label, k in cuts}
-
-        print(f"counting tokens over {n} docs (one pass)...")
-        snapshots = []
-        running = torch.zeros(vocab_size, dtype=torch.int64)
-        for i in range(n):
-            ids_list = ds[i]["input_ids"]
-            t = torch.as_tensor(ids_list, dtype=torch.int64)
-            if t.numel():
-                if int(t.max()) >= vocab_size or int(t.min()) < 0:
-                    raise ValueError(
-                        f"OOR token at doc {i}: min={int(t.min())}, "
-                        f"max={int(t.max())}, vocab_size={vocab_size}"
-                    )
-                running += torch.bincount(t, minlength=vocab_size)
-            if (i + 1) in cut_lookup:
-                snapshots.append(
-                    (cut_lookup[i + 1], i + 1, running.clone())
-                )
-
-    slices = []
-    for label, k, counts in snapshots:
-        mask = common_mask_from_counts(counts, keep_fraction=kf)
-        n_pre_protect = int(mask.sum())
-        freed_terms, freed_numeric, freed_symbols = apply_protect_passes(
-            mask, tokenizer,
-            TRAIN_CFG.loss_mask_protect_terms,
-            TRAIN_CFG.loss_mask_protect_numeric,
-            TRAIN_CFG.loss_mask_protect_symbols,
-        )
-        total = int(counts.sum().item())
-        n_masked = int(mask.sum())
-        kept_share = (
-            float((counts * (~mask).long()).sum().item() / total)
-            if total else 0.0
-        )
-        slices.append({
-            "label": label, "k": k, "tokens": total,
-            "mask": mask, "counts": counts,
-            "n_pre_protect": n_pre_protect,
-            "freed_terms": freed_terms,
-            "freed_numeric": freed_numeric,
-            "freed_symbols": freed_symbols,
-            "n_masked": n_masked, "kept_share": kept_share,
-        })
-
-    header = ("Mask statistics (external reference)"
-              if use_reference else
-              "Per-slice mask statistics (post-protect passes)")
-    print(f"\n=== {header} ===")
-    label_w = max(20, max(len(s["label"]) for s in slices) + 1)
-    print(f"  {'slice':<{label_w}} {'docs':>6} {'tokens':>14} "
-          f"{'pre_protect':>11} {'free_t':>7} {'free_n':>7} {'free_s':>7} "
-          f"{'masked_ids':>11} {'pos_kept':>9}")
-    for s in slices:
-        print(f"  {s['label']:<{label_w}} {s['k']:>6} {s['tokens']:>14,} "
-              f"{s['n_pre_protect']:>11} {s['freed_terms']:>7} "
-              f"{s['freed_numeric']:>7} {s['freed_symbols']:>7} "
-              f"{s['n_masked']:>11} {s['kept_share']:>8.1%}")
-    print("  free_t = protect-terms, free_n = protect-numeric, "
-          "free_s = protect-symbols.")
-
-    where = "external ref" if use_reference else "full set"
-    print(f"\n=== Top-{top_k} masked tokens ({where}, descending freq) ===")
-    print(f"  {'rank':>4}  {'id':>6}  {'count':>14}  token")
-    full = slices[-1]
-    masked_counts = full["counts"].clone()
-    masked_counts[~full["mask"]] = 0
-    top_vals, top_ids = torch.topk(masked_counts, k=min(top_k, vocab_size))
-    for rank, (val, tid) in enumerate(
-        zip(top_vals.tolist(), top_ids.tolist()), 1
-    ):
-        if val == 0:
-            break
-        s = tokenizer.decode([tid])
-        print(f"  {rank:>4}  {tid:>6}  {val:>14,}  {s!r}")
-
-    spot_terms = [
-        ("function-words",
-         ["the", "of", "and", "is", "we", "in", "to", "a", "for", "with"]),
-        ("ML-glue (the question)",
-         ["model", "training", "data", "loss", "gradient", "layer",
-          "network", "learning", "weights", "function"]),
-        ("domain content (should stay kept)",
-         ["transformer", "diffusion", "convolution", "attention",
-          "embedding", "tokenizer", "Bayesian", "Markov", "kernel",
-          "VAE", "GAN", "policy", "reward"]),
-    ]
-    print("\n=== Spot check: mask status across cumulative slices ===")
-    print("  Row 1: first-piece status per slice (legacy summary).")
-    print("  Row 2: ACTUAL pieces -- decoded string and full-set mask "
-          "status of each.")
-    print("  A multi-piece row whose first piece is MASKED does NOT "
-          "mean the full term was masked; it means BPE split the term "
-          "and one piece happened to be a common id. Read row 2.")
-    col_w = max(10, max(len(s["label"]) for s in slices))
-    header_cells = "  ".join(f"{s['label']:>{col_w}s}" for s in slices)
-    print(f"\n  {'term':<24}  {header_cells}")
-    print(f"  {'-' * 24}  " + "  ".join("-" * col_w for _ in slices))
-    full_mask = slices[-1]["mask"]
-    for group_name, terms in spot_terms:
-        print(f"  [{group_name}]")
-        for term in terms:
-            ids = tokenizer.encode(" " + term, add_special_tokens=False)
-            if not ids:
-                continue
-            cells = []
-            for s in slices:
-                cells.append("MASKED" if bool(s["mask"][ids[0]])
-                             else "kept")
-            cell_str = "  ".join(f"{c:>{col_w}s}" for c in cells)
-            shown = f"' {term}' (1st id {ids[0]})"
-            print(f"  {shown:<24}  {cell_str}")
-            piece_parts = []
-            for tid in ids:
-                tid = int(tid)
-                mark = "M" if bool(full_mask[tid]) else "k"
-                decoded = tokenizer.decode([tid])
-                piece_parts.append(f"[{tid}:{decoded!r}={mark}]")
-            piece_str = " + ".join(piece_parts)
-            tag = " <-- single piece" if len(ids) == 1 else \
-                  f" <-- {len(ids)}-piece BPE split"
-            print(f"  {'':<24}  pieces: {piece_str}{tag}")
-
-    print("\ndone.")
-    print("Reading the spot check:")
-    print("  - Row 1 is the legacy 'first-piece' summary; Row 2 is the "
-          "truth.")
-    print("  - Single-piece rows: 'MASKED' there = the whole word's "
-          "loss is dropped. If those are domain content, the "
-          "protect-list should have caught them; otherwise raise "
-          "keep_fraction or add the term.")
-    print("  - Multi-piece rows with M+k...: BPE split the term, the "
-          "first piece is a common id (e.g. ' V', ' G'). protect_token_ids "
-          "deliberately skips these to avoid leak-unmasking every "
-          "capital-V mid-sentence word; the trailing pieces still "
-          "receive loss, so the model still trains on the rare onset "
-          "+ the full tail.")
 
 
 @app.local_entrypoint()

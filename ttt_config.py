@@ -5,7 +5,7 @@ imported by both the training and inference apps.
 """
 
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 
 CKPT_VOLUME_NAME = "ttt-checkpoints"
@@ -186,13 +186,6 @@ def derive_ttt_layer_indices(num_layers: int,
     return tuple(range(start, num_layers, stride))
 
 
-def _default_protect_terms() -> tuple:
-    """Lazy import so ttt_config stays a leaf module (train_utils may add
-    heavier deps later without pulling them at config import time)."""
-    from train_utils import LOSS_MASK_DEFAULT_PROTECT_TERMS
-    return LOSS_MASK_DEFAULT_PROTECT_TERMS
-
-
 @dataclass
 class TTTConfig:
     """Hyperparameters of the In-Place TTT mechanism itself."""
@@ -338,37 +331,6 @@ class TrainConfig:
     #     carry stays bounded across hundreds of doc updates.
     #   - Precedence over hybrid_sessions / single_paper_sessions.
     everlasting_carry: bool = False
-
-    # Content-token loss masking. CE is computed only on positions whose
-    # token_id is NOT among the most-frequent tokens accounting for
-    # (1 - loss_mask_keep_fraction) of baseline occurrences.
-    # 1.0 disables masking even when loss_mask_enabled=True.
-    loss_mask_enabled: bool = False
-    loss_mask_keep_fraction: float = 0.5
-
-    # Force-unmask domain content. Pass () to disable the override.
-    # The default list lives in train_utils to keep this module scannable.
-    loss_mask_protect_terms: tuple = field(
-        default_factory=lambda: _default_protect_terms()
-    )
-
-    # External-reference frequency baseline; falls back to in-corpus
-    # frequency (with a log line) when the file is absent.
-    loss_mask_reference_counts_path: str = (
-        "/ckpt/loss_mask/reference_wikitext103.pt"
-    )
-
-    # Predicate-protect: pure-digit tokens (scientific content).
-    loss_mask_protect_numeric: bool = True
-
-    # Predicate-protect: single-character math symbols (scientific content).
-    loss_mask_protect_symbols: tuple = (
-        "=", "@", "^", "_", "\\", "+", "-", "*", "/", "|", "<", ">",
-    )
-
-    # Mask the first N tokens of paper-START items (SessionItem.start == 0)
-    # to skip boilerplate. Mid-paper slices are unaffected. 0 disables.
-    loss_mask_first_tokens: int = 16
 
     seed: int = 42
     log_every: int = 10
