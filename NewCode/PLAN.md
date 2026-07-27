@@ -5,7 +5,8 @@ Rebuilding the In-Place TTT research codebase under `RESEARCH_ARCHITECTURE.md`
 gets built, in what order, and how each phase is proven correct before the
 next one starts.
 
-Status: **plan approved? → not yet. Nothing built.**
+Status: **Phase 0 complete (2026-07-27)** — scaffold + enforcement, `make check`
+green. Phases 1–6 pending.
 
 ---
 
@@ -398,7 +399,13 @@ pipeline runs in a test in milliseconds with no `datasets` install.
 ```ini
 [importlinter:contract:rings]
 type = layers
-layers = ttt.experiments | ttt.app | ttt.adapters | ttt.ports | ttt.extensions | ttt.core
+layers =
+    ttt.experiments
+    ttt.app
+    ttt.adapters
+    ttt.ports
+    ttt.extensions
+    ttt.core
 
 [importlinter:contract:app-never-touches-a-concrete-adapter]
 type = forbidden
@@ -408,7 +415,11 @@ forbidden_modules = ttt.adapters
 (The spec's own snippet is not sufficient here — a pure `layers` contract puts
 `adapters` *below* `app`, which would legalise `app → adapters`. The explicit
 `forbidden` contract is what actually enforces "via interfaces, never a
-concrete adapter directly.")
+concrete adapter directly." Verified in Phase 0: a planted `app → adapters`
+import leaves the `rings` contract **kept** and breaks only the `forbidden`
+one. Note also that layers are *newline*-separated — the spec writes them on
+one line joined by `|`, which in import-linter means "independent siblings in
+a single layer" and would forbid `app → core`.)
 
 Plus forbidden contracts keeping `transformers` / `peft` / `modal` / `wandb` /
 `datasets` out of `core`, `extensions`, and `ports`.

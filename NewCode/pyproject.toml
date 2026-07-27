@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ttt"
+version = "0.1.0"
+description = "Session-persistent in-place test-time training, rebuilt under the Research Hexagon"
+requires-python = ">=3.11"
+dependencies = [
+    "torch>=2.8",
+    "transformers>=4.56",
+    "peft>=0.17",
+    "datasets>=4.0",
+    "huggingface-hub>=0.34",
+    "modal>=1.0",
+    "wandb>=0.21",
+]
+# Deliberately absent (D11): bitsandbytes (-> torch.optim.AdamW) and the
+# pinned flash-attn wheel (-> sdpa attention everywhere).
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "hypothesis>=6.100",       # Ring 0 property tests (spec §10)
+    "import-linter>=2.0",      # the enforced Dependency Rule (spec §9)
+]
+plot = ["matplotlib>=3.8"]
+
+[tool.setuptools.packages.find]
+include = ["ttt*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+# Default deselection: `pytest` with no arguments runs exactly the tier that
+# must stay fast (spec §10 rule 10). Pass `-m gpu` etc. to override.
+addopts = "-m 'not gpu and not integration and not slow' --strict-markers -q"
+markers = [
+    "gpu: needs a real GPU. Manual and gated, never in CI.",
+    "integration: needs network, a real download, or a live service.",
+    "slow: over ~1s. Quarantined out of the default tier.",
+    "parity: OLD-vs-NEW numeric equivalence (Phase 6).",
+]

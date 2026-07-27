@@ -1,0 +1,5 @@
+# Hypothesis' example database (Phase 1 onward) — machine-local, not shared.
+.hypothesis/
+
+# Editable-install metadata from `make install-dev`.
+*.egg-info/
