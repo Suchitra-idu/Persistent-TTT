@@ -5,8 +5,9 @@ Rebuilding the In-Place TTT research codebase under `RESEARCH_ARCHITECTURE.md`
 gets built, in what order, and how each phase is proven correct before the
 next one starts.
 
-Status: **Phases 0–1 complete (2026-07-27)** — scaffold + enforcement, and all
-of Ring 0. `make check` green: 407 tests, 5.5s. Phases 2–6 pending.
+Status: **Phases 0–2 complete (2026-07-28)** — scaffold + enforcement, all of
+Ring 0, and Ring 1's two registries plus the TTT module. `make check` green:
+616 tests, 5.9s. Phases 3–6 pending.
 
 ---
 

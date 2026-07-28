@@ -68,4 +68,5 @@ nav:
   - Mechanism: mechanism.md
   - Glossary: glossary.md
   - Ring 0 map: core-map.md
+  - Ring 1 map: extensions-map.md
   - Testing: testing.md

@@ -11,6 +11,7 @@ Read as files, or run `make docs` from `NewCode/` and open
 | [mechanism.md](mechanism.md) | What In-Place TTT does, with the formulas |
 | [glossary.md](glossary.md) | Every term used in the code |
 | [core-map.md](core-map.md) | What is in each Ring 0 file |
+| [extensions-map.md](extensions-map.md) | The Ring 1 plugins and the TTT module |
 | [testing.md](testing.md) | How to run and add tests |
 
 Elsewhere: [ARCHITECTURE.md](../ARCHITECTURE.md) for the rings,
@@ -19,7 +20,8 @@ Elsewhere: [ARCHITECTURE.md](../ARCHITECTURE.md) for the rings,
 
 ## Status
 
-Phases 0–1 done: enforcement and all of Ring 0. Rings 1–5 are empty packages.
+Phases 0–2 done: enforcement, all of Ring 0, and Ring 1's two registries plus
+the TTT module. Rings 2–5 are empty packages.
 
 ## Commands
 

@@ -6,6 +6,10 @@ LINT_IMPORTS ?= $(VENV)/bin/lint-imports
 
 export PYTHONPATH := .
 
+# Silences mkdocs-material's advocacy banner about a future MkDocs 2.0. It is
+# not a build warning; `docs-build` is --strict and clean.
+export NO_MKDOCS_2_WARNING := 1
+
 .DEFAULT_GOAL := check
 
 ## check: the gate. Dependency Rule + the fast test tier. Nothing merges red.

@@ -155,8 +155,13 @@ Built side by side with the original flat modules in the parent directory
 (PLAN.md D8); nothing there is touched until the parity suite in Phase 6 is
 green, and retiring it is a separate explicit call.
 
-**Phases 0–1 complete.** Ring 0 is built and property-tested; rings 1–5 are
-empty packages awaiting their phases.
+**Phases 0–2 complete.** Ring 0 is built and property-tested, Ring 1 holds the
+`strategies` and `datasets` registries and the TTT module; rings 2–5 are empty
+packages awaiting their phases.
+
+`tests/parity/` opened early, with the Phase 2 schedule parity that PLAN §5
+requires of this phase. It is marked `parity` and runs by default; the numeric
+suite that fills it out is still Phase 6.
 
 One file in `ttt/core/` is not in PLAN §2's list: `lr_schedule.py`. The old
 loop got its schedule from `transformers.get_cosine_schedule_with_warmup`, and
