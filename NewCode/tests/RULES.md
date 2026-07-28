@@ -43,6 +43,11 @@ Rules 5, 6 and 10 are not left to good intentions:
 | 6 (every registry has a contract suite) | `tests/architecture/test_suite_completeness.py` |
 | 10 (speed budget) | the `gpu`, `integration` and `slow` markers, deselected by default in `pyproject.toml` |
 | the Dependency Rule itself | `.importlinter`, run by `make check` |
+| no excessive comments (`/CLAUDE.md`) | `tests/architecture/test_comment_budget.py` — documentation lines may not exceed half a file's code lines |
+
+A test's name is its documentation. Do not add a comment restating what a
+test asserts; if the name cannot carry it, the test is doing too much
+(rule 2).
 
 ## Directory map
 

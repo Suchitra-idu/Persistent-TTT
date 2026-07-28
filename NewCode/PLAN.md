@@ -5,8 +5,8 @@ Rebuilding the In-Place TTT research codebase under `RESEARCH_ARCHITECTURE.md`
 gets built, in what order, and how each phase is proven correct before the
 next one starts.
 
-Status: **Phase 0 complete (2026-07-27)** — scaffold + enforcement, `make check`
-green. Phases 1–6 pending.
+Status: **Phases 0–1 complete (2026-07-27)** — scaffold + enforcement, and all
+of Ring 0. `make check` green: 407 tests, 5.5s. Phases 2–6 pending.
 
 ---
 
@@ -559,14 +559,18 @@ three, four plugins instead of eight.
 
 ## 7. Defects found in the current code (carried into the rebuild as fixes)
 
-1. **`tests/test_scan_math.py::test_scan_matches_sequential_reference_session_carry`
-   fails today** (max err 3.5e-3 vs a 1e-6 tolerance). The reference oracle
+1. ~~**`tests/test_scan_math.py::test_scan_matches_sequential_reference_session_carry`
+   fails today**~~ (max err 3.5e-3 vs a 1e-6 tolerance). The reference oracle
    models the carry as a pure sum; `_scan_forward` has applied a
    `carried_decay=0.9` EMA since that config field was added. The oracle was
    never updated. The mechanism is probably right and the oracle stale — but
-   *nothing in the repo currently proves which*. Phase 1 rebuilds the oracle
-   with `carried_decay` as a parameter and property-tests both
-   `decay=1.0` (pure sum) and `decay<1.0` (EMA), which settles it.
+   *nothing in the repo currently proves which*.
+   **Settled in Phase 1.** `tests/core/_oracles.py::sequential_carry` takes
+   `decay` as a parameter and `tests/core/test_carry.py` pins both limits:
+   `decay=1.0` reproduces the pure sum the old oracle assumed, `decay<1.0`
+   reproduces the EMA the mechanism runs, and a third test asserts the two
+   disagree — which is exactly the 3.5e-3 the old suite reported. The
+   mechanism was right; the oracle was stale.
 
 2. **`tests/test_loss_mask.py` is dead** — it imports eight functions deleted
    from `train_utils.py` in commit `00f2a53`, so the suite doesn't even

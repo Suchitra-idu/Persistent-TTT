@@ -3,3 +3,6 @@
 
 # Editable-install metadata from `make install-dev`.
 *.egg-info/
+
+# mkdocs build output.
+site/

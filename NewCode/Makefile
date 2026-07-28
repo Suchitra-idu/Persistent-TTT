@@ -28,9 +28,17 @@ test-gpu:
 test-all:
 	$(PYTHON) -m pytest -m ""
 
-## install-dev: the dev tier (pytest, hypothesis, import-linter).
+## docs: serve docs/ at http://127.0.0.1:8000 with live reload.
+docs:
+	$(VENV)/bin/mkdocs serve
+
+## docs-build: build the site into site/. --strict fails on a broken link.
+docs-build:
+	$(VENV)/bin/mkdocs build --strict
+
+## install-dev: the dev tier (pytest, hypothesis, import-linter, mkdocs).
 install-dev:
-	$(PYTHON) -m pip install -e ".[dev]"
+	$(PYTHON) -m pip install -e ".[dev,docs]"
 
 ## guard: prove the enforcement bites — plant a core -> transformers import,
 ## expect `make lint` to fail, then remove it. Should print PASS.
@@ -45,4 +53,4 @@ guard:
 		echo "GUARD PASS: core -> transformers is rejected"; \
 	fi
 
-.PHONY: check lint test test-gpu test-all install-dev guard
+.PHONY: check lint test test-gpu test-all docs docs-build install-dev guard

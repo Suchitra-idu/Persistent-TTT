@@ -1,15 +1,13 @@
-"""Filesystem scanning helpers for the architecture tests.
+"""Filesystem scanning for the architecture tests.
 
-These run at *collection* time so that each discovered file becomes its own
-parametrized test case. That keeps the test bodies free of loops and
-branching (RULES.md rule 9) and gives one reason to fail per test (rule 2).
-
-This module is a test helper, not a test: it is the one place in the suite
-allowed to read the filesystem.
+Runs at collection time so each discovered file is its own parametrized case,
+keeping loops and branching out of test bodies (RULES.md rule 9). The one
+place in the suite allowed to read the filesystem.
 """
 
 from __future__ import annotations
 
+import ast
 import io
 import tokenize
 from pathlib import Path
@@ -18,13 +16,10 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 PACKAGE_ROOT = REPO_ROOT / "ttt"
 TESTS_ROOT = REPO_ROOT / "tests"
 
-#: Rings 0-2. Everything here must be importable with no I/O, no GPU, no
-#: global state, and no wall clock.
 PURE_RINGS = ("core", "extensions", "ports")
 
 
 def python_files(*relative_dirs: str) -> list[Path]:
-    """Every ``.py`` file under the given package-relative directories."""
     found: list[Path] = []
     for relative in relative_dirs:
         found.extend(sorted((PACKAGE_ROOT / relative).rglob("*.py")))
@@ -32,7 +27,6 @@ def python_files(*relative_dirs: str) -> list[Path]:
 
 
 def package_relative(path: Path) -> str:
-    """``ttt/core/carry.py`` — the form used in test ids and messages."""
     return str(path.relative_to(REPO_ROOT))
 
 
@@ -48,12 +42,9 @@ _LITERAL_TOKENS = frozenset(
 
 
 def code_only(path: Path) -> str:
-    """Source with every comment and string literal blanked out.
+    """Source with comments and string literals blanked, positions preserved.
 
-    A banned idiom named in a docstring — "this ring may not read
-    ``os.environ``" — is documentation, not a violation. Blanking preserves
-    line and column positions so any future line-number reporting stays
-    accurate.
+    A banned idiom named in a docstring is documentation, not a violation.
     """
     source = path.read_text(encoding="utf-8")
     grid = [list(line) for line in source.splitlines(keepends=True)]
@@ -71,11 +62,42 @@ def code_only(path: Path) -> str:
     return "".join("".join(line) for line in grid)
 
 
+def documentation_and_code_lines(path: Path) -> tuple[int, int]:
+    """(documentation lines, code lines) for the comment budget.
+
+    Documentation is docstring lines plus whole-line comments. A trailing
+    comment counts as code — it is the cheapest and most useful kind — and a
+    multi-line error message is code, not prose, which is why this uses `ast`
+    rather than blanking every string literal.
+    """
+    source = path.read_text(encoding="utf-8")
+    documented: set[int] = set()
+
+    for node in ast.walk(ast.parse(source)):
+        if not isinstance(
+            node, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)
+        ):
+            continue
+        if ast.get_docstring(node, clean=False) is None:
+            continue
+        expression = node.body[0]
+        documented.update(range(expression.lineno, expression.end_lineno + 1))
+
+    for token in tokenize.generate_tokens(io.StringIO(source).readline):
+        if token.type == tokenize.COMMENT and not token.line[: token.start[1]].strip():
+            documented.add(token.start[0])
+
+    non_blank = {
+        number
+        for number, line in enumerate(source.splitlines(), start=1)
+        if line.strip()
+    }
+    return len(documented), len(non_blank - documented)
+
+
 def port_modules() -> list[Path]:
-    """One file per port interface (Ring 2), excluding ``__init__``."""
     return [p for p in python_files("ports") if p.stem != "__init__"]
 
 
 def registry_modules() -> list[Path]:
-    """One ``_registry.py`` per Ring 1 extension axis."""
     return [p for p in python_files("extensions") if p.stem == "_registry"]

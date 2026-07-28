@@ -1,1 +1,1 @@
-"""Ring 1 — session strategies. Registry axis: ``STRATEGIES``."""
+"""Ring 1 — session strategies. Registry: STRATEGIES."""

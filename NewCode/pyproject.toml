@@ -16,14 +16,17 @@ dependencies = [
     "modal>=1.0",
     "wandb>=0.21",
 ]
-# Deliberately absent (D11): bitsandbytes (-> torch.optim.AdamW) and the
-# pinned flash-attn wheel (-> sdpa attention everywhere).
+# Absent by decision (D11): bitsandbytes, and the pinned flash-attn wheel.
 
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0",
-    "hypothesis>=6.100",       # Ring 0 property tests (spec §10)
-    "import-linter>=2.0",      # the enforced Dependency Rule (spec §9)
+    "hypothesis>=6.100",
+    "import-linter>=2.0",
+]
+docs = [
+    "mkdocs>=1.6",
+    "mkdocs-material>=9.5",
 ]
 plot = ["matplotlib>=3.8"]
 
@@ -33,8 +36,7 @@ include = ["ttt*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
-# Default deselection: `pytest` with no arguments runs exactly the tier that
-# must stay fast (spec §10 rule 10). Pass `-m gpu` etc. to override.
+# `pytest` with no arguments runs the tier that must stay fast (rule 10).
 addopts = "-m 'not gpu and not integration and not slow' --strict-markers -q"
 markers = [
     "gpu: needs a real GPU. Manual and gated, never in CI.",

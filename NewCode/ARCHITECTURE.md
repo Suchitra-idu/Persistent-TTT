@@ -7,6 +7,8 @@ them going anywhere else.
 
 The rebuild contract — what gets built, in what order, and the decisions
 (D1–D14) behind the deviations noted below — is [`PLAN.md`](PLAN.md).
+For the mechanism itself, the vocabulary, and a file-by-file map of Ring 0,
+see [`docs/`](docs/README.md).
 
 ---
 
@@ -92,8 +94,10 @@ make check   =   make lint   +   make test
 scan banning `os.environ`, wall-clock reads, `torch.cuda`, `torch.manual_seed`,
 `random.seed` / `numpy.random`, and filesystem access from rings 0–2. Comments
 and string literals are excluded, so *naming* an idiom in a docstring is not a
-violation. It also asserts the structural half of the test doctrine: every
-port has a conformance suite, every registry has a contract suite.
+violation. It also asserts the structural half of the test doctrine (every
+port has a conformance suite, every registry has a contract suite) and the
+comment budget from [`/CLAUDE.md`](../CLAUDE.md): documentation lines may not
+exceed half a file's code lines.
 
 `make guard` proves the enforcement is live: it plants a `core -> transformers`
 import, expects `make lint` to reject it, and cleans up.
@@ -151,5 +155,12 @@ Built side by side with the original flat modules in the parent directory
 (PLAN.md D8); nothing there is touched until the parity suite in Phase 6 is
 green, and retiring it is a separate explicit call.
 
-**Phase 0 complete** — scaffold and enforcement. Rings 1–5 are empty packages
-awaiting their phases.
+**Phases 0–1 complete.** Ring 0 is built and property-tested; rings 1–5 are
+empty packages awaiting their phases.
+
+One file in `ttt/core/` is not in PLAN §2's list: `lr_schedule.py`. The old
+loop got its schedule from `transformers.get_cosine_schedule_with_warmup`, and
+Ring 4 may not import a framework, so the warmup+cosine math has to live in
+Ring 0. It reproduces HuggingFace's curve exactly inside
+`[0, num_training_steps]` and raises past the end, where HuggingFace silently
+oscillates back up.

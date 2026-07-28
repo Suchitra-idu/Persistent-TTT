@@ -3,15 +3,8 @@ root_packages =
     ttt
 include_external_packages = True
 
-# ---------------------------------------------------------------------------
-# The Dependency Rule (spec §9). Imports point strictly inward.
-#
-# NOTE ON SYNTAX: layers are newline-separated, one ring per line. The
-# specification's snippet writes them on a single line joined by "|", but in
-# import-linter "|" separates *independent siblings within one layer* — which
-# would forbid `app -> core` instead of allowing it. Newlines are what
-# actually encode "outer may import inner".
-# ---------------------------------------------------------------------------
+# Layers are newline-separated, one ring per line. "|" would mean independent
+# siblings in a single layer, which forbids app -> core rather than allowing it.
 [importlinter:contract:rings]
 name = inward-only dependencies
 type = layers
@@ -23,9 +16,8 @@ layers =
     ttt.extensions
     ttt.core
 
-# A pure `layers` contract places adapters *below* app, which would legalise
-# `app -> adapters`. Ring 4 must reach the outside world only through the
-# ports, so the prohibition is spelled out separately.
+# A pure layers contract puts adapters below app, which would legalise
+# app -> adapters. Ring 4 reaches the outside world only through the ports.
 [importlinter:contract:app-never-touches-a-concrete-adapter]
 name = app depends on ports, never on a concrete adapter
 type = forbidden
@@ -34,7 +26,8 @@ source_modules =
 forbidden_modules =
     ttt.adapters
 
-# D1: Ring 0 may import torch; no ring inside adapters may import a framework.
+# D1: Ring 0 may import torch. D1's numpy.random half is enforced by the
+# banned-idiom scan, since import-linter tracks externals at top level only.
 [importlinter:contract:frameworks-out-of-inner-rings]
 name = no frameworks in core, extensions, or ports
 type = forbidden
@@ -48,13 +41,8 @@ forbidden_modules =
     modal
     wandb
     datasets
-# (D1 also bans `numpy.random` globals from these rings. import-linter tracks
-# external packages only at top level, so that half is enforced by the
-# banned-idiom scan in tests/architecture/ instead.)
 
-# Ring 4 is orchestration only and is tested entirely on fakes, so it must not
-# reach a framework directly either — including torch, which belongs behind
-# the Compute / FastWeights ports.
+# Ring 4 is tested entirely on fakes, so torch belongs behind the ports too.
 [importlinter:contract:app-stays-framework-free]
 name = app touches no framework directly
 type = forbidden

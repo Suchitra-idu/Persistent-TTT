@@ -1,11 +1,7 @@
 """Rings 0-2 are pure: no environment, no clock, no GPU, no global seed, no disk.
 
-import-linter enforces *which packages* an inner ring may import. It cannot
-express "may import torch but not touch torch.cuda", which is exactly where
-D1 draws the line, so that half is a mechanical source scan.
-
-Each (file, idiom) pair is its own test case: one reason to fail, and the
-failing test id names both the file and the rule it broke.
+import-linter cannot express "may import torch but not touch torch.cuda",
+which is where D1 draws the line, so that half is a source scan.
 """
 
 from __future__ import annotations
@@ -16,9 +12,7 @@ import pytest
 
 from tests.architecture import _scan
 
-#: (rule name, pattern, why). Matched against source with comments and string
-#: literals blanked out, so naming an idiom in a docstring is not a violation.
-#: Groups are non-capturing so a failure reports the matched text, not a tuple.
+# (rule, pattern, why). Non-capturing groups so a failure reports the match.
 BANNED_IDIOMS = [
     (
         "environment-access",

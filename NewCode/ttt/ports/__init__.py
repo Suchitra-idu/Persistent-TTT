@@ -1,6 +1,4 @@
-"""Ring 2 — abstract interfaces to the costly and impure world.
+"""Ring 2 — interfaces to the costly world, in core types.
 
-Defined in terms of Ring 0 types, never framework types. Every port has a
-conformance suite in ``tests/ports/`` that every adapter — real and fake —
-must pass.
+Every port has a conformance suite that real and fake adapters both pass.
 """

@@ -1,1 +1,1 @@
-"""Ring 1 — dataset specs. Registry axis: ``DATASETS``."""
+"""Ring 1 — dataset specs. Registry: DATASETS."""

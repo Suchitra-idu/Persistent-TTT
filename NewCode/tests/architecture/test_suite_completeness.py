@@ -1,16 +1,11 @@
 """Every port has a conformance suite; every registry has a contract suite.
 
-Rules 5 and 6 of RULES.md are structural claims about the test tree, so they
-are checked structurally. The conventions they pin:
+    ttt/ports/<name>.py                -> tests/ports/test_<name>.py + a
+                                          `*Conformance` class
+    ttt/extensions/<axis>/_registry.py -> tests/extensions/test_<axis>_contract.py
 
-    ttt/ports/<name>.py                  -> tests/ports/test_<name>.py
-                                            defining a `*Conformance` class
-    ttt/extensions/<axis>/_registry.py   -> tests/extensions/test_<axis>_contract.py
-
-Until Phases 2 and 3 land there are no ports and no registries, so these
-parametrizations are empty and pytest reports them as skipped. That is the
-intended reading: nothing to enforce yet, and the enforcement arms itself the
-moment the first port or registry file appears.
+Empty (and so reported as skipped) until Phases 2 and 3 create the first port
+and registry.
 """
 
 from __future__ import annotations
