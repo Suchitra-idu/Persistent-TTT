@@ -40,7 +40,8 @@ def test_every_port_has_a_conformance_suite(port_module):
 def test_every_port_conformance_suite_defines_a_conformance_base(port_module):
     suite = _scan.TESTS_ROOT / "ports" / f"test_{port_module.stem}.py"
 
-    bases = re.findall(r"^class\s+(\w*Conformance)\b", suite.read_text(), re.MULTILINE)
+    source = suite.read_text() if suite.is_file() else ""
+    bases = re.findall(r"^class\s+(\w*Conformance)\b", source, re.MULTILINE)
 
     assert bases, (
         f"{_scan.package_relative(suite)} defines no `*Conformance` base class, so "

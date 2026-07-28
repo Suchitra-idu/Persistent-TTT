@@ -57,6 +57,7 @@ tests/
   core/           Ring 0 — property tests (hypothesis) + reference oracles
   extensions/     Ring 1 — one contract suite per registry axis
   ports/          Rings 2/3 — one conformance suite per port, subclassed by every adapter
+  adapters/       Ring 3 — the framework seams that answer to no port
   app/            Ring 4 — orchestration on all-fake adapters
   experiments/    Ring 5 — smoke + same-seed reproducibility
   parity/         OLD-vs-NEW numeric equivalence (Phase 6, then frozen)

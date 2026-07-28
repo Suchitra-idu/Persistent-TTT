@@ -155,13 +155,24 @@ Built side by side with the original flat modules in the parent directory
 (PLAN.md D8); nothing there is touched until the parity suite in Phase 6 is
 green, and retiring it is a separate explicit call.
 
-**Phases 0–2 complete.** Ring 0 is built and property-tested, Ring 1 holds the
-`strategies` and `datasets` registries and the TTT module; rings 2–5 are empty
-packages awaiting their phases.
+**Phases 0–3 complete.** Ring 0 is built and property-tested, Ring 1 holds the
+`strategies` and `datasets` registries and the TTT module, and Rings 2/3 hold
+ten ports with at least one real and one fake adapter each. Rings 4–5 are
+empty packages awaiting their phases.
 
 `tests/parity/` opened early, with the Phase 2 schedule parity that PLAN §5
 requires of this phase. It is marked `parity` and runs by default; the numeric
 suite that fills it out is still Phase 6.
+
+Two deviations from PLAN §2's Ring 2/3 list, both recorded in
+[`docs/ports-map.md`](docs/ports-map.md): there are **ten** ports rather than
+nine — `generation` is separate from `compute` for the reason D6 separates
+`compute` from `fast_weights` — and `modal_storage` / `modal_runtime` are
+deferred to Phase 5, where PLAN §5 already puts the rest of the Modal surface.
+`local_storage` is Storage's real adapter until then.
+
+`tests/adapters/` holds the two Ring 3 framework seams that answer to no port,
+`model_builder` and `checkpoint_io`.
 
 One file in `ttt/core/` is not in PLAN §2's list: `lr_schedule.py`. The old
 loop got its schedule from `transformers.get_cosine_schedule_with_warmup`, and

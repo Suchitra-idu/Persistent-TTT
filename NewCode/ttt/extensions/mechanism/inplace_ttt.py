@@ -173,7 +173,9 @@ class InPlaceTTTMLP(nn.Module):
         # a gate pinned near 0 means the TTT term cannot be reaching the output.
         with torch.no_grad():
             self.gate_mean = float(gate.mean())
-            self.gate_std = float(gate.std())
+            # Population std: chat streams one token at a time, and the sample
+            # std of one element is nan.
+            self.gate_std = float(gate.std(correction=0))
         return gate * ttt_term
 
     def _scan_forward(
