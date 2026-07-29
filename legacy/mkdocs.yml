@@ -1,0 +1,83 @@
+site_name: In-Place TTT Documentation
+site_description: Fast-weight test-time training for Qwen3 on arxiv ML papers
+site_url: ""
+
+docs_dir: docs
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.indexes
+    - navigation.top
+    - toc.follow
+    - search.highlight
+    - search.suggest
+    - content.code.copy
+    - content.code.annotate
+  icon:
+    repo: fontawesome/brands/github
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      permalink_title: Anchor link
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+
+plugins:
+  - search
+
+nav:
+  - Home: README.md
+  - Architecture:
+      - Overview: architecture.md
+      - Mechanism: mechanism.md
+      - Configuration: config.md
+      - Glossary: glossary.md
+  - Runtime:
+      - Training: training.md
+      - Inference: inference.md
+      - Chat REPL: chat.md
+      - Checkpoints: checkpoints.md
+  - Data & Operations:
+      - Dataset: data.md
+      - Observability: observability.md
+      - Failure Modes: failure-modes.md
+      - Scaling: scaling.md
+  - Development:
+      - Testing: testing.md
+      - Contributing: development.md

@@ -1,30 +1,25 @@
-# NewCode — Rebuild Plan
+# Rebuild Plan
 
 Rebuilding the In-Place TTT research codebase under `RESEARCH_ARCHITECTURE.md`
 (the Research Hexagon). This document is the contract for the rebuild: what
 gets built, in what order, and how each phase is proven correct before the
 next one starts.
 
-Status: **Phases 0–5 complete (2026-07-29)** — scaffold + enforcement, all of
-Ring 0, Ring 1's two registries plus the TTT module, Rings 2/3 (ten ports, each
-with a real and a fake adapter passing one conformance suite), Ring 4's eight
-loop modules, and Ring 5: `ttt/cli.py` plus one append-only file per entrypoint,
-with the Modal runtime and storage adapters Phase 3 deferred. `make check` green:
-1777 tests, 9.5s, plus 37 `integration` tests deselected; `make guard` passes
-both its plants. **Phase 6 is what remains.**
+Status: **All six phases complete (2026-07-29).** Ring 0 property-tested, Ring 1's
+two registries plus the TTT module, Rings 2/3 (ten ports, each with a real and a
+fake adapter passing one conformance suite), Ring 4's eight loop modules, Ring 5's
+CLI and one append-only file per entrypoint, and Phase 6's parity suite.
+`make check` green: 1944 tests, ~10s, plus 46 `integration` tests deselected;
+`make guard` passes both plants. The `gpu` tier is written and collects but has
+**not been run** — it needs a real H100.
 
-Deviations from §2 are recorded in the docs rather than left implicit.
-Rings 2/3, in `docs/ports-map.md`: `generation` is a tenth port. Ring 4, in
-`docs/app-map.md`: three port methods were added because the loops could not be
-written without them (`FastWeights.install(family=)`, `FastWeights.decay_stream`,
-`Table.filter`), and three loop behaviours diverge deliberately from the old code
-— a nonfinite loss no longer defers the accumulation boundary, a window with no
-finite loss does not step at all, and the logged learning rate is the one the
-optimizer applied rather than the next step's. Ring 5, in
-`docs/experiments-map.md`: `cli.py` lives at `ttt/cli.py` rather than the tree
-root so the import contracts cover it, `session_eval`'s entrypoint is cut (D11)
-while the measurement it drove survives in Ring 4, and `chat_v1.py` is a file §2
-did not list — the REPL needs a deployed class to talk to.
+What moved, what was dropped, what diverges deliberately, and what remains before
+cutover is [`MIGRATION.md`](MIGRATION.md). Deviations from §2 are in the docs:
+`docs/ports-map.md` (Rings 2/3), `docs/app-map.md` (Ring 4),
+`docs/experiments-map.md` (Ring 5).
+
+**Cutover is not done and is a separate call** (D8) — the old modules are
+untouched. `MIGRATION.md` lists the four steps.
 
 ---
 
@@ -116,8 +111,10 @@ run against fakes with no torch model at all.
 (from `train_modal.py`, `train_utils.py`, and `ttt_config.py`). Only the test
 file survived the deletion. It stays deleted.
 
-**D8 — NewCode is built side-by-side.** The old files are not touched until
-the parity suite in Phase 6 is green. Cutover is a separate, explicit call.
+**D8 — the rebuild is built side-by-side.** The old files are not touched
+until the parity suite in Phase 6 is green. Cutover is a separate, explicit
+call. The rebuilt tree now sits at the repo root and the old one in `legacy/`;
+moving them was not cutover, and `legacy/` is still what parity imports.
 
 **D9 — SlimPajama only; `source` becomes a universal invariant.**
 The `arxiv` spec is dropped. That is not just one fewer file — arxiv was the
@@ -271,7 +268,7 @@ exist.
 ## 2. Target tree
 
 ```
-NewCode/
+<repo root>/
   pyproject.toml               deps, pytest config, markers
   Makefile                     `make check` = lint-imports + arch tests + pytest
   .importlinter                the enforced Dependency Rule
@@ -610,7 +607,7 @@ three, four plugins instead of eight.
 2. **Package root is `ttt/`** — D2 confirmed.
 3. **Cutover deferred.** Build side-by-side; the old files are not deleted in
    Phase 6. Retiring them is a separate explicit call after parity is green
-   and a real GPU run has been done against NewCode.
+   and a real GPU run has been done against the rebuilt tree.
 4. **arXiv is dropped; SlimPajama is the corpus.** See D9/D10 for the
    invariants and the rename this unlocks.
 5. **Cut list confirmed** (D11) and **logging budget set** (D12).

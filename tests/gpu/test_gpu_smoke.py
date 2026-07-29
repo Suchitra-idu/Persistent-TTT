@@ -1,13 +1,18 @@
-"""Manual, gated, never in CI: `make test-gpu` on a real H100.
+"""Manual, gated, never in CI: `make test-gpu-modal` on a real H100.
 
 Everything else in the suite runs on `TinyCausalLM` or fakes. This is the one
 tier that touches the actual base model, and it is the last thing to run before
 believing a cutover.
+
+The device is not incidental. The base model loads in bfloat16, which needs
+sm_80 or newer, so a pre-Ampere card measures nothing worth having even when it
+fits. `run_on_modal.py` is the supported path.
 """
 
 from __future__ import annotations
 
 import math
+import time
 
 import pytest
 
@@ -24,13 +29,18 @@ from ttt.ports.tracker import outside_budget
 
 pytestmark = pytest.mark.gpu
 
-STEPS = 20
-DOCS = 8
+MIN_STEPS = 20
+DOCS = 40
+# The pipeline holds a slice out, so the corpus has to over-supply what the run
+# trains on. `test_the_corpus_was_big_enough` is what catches this shrinking.
+RAW_DOCS = 4 * DOCS
 IDENTITY_TEXT = "Test-time training updates a subset of weights during inference. " * 20
 
 
 @pytest.fixture(scope="module")
 def resolved():
+    # `warmup_min_steps` is 10 by default, which over a smoke-length run means
+    # every sampled step is still ramping and W_target has not moved off zero.
     return cli.resolve(
         dataset="fixture",
         strategy="everlasting",
@@ -38,11 +48,17 @@ def resolved():
         grad_accum_steps=2,
         min_doc_tokens=64,
         max_seq_len=512,
+        warmup_min_steps=2,
         eval_every=0,
         save_every=1000,
         log_every=5,
         wandb_enabled=False,
     )
+
+
+def say(message: str) -> None:
+    """Reaches the terminal only under `-s`, which is why `make test-gpu` sets it."""
+    print(f"\n[gpu] {message}", flush=True)
 
 
 @pytest.fixture(scope="module")
@@ -51,25 +67,47 @@ def loaded(resolved):
 
     if not torch.cuda.is_available():
         pytest.skip("no GPU; run this tier by hand on a real device")
+    say(f"device: {torch.cuda.get_device_name(0)}")
+    say(f"loading {resolved.base_model} — a cold cache downloads ~1.5GB here")
+    started = time.monotonic()
     model, ttt_cfg = build_model(
         resolved.base_model, ttt_cfg=resolved.ttt, train_cfg=resolved.train
     )
     from ttt.adapters.hf_tokenizer import HfTokenizer
 
+    say(f"model ready in {time.monotonic() - started:.1f}s")
     return model, ttt_cfg, HfTokenizer.from_pretrained(resolved.base_model)
 
 
-class TestIdentity:
-    def test_a_zeroed_fast_weight_contributes_nothing(self, loaded):
-        model, ttt_cfg, tokenizer = loaded
+def perturb(model) -> None:
+    """W_target is zero-init, so an untouched one agrees perfectly while proving
+    nothing. Left zeroed afterwards by the check itself, as it was built."""
+    import torch
 
-        result = sanity_check_v1.run(
+    from ttt.extensions.mechanism import iter_ttt_modules
+
+    with torch.no_grad():
+        for module in iter_ttt_modules(model):
+            module.w_target.normal_(std=1e-2)
+
+
+class TestIdentity:
+    @pytest.fixture(scope="class")
+    def checked(self, loaded):
+        model, ttt_cfg, tokenizer = loaded
+        perturb(model)
+        return sanity_check_v1.run(
             model,
             tokenizer.encode(IDENTITY_TEXT),
             fast_weights=TorchFastWeights(model, ttt_cfg),
+            announce=say,
         )
 
-        assert result.passed
+    def test_a_zeroed_fast_weight_contributes_nothing(self, checked):
+        assert checked.passed
+
+    def test_the_check_could_have_failed(self, checked):
+        assert checked.diff_at_init > 0.0
 
     def test_the_check_runs_past_a_chunk_boundary(self, loaded):
         _, ttt_cfg, tokenizer = loaded
@@ -85,7 +123,7 @@ class TestTrainingRun:
             {"fixture": [
                 {"text": "the quick brown fox " * 200,
                  "meta": {"redpajama_set_name": name}}
-                for name in ("FixtureProse", "FixtureCode") * (DOCS // 2)
+                for name in ("FixtureProse", "FixtureCode") * (RAW_DOCS // 2)
             ]}
         )
         docs = data_pipeline.documents(
@@ -114,6 +152,18 @@ class TestTrainingRun:
         result, _ = run
 
         assert result.steps == result.total_steps > 0
+
+    def test_the_corpus_was_big_enough(self, run):
+        result, _ = run
+
+        assert result.sessions >= DOCS
+
+    def test_it_runs_long_enough_for_the_fast_weight_to_leave_zero(self, run):
+        """W_target is zero-init, so a run shorter than warmup measures nothing —
+        which is what a 2-step run silently did before."""
+        result, _ = run
+
+        assert result.total_steps >= MIN_STEPS
 
     def test_no_loss_diverged(self, run):
         _, tracker = run

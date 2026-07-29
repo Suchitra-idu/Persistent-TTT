@@ -1,6 +1,6 @@
 # The repo-root virtualenv. Override on the command line to use another:
 #   make check PYTHON=python LINT_IMPORTS=lint-imports
-VENV         ?= $(abspath $(CURDIR)/../.venv)
+VENV         ?= $(abspath $(CURDIR)/.venv)
 PYTHON       ?= $(VENV)/bin/python
 LINT_IMPORTS ?= $(VENV)/bin/lint-imports
 
@@ -23,10 +23,21 @@ lint:
 test:
 	$(PYTHON) -m pytest
 
-## test-gpu: manual and gated. Needs a real H100; never runs in CI.
-## Until Phase 6 populates tests/gpu/ this exits 5 ("no tests collected").
+## test-gpu-modal: the gpu tier on a real H100. The supported path; costs money.
+test-gpu-modal:
+	$(VENV)/bin/modal run tests/gpu/run_on_modal.py
+
+## test-gpu: the same tier against a local GPU. Only meaningful on sm_80 or newer
+## — the base model is bfloat16, so anything older measures nothing.
+# Overrides addopts wholesale: the default tier's -q and its `not gpu` filter are
+# both wrong here, and -s is what lets the download's progress bar reach you.
 test-gpu:
-	$(PYTHON) -m pytest -m gpu
+	$(PYTHON) -m pytest tests/gpu -o addopts="" -m gpu -v -s
+
+## gpu-warm: pull the base model into the local HF cache. Resumable, shows a bar.
+gpu-warm:
+	$(PYTHON) -c "from huggingface_hub import snapshot_download; \
+	from ttt import cli; print(snapshot_download(cli.resolve().base_model))"
 
 ## test-all: every tier including the quarantined ones.
 test-all:

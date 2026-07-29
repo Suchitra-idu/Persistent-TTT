@@ -41,10 +41,12 @@ def forwarded_env(environ=None) -> dict[str, str]:
     return {key: source[key] for key in FORWARDED_KEYS if key in source}
 
 
-def build_image(environ=None) -> modal.Image:
+def build_image(environ=None, *, extra_packages=()) -> modal.Image:
+    """`extra_packages` exists because Modal rejects any build step after an
+    `add_local_*`, so a caller cannot pip_install onto the returned image."""
     return (
         modal.Image.debian_slim(python_version=PYTHON_VERSION)
-        .pip_install(*REQUIREMENTS)
+        .pip_install(*REQUIREMENTS, *extra_packages)
         .env({"HF_HOME": HF_CACHE_MOUNT, **forwarded_env(environ)})
         .add_local_python_source("ttt")
     )

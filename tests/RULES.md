@@ -60,8 +60,8 @@ tests/
   adapters/       Ring 3 — the framework seams that answer to no port
   app/            Ring 4 — orchestration on all-fake adapters (test_run.py is the whole loop)
   experiments/    Ring 5 — CLI resolution, entrypoint smoke, same-seed reproducibility
-  parity/         OLD-vs-NEW numeric equivalence (Phase 6, then frozen)
-  gpu/            marked `gpu`, deselected by default, run by hand
+  parity/         OLD-vs-NEW equivalence. Deleted with the old tree at cutover
+  gpu/            marked `gpu`, deselected by default. The only tier that loads the real model
 ```
 
 ## Naming conventions the architecture tests rely on

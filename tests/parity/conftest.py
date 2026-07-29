@@ -1,7 +1,7 @@
 """Puts the pre-rebuild tree on the path so parity suites can import both sides.
 
-Appended, never prepended: NewCode must keep winning for every name the two
-trees share.
+Appended, never prepended: the rebuilt tree must keep winning for every name
+the two trees share.
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ from pathlib import Path
 # which one gets there first, and a stale singleton is not recoverable.
 os.environ.setdefault("TTT_DATASET", "slimpajama-6b")
 
-OLD_ROOT = str(Path(__file__).resolve().parents[3])
+OLD_ROOT = str(Path(__file__).resolve().parents[2] / "legacy")
 
 if OLD_ROOT not in sys.path:
     sys.path.append(OLD_ROOT)

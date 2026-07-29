@@ -35,6 +35,17 @@ class TestImage:
     def test_it_builds_without_a_network(self):
         assert modal_runtime.build_image({}) is not None
 
+    def test_extra_packages_survive_the_local_source_step(self):
+        """Modal rejects a build step after `add_local_*`, so extras have to go in
+        before it — a caller chaining `.pip_install` onto the result gets an error
+        only at `modal run`."""
+        assert modal_runtime.build_image({}, extra_packages=("pytest>=8",)) is not None
+
+    def test_local_files_can_still_be_added_after_the_extras(self):
+        image = modal_runtime.build_image({}, extra_packages=("pytest>=8",))
+
+        assert image.add_local_file("pyproject.toml", "/root/pyproject.toml")
+
     @pytest.mark.parametrize("cut", ["bitsandbytes", "flash-attn", "flash_attn"])
     def test_the_dependencies_d11_removed_are_absent(self, cut):
         assert not any(cut in package for package in modal_runtime.REQUIREMENTS)

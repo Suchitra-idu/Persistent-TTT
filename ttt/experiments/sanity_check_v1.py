@@ -17,6 +17,7 @@ import modal
 from ttt import cli
 from ttt.adapters import modal_runtime
 from ttt.experiments import _runtime
+from ttt.extensions.mechanism import iter_ttt_modules
 
 app = modal.App("ttt-sanity-check-v1")
 image = modal_runtime.build_image()
@@ -35,6 +36,16 @@ class SanityResult:
         return self.diff_at_zero < TOLERANCE
 
 
+def input_ids(token_ids: Sequence[int], model):
+    """On the model's device: a CPU batch against a CUDA model fails inside the
+    embedding lookup, in a traceback that names neither."""
+    import torch
+
+    return torch.tensor(
+        [list(token_ids)], device=next(model.parameters()).device, dtype=torch.long
+    )
+
+
 def run(
     model,
     token_ids: Sequence[int],
@@ -46,8 +57,10 @@ def run(
     broken scan would pass by never running."""
     import torch
 
-    ids = torch.tensor([list(token_ids)])
-    modules = [model.model.layers[i].mlp for i in fast_weights.layer_indices]
+    ids = input_ids(token_ids, model)
+    # Walked, not indexed: PEFT wraps the model and `model.model.layers` stops
+    # resolving the moment LoRA is attached.
+    modules = list(iter_ttt_modules(model))
 
     fast_weights.set_mode(evolve=False, stream=False, session=False)
     with torch.no_grad():

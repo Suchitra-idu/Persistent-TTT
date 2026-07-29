@@ -1,61 +1,56 @@
-# Documentation
+# Docs
 
-Deep-dive docs for the In-Place TTT project. The top-level
-[`../README.md`](../README.md) is the run protocol and setup guide;
-these pages are the reference material.
+Documentation for the rebuilt tree. The root `docs/` describes the old flat
+layout and is untouched until cutover (PLAN D13).
 
-## Index
+Read as files, or run `make docs` from the repo root and open
+<http://127.0.0.1:8000>.
 
-**Architecture and mechanism**
-- [architecture.md](architecture.md) — module boundaries, import graph, dataflow
-- [mechanism.md](mechanism.md) — TTT math + code walkthrough, both execution paths
-- [config.md](config.md) — every config field + env var, defaults, sensitivity notes
-- [glossary.md](glossary.md) — vocabulary used across the docs
+| Page | Read it for |
+|---|---|
+| [mechanism.md](mechanism.md) | What In-Place TTT does, with the formulas |
+| [glossary.md](glossary.md) | Every term used in the code |
+| [core-map.md](core-map.md) | What is in each Ring 0 file |
+| [extensions-map.md](extensions-map.md) | The Ring 1 plugins and the TTT module |
+| [ports-map.md](ports-map.md) | The Ring 2 ports and their real/fake adapters |
+| [app-map.md](app-map.md) | The Ring 4 loops, the pipeline, and the D14 chat switches |
+| [experiments-map.md](experiments-map.md) | The CLI surface, the entrypoints, and the Modal runtime |
+| [testing.md](testing.md) | How to run and add tests |
 
-**Runtime**
-- [training.md](training.md) — training loop, sessions, slicing, loss mask, in-loop eval
-- [inference.md](inference.md) — eval paths, three-way comparison, snapshot lifecycle
-- [chat.md](chat.md) — chat REPL, cross-turn memory invariant, snapshot resume
-- [checkpoints.md](checkpoints.md) — save/load semantics, ckpt structure, migration rules
+Elsewhere: [MIGRATION.md](../MIGRATION.md) for what moved and what was dropped,
+[ARCHITECTURE.md](../ARCHITECTURE.md) for the rings,
+[PLAN.md](../PLAN.md) for the rebuild decisions D1–D14,
+[tests/RULES.md](../tests/RULES.md) for the test doctrine.
 
-**Data**
-- [data.md](data.md) — dataset shape, holdout split, tokenization, loss-mask reference
+## Status
 
-**Operations**
-- [observability.md](observability.md) — full metric reference, healthy vs failure signatures
-- [failure-modes.md](failure-modes.md) — known failure patterns and their fixes
-- [scaling.md](scaling.md) — model-size scaling: gradient dilution, state saturation, memory
+All six phases done: enforcement, Ring 0, Ring 1's two registries plus the TTT
+module, Rings 2/3 (ten ports with a real and a fake adapter each), Ring 4's eight
+loop modules, Ring 5's CLI and entrypoints, and the OLD-vs-NEW parity suite.
+The `gpu` tier is written but has not been run — it needs a real H100.
 
-**Development**
-- [testing.md](testing.md) — test suite structure, invariants tested, what runs where
-- [development.md](development.md) — safe-change checklist, review conventions
+Cutover is a separate call and is not done: see
+[MIGRATION.md](../MIGRATION.md).
 
-## Reading order for a new contributor
+## Commands
 
-1. Top-level `README.md` (setup + run protocol)
-2. [architecture.md](architecture.md) — orient in the codebase
-3. [mechanism.md](mechanism.md) — understand what TTT is doing
-4. [config.md](config.md) — know the knobs
-5. Then pick the runtime doc matching what you want to change
-   ([training.md](training.md), [inference.md](inference.md), or
-   [chat.md](chat.md))
-6. Before submitting: [testing.md](testing.md) + [development.md](development.md)
+Run from the repo root.
 
-## Reading order for a research user
+| Command | Does |
+|---|---|
+| `make check` | The gate: import contracts + the fast test tier |
+| `make test` | Tests only, minus `gpu` / `integration` / `slow` |
+| `make lint` | Import contracts only |
+| `make guard` | Proves enforcement is live (plants a bad import) |
+| `make test-gpu` | The gated tier. Needs a real GPU; empty until Phase 6 |
+| `make docs` | Serve these pages with live reload |
+| `make docs-build` | Build to `site/`; `--strict`, so a broken link fails |
 
-1. Top-level `README.md`
-2. [training.md](training.md) — pick session mode and knobs
-3. [inference.md](inference.md) — understand what the eval numbers mean
-4. [failure-modes.md](failure-modes.md) when things look wrong
-5. [scaling.md](scaling.md) when moving between model sizes
+## Reading order
 
-## Doc conventions
-
-- Concrete over abstract. Every claim links back to a file:line where
-  possible.
-- Include what SHOULD happen alongside what CAN go wrong. Failure modes
-  are documented next to correct behavior, not in a separate section.
-- Numbers reflect current config defaults in [`../ttt_config.py`](../ttt_config.py).
-  When those change, docs referencing them need updating.
-- No fictional examples. All commands are copy-pasteable and reflect
-  actual entrypoint signatures.
+1. [mechanism.md](mechanism.md) — the research idea.
+2. [`ttt/core/ttt_math.py`](../ttt/core/ttt_math.py) and
+   [`ttt/core/carry.py`](../ttt/core/carry.py) — that idea as ~130 lines.
+3. [`tests/core/test_ttt_math.py`](../tests/core/test_ttt_math.py) — what is
+   guaranteed about it.
+4. [ARCHITECTURE.md](../ARCHITECTURE.md) — where everything else will go.

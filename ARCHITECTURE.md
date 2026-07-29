@@ -109,12 +109,13 @@ reject each, and cleans up.
 ## Where things go
 
 ```
-NewCode/
+<repo root>/
   pyproject.toml     deps, pytest config, markers
   Makefile           check / lint / test / test-gpu / guard
   .importlinter      the enforced Dependency Rule
   ARCHITECTURE.md    this file
   PLAN.md            the rebuild contract (phases, decisions D1-D14)
+  MIGRATION.md       what moved where, what was dropped, what proves it
 
   ttt/
     cli.py           Ring 5 — the single source of CLI args
@@ -157,13 +158,15 @@ Built side by side with the original flat modules in the parent directory
 (PLAN.md D8); nothing there is touched until the parity suite in Phase 6 is
 green, and retiring it is a separate explicit call.
 
-**Phases 0–5 complete.** Ring 0 is built and property-tested, Ring 1 holds the
+**All six phases complete.** Ring 0 is built and property-tested, Ring 1 holds the
 `strategies` and `datasets` registries and the TTT module, Rings 2/3 hold ten
 ports with at least one real and one fake adapter each, and Ring 4 holds the
 eight loop modules — pipeline, train, eval, session eval, pilot, generate, chat
 — tested end to end against fakes. Ring 5 holds `cli.py` and one append-only
 file per entrypoint, with the Modal runtime and storage adapters Phase 3
-deferred. Phase 6 (numeric parity, checkpoint compatibility, cutover) remains.
+deferred, and `tests/parity/` holds the OLD-vs-NEW suite Phase 6 required.
+See [`MIGRATION.md`](MIGRATION.md) for what moved, what was dropped, and the
+four steps that remain before cutover.
 
 Phase 4 added three port methods, each because Ring 4 could not be written
 without it: `FastWeights.install(carry, family=...)` and

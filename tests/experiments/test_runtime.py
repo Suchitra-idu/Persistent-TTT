@@ -3,12 +3,25 @@ from __future__ import annotations
 import json
 
 import pytest
+import torch
 
 from tests.experiments import _builders
 from ttt import cli
 from ttt.adapters import checkpoint_io
 from ttt.adapters.in_memory_storage import InMemoryStorage
 from ttt.experiments import _runtime, plot_pilot, sanity_check_v1
+
+
+class _PeftShaped(torch.nn.Module):
+    """Nests the model one level deeper, the way `get_peft_model` does, so that
+    `model.model.layers` stops resolving."""
+
+    def __init__(self, inner):
+        super().__init__()
+        self.base_model = inner
+
+    def forward(self, **kwargs):
+        return self.base_model(**kwargs)
 
 
 class TestEngine:
@@ -158,6 +171,27 @@ class TestSanityCheck:
         )
 
         assert result.n_tokens > cfg.chunk_size
+
+    def test_the_input_is_built_on_the_models_device(self):
+        model = torch.nn.Linear(4, 4, device="meta")
+
+        assert sanity_check_v1.input_ids([1, 2, 3], model).device.type == "meta"
+
+    def test_it_finds_the_ttt_modules_through_a_peft_style_wrapper(self):
+        from tests.ports import _builders as port_builders
+        from ttt.adapters.torch_fast_weights import TorchFastWeights
+
+        model, cfg = port_builders.tiny_model(chunk_size=4)
+        wrapped = _PeftShaped(model)
+
+        result = sanity_check_v1.run(
+            wrapped,
+            port_builders.token_ids(20),
+            fast_weights=TorchFastWeights(wrapped, cfg),
+            announce=lambda _: None,
+        )
+
+        assert result.passed
 
 
 class TestPlotPilot:
