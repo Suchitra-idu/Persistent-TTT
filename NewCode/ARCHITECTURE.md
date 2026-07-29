@@ -19,7 +19,7 @@ outer ring exists.
 
 ```
   ┌─────────────────────────────────────────────────────────────┐
-  │ Ring 5  ttt/experiments/, cli.py                            │
+  │ Ring 5  ttt/cli.py, ttt/experiments/                        │
   │         append-only compositions. Nothing imports this.     │
   │  ┌───────────────────────────────────────────────────────┐  │
   │  │ Ring 4  ttt/app/                                      │  │
@@ -54,7 +54,7 @@ outer ring exists.
 | 2 | `ttt/ports/` | Ring 0 | one conformance suite per port |
 | 3 | `ttt/adapters/` | Rings 0–2 + any framework | the port's conformance suite (real *and* fake) |
 | 4 | `ttt/app/` | Rings 0–2, **via interfaces only** | orchestration tests on all-fake adapters |
-| 5 | `ttt/experiments/`, `cli.py` | everything inward | smoke + same-seed reproducibility |
+| 5 | `ttt/cli.py`, `ttt/experiments/` | everything inward | CLI snapshots + smoke + same-seed reproducibility |
 
 ### Two deviations from the spec's template, both deliberate
 
@@ -81,7 +81,7 @@ make check   =   make lint   +   make test
                  └─ import-linter, the Dependency Rule
 ```
 
-**`.importlinter`** — four contracts:
+**`.importlinter`** — five contracts:
 
 | Contract | What it stops |
 |---|---|
@@ -89,6 +89,7 @@ make check   =   make lint   +   make test
 | `app-never-touches-a-concrete-adapter` | `app -> adapters`, which a plain `layers` contract would *legalise* (it places adapters below app) |
 | `frameworks-out-of-inner-rings` | `transformers` / `peft` / `modal` / `wandb` / `datasets` reaching rings 0–2 |
 | `app-stays-framework-free` | Ring 4 touching any framework, `torch` included — it belongs behind the ports |
+| `cli-only-resolves-config` | `cli -> app / adapters / ports`, which the layers contract would legalise. Argument resolution loads no model |
 
 **`tests/architecture/`** — the half import-linter cannot express: a source
 scan banning `os.environ`, wall-clock reads, `torch.cuda`, `torch.manual_seed`,
@@ -99,8 +100,9 @@ port has a conformance suite, every registry has a contract suite) and the
 comment budget from [`/CLAUDE.md`](../CLAUDE.md): documentation lines may not
 exceed half a file's code lines.
 
-`make guard` proves the enforcement is live: it plants a `core -> transformers`
-import, expects `make lint` to reject it, and cleans up.
+`make guard` proves the enforcement is live: it plants a banned import in each
+inner ring — `core -> transformers` and `app -> torch` — expects `make lint` to
+reject each, and cleans up.
 
 ---
 
@@ -113,9 +115,9 @@ NewCode/
   .importlinter      the enforced Dependency Rule
   ARCHITECTURE.md    this file
   PLAN.md            the rebuild contract (phases, decisions D1-D14)
-  cli.py             Ring 5 — the single source of CLI args
 
   ttt/
+    cli.py           Ring 5 — the single source of CLI args
     core/            types, config (frozen), ttt_math, carry, schedule, tokens,
                      sampling, balance, metrics, naming, sampling_text, report
       config/        TTTConfig, TrainConfig, DatasetSpec, presets, resolve
@@ -128,7 +130,7 @@ NewCode/
     adapters/        torch_* / wandb_* / modal_* / hf_*  +  their fakes
     app/             data_pipeline, stages, train_loop, eval_loop,
                      session_eval, pilot, chat, generate
-    experiments/     *_v1.py — append-only
+    experiments/     *_v1.py — append-only; _runtime.py is the composition root
 
   tests/             mirrors the rings; see tests/RULES.md
 ```
@@ -155,11 +157,13 @@ Built side by side with the original flat modules in the parent directory
 (PLAN.md D8); nothing there is touched until the parity suite in Phase 6 is
 green, and retiring it is a separate explicit call.
 
-**Phases 0–4 complete.** Ring 0 is built and property-tested, Ring 1 holds the
+**Phases 0–5 complete.** Ring 0 is built and property-tested, Ring 1 holds the
 `strategies` and `datasets` registries and the TTT module, Rings 2/3 hold ten
 ports with at least one real and one fake adapter each, and Ring 4 holds the
 eight loop modules — pipeline, train, eval, session eval, pilot, generate, chat
-— tested end to end against fakes. Ring 5 is an empty package awaiting its phase.
+— tested end to end against fakes. Ring 5 holds `cli.py` and one append-only
+file per entrypoint, with the Modal runtime and storage adapters Phase 3
+deferred. Phase 6 (numeric parity, checkpoint compatibility, cutover) remains.
 
 Phase 4 added three port methods, each because Ring 4 could not be written
 without it: `FastWeights.install(carry, family=...)` and

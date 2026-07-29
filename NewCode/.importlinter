@@ -10,6 +10,7 @@ name = inward-only dependencies
 type = layers
 layers =
     ttt.experiments
+    ttt.cli
     ttt.app
     ttt.adapters
     ttt.ports
@@ -25,6 +26,19 @@ source_modules =
     ttt.app
 forbidden_modules =
     ttt.adapters
+
+# The layers contract places cli above app and adapters, which would legalise
+# cli -> either. Argument resolution is config arithmetic; it loads no model and
+# opens no volume. Composition is ttt.experiments' job.
+[importlinter:contract:cli-only-resolves-config]
+name = cli resolves configuration and composes nothing
+type = forbidden
+source_modules =
+    ttt.cli
+forbidden_modules =
+    ttt.app
+    ttt.adapters
+    ttt.ports
 
 # D1: Ring 0 may import torch. D1's numpy.random half is enforced by the
 # banned-idiom scan, since import-linter tracks externals at top level only.

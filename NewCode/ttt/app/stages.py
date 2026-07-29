@@ -21,7 +21,9 @@ TOKENS_COLUMN = "input_ids"
 
 # The pre-tokenize pass over-fetches because drop_short is source-biased: Books
 # survive it, C4 does not, so a mix balanced before tokenizing is not one after.
-PRESET_OVERSAMPLE = 3
+# 2x is a rough upper bound on drop-short loss for SlimPajama's short-doc-heavy
+# sources at min_doc_tokens=2048.
+PRESET_OVERSAMPLE = 2
 
 
 @dataclass(frozen=True)

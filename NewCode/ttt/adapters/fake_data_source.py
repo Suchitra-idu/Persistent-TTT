@@ -21,4 +21,9 @@ class FakeDataSource:
             )
         rows = self._rows_by_spec[spec.name]
         labelled = [{**row, SOURCE_COLUMN: spec.source_of(row)} for row in rows]
-        return ListTable(labelled)
+        # Named explicitly: an empty corpus still has columns, and a table that
+        # loses them turns "no rows" into a KeyError two stages downstream.
+        columns = (
+            tuple(labelled[0]) if labelled else (spec.text_column, SOURCE_COLUMN)
+        )
+        return ListTable(labelled, columns)

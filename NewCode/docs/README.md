@@ -14,6 +14,7 @@ Read as files, or run `make docs` from `NewCode/` and open
 | [extensions-map.md](extensions-map.md) | The Ring 1 plugins and the TTT module |
 | [ports-map.md](ports-map.md) | The Ring 2 ports and their real/fake adapters |
 | [app-map.md](app-map.md) | The Ring 4 loops, the pipeline, and the D14 chat switches |
+| [experiments-map.md](experiments-map.md) | The CLI surface, the entrypoints, and the Modal runtime |
 | [testing.md](testing.md) | How to run and add tests |
 
 Elsewhere: [ARCHITECTURE.md](../ARCHITECTURE.md) for the rings,
@@ -22,10 +23,10 @@ Elsewhere: [ARCHITECTURE.md](../ARCHITECTURE.md) for the rings,
 
 ## Status
 
-Phases 0–4 done: enforcement, all of Ring 0, Ring 1's two registries plus the
-TTT module, Rings 2/3 — ten ports with a real and a fake adapter each — and
-Ring 4's eight loop modules, tested end to end on fakes. Ring 5 is an empty
-package.
+Phases 0–5 done: enforcement, all of Ring 0, Ring 1's two registries plus the
+TTT module, Rings 2/3 — ten ports with a real and a fake adapter each — Ring 4's
+eight loop modules, and Ring 5's CLI plus one append-only file per entrypoint.
+Phase 6 (numeric parity, checkpoint compatibility, cutover) is what remains.
 
 ## Commands
 

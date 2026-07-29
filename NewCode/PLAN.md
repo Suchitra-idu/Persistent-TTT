@@ -5,22 +5,26 @@ Rebuilding the In-Place TTT research codebase under `RESEARCH_ARCHITECTURE.md`
 gets built, in what order, and how each phase is proven correct before the
 next one starts.
 
-Status: **Phases 0–4 complete (2026-07-29)** — scaffold + enforcement, all of
+Status: **Phases 0–5 complete (2026-07-29)** — scaffold + enforcement, all of
 Ring 0, Ring 1's two registries plus the TTT module, Rings 2/3 (ten ports, each
-with a real and a fake adapter passing one conformance suite), and Ring 4's
-eight loop modules. `make check` green: 1288 tests, 8.5s, plus 37 `integration`
-tests deselected; `make guard` passes both its plants. Phases 5–6 pending.
+with a real and a fake adapter passing one conformance suite), Ring 4's eight
+loop modules, and Ring 5: `ttt/cli.py` plus one append-only file per entrypoint,
+with the Modal runtime and storage adapters Phase 3 deferred. `make check` green:
+1777 tests, 9.5s, plus 37 `integration` tests deselected; `make guard` passes
+both its plants. **Phase 6 is what remains.**
 
 Deviations from §2 are recorded in the docs rather than left implicit.
-Rings 2/3, in `docs/ports-map.md`: `generation` is a tenth port, and
-`modal_storage` / `modal_runtime` move to Phase 5 with the rest of the Modal
-surface. Ring 4, in `docs/app-map.md`: three port methods were added because
-the loops could not be written without them (`FastWeights.install(family=)`,
-`FastWeights.decay_stream`, `Table.filter`), and three loop behaviours diverge
-deliberately from the old code — a nonfinite loss no longer defers the
-accumulation boundary, a window with no finite loss does not step at all, and
-the logged learning rate is the one the optimizer applied rather than the next
-step's.
+Rings 2/3, in `docs/ports-map.md`: `generation` is a tenth port. Ring 4, in
+`docs/app-map.md`: three port methods were added because the loops could not be
+written without them (`FastWeights.install(family=)`, `FastWeights.decay_stream`,
+`Table.filter`), and three loop behaviours diverge deliberately from the old code
+— a nonfinite loss no longer defers the accumulation boundary, a window with no
+finite loss does not step at all, and the logged learning rate is the one the
+optimizer applied rather than the next step's. Ring 5, in
+`docs/experiments-map.md`: `cli.py` lives at `ttt/cli.py` rather than the tree
+root so the import contracts cover it, `session_eval`'s entrypoint is cut (D11)
+while the measurement it drove survives in Ring 4, and `chat_v1.py` is a file §2
+did not list — the REPL needs a deployed class to talk to.
 
 ---
 

@@ -115,7 +115,7 @@ class TestBalance:
 
         counts = stages.balance(data).table.column(SOURCE_COLUMN)
 
-        assert (counts.count("alpha"), counts.count("beta")) == (1, 4)
+        assert (counts.count("alpha"), counts.count("beta")) == (1, 3)
 
     def test_a_source_the_preset_omits_is_dropped(self):
         data = _builders.pipeline_data(

@@ -46,6 +46,7 @@ class DataSourceConformance:
             source.load(unlabelled_spec)
 
 
+
 class TestFakeDataSource(DataSourceConformance):
     @pytest.fixture
     def spec(self):
@@ -63,6 +64,13 @@ class TestFakeDataSource(DataSourceConformance):
                 unlabelled_spec.name: [{"text": "doc 0", "meta": {}}],
             }
         )
+
+    def test_an_empty_corpus_still_declares_its_columns(self):
+        spec = _builders.CONSTANT_SPEC
+
+        loaded = FakeDataSource({spec.name: []}).load(spec)
+
+        assert (len(loaded), SOURCE_COLUMN in loaded.column_names) == (0, True)
 
     def test_an_unscripted_spec_raises(self, source):
         with pytest.raises(KeyError, match="no rows scripted"):

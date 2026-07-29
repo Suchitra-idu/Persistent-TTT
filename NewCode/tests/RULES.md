@@ -59,7 +59,7 @@ tests/
   ports/          Rings 2/3 — one conformance suite per port, subclassed by every adapter
   adapters/       Ring 3 — the framework seams that answer to no port
   app/            Ring 4 — orchestration on all-fake adapters (test_run.py is the whole loop)
-  experiments/    Ring 5 — smoke + same-seed reproducibility
+  experiments/    Ring 5 — CLI resolution, entrypoint smoke, same-seed reproducibility
   parity/         OLD-vs-NEW numeric equivalence (Phase 6, then frozen)
   gpu/            marked `gpu`, deselected by default, run by hand
 ```

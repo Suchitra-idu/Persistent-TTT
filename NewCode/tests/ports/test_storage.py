@@ -4,6 +4,7 @@ import pytest
 
 from ttt.adapters.in_memory_storage import InMemoryStorage
 from ttt.adapters.local_storage import LocalStorage
+from ttt.adapters.modal_storage import ModalStorage
 from ttt.ports.storage import Storage
 
 PATH = "run/ckpt-100/ttt_params.pt"
@@ -86,5 +87,41 @@ class TestLocalStorage(StorageConformance):
         assert (tmp_path / PATH).is_file()
 
     def test_a_path_escaping_the_root_is_rejected(self, storage):
+        with pytest.raises(ValueError, match="escapes the storage root"):
+            storage.write_bytes("../outside.pt", DATA)
+
+
+class FakeVolume:
+    """A Modal Volume's only contract that matters here: commit is explicit."""
+
+    def __init__(self) -> None:
+        self.commits = 0
+
+    def commit(self) -> None:
+        self.commits += 1
+
+
+class TestModalStorage(StorageConformance):
+    @pytest.fixture
+    def storage(self, tmp_path):
+        return ModalStorage(FakeVolume(), tmp_path)
+
+    def test_a_commit_reaches_the_volume(self, storage):
+        storage.write_bytes(PATH, DATA)
+        storage.commit()
+
+        assert storage.volume.commits == 1
+
+    def test_a_write_alone_does_not_commit(self, storage):
+        storage.write_bytes(PATH, DATA)
+
+        assert storage.volume.commits == 0
+
+    def test_it_writes_where_the_volume_is_mounted(self, storage, tmp_path):
+        storage.write_bytes(PATH, DATA)
+
+        assert (tmp_path / PATH).is_file()
+
+    def test_a_path_escaping_the_mount_is_rejected(self, storage):
         with pytest.raises(ValueError, match="escapes the storage root"):
             storage.write_bytes("../outside.pt", DATA)
