@@ -10,15 +10,14 @@ and would otherwise default to arxiv, which D9 dropped.
 
 from __future__ import annotations
 
-import os
-
 import pytest
+import train_modal
+import ttt_config
 
-os.environ.setdefault("TTT_DATASET", "slimpajama-6b")
+from ttt import cli
 
-import train_modal  # noqa: E402
-
-from ttt import cli  # noqa: E402
+# Named rather than read off the old tree's import-time singleton (PLAN §6.2).
+OLD_SPEC = ttt_config.get_dataset_spec("slimpajama-6b")
 
 pytestmark = pytest.mark.parity
 
@@ -170,28 +169,26 @@ def test_the_session_ablation_still_overrides_the_strategy():
 
 @pytest.mark.parametrize("preset", ["slim-paper", "slim-research"])
 def test_a_preset_resolves_to_the_same_weights(preset):
-    from ttt_config import get_source_preset
-
-    assert dict(new(source_preset=preset).weights) == dict(get_source_preset(preset))
+    assert dict(new(source_preset=preset).weights) == dict(
+        ttt_config.get_source_preset(preset)
+    )
 
 
 def test_the_spec_default_preset_is_the_same_on_both_sides():
-    from ttt_config import DATASET_SPEC, get_source_preset
-
     assert dict(new().weights) == dict(
-        get_source_preset(DATASET_SPEC.default_source_preset)
+        ttt_config.get_source_preset(OLD_SPEC.default_source_preset)
     )
 
 
 def test_only_sources_still_builds_equal_weights_over_the_picks():
-    from ttt_config import SOURCE_PRESETS
-
     picks = "RedPajamaBook,RedPajamaArXiv"
     # The old path registered the ephemeral preset into a module-level dict; the
     # new one returns it, which is why D5 could delete the registry.
     registered = old(only_sources=picks).source_preset
 
-    assert dict(new(only_sources=picks).weights) == dict(SOURCE_PRESETS[registered])
+    assert dict(new(only_sources=picks).weights) == dict(
+        ttt_config.SOURCE_PRESETS[registered]
+    )
 
 
 def test_the_session_training_default_changed_deliberately():
@@ -200,15 +197,11 @@ def test_the_session_training_default_changed_deliberately():
 
 
 def test_the_dataset_spec_agrees_on_what_is_held_out():
-    from ttt_config import DATASET_SPEC
-
-    assert new().spec.holdout_last_n == DATASET_SPEC.holdout_last_n
+    assert new().spec.holdout_last_n == OLD_SPEC.holdout_last_n
 
 
 def test_the_dataset_spec_agrees_on_which_sources_are_included():
-    from ttt_config import DATASET_SPEC
-
-    assert new().spec.include_sources == tuple(DATASET_SPEC.include_sources)
+    assert new().spec.include_sources == tuple(OLD_SPEC.include_sources)
 
 
 def test_the_hybrid_knobs_moved_to_the_plugin_but_kept_their_values():
@@ -258,9 +251,7 @@ def test_the_hybrid_knobs_still_flow_through_from_the_command_line():
 
 
 def test_the_base_model_identity_is_unchanged():
-    from ttt_config import BASE_MODEL
-
-    assert new().base_model == BASE_MODEL
+    assert new().base_model == ttt_config.BASE_MODEL
 
 
 def test_a_cut_mode_is_rejected_rather_than_silently_accepted():

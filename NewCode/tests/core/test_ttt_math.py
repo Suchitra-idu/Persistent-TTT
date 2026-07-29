@@ -216,6 +216,19 @@ def test_stream_chunk_delta_matches_the_scan_delta_on_a_full_chunk():
     assert torch.allclose(streamed, scanned, atol=TOL)
 
 
+def test_a_short_stream_chunk_still_divides_by_the_configured_chunk_size():
+    """A stream commits only when the buffer is full, so a short buffer is
+    pending rather than short — the divisor is the configured size either way."""
+    z, v = build.scan_inputs(seed=83, n_tokens=3)
+
+    delta = ttt_math.stream_chunk_delta(v, z, chunk_size=6)
+
+    assert torch.allclose(
+        delta, ttt_math.stream_chunk_delta(v, z, chunk_size=6, normalize=False) / 6,
+        atol=TOL,
+    )
+
+
 def test_stream_apply_matches_the_scan_term_for_one_state():
     z, _ = build.scan_inputs(seed=91, n_tokens=5)
     state = build.randn(6, 8, seed=92)
