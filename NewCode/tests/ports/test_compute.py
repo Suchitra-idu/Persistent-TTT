@@ -3,6 +3,7 @@ from __future__ import annotations
 import math
 
 import pytest
+import torch
 
 from tests.ports import _builders
 from ttt.adapters.fake_compute import FakeCompute
@@ -11,6 +12,7 @@ from ttt.core.config.train import TrainConfig
 from ttt.ports.compute import GROUPS, Compute
 
 IDS = _builders.token_ids(12)
+OTHER_IDS = _builders.token_ids(12, seed=99)
 RATES = {"lora": 1e-5, "wdown": 3e-5, "new": 2e-5}
 CLIP = 10.0
 FLOOR = 1e-6
@@ -129,6 +131,24 @@ class TestTorchCompute(ComputeConformance):
         return TorchCompute(
             model, ttt_cfg=cfg, train_cfg=TrainConfig(), device="cpu"
         )
+
+    def test_the_loss_is_the_next_token_cross_entropy_of_those_tokens(self, compute):
+        ids = torch.tensor([IDS])
+        logits = compute.model(input_ids=ids).logits
+        oracle = torch.nn.functional.cross_entropy(logits[0, :-1], ids[0, 1:])
+
+        assert compute.loss(IDS) == pytest.approx(float(oracle.detach()), rel=1e-6)
+
+    def test_different_tokens_give_a_different_loss(self, compute):
+        assert compute.loss(IDS) != compute.loss(OTHER_IDS)
+
+    def test_the_retained_graph_reaches_the_trainable_parameters(self, compute):
+        w_target = compute.model.model.layers[1].mlp.w_target
+        compute.loss(IDS)
+
+        compute.backward(scale=1.0)
+
+        assert w_target.grad is not None and w_target.grad.abs().sum() > 0.0
 
     def test_the_ttt_parameters_land_in_the_new_group(self, compute):
         assert compute.parameter_counts()["new"] > 0

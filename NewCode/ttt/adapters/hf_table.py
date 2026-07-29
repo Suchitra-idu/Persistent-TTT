@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Sequence
+from typing import Any, Callable, Sequence
 
 
 class HfTable:
@@ -30,6 +30,13 @@ class HfTable:
 
     def select(self, indices: Sequence[int]) -> "HfTable":
         return HfTable(self._dataset.select(list(indices)))
+
+    def filter(self, name: str, predicate: Callable[[Any], bool]) -> "HfTable":
+        if name not in self._dataset.column_names:
+            raise KeyError(f"no column {name!r}; have {self._dataset.column_names}")
+        return HfTable(
+            self._dataset.filter(lambda row: predicate(row[name]), desc=f"filter {name}")
+        )
 
     def with_column(self, name: str, values: Sequence[Any]) -> "HfTable":
         if len(values) != len(self._dataset):

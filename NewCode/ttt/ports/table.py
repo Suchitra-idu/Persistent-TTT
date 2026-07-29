@@ -1,12 +1,8 @@
-"""Table — a columnar row store. The pipeline's only view of a corpus.
-
-Every method returns a new table; a stage never mutates its input, which is
-what lets the pipeline log what each stage kept without re-reading anything.
-"""
+"""Table — a columnar row store. Every method returns a new table."""
 
 from __future__ import annotations
 
-from typing import Any, Protocol, Sequence, runtime_checkable
+from typing import Any, Callable, Protocol, Sequence, runtime_checkable
 
 SOURCE_COLUMN = "source"
 
@@ -24,6 +20,9 @@ class Table(Protocol):
 
     def select(self, indices: Sequence[int]) -> "Table":
         """Reorders as well as filters: `select` is how shuffling happens."""
+
+    def filter(self, name: str, predicate: Callable[[Any], bool]) -> "Table":
+        """Row-wise, so a corpus larger than memory never materialises."""
 
     def with_column(self, name: str, values: Sequence[Any]) -> "Table":
         """Replaces an existing column of the same name."""

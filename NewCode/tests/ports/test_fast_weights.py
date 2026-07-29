@@ -22,6 +22,14 @@ class FastWeightsConformance:
     def run_item(self, fast_weights, n_tokens: int = ITEM_TOKENS) -> None:
         raise NotImplementedError
 
+    def staged_carry(self, fast_weights) -> Carry:
+        fast_weights.set_mode(evolve=True, stream=False, session=True)
+        self.run_item(fast_weights)
+        fast_weights.advance_carry()
+        staged = fast_weights.snapshot()
+        fast_weights.reset_carry()
+        return staged
+
     def test_it_satisfies_the_port(self, fast_weights):
         assert isinstance(fast_weights, FastWeights)
 
@@ -131,6 +139,56 @@ class FastWeightsConformance:
         fast_weights.reset_stream()
 
         assert fast_weights.state_ratio(family=CARRY) > 0.0
+
+    def test_a_seed_can_be_installed_into_the_stream_family(self, fast_weights):
+        seed = self.staged_carry(fast_weights)
+
+        fast_weights.install(seed, family=STREAM)
+
+        assert fast_weights.state_ratio(family=STREAM) > 0.0
+
+    def test_a_stream_install_leaves_the_carry_empty(self, fast_weights):
+        seed = self.staged_carry(fast_weights)
+
+        fast_weights.install(seed, family=STREAM)
+
+        assert fast_weights.snapshot().is_empty
+
+    def test_installing_into_an_unknown_family_raises(self, fast_weights):
+        with pytest.raises(ValueError, match="unknown state family"):
+            fast_weights.install(Carry.empty(), family="nonsense")
+
+    def test_decaying_the_stream_scales_it(self, fast_weights):
+        fast_weights.set_mode(evolve=True, stream=True, session=False)
+        self.run_item(fast_weights, 2 * CHUNK)
+        before = fast_weights.state_ratio(family=STREAM)
+
+        fast_weights.decay_stream(factor=0.5)
+
+        assert fast_weights.state_ratio(family=STREAM) == pytest.approx(0.5 * before)
+
+    def test_decaying_the_stream_by_one_changes_nothing(self, fast_weights):
+        fast_weights.set_mode(evolve=True, stream=True, session=False)
+        self.run_item(fast_weights, 2 * CHUNK)
+        before = fast_weights.state_ratio(family=STREAM)
+
+        fast_weights.decay_stream(factor=1.0)
+
+        assert fast_weights.state_ratio(family=STREAM) == pytest.approx(before)
+
+    def test_decaying_the_stream_leaves_the_carry_alone(self, fast_weights):
+        seed = self.staged_carry(fast_weights)
+        fast_weights.install(seed)
+        before = fast_weights.state_ratio(family=CARRY)
+
+        fast_weights.decay_stream(factor=0.0)
+
+        assert fast_weights.state_ratio(family=CARRY) == pytest.approx(before)
+
+    def test_decaying_an_empty_stream_is_safe(self, fast_weights):
+        fast_weights.decay_stream(factor=0.5)
+
+        assert fast_weights.state_ratio(family=STREAM) == 0.0
 
     def test_reset_v_context_leaves_the_stream_delta_alone(self, fast_weights):
         fast_weights.set_mode(evolve=True, stream=True, session=False)

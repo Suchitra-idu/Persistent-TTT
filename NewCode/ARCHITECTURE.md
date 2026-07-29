@@ -155,10 +155,24 @@ Built side by side with the original flat modules in the parent directory
 (PLAN.md D8); nothing there is touched until the parity suite in Phase 6 is
 green, and retiring it is a separate explicit call.
 
-**Phases 0–3 complete.** Ring 0 is built and property-tested, Ring 1 holds the
-`strategies` and `datasets` registries and the TTT module, and Rings 2/3 hold
-ten ports with at least one real and one fake adapter each. Rings 4–5 are
-empty packages awaiting their phases.
+**Phases 0–4 complete.** Ring 0 is built and property-tested, Ring 1 holds the
+`strategies` and `datasets` registries and the TTT module, Rings 2/3 hold ten
+ports with at least one real and one fake adapter each, and Ring 4 holds the
+eight loop modules — pipeline, train, eval, session eval, pilot, generate, chat
+— tested end to end against fakes. Ring 5 is an empty package awaiting its phase.
+
+Phase 4 added three port methods, each because Ring 4 could not be written
+without it: `FastWeights.install(carry, family=...)` and
+`FastWeights.decay_stream(factor=...)` are D14 defects 1 and 3, and
+`Table.filter(name, predicate)` is what keeps the prefilter stage from
+materialising a corpus larger than memory. All three are in every adapter's
+conformance suite.
+
+Phase 4 is also the first time `app-stays-framework-free` had a Ring 4 to check.
+It now sets `allow_indirect_imports = True`: D1 puts torch in Ring 0, and Ring 4
+reads core types and port protocols defined in it. A direct `import torch` in
+`ttt/app/` is still rejected, which `make guard` proves alongside the
+`core -> transformers` guard it already ran.
 
 `tests/parity/` opened early, with the Phase 2 schedule parity that PLAN §5
 requires of this phase. It is marked `parity` and runs by default; the numeric

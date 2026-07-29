@@ -53,7 +53,10 @@ class FakeGeneration:
         return self._logits()
 
     def reset_cache(self) -> None:
+        # Rewinds the script too: a real model re-prefilled on the same prompt
+        # with no cache repeats itself, and the D14 A/B relies on that.
         self._primed = False
+        self._emitted = 0
         self.cache_resets += 1
 
     def _observe(self, n_tokens: int) -> None:

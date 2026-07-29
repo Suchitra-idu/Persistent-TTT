@@ -56,6 +56,12 @@ class GenerationConformance:
     def test_resetting_an_unprimed_cache_is_safe(self, generation):
         generation.reset_cache()
 
+    def test_a_prefill_after_a_reset_repeats_itself(self, generation):
+        first = generation.prefill(PROMPT)
+        generation.reset_cache()
+
+        assert torch.equal(generation.prefill(PROMPT), first)
+
 
 class TestFakeGeneration(GenerationConformance):
     @pytest.fixture

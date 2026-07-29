@@ -5,13 +5,22 @@ Rebuilding the In-Place TTT research codebase under `RESEARCH_ARCHITECTURE.md`
 gets built, in what order, and how each phase is proven correct before the
 next one starts.
 
-Status: **Phases 0–3 complete (2026-07-28)** — scaffold + enforcement, all of
-Ring 0, Ring 1's two registries plus the TTT module, and Rings 2/3: ten ports,
-each with a real and a fake adapter passing one conformance suite. `make check`
-green: 995 tests, 7.9s, plus 32 `integration` tests deselected. Phases 4–6
-pending. Ring 2/3 deviations from §2 are recorded in `docs/ports-map.md`:
-`generation` is a tenth port, and `modal_storage` / `modal_runtime` move to
-Phase 5 with the rest of the Modal surface.
+Status: **Phases 0–4 complete (2026-07-29)** — scaffold + enforcement, all of
+Ring 0, Ring 1's two registries plus the TTT module, Rings 2/3 (ten ports, each
+with a real and a fake adapter passing one conformance suite), and Ring 4's
+eight loop modules. `make check` green: 1288 tests, 8.5s, plus 37 `integration`
+tests deselected; `make guard` passes both its plants. Phases 5–6 pending.
+
+Deviations from §2 are recorded in the docs rather than left implicit.
+Rings 2/3, in `docs/ports-map.md`: `generation` is a tenth port, and
+`modal_storage` / `modal_runtime` move to Phase 5 with the rest of the Modal
+surface. Ring 4, in `docs/app-map.md`: three port methods were added because
+the loops could not be written without them (`FastWeights.install(family=)`,
+`FastWeights.decay_stream`, `Table.filter`), and three loop behaviours diverge
+deliberately from the old code — a nonfinite loss no longer defers the
+accumulation boundary, a window with no finite loss does not step at all, and
+the logged learning rate is the one the optimizer applied rather than the next
+step's.
 
 ---
 

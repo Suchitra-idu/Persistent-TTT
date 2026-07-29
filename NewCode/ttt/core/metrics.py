@@ -47,6 +47,14 @@ class SourceSummary:
     gaps: Gaps
 
 
+def perplexity(nll: float) -> float:
+    """exp(nll), saturating at inf: a diverged eval is a number, not a crash."""
+    try:
+        return math.exp(nll)
+    except OverflowError:
+        return float("inf")
+
+
 def token_weighted_ppl(rows: Sequence[PplRow]) -> float:
     """NaN over zero tokens."""
     total_log = sum(math.log(row.ppl) * row.n_tokens for row in rows)

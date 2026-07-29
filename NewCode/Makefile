@@ -44,17 +44,30 @@ docs-build:
 install-dev:
 	$(PYTHON) -m pip install -e ".[dev,docs]"
 
-## guard: prove the enforcement bites — plant a core -> transformers import,
-## expect `make lint` to fail, then remove it. Should print PASS.
-guard:
-	@echo "import transformers" > ttt/core/_guard_violation.py
+## guard: prove the enforcement bites — plant a banned import in each inner
+## ring, expect `make lint` to fail on it, then remove it. Should print PASS.
+guard: guard-core guard-app
+
+guard-core:
+	@$(MAKE) --no-print-directory _guard \
+		FILE=ttt/core/_guard_violation.py LINE="import transformers" \
+		WHAT="core -> transformers"
+
+guard-app:
+	@$(MAKE) --no-print-directory _guard \
+		FILE=ttt/app/_guard_violation.py LINE="import torch" \
+		WHAT="app -> torch"
+
+_guard:
+	@echo "$(LINE)" > $(FILE)
 	@if $(MAKE) --no-print-directory lint >/dev/null 2>&1; then \
-		rm -f ttt/core/_guard_violation.py; \
-		echo "GUARD FAILED: a core -> transformers import was not caught"; \
+		rm -f $(FILE); \
+		echo "GUARD FAILED: $(WHAT) was not caught"; \
 		exit 1; \
 	else \
-		rm -f ttt/core/_guard_violation.py; \
-		echo "GUARD PASS: core -> transformers is rejected"; \
+		rm -f $(FILE); \
+		echo "GUARD PASS: $(WHAT) is rejected"; \
 	fi
 
-.PHONY: check lint test test-gpu test-all docs docs-build install-dev guard
+.PHONY: check lint test test-gpu test-all docs docs-build install-dev guard \
+        guard-core guard-app _guard

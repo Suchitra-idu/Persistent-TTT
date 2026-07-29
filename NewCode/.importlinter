@@ -43,9 +43,13 @@ forbidden_modules =
     datasets
 
 # Ring 4 is tested entirely on fakes, so torch belongs behind the ports too.
+# Indirect imports are allowed because D1 lets Ring 0 hold torch, and Ring 4
+# reads core types and port protocols defined in it. A direct `import torch` in
+# ttt/app/ is still a failure, which is what `make guard` proves.
 [importlinter:contract:app-stays-framework-free]
 name = app touches no framework directly
 type = forbidden
+allow_indirect_imports = True
 source_modules =
     ttt.app
 forbidden_modules =

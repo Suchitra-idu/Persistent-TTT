@@ -184,3 +184,16 @@ def test_a_clipped_step_reports_how_far_it_was_scaled_down():
 
 def test_a_zero_gradient_does_not_divide_by_zero():
     assert metrics.clip_ratio(total_norm=0.0, max_grad_norm=10.0) == 1.0
+
+
+@given(nll=st.floats(min_value=-50.0, max_value=50.0))
+def test_perplexity_is_the_exponentiated_loss(nll):
+    assert metrics.perplexity(nll) == pytest.approx(math.exp(nll))
+
+
+def test_a_diverged_loss_saturates_rather_than_overflowing():
+    assert math.isinf(metrics.perplexity(1e6))
+
+
+def test_a_nonfinite_loss_stays_nonfinite():
+    assert math.isnan(metrics.perplexity(float("nan")))

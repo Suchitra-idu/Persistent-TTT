@@ -48,6 +48,24 @@ class TableConformance:
     def test_select_of_nothing_is_empty(self, table):
         assert len(table.select([])) == 0
 
+    def test_filter_keeps_the_rows_the_predicate_accepts(self, table):
+        assert table.filter("n", lambda n: n % 2 == 0).column("n") == [0, 2, 4]
+
+    def test_filter_preserves_row_order(self, table):
+        assert table.filter("n", lambda n: n > 1).column("n") == [2, 3, 4]
+
+    def test_filter_leaves_the_original_alone(self, table):
+        table.filter("n", lambda n: False)
+
+        assert len(table) == len(ROWS)
+
+    def test_filter_rejecting_everything_is_empty(self, table):
+        assert len(table.filter("n", lambda n: False)) == 0
+
+    def test_filter_on_an_absent_column_raises(self, table):
+        with pytest.raises(KeyError):
+            table.filter("nope", lambda value: True)
+
     def test_with_column_adds_it(self, table):
         added = table.with_column("extra", list(range(len(ROWS))))
 

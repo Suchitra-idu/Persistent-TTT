@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Mapping, Sequence
+from typing import Any, Callable, Mapping, Sequence
 
 
 class ListTable:
@@ -41,6 +41,13 @@ class ListTable:
 
     def select(self, indices: Sequence[int]) -> "ListTable":
         return ListTable([self._rows[i] for i in indices], self._column_names)
+
+    def filter(self, name: str, predicate: Callable[[Any], bool]) -> "ListTable":
+        if name not in self._column_names:
+            raise KeyError(f"no column {name!r}; have {list(self._column_names)}")
+        return ListTable(
+            [row for row in self._rows if predicate(row[name])], self._column_names
+        )
 
     def with_column(self, name: str, values: Sequence[Any]) -> "ListTable":
         if len(values) != len(self._rows):

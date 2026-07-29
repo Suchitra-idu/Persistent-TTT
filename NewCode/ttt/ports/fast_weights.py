@@ -32,7 +32,11 @@ class FastWeights(Protocol):
 
     def snapshot(self, *, to_cpu: bool = False) -> Carry: ...
 
-    def install(self, carry: Carry) -> None: ...
+    def install(self, carry: Carry, *, family: str = CARRY) -> None:
+        """`family=STREAM` is how a trained seed reaches chat (D14 defect 1)."""
+
+    def decay_stream(self, *, factor: float) -> None:
+        """The turn boundary's EMA, so chat and training decay alike (D14 defect 3)."""
 
     def state_ratio(self, *, family: str) -> float:
         """Mean ||eta*S||_F / ||W0||_F over layers. Zero when nothing is staged."""

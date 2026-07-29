@@ -13,6 +13,7 @@ Read as files, or run `make docs` from `NewCode/` and open
 | [core-map.md](core-map.md) | What is in each Ring 0 file |
 | [extensions-map.md](extensions-map.md) | The Ring 1 plugins and the TTT module |
 | [ports-map.md](ports-map.md) | The Ring 2 ports and their real/fake adapters |
+| [app-map.md](app-map.md) | The Ring 4 loops, the pipeline, and the D14 chat switches |
 | [testing.md](testing.md) | How to run and add tests |
 
 Elsewhere: [ARCHITECTURE.md](../ARCHITECTURE.md) for the rings,
@@ -21,9 +22,10 @@ Elsewhere: [ARCHITECTURE.md](../ARCHITECTURE.md) for the rings,
 
 ## Status
 
-Phases 0–3 done: enforcement, all of Ring 0, Ring 1's two registries plus the
-TTT module, and Rings 2/3 — ten ports with a real and a fake adapter each.
-Rings 4–5 are empty packages.
+Phases 0–4 done: enforcement, all of Ring 0, Ring 1's two registries plus the
+TTT module, Rings 2/3 — ten ports with a real and a fake adapter each — and
+Ring 4's eight loop modules, tested end to end on fakes. Ring 5 is an empty
+package.
 
 ## Commands
 

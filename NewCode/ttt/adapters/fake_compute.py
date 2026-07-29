@@ -68,6 +68,8 @@ class FakeCompute:
     def eval_loss(self, token_ids: Sequence[int]) -> float:
         ids = tuple(token_ids)
         self.eval_forwards.append(ids)
+        if self._fast_weights is not None:
+            self._fast_weights.stage(len(ids))
         return self._losses[(len(self.eval_forwards) - 1) % len(self._losses)]
 
     def parameter_counts(self) -> Mapping[str, int]:

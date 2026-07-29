@@ -97,21 +97,27 @@ class FakeFastWeights:
     def snapshot(self, *, to_cpu: bool = False) -> Carry:
         return Carry(deltas={i: t.clone() for i, t in self._carried.items()})
 
-    def install(self, carry: Carry) -> None:
+    def install(self, carry: Carry, *, family: str = CARRY) -> None:
+        _check_family(family)
         unknown = sorted(set(carry.deltas) - set(self._layer_indices))
         if unknown:
             raise KeyError(
                 f"carry has layer indices {unknown} this model does not have; "
                 f"it has {list(self._layer_indices)}"
             )
-        self._carried = {i: t.clone() for i, t in carry.deltas.items()}
-        self.events.append("install")
+        installed = {i: t.clone() for i, t in carry.deltas.items()}
+        if family == CARRY:
+            self._carried = installed
+        else:
+            self._stream = installed
+        self.events.append(f"install({family})")
+
+    def decay_stream(self, *, factor: float) -> None:
+        self._stream = {i: t * factor for i, t in self._stream.items()}
+        self.events.append("decay_stream")
 
     def state_ratio(self, *, family: str) -> float:
-        if family not in FAMILIES:
-            raise ValueError(
-                f"unknown state family {family!r}; expected {CARRY!r} or {STREAM!r}"
-            )
+        _check_family(family)
         states = self._carried if family == CARRY else self._stream
         ratios = {
             i: carry_math.state_ratio(states.get(i), 1.0, eta=self.eta)
@@ -124,3 +130,10 @@ class FakeFastWeights:
 
     def gate_stats(self) -> tuple[float, float] | None:
         return (0.5, 0.0)
+
+
+def _check_family(family: str) -> None:
+    if family not in FAMILIES:
+        raise ValueError(
+            f"unknown state family {family!r}; expected {CARRY!r} or {STREAM!r}"
+        )

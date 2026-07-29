@@ -78,3 +78,22 @@ The default tier is all fakes plus `torch_*` against a four-layer, no-attention
 stand-in model (`tests/ports/_builders.py::TinyCausalLM`) — real gradients,
 real optimizer steps, CPU milliseconds. The three HF adapters need a download
 and are marked `integration`, deselected by default.
+
+## Added in Phase 4
+
+Three methods were added when Ring 4 was written, each because a loop could not
+be expressed without it. All three are in the conformance suites, so every
+adapter — real and fake — is held to them.
+
+| Method | Why |
+|---|---|
+| `FastWeights.install(carry, family=...)` | D14 defect 1: chat reads the streaming state, the trained carrier was written to the carry, and nothing connected them |
+| `FastWeights.decay_stream(factor=...)` | D14 defect 3: the turn boundary had no decay, so chat drove `state_ratio` into a regime training never showed the model |
+| `Table.filter(name, predicate)` | The prefilter stage runs before anything has shrunk the corpus; `column()` would materialise SlimPajama-6B |
+
+`FakeGeneration.reset_cache` also gained a script rewind. A real model
+re-prefilled on the same prompt with no cache repeats itself; the fake's script
+pointer used to survive the reset, which made the same-seed A/B (D14) come out
+shifted by a token. A conformance test now pins the property on both adapters.
+
+See [app-map.md](app-map.md) for what Ring 4 does with all of this.

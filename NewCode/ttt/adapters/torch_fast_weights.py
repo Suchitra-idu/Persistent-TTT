@@ -65,7 +65,8 @@ class TorchFastWeights:
             deltas[index] = (staged.cpu() if to_cpu else staged).clone()
         return Carry(deltas=deltas)
 
-    def install(self, carry: Carry) -> None:
+    def install(self, carry: Carry, *, family: str = CARRY) -> None:
+        _check_family(family)
         unknown = sorted(set(carry.deltas) - set(self._modules))
         if unknown:
             raise KeyError(
@@ -80,7 +81,16 @@ class TorchFastWeights:
                     f"carry for layer {index} has shape {tuple(delta.shape)}, "
                     f"incompatible with W0 {tuple(target.shape)}"
                 )
-            module.carried = delta.to(device=target.device).float()
+            state = delta.to(device=target.device).float()
+            if family == CARRY:
+                module.carried = state
+            else:
+                module.stream.delta = state
+
+    def decay_stream(self, *, factor: float) -> None:
+        for module in self._modules.values():
+            if module.stream.delta is not None:
+                module.stream.delta = module.stream.delta * factor
 
     def state_ratio(self, *, family: str) -> float:
         _check_family(family)
