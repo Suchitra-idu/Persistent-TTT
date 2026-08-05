@@ -1,7 +1,13 @@
 from __future__ import annotations
 
+import pytest
+
 from tests.ports import _builders
-from ttt.adapters.model_builder import patch_model_with_ttt, unfreeze_ttt_params
+from ttt.adapters.model_builder import (
+    patch_model_with_ttt,
+    prepare_for_training,
+    unfreeze_ttt_params,
+)
 from ttt.core import naming
 from ttt.core.config.ttt import TTTConfig, derive_layer_indices
 from ttt.extensions.mechanism import InPlaceTTTMLP
@@ -119,3 +125,132 @@ def test_unfreezing_reports_how_many_it_thawed():
         parameter.requires_grad_(False)
 
     assert unfreeze_ttt_params(model, cfg) == len(cfg.layer_indices) * THAWED_PER_LAYER
+
+
+class _SpyModel:
+    """Records what `prepare_for_training` asks of a model. `TinyCausalLM` has no
+    checkpointing API, and the real one needs a download."""
+
+    def __init__(self):
+        self.calls = []
+        self.checkpoint_kwargs = None
+        self.config = type("Config", (), {"use_cache": True})()
+
+    def gradient_checkpointing_enable(self, gradient_checkpointing_kwargs=None):
+        self.calls.append("gradient_checkpointing_enable")
+        self.checkpoint_kwargs = gradient_checkpointing_kwargs
+
+    def enable_input_require_grads(self):
+        self.calls.append("enable_input_require_grads")
+
+    def train(self):
+        self.calls.append("train")
+
+
+class TestPrepareForTraining:
+    def test_it_turns_on_gradient_checkpointing(self):
+        model = _SpyModel()
+
+        prepare_for_training(model)
+
+        assert "gradient_checkpointing_enable" in model.calls
+
+    def test_it_asks_for_the_non_reentrant_implementation(self):
+        model = _SpyModel()
+
+        prepare_for_training(model)
+
+        assert model.checkpoint_kwargs == {"use_reentrant": False}
+
+    def test_it_enables_input_grads(self):
+        """Belt and braces under `use_reentrant=False`; what makes the reentrant
+        path safe if anyone switches back."""
+        model = _SpyModel()
+
+        prepare_for_training(model)
+
+        assert "enable_input_require_grads" in model.calls
+
+    def test_it_turns_the_kv_cache_off(self):
+        model = _SpyModel()
+
+        prepare_for_training(model)
+
+        assert model.config.use_cache is False
+
+    def test_it_puts_the_model_in_train_mode(self):
+        """`from_pretrained` returns an eval-mode model, which silently disables
+        LoRA dropout and flips `self.training` inside the mechanism."""
+        model = _SpyModel()
+
+        prepare_for_training(model)
+
+        assert "train" in model.calls
+
+    def test_input_grads_are_enabled_after_checkpointing_not_before(self):
+        model = _SpyModel()
+
+        prepare_for_training(model)
+
+        assert model.calls.index("gradient_checkpointing_enable") < model.calls.index(
+            "enable_input_require_grads"
+        )
+
+
+@pytest.mark.integration
+class TestPrepareForTrainingOnARealModel:
+    """A spy proves the calls happen; this proves transformers accepts them."""
+
+    @pytest.fixture(scope="class")
+    def prepared(self):
+        from peft import LoraConfig, get_peft_model
+        from transformers import AutoModelForCausalLM
+
+        from ttt.core.config.train import TrainConfig
+
+        model = AutoModelForCausalLM.from_pretrained(
+            "peft-internal-testing/tiny-dummy-qwen2"
+        )
+        depth = model.config.num_hidden_layers
+        # Under the default chunk_size the 8-token probe below would hit
+        # `_scan_forward`'s early return and never exercise the TTT path.
+        cfg = patch_model_with_ttt(
+            model, TTTConfig(layer_indices=(0,), chunk_size=4)
+        )
+        train_cfg = TrainConfig()
+        model = get_peft_model(
+            model,
+            LoraConfig(
+                r=train_cfg.lora_r,
+                lora_alpha=train_cfg.lora_alpha,
+                target_modules=naming.lora_target_regex(depth, cfg.layer_indices),
+                bias="none",
+                task_type="CAUSAL_LM",
+            ),
+        )
+        unfreeze_ttt_params(model, cfg)
+        prepare_for_training(model)
+        return model
+
+    def test_the_model_reports_gradient_checkpointing(self, prepared):
+        assert prepared.is_gradient_checkpointing
+
+    def test_the_model_is_in_train_mode(self, prepared):
+        assert prepared.training
+
+    def test_the_kv_cache_is_off(self, prepared):
+        assert prepared.config.use_cache is False
+
+    def test_a_backward_still_reaches_the_fast_weight(self, prepared):
+        """Checkpointing must not sever the graph to the fast weight — a broken
+        segment yields a None gradient rather than an error."""
+        import torch
+
+        ids = torch.tensor([[1, 2, 3, 4, 5, 6, 7, 8]])
+
+        prepared(input_ids=ids, labels=ids).loss.backward()
+
+        target = next(
+            p for n, p in prepared.named_parameters() if n.endswith("w_target")
+        )
+        assert target.grad is not None and torch.isfinite(target.grad).all()

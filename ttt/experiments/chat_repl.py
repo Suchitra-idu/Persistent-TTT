@@ -135,6 +135,7 @@ def control_for(switches: Switches) -> Switches:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="chat_repl")
     parser.add_argument("--resume-from", default="")
+    parser.add_argument("--flags", default="", help="name=value,name=value")
     parser.add_argument("--system", default="")
     parser.add_argument("--seed-source", default="", help="install this source's carrier")
     parser.add_argument("--context", choices=CONTEXTS, default=NONE)
@@ -280,7 +281,7 @@ def main(argv: Sequence[str] | None = None) -> None:
 
     args = build_parser().parse_args(argv)
     handle = modal.Cls.from_name("ttt-chat-v1", "ChatEngine")(
-        resume_from=args.resume_from
+        resume_from=args.resume_from, flags=args.flags
     )
     repl(
         RemoteSession(

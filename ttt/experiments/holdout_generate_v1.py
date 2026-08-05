@@ -127,6 +127,7 @@ def _announce(continuation: Continuation, announce) -> None:
     secrets=modal_runtime.secrets(),
     timeout=60 * 60,
 )
+@modal_runtime.caching
 def holdout_generate(n_docs: int = 1, temperature: float = 0.0, **flags):
     from ttt.adapters.hf_data_source import HfDataSource
 
@@ -147,5 +148,7 @@ def holdout_generate(n_docs: int = 1, temperature: float = 0.0, **flags):
 
 
 @app.local_entrypoint()
-def main(n_docs: int = 1, temperature: float = 0.0, **flags):
-    holdout_generate.remote(n_docs=n_docs, temperature=temperature, **flags)
+def main(n_docs: int = 1, temperature: float = 0.0, flags: str = ""):
+    holdout_generate.remote(
+        n_docs=n_docs, temperature=temperature, **cli.parse_flags(flags)
+    )

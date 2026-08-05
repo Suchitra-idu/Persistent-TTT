@@ -32,6 +32,26 @@ def patch_model_with_ttt(model: torch.nn.Module, cfg: TTTConfig) -> TTTConfig:
     return cfg
 
 
+def prepare_for_training(model: torch.nn.Module) -> None:
+    """Checkpointing, input grads, no KV cache, train mode.
+
+    Without checkpointing a 16k-token document holds every layer's scan state at
+    once — the state is [B, N/chunk_size, d_model, d_ff], about 2GB per TTT layer
+    at the defaults — and an 80GB card runs out on the first micro step.
+
+    `enable_input_require_grads` guards the PEFT trap where a checkpointed
+    segment sees only frozen inputs. Under `use_reentrant=False` it is belt and
+    braces — removing it changes no gradient here — but it is what makes the
+    reentrant path safe, and it costs one embedding hook.
+    """
+    model.gradient_checkpointing_enable(
+        gradient_checkpointing_kwargs={"use_reentrant": False}
+    )
+    model.enable_input_require_grads()
+    model.config.use_cache = False
+    model.train()
+
+
 def unfreeze_ttt_params(model: torch.nn.Module, cfg: TTTConfig) -> int:
     """PEFT freezes everything non-LoRA; re-enable the TTT trainables."""
     ttt_down = naming.ttt_down_suffixes(cfg.layer_indices or ())
@@ -74,6 +94,7 @@ def build_model(
     )
     if trainable:
         unfreeze_ttt_params(model, ttt_cfg)
+        prepare_for_training(model)
     return model, ttt_cfg
 
 

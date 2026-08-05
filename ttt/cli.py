@@ -233,6 +233,63 @@ def _taken(overrides: Mapping[str, Any], fields: tuple[str, ...]) -> dict[str, A
     }
 
 
+TRUTHY = ("1", "true", "yes", "on")
+
+
+def _flag_types() -> dict[str, type]:
+    """name -> type, read off each field's default so a new config field becomes
+    coercible the moment it exists."""
+    types: dict[str, type] = {}
+    for owner in (TrainConfig, TTTConfig, *strategies.STRATEGIES.values()):
+        for field in dataclasses.fields(owner):
+            if field.default not in (dataclasses.MISSING, None):
+                types[field.name] = type(field.default)
+    return types
+
+
+_FLAG_TYPES = _flag_types()
+
+
+def parse_flags(text: str) -> dict[str, Any]:
+    """`"num_epochs=2,strategy=hybrid"` -> kwargs for `from_flags`.
+
+    Modal builds an entrypoint's CLI from its signature and cannot express
+    `**kwargs`, so the whole surface has to arrive as one string. Unknown names
+    still raise in `resolve`, before anything reaches a GPU.
+    """
+    given: dict[str, Any] = {}
+    for part in text.split(","):
+        pair = part.strip()
+        if not pair:
+            continue
+        if "=" not in pair:
+            raise ValueError(f"expected name=value, got {pair!r}")
+        name, _, value = pair.partition("=")
+        given[name.strip()] = _flag_value(name.strip(), value.strip())
+    return given
+
+
+def _flag_value(name: str, text: str) -> Any:
+    kind = _FLAG_TYPES.get(name)
+    if kind is bool:
+        return text.lower() in TRUTHY
+    if kind in (int, float):
+        return kind(text)
+    if kind is str:
+        return text
+    return _guessed(text)
+
+
+def _guessed(text: str) -> Any:
+    """For the flags that are not config fields — `session`, `dataset`."""
+    for kind in (int, float):
+        try:
+            return kind(text)
+        except ValueError:
+            continue
+    return text
+
+
 def env_defaults(environ: Mapping[str, str] | None = None) -> dict[str, str]:
     """The three settings the laptop and the container must agree on. Read here
     and nowhere else (D3); an explicit argument still wins."""

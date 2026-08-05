@@ -95,6 +95,7 @@ def run(
     secrets=modal_runtime.secrets(),
     timeout=60 * 20,
 )
+@modal_runtime.caching
 def sanity_check(**flags):
     resolved = cli.from_flags(**{**cli.env_defaults(), **flags})
     engine = _runtime.build(
@@ -118,5 +119,5 @@ def sanity_check(**flags):
 
 
 @app.local_entrypoint()
-def main(**flags):
-    sanity_check.remote(**flags)
+def main(flags: str = ""):
+    sanity_check.remote(**cli.parse_flags(flags))

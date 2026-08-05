@@ -92,6 +92,7 @@ def slice_table(
     secrets=modal_runtime.secrets(),
     timeout=60 * 60,
 )
+@modal_runtime.caching
 def single_doc_eval(n_slices: int = 8, **flags):
     from ttt.adapters.hf_data_source import HfDataSource
     from ttt.experiments.holdout_eval_v1 import _EvalCompute
@@ -108,5 +109,5 @@ def single_doc_eval(n_slices: int = 8, **flags):
 
 
 @app.local_entrypoint()
-def main(n_slices: int = 8, **flags):
-    single_doc_eval.remote(n_slices=n_slices, **flags)
+def main(n_slices: int = 8, flags: str = ""):
+    single_doc_eval.remote(n_slices=n_slices, **cli.parse_flags(flags))

@@ -90,6 +90,7 @@ def _announce(measured, holdout, meta, announce) -> None:
     secrets=modal_runtime.secrets(),
     timeout=60 * 60,
 )
+@modal_runtime.caching
 def holdout_eval(seeded: bool = True, force_source: str = "", **flags):
     from ttt.adapters.hf_data_source import HfDataSource
 
@@ -127,5 +128,7 @@ class _EvalCompute:
 
 
 @app.local_entrypoint()
-def main(seeded: bool = True, force_source: str = "", **flags):
-    holdout_eval.remote(seeded=seeded, force_source=force_source, **flags)
+def main(seeded: bool = True, force_source: str = "", flags: str = ""):
+    holdout_eval.remote(
+        seeded=seeded, force_source=force_source, **cli.parse_flags(flags)
+    )

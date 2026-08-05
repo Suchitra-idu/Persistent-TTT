@@ -7,8 +7,8 @@ The container is what holds the fast weight between turns, so the session lives
 here and `chat_repl` drives it remotely.
 """
 
-from __future__ import annotations
-
+# No `from __future__ import annotations` here: `modal.parameter` reads
+# `__annotations__` without resolving it, and PEP 563 hands it the string "str".
 import dataclasses
 
 import modal
@@ -61,11 +61,16 @@ def as_payload(turn) -> dict:
 )
 class ChatEngine:
     resume_from: str = modal.parameter(default="")
+    flags: str = modal.parameter(default="")
 
     @modal.enter()
     def load(self):
         self.resolved = cli.from_flags(
-            **{**cli.env_defaults(), "resume_from": self.resume_from}
+            **{
+                **cli.env_defaults(),
+                **cli.parse_flags(self.flags),
+                "resume_from": self.resume_from,
+            }
         )
         self.engine = _runtime.build(
             self.resolved,

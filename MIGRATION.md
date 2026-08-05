@@ -76,6 +76,8 @@ as-is and listed in PLAN §9. None is a cleanup decision.
 | **D14.1** — the trained seed could not reach chat at all | `_stream_forward` never read `carried_delta` | `FastWeights.install(carry, family=STREAM)`; `tests/app/test_chat.py::TestSeedSwitch` |
 | **D14.2** — two incompatible snapshot key schemes | `snapshot_carried_delta` keyed by layer index, `export_fast_weights` by enumeration; mixing them loaded 7 of 14 modules with **another layer's** delta, silently | One `Carry`, keyed by base-model layer index. `tests/parity/test_checkpoint_parity.py::test_the_carry_key_scheme_is_the_base_model_layer_index` |
 | **D14.3** — no decay at the turn boundary | Chat accumulated a pure sum while training used an EMA | `FastWeights.decay_stream(factor=)`; `tests/app/test_chat.py::TestCrossTurnSwitch` |
+| Gradient checkpointing was dropped in the port | `train_modal.py:698` enabled it; the rebuild did not, and a 16k document OOM'd an 80GB card on the first micro step — the scan state is ~2GB per TTT layer | `prepare_for_training`; `tests/adapters/test_model_builder.py::TestPrepareForTraining` |
+| `model.train()` was never called | `from_pretrained` returns an eval-mode model, so LoRA dropout was inactive and `self.training` was False inside the mechanism | `test_it_puts_the_model_in_train_mode` |
 | Per-turn gate std was `nan` every turn | `gate.std()` on one element — chat streams one token per call | Population std. `tests/parity/test_mechanism_parity.py::TestGate::test_the_gate_std_is_where_the_two_sides_deliberately_differ` |
 
 ---

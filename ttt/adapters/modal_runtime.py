@@ -7,6 +7,7 @@ line in the build. Attention is `sdpa` everywhere.
 
 from __future__ import annotations
 
+import functools
 import os
 
 import modal
@@ -67,3 +68,23 @@ def secrets() -> list:
 def checkpoint_storage(volume=None) -> ModalStorage:
     """Built here so the mount path and the volume cannot drift apart."""
     return ModalStorage(volume or checkpoint_volume(), CKPT_MOUNT)
+
+
+def commit_cache(volume=None) -> None:
+    """Persist the HF cache. Modal commits nothing on exit, so without this every
+    run re-downloads the base model and re-labels the whole corpus."""
+    (volume or cache_volume()).commit()
+
+
+def caching(fn):
+    """Commit the HF cache however `fn` ends — a model that downloaded is worth
+    keeping even if training later failed, or the retry pays for it again."""
+
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        try:
+            return fn(*args, **kwargs)
+        finally:
+            commit_cache()
+
+    return wrapper

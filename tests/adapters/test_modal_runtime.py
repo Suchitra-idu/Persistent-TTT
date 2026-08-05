@@ -83,3 +83,46 @@ class TestStorage:
         volume = object()
 
         assert modal_runtime.checkpoint_storage(volume).volume is volume
+
+
+class TestCacheCommit:
+    def test_it_commits_the_volume_it_was_given(self):
+        volume = _SpyVolume()
+
+        modal_runtime.commit_cache(volume)
+
+        assert volume.commits == 1
+
+    def test_the_decorator_commits_after_a_successful_call(self, monkeypatch):
+        volume = _SpyVolume()
+        monkeypatch.setattr(modal_runtime, "cache_volume", lambda: volume)
+
+        modal_runtime.caching(lambda: "done")()
+
+        assert volume.commits == 1
+
+    def test_the_decorator_commits_even_when_the_run_raises(self, monkeypatch):
+        """A model that downloaded is worth keeping whatever failed after it."""
+        volume = _SpyVolume()
+        monkeypatch.setattr(modal_runtime, "cache_volume", lambda: volume)
+
+        def boom():
+            raise RuntimeError("training died")
+
+        with pytest.raises(RuntimeError):
+            modal_runtime.caching(boom)()
+
+        assert volume.commits == 1
+
+    def test_it_returns_what_the_wrapped_function_returned(self, monkeypatch):
+        monkeypatch.setattr(modal_runtime, "cache_volume", _SpyVolume)
+
+        assert modal_runtime.caching(lambda n: n * 2)(21) == 42
+
+
+class _SpyVolume:
+    def __init__(self):
+        self.commits = 0
+
+    def commit(self):
+        self.commits += 1

@@ -289,3 +289,57 @@ class TestDescribe:
 
     def test_a_changed_option_changes_the_description(self):
         assert cli.resolve(num_epochs=2).describe() != cli.resolve(num_epochs=3).describe()
+
+
+class TestParseFlags:
+    def test_an_empty_string_sets_nothing(self):
+        assert cli.parse_flags("") == {}
+
+    def test_an_integer_field_arrives_as_an_integer(self):
+        assert cli.parse_flags("num_epochs=3") == {"num_epochs": 3}
+
+    def test_a_float_field_arrives_as_a_float(self):
+        assert cli.parse_flags("lr_wdown=0.0005") == {"lr_wdown": 0.0005}
+
+    def test_a_string_field_stays_a_string(self):
+        assert cli.parse_flags("strategy=hybrid") == {"strategy": "hybrid"}
+
+    @pytest.mark.parametrize("text", ["true", "1", "yes", "on", "TRUE"])
+    def test_a_boolean_field_accepts_the_usual_spellings(self, text):
+        assert cli.parse_flags(f"wandb_enabled={text}") == {"wandb_enabled": True}
+
+    def test_a_boolean_field_is_false_when_it_says_so(self):
+        """`bool("false")` is True, so a string would silently invert this."""
+        assert cli.parse_flags("wandb_enabled=false") == {"wandb_enabled": False}
+
+    def test_several_flags_separated_by_commas(self):
+        assert cli.parse_flags("num_epochs=2,strategy=hybrid") == {
+            "num_epochs": 2,
+            "strategy": "hybrid",
+        }
+
+    def test_surrounding_whitespace_is_ignored(self):
+        assert cli.parse_flags(" num_epochs = 2 , strategy = hybrid ") == {
+            "num_epochs": 2,
+            "strategy": "hybrid",
+        }
+
+    def test_a_flag_that_is_not_a_config_field_still_gets_a_type(self):
+        assert cli.parse_flags("session=0") == {"session": 0}
+
+    def test_a_dataset_name_is_not_mistaken_for_a_number(self):
+        assert cli.parse_flags("dataset=slimpajama-6b") == {"dataset": "slimpajama-6b"}
+
+    def test_a_pair_without_a_value_is_rejected(self):
+        with pytest.raises(ValueError, match="expected name=value"):
+            cli.parse_flags("num_epochs")
+
+    def test_a_strategy_knob_is_coerced_by_its_plugin(self):
+        assert cli.parse_flags("slices_min=4") == {"slices_min": 4}
+
+    def test_what_it_parses_reaches_the_resolved_config(self):
+        assert cli.from_flags(**cli.parse_flags("num_epochs=7")).train.num_epochs == 7
+
+    def test_a_typo_is_rejected_before_anything_reaches_a_gpu(self):
+        with pytest.raises(ValueError, match="unknown option"):
+            cli.from_flags(**cli.parse_flags("num_epoch=7"))

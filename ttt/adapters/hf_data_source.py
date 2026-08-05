@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import glob
 import os
+import sys
 
 from ttt.adapters.hf_table import HfTable
 from ttt.core.config.dataset import DatasetSpec
@@ -22,12 +23,26 @@ class HfDataSource:
                 f"column to read a source label from (columns: "
                 f"{dataset.column_names})"
             )
-        # `map`, not a Python list: SlimPajama-6B does not fit in memory.
-        dataset = dataset.map(
-            lambda row: {SOURCE_COLUMN: spec.source_of(row)},
-            desc="labelling source",
+        return HfTable(dataset.add_column(SOURCE_COLUMN, source_labels(dataset, spec)))
+
+
+def source_labels(dataset, spec: DatasetSpec) -> list[str]:
+    """The `source` column's values, read a chunk at a time.
+
+    Deliberately not `dataset.map`: that rewrites every column of every row to
+    append one string, which on SlimPajama-6B is tens of GB of writes to a
+    network-backed volume. Appending one array leaves the rest memory-mapped.
+    Interned because a 6M-row corpus holds about six distinct labels.
+    """
+    if spec.source_meta_column is None:
+        return [spec.constant_source] * len(dataset)
+    labels: list[str] = []
+    for chunk in dataset.data.column(spec.source_meta_column).chunks:
+        labels.extend(
+            sys.intern(spec.source_of({spec.source_meta_column: value}))
+            for value in chunk.to_pylist()
         )
-        return HfTable(dataset)
+    return labels
 
 
 def _load(spec: DatasetSpec):

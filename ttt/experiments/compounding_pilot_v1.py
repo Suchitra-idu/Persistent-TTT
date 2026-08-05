@@ -100,6 +100,7 @@ def payload(resolved: cli.Resolved, rows) -> bytes:
     secrets=modal_runtime.secrets(),
     timeout=60 * 60,
 )
+@modal_runtime.caching
 def compounding_pilot(pilot_source: str = "", n_docs: int = 10, out_name: str = "", **flags):
     from ttt.adapters.hf_data_source import HfDataSource
     from ttt.experiments.holdout_eval_v1 import _EvalCompute
@@ -130,7 +131,10 @@ def _default_name(engine: Engine, pilot_source: str, n_rows: int) -> str:
 
 
 @app.local_entrypoint()
-def main(pilot_source: str = "", n_docs: int = 10, out_name: str = "", **flags):
+def main(pilot_source: str = "", n_docs: int = 10, out_name: str = "", flags: str = ""):
     compounding_pilot.remote(
-        pilot_source=pilot_source, n_docs=n_docs, out_name=out_name, **flags
+        pilot_source=pilot_source,
+        n_docs=n_docs,
+        out_name=out_name,
+        **cli.parse_flags(flags),
     )

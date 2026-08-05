@@ -101,6 +101,7 @@ def _evaluator(resolved, engine, holdout_docs, announce):
     secrets=modal_runtime.secrets(),
     timeout=24 * 60 * 60,
 )
+@modal_runtime.caching
 def train(**flags):
     from ttt.adapters.hf_data_source import HfDataSource
 
@@ -118,5 +119,5 @@ def train(**flags):
 
 
 @app.local_entrypoint()
-def main(**flags):
-    train.remote(**flags)
+def main(flags: str = ""):
+    train.remote(**cli.parse_flags(flags))

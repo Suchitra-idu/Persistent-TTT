@@ -22,6 +22,21 @@ arguments into frozen config and touches nothing else — the
 | `chat_repl.py` | `chat_client.py` | `python -m ttt.experiments.chat_repl` |
 | `plot_pilot.py` | `plot_pilot.py` | `python -m ttt.experiments.plot_pilot <json>` |
 
+## Passing configuration
+
+Every knob travels in one `--flags` string, as `name=value` pairs:
+
+```
+modal run --detach ttt/experiments/train_v1.py --flags "num_epochs=2,strategy=hybrid"
+```
+
+Modal builds an entrypoint's CLI from its signature and cannot express
+`**kwargs`, so a per-field surface is not available to it. `cli.parse_flags`
+coerces each value using that field's declared default, and `cli.resolve`
+rejects an unknown name locally — before anything reaches a GPU. An entrypoint's
+own arguments (`--n-docs`, `--seeded`) stay separate, because those are not
+config fields. `tests/architecture/test_entrypoints.py` enforces the shape.
+
 `session_eval` has no equivalent: it read `.txt` files from a directory, an
 arxiv-era manual workflow, and D11 cut it. The session-perplexity *measurement*
 it drove survives as `ttt/app/session_eval.py`, which `single_doc_eval_v1` uses.
