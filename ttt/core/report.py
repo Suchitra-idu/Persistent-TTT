@@ -5,8 +5,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Sequence
 
-from ttt.core.metrics import SourceSummary
-from ttt.core.types import CARRY, COLD_CARRY, COLD_CARRY_OFF, FRESH
+from ttt.core.metrics import SliceSummary, SourceSummary
+from ttt.core.ruler_types import RulerResult
+from ttt.core.types import CARRY, COLD_CARRY, COLD_CARRY_OFF, FRESH, LORA_ONLY
 
 LEFT = "left"
 RIGHT = "right"
@@ -69,12 +70,13 @@ def per_source_table(summaries: Sequence[SourceSummary]) -> Table:
     aligns = [LEFT, RIGHT, RIGHT]
     if seeded:
         headers += [
-            "carry", "cold-c", "cold-co", "fresh", "Δwithin", "Δbetween", "Δseed",
+            "carry", "cold-c", "cold-co", "lora", "fresh",
+            "Δlora", "Δwithin", "Δbetween", "Δseed",
         ]
-        aligns += [RIGHT] * 7
+        aligns += [RIGHT] * 9
     else:
-        headers += ["cold-c", "cold-co", "fresh", "Δwithin", "Δbetween"]
-        aligns += [RIGHT] * 5
+        headers += ["cold-c", "cold-co", "lora", "fresh", "Δlora", "Δwithin", "Δbetween"]
+        aligns += [RIGHT] * 7
 
     rows = []
     for summary in summaries:
@@ -85,7 +87,9 @@ def per_source_table(summaries: Sequence[SourceSummary]) -> Table:
         cells += [
             ppl(by_regime.get(COLD_CARRY, float("nan"))),
             ppl(by_regime.get(COLD_CARRY_OFF, float("nan"))),
+            ppl(by_regime.get(LORA_ONLY, float("nan"))),
             ppl(by_regime.get(FRESH, float("nan"))),
+            delta(summary.gaps.lora),
             delta(summary.gaps.within),
             delta(summary.gaps.between),
         ]
@@ -94,6 +98,73 @@ def per_source_table(summaries: Sequence[SourceSummary]) -> Table:
         rows.append(tuple(cells))
 
     return Table(headers=tuple(headers), rows=tuple(rows), aligns=tuple(aligns))
+
+
+def slice_gap_table(summaries: Sequence[SliceSummary]) -> Table:
+    """Same columns as `per_source_table`, keyed by distance into the
+    document instead of source — a win concentrated at low slice indices and
+    fading at high ones is a local-adaptation win, not a long-range one."""
+    seeded = any(CARRY in s.ppl_by_regime for s in summaries)
+
+    headers = ["slice", "n_docs", "n_tok"]
+    aligns = [RIGHT, RIGHT, RIGHT]
+    if seeded:
+        headers += [
+            "carry", "cold-c", "cold-co", "lora", "fresh",
+            "Δlora", "Δwithin", "Δbetween", "Δseed",
+        ]
+        aligns += [RIGHT] * 9
+    else:
+        headers += ["cold-c", "cold-co", "lora", "fresh", "Δlora", "Δwithin", "Δbetween"]
+        aligns += [RIGHT] * 7
+
+    rows = []
+    for summary in sorted(summaries, key=lambda s: s.slice_index):
+        by_regime = summary.ppl_by_regime
+        cells = [str(summary.slice_index), str(summary.n_docs), f"{summary.n_tokens:,d}"]
+        if seeded:
+            cells.append(ppl(by_regime.get(CARRY, float("nan"))))
+        cells += [
+            ppl(by_regime.get(COLD_CARRY, float("nan"))),
+            ppl(by_regime.get(COLD_CARRY_OFF, float("nan"))),
+            ppl(by_regime.get(LORA_ONLY, float("nan"))),
+            ppl(by_regime.get(FRESH, float("nan"))),
+            delta(summary.gaps.lora),
+            delta(summary.gaps.within),
+            delta(summary.gaps.between),
+        ]
+        if seeded:
+            cells.append(delta(summary.gaps.seed))
+        rows.append(tuple(cells))
+
+    return Table(headers=tuple(headers), rows=tuple(rows), aligns=tuple(aligns))
+
+
+def ruler_table(results: Sequence[RulerResult]) -> Table:
+    """One row per task x length, one column per regime, mean score."""
+    regimes = sorted({r.regime for r in results})
+    grouped: dict[tuple[str, int], dict[str, list[float]]] = {}
+    for r in results:
+        grouped.setdefault((r.task, r.length_bucket), {}).setdefault(
+            r.regime, []
+        ).append(r.score)
+
+    rows = []
+    for (task, length), by_regime in sorted(grouped.items()):
+        cells = [task, str(length)]
+        cells += [
+            f"{sum(scores) / len(scores):.3f}"
+            if (scores := by_regime.get(regime))
+            else "n/a"
+            for regime in regimes
+        ]
+        rows.append(tuple(cells))
+
+    return Table(
+        headers=("task", "length", *regimes),
+        rows=tuple(rows),
+        aligns=(LEFT, RIGHT, *([RIGHT] * len(regimes))),
+    )
 
 
 @dataclass(frozen=True)

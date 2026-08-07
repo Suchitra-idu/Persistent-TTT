@@ -6,6 +6,7 @@ hard error: silently dropping one would train it at no learning rate at all.
 
 from __future__ import annotations
 
+import contextlib
 from typing import Mapping, Sequence
 
 import torch
@@ -82,9 +83,10 @@ class TorchCompute:
         return GradStats(total_norm=float(total), **norms)
 
     @torch.no_grad()
-    def eval_loss(self, token_ids: Sequence[int]) -> float:
+    def eval_loss(self, token_ids: Sequence[int], *, lora: bool = True) -> float:
         ids = self._ids(token_ids)
-        return float(self.model(input_ids=ids, labels=ids).loss)
+        with contextlib.nullcontext() if lora else self.model.disable_adapter():
+            return float(self.model(input_ids=ids, labels=ids).loss)
 
     def parameter_counts(self) -> Mapping[str, int]:
         return {

@@ -145,12 +145,15 @@ class TestMetricArithmetic:
         )
 
     @pytest.mark.parametrize("source", ["alpha", "beta"])
-    @pytest.mark.parametrize("gap", ["within", "between"])
-    def test_the_per_source_gap_agrees(self, source, gap):
+    def test_the_per_source_between_gap_agrees(self, source):
+        """`within` is deliberately excluded: it used to be fresh - carry_off,
+        and is now lora_only - carry_off (`lora_only` reinstated, `fresh`
+        redefined to the untouched base model — see PLAN.md's cut list, item
+        4). `between` is unaffected by that split, so parity still holds."""
         old, summaries = _both_sides()
 
-        assert getattr(summaries[source].gaps, gap) == pytest.approx(
-            old[f"eval/{source}/gap_{gap}"], rel=1e-12
+        assert summaries[source].gaps.between == pytest.approx(
+            old[f"eval/{source}/gap_between"], rel=1e-12
         )
 
     @pytest.mark.parametrize("source", ["alpha", "beta"])

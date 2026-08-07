@@ -6,7 +6,7 @@ import random
 
 import torch
 
-from ttt.core.types import DocRef, EvalRow, PplRow, WorkItem
+from ttt.core.types import DocRef, EvalRow, PplRow, SliceRow, WorkItem
 
 FP64 = torch.float64
 
@@ -56,6 +56,25 @@ def eval_row(
         n_tokens=n_tokens,
         ppl=ppl,
         state_ratio_final=state_ratio_final,
+    )
+
+
+def slice_row(
+    *,
+    doc_idx: int = 0,
+    source: str = "RedPajamaC4",
+    regime: str = "cold_carry",
+    slice_index: int = 0,
+    n_tokens: int = 1000,
+    ppl: float = 10.0,
+) -> SliceRow:
+    return SliceRow(
+        doc_idx=doc_idx,
+        source=source,
+        regime=regime,
+        slice_index=slice_index,
+        n_tokens=n_tokens,
+        ppl=ppl,
     )
 
 

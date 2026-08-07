@@ -53,7 +53,10 @@ class TrainConfig:
 
     eval_every: int = 100
     eval_n_docs: int = 3
-    eval_n_docs_per_source: int = 1
+    # In-loop default; standalone eval commands (holdout_eval_v1/v2) raise
+    # this to 50 unless a flag overrides it — a checkpoint eval runs often and
+    # cheaply, a standalone one runs once and wants the tighter estimate.
+    eval_n_docs_per_source: int = 5
     eval_n_slices: int = 8
     eval_min_tokens: int = 2048
     eval_holdout_seed: int = 0

@@ -6,13 +6,20 @@ import pytest
 
 from tests.app import _builders
 from ttt.app import eval_loop
-from ttt.core.types import CARRY, CARRY_OFF, COLD_CARRY, COLD_CARRY_OFF, FRESH
+from ttt.core.types import (
+    CARRY,
+    CARRY_OFF,
+    COLD_CARRY,
+    COLD_CARRY_OFF,
+    FRESH,
+    LORA_ONLY,
+)
 
 SLICES = 4
 
 # Cycle length coprime with the slice count, so each document lands on a
 # different offset and a subset mean is distinguishable from the pool mean.
-SHIFTING = (1.0, 0.9, 0.8)
+SHIFTING = (1.0, 0.95, 0.9, 0.85, 0.8)
 
 
 def measure(*, n_docs=2, n_slices=SLICES, losses=(1.0, 0.9, 0.8, 0.7), carries=None):
@@ -28,24 +35,30 @@ def measure(*, n_docs=2, n_slices=SLICES, losses=(1.0, 0.9, 0.8, 0.7), carries=N
 
 
 class TestZeroSeedPass:
-    def test_it_measures_three_regimes_per_document(self):
+    def test_it_measures_four_regimes_per_document(self):
         report, _ = measure(n_docs=2)
 
-        assert len(report.rows) == 6
+        assert len(report.rows) == 8
 
-    def test_the_regimes_are_the_cold_trio(self):
+    def test_the_regimes_are_the_cold_quartet(self):
         report, _ = measure()
 
         assert {row.regime for row in report.rows} == {
             COLD_CARRY,
             COLD_CARRY_OFF,
+            LORA_ONLY,
             FRESH,
         }
 
     def test_every_slice_is_one_evaluation_forward(self):
         _, wiring = measure(n_docs=1, n_slices=SLICES)
 
-        assert len(wiring.compute.eval_forwards) == 3 * SLICES
+        assert len(wiring.compute.eval_forwards) == 4 * SLICES
+
+    def test_only_the_fresh_regime_disables_lora(self):
+        _, wiring = measure(n_docs=1, n_slices=SLICES)
+
+        assert wiring.compute.eval_lora_flags.count(False) == SLICES
 
     def test_no_evaluation_forward_leaves_a_backward_pending(self):
         _, wiring = measure()
@@ -58,7 +71,9 @@ class TestZeroSeedPass:
         assert set(report.metrics) == {
             "eval/carry_ppl",
             "eval/carry_off_ppl",
+            "eval/lora_only_ppl",
             "eval/fresh_ppl",
+            "eval/gap_lora",
             "eval/gap_within",
             "eval/gap_between",
             "eval/gap_total",
@@ -69,9 +84,9 @@ class TestZeroSeedPass:
         report, _ = measure()
         gaps = report.metrics
 
-        assert gaps["eval/gap_within"] + gaps["eval/gap_between"] == pytest.approx(
-            gaps["eval/gap_total"]
-        )
+        assert gaps["eval/gap_lora"] + gaps["eval/gap_within"] + gaps[
+            "eval/gap_between"
+        ] == pytest.approx(gaps["eval/gap_total"])
 
     def test_carry_off_resets_once_per_extra_slice(self):
         _, one = measure(n_docs=1, n_slices=1)
@@ -230,8 +245,26 @@ class TestStateRestoration:
 
 
 class _Exploding:
-    def eval_loss(self, token_ids):
+    def eval_loss(self, token_ids, *, lora: bool = True):
         raise ZeroDivisionError("measurement blew up")
+
+
+class TestSliceRows:
+    def test_it_keeps_one_row_per_doc_regime_and_slice(self):
+        report, _ = measure(n_docs=2, n_slices=SLICES)
+
+        assert len(report.slices) == 2 * 4 * SLICES
+
+    def test_slice_indices_run_in_order_per_doc_and_regime(self):
+        report, _ = measure(n_docs=1, n_slices=SLICES)
+        indices = [s.slice_index for s in report.slices if s.regime == COLD_CARRY]
+
+        assert indices == list(range(SLICES))
+
+    def test_an_empty_holdout_has_no_slices(self):
+        report, _ = measure(n_docs=0)
+
+        assert report.slices == ()
 
 
 class TestPerSourceSummaries:

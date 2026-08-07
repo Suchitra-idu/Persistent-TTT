@@ -21,6 +21,8 @@ arguments into frozen config and touches nothing else — the
 | `chat_v1.py` | `infer_modal.py::TTTInference` (chat half) | `modal deploy ttt/experiments/chat_v1.py` |
 | `chat_repl.py` | `chat_client.py` | `python -m ttt.experiments.chat_repl` |
 | `plot_pilot.py` | `plot_pilot.py` | `python -m ttt.experiments.plot_pilot <json>` |
+| `ruler_prepare_v1.py` | — | `modal run ttt/experiments/ruler_prepare_v1.py` |
+| `ruler_eval_v1.py` | — | `modal run ttt/experiments/ruler_eval_v1.py` |
 
 ## Passing configuration
 
@@ -97,6 +99,35 @@ whole thing runs on fakes with no GPU. That is what `tests/experiments/` does.
 storage adapter *and* its mount path separately, because PEFT writes an adapter
 directory and the Storage port speaks in blobs. That is a deliberate Ring-5-only
 concession rather than a `root` attribute smuggled onto the port.
+
+---
+
+## RULER
+
+Two phases, not one: `ruler_prepare_v1` (CPU only) synthesizes each task x
+context-length example set once via `extensions/ruler_tasks/` and writes it
+to `Storage` as JSONL; `ruler_eval_v1` (GPU) only reads those sets and scores
+generations under each `FastWeights` regime — `COLD_CARRY` (TTT on) and
+`FRESH` (TTT off). Splitting it this way means synthesis never runs inside a
+billed GPU container, and every model/checkpoint compared runs against the
+*same* fixed example set.
+
+`RulerConfig.prompt_style` (`ruler_flags="prompt_style=..."`) picks how a
+prepared example reaches the model: `base` (default) appends the task's own
+completion cue (`RulerExample.answer_prefix`) straight onto the prompt — what
+a non-instruct checkpoint needs, since it has no instruction-following to
+lean on. `instruct` routes through the tokenizer's chat template instead,
+for when the base model being evaluated is swapped for an instruct-tuned one.
+
+`ruler_eval.py` runs the FastWeights STREAM family (`stream=True`), not
+CARRY/`_scan_forward` — `_scan_forward` materializes one
+`[num_chunks, d_model, d_ff]` tensor per patched layer for the whole prompt
+at once, which OOMs on one H100 well before 32k tokens. `_stream_forward`
+(the same path chat generation already uses) holds one running
+`[d_model, d_ff]` state instead, committed and discarded chunk by chunk —
+O(1) in sequence length. Known gap versus the scan path: a trailing partial
+chunk is never committed, which is negligible since a prompt's last tokens
+are its query/answer cue, never the needle.
 
 ---
 

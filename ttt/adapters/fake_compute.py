@@ -32,6 +32,7 @@ class FakeCompute:
 
         self.forwards: list[tuple[int, ...]] = []
         self.eval_forwards: list[tuple[int, ...]] = []
+        self.eval_lora_flags: list[bool] = []
         self.backwards: list[float] = []
         self.steps: list[dict[str, float]] = []
         self.clipped_at: list[float] = []
@@ -65,9 +66,10 @@ class FakeCompute:
         self.clipped_at.append(max_grad_norm)
         return GradStats(total_norm=self._total_norm, **self._grad_norms)
 
-    def eval_loss(self, token_ids: Sequence[int]) -> float:
+    def eval_loss(self, token_ids: Sequence[int], *, lora: bool = True) -> float:
         ids = tuple(token_ids)
         self.eval_forwards.append(ids)
+        self.eval_lora_flags.append(lora)
         if self._fast_weights is not None:
             self._fast_weights.stage(len(ids))
         return self._losses[(len(self.eval_forwards) - 1) % len(self._losses)]

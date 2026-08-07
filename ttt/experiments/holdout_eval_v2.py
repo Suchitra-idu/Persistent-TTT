@@ -1,6 +1,9 @@
-"""Six-regime perplexity on the held-out tail, with the per-source breakdown.
+"""Six-regime perplexity, plus the same gap broken out by distance into the
+document. v1's aggregate can't tell a win concentrated in the first slice
+from one that holds up in the last — exactly the failure mode plain
+perplexity has for long-context claims (arXiv 2410.23771).
 
-    modal run ttt/experiments/holdout_eval_v1.py --resume-from step_600
+    modal run ttt/experiments/holdout_eval_v2.py --flags "resume_from=step_600"
 """
 
 from __future__ import annotations
@@ -13,11 +16,11 @@ import modal
 from ttt import cli
 from ttt.adapters import modal_runtime
 from ttt.app import data_pipeline, eval_loop
-from ttt.core import report
+from ttt.core import metrics, report
 from ttt.experiments import _runtime
 from ttt.experiments._runtime import Engine
 
-app = modal.App("ttt-holdout-eval-v1")
+app = modal.App("ttt-holdout-eval-v2")
 image = modal_runtime.build_image()
 
 # A standalone run wants the tighter estimate; a --flags override still wins.
@@ -82,6 +85,9 @@ def _announce(measured, holdout, meta, announce) -> None:
     announce(
         "  ".join(f"{key} {value:.4g}" for key, value in sorted(measured.metrics.items()))
     )
+    if measured.slices:
+        by_slice = metrics.summarise_by_slice_index(measured.slices)
+        announce(report.render(report.slice_gap_table(by_slice)))
 
 
 @app.function(

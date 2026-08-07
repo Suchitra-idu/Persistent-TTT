@@ -664,9 +664,14 @@ settling before Phase 2.
 3. **Training resume (`resume_from`).** Optimizer momentum isn't preserved, so
    a resume was never a faithful continuation anyway. Loading a checkpoint
    *for eval / the pilot* stays regardless.
-4. **`LORA-ONLY` eval config and `compare_ppl`.** With `evolve=False`, FULL's
-   `fresh` regime already is "TTT silent"; LORA-ONLY differs only by the
-   trained `W_down`. Costs a Modal container per eval.
+4. ~~**`LORA-ONLY` eval config and `compare_ppl`.** With `evolve=False`,
+   FULL's `fresh` regime already is "TTT silent"; LORA-ONLY differs only by
+   the trained `W_down`. Costs a Modal container per eval.~~ **Reinstated**:
+   product now requires every non-RULER eval to isolate the LoRA contribution
+   from the TTT one. `fresh` is redefined to the untouched base model (no
+   LoRA, no TTT); the old `fresh` behavior is the new `lora_only` regime. See
+   `LORA_ONLY` in `core/types.py` and the `lora` term in
+   `metrics.gap_decomposition`.
 5. **`_stratified_sample_indices` and uniform holdout sampling.** Unreachable
    at default config (`eval_n_docs_per_source=1`), and the proposal specifies
    ≥30 docs per source — per-source *is* the sampling policy.

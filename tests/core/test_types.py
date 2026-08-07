@@ -6,7 +6,7 @@ import pytest
 import torch
 
 from tests.core import _builders as build
-from ttt.core.types import Carry, DocRef, EvalRow, PplRow, Session, WorkItem
+from ttt.core.types import Carry, DocRef, EvalRow, PplRow, Session, SliceRow, WorkItem
 
 
 def test_a_work_item_knows_its_token_count():
@@ -100,4 +100,26 @@ def test_every_named_regime_is_accepted():
 
     rows = [build.eval_row(regime=regime) for regime in REGIMES]
 
-    assert len(rows) == 5
+    assert len(rows) == 6
+
+
+def _slice_row(**overrides) -> SliceRow:
+    defaults = dict(
+        doc_idx=0, source="c4", regime="fresh", slice_index=0, n_tokens=10, ppl=5.0
+    )
+    return SliceRow(**{**defaults, **overrides})
+
+
+def test_a_slice_row_with_an_unknown_regime_is_rejected():
+    with pytest.raises(ValueError, match="unknown regime"):
+        _slice_row(regime="carry_ish")
+
+
+def test_a_slice_row_with_a_negative_index_is_rejected():
+    with pytest.raises(ValueError, match="slice_index must be >= 0"):
+        _slice_row(slice_index=-1)
+
+
+def test_a_non_positive_slice_row_perplexity_is_rejected():
+    with pytest.raises(ValueError, match="ppl must be positive"):
+        _slice_row(ppl=0.0)

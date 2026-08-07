@@ -31,7 +31,7 @@ class Compute(Protocol):
         """Norms are measured before clipping. `learning_rates` is keyed by
         GROUPS and applied first, so the schedule stays in Ring 0."""
 
-    def eval_loss(self, token_ids: Sequence[int]) -> float:
-        """No graph, and accumulated gradients left untouched."""
+    def eval_loss(self, token_ids: Sequence[int], *, lora: bool = True) -> float:
+        """No graph, gradients untouched. `lora=False` is the `fresh` regime."""
 
     def parameter_counts(self) -> Mapping[str, int]: ...

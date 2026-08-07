@@ -187,3 +187,45 @@ class TestTorchCompute(ComputeConformance):
 
         with pytest.raises(RuntimeError, match="unclassified trainable parameter"):
             TorchCompute(model, ttt_cfg=cfg, train_cfg=TrainConfig(), device="cpu")
+
+
+@pytest.mark.integration
+class TestEvalLossWithoutLora:
+    """`tiny_model` isn't PEFT-wrapped, so `lora=False` needs a real adapter."""
+
+    @pytest.fixture(scope="class")
+    def compute(self):
+        from peft import LoraConfig, get_peft_model
+        from transformers import AutoModelForCausalLM
+
+        from ttt.adapters.model_builder import patch_model_with_ttt, unfreeze_ttt_params
+        from ttt.core import naming
+        from ttt.core.config.ttt import TTTConfig
+
+        model = AutoModelForCausalLM.from_pretrained("peft-internal-testing/tiny-dummy-qwen2")
+        depth = model.config.num_hidden_layers
+        cfg = patch_model_with_ttt(model, TTTConfig(layer_indices=(0,), chunk_size=4))
+        train_cfg = TrainConfig()
+        model = get_peft_model(
+            model,
+            LoraConfig(
+                r=train_cfg.lora_r,
+                lora_alpha=train_cfg.lora_alpha,
+                target_modules=naming.lora_target_regex(depth, cfg.layer_indices),
+                bias="none",
+                task_type="CAUSAL_LM",
+            ),
+        )
+        unfreeze_ttt_params(model, cfg)
+        return TorchCompute(model, ttt_cfg=cfg, train_cfg=train_cfg, device="cpu")
+
+    def test_lora_off_matches_the_context_manager_directly(self, compute):
+        with compute.model.disable_adapter():
+            expected = float(
+                compute.model(input_ids=torch.tensor([IDS]), labels=torch.tensor([IDS])).loss
+            )
+
+        assert compute.eval_loss(IDS, lora=False) == pytest.approx(expected)
+
+    def test_lora_on_is_the_default(self, compute):
+        assert compute.eval_loss(IDS, lora=True) == pytest.approx(compute.eval_loss(IDS))

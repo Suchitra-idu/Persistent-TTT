@@ -11,17 +11,21 @@ from typing import Mapping
 
 import torch
 
-# Regimes. A regime fixes whether the fast weight evolves within an item and
-# what it starts from: fresh = TTT off; cold_* = starts from zero;
+# Regimes. A regime fixes whether the fast weight evolves within an item, what
+# it starts from, and whether LoRA is applied: fresh = the untouched base
+# model, nothing else; lora_only = LoRA on, TTT off — isolates the LoRA
+# contribution from the TTT one; cold_* = TTT starts from zero;
 # carry/carry_off = starts from the trained per-source seed; *_off = reset
-# between items. A zero-seed eval measures only the cold_* trio.
+# between items. A zero-seed eval measures fresh, lora_only, and the cold_*
+# trio.
 FRESH = "fresh"
+LORA_ONLY = "lora_only"
 COLD_CARRY_OFF = "cold_carry_off"
 COLD_CARRY = "cold_carry"
 CARRY_OFF = "carry_off"
 CARRY = "carry"
 
-REGIMES = (FRESH, COLD_CARRY_OFF, COLD_CARRY, CARRY_OFF, CARRY)
+REGIMES = (FRESH, LORA_ONLY, COLD_CARRY_OFF, COLD_CARRY, CARRY_OFF, CARRY)
 
 
 @dataclass(frozen=True)
@@ -144,6 +148,30 @@ class PplRow:
     def __post_init__(self) -> None:
         if self.n_tokens < 0:
             raise ValueError(f"n_tokens must be >= 0, got {self.n_tokens}")
+        if self.ppl <= 0.0:
+            raise ValueError(f"ppl must be positive, got {self.ppl}")
+
+
+@dataclass(frozen=True)
+class SliceRow:
+    """One measured slice, keeping its position within its document — `EvalRow`
+    already collapses this away, which is exactly what a distance-into-the-
+    document breakdown needs back (arXiv 2410.23771 on plain perplexity)."""
+
+    doc_idx: int
+    source: str
+    regime: str
+    slice_index: int
+    n_tokens: int
+    ppl: float
+
+    def __post_init__(self) -> None:
+        if self.regime not in REGIMES:
+            raise ValueError(
+                f"unknown regime {self.regime!r}; expected one of {list(REGIMES)}"
+            )
+        if self.slice_index < 0:
+            raise ValueError(f"slice_index must be >= 0, got {self.slice_index}")
         if self.ppl <= 0.0:
             raise ValueError(f"ppl must be positive, got {self.ppl}")
 
