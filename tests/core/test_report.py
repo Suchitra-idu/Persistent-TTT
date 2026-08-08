@@ -122,6 +122,49 @@ def test_an_empty_slice_summary_list_still_produces_headers():
     assert table.rows == () and table.headers[0] == "slice"
 
 
+def _repeat_summaries():
+    rows = [
+        build.repeat_row(doc_idx=0, source="RedPajamaC4", repeat=0, ppl=10.0),
+        build.repeat_row(doc_idx=0, source="RedPajamaC4", repeat=1, ppl=8.0),
+        build.repeat_row(doc_idx=1, source="RedPajamaBook", repeat=0, ppl=20.0),
+        build.repeat_row(doc_idx=1, source="RedPajamaBook", repeat=1, ppl=16.0),
+    ]
+    return metrics.summarise_by_repeat(rows)
+
+
+def test_the_repeat_table_has_one_row_per_source_and_repeat_plus_all():
+    table = report.repeat_table(_repeat_summaries())
+
+    assert {row[0] for row in table.rows} == {"RedPajamaC4", "RedPajamaBook", "ALL"}
+    assert len(table.rows) == 6
+
+
+def test_the_repeat_table_puts_all_last_within_each_source_block():
+    table = report.repeat_table(_repeat_summaries())
+
+    assert [row[0] for row in table.rows][-2:] == ["ALL", "ALL"]
+
+
+def test_the_repeat_table_orders_repeats_ascending_within_a_source():
+    table = report.repeat_table(_repeat_summaries())
+
+    c4_repeats = [row[1] for row in table.rows if row[0] == "RedPajamaC4"]
+    assert c4_repeats == ["0", "1"]
+
+
+def test_the_repeat_deltas_carry_an_explicit_sign():
+    table = report.repeat_table(_repeat_summaries())
+    delta_col = table.headers.index("Δfirst")
+
+    assert all(row[delta_col].startswith(("+", "-")) for row in table.rows)
+
+
+def test_an_empty_repeat_summary_list_still_produces_headers():
+    table = report.repeat_table([])
+
+    assert table.rows == () and table.headers[0] == "source"
+
+
 def test_the_composition_table_totals_every_column():
     rows = [
         report.CompositionRow("c4", no_carry_docs=10, carry_docs=5, items=25),

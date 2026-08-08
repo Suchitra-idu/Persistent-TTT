@@ -25,8 +25,11 @@ from ttt.core.types import (
     LORA_ONLY,
     EvalRow,
     PplRow,
+    RepeatRow,
     SliceRow,
 )
+
+ALL_SOURCES = "ALL"
 
 
 @dataclass(frozen=True)
@@ -68,6 +71,20 @@ class SliceSummary:
     n_tokens: int
     ppl_by_regime: Mapping[str, float]
     gaps: Gaps
+
+
+@dataclass(frozen=True)
+class RepeatSummary:
+    """One (source, repeat) cell of the replay eval. `source=ALL_SOURCES`
+    rolls up every source at that repeat. `delta_from_first` is repeat 0's
+    ppl minus this one's — positive means the replay improved."""
+
+    source: str
+    repeat: int
+    n_docs: int
+    n_tokens: int
+    ppl: float
+    delta_from_first: float
 
 
 def perplexity(nll: float) -> float:
@@ -187,6 +204,42 @@ def summarise_by_slice_index(slices: Sequence[SliceRow]) -> tuple[SliceSummary, 
                     cold_carry=ppls.get(COLD_CARRY, float("nan")),
                     carry=ppls.get(CARRY),
                 ),
+            )
+        )
+    return tuple(summaries)
+
+
+def summarise_by_repeat(rows: Sequence[RepeatRow]) -> tuple[RepeatSummary, ...]:
+    """Per (source, repeat), plus an `ALL_SOURCES` rollup — whether a doc's
+    own carry pays off across replays is a within-source question first.
+    Assumes every source has a repeat-0 row to diff the rest against."""
+    return _repeat_summaries(rows, key=lambda row: row.source) + _repeat_summaries(
+        rows, key=lambda row: ALL_SOURCES
+    )
+
+
+def _repeat_summaries(
+    rows: Sequence[RepeatRow], *, key
+) -> tuple[RepeatSummary, ...]:
+    by_cell: dict[tuple[str, int], list[RepeatRow]] = defaultdict(list)
+    for row in rows:
+        by_cell[(key(row), row.repeat)].append(row)
+
+    first_ppl: dict[str, float] = {}
+    summaries = []
+    for source, repeat in sorted(by_cell):
+        cell = by_cell[(source, repeat)]
+        value = token_weighted_ppl([PplRow(n_tokens=r.n_tokens, ppl=r.ppl) for r in cell])
+        if repeat == 0:
+            first_ppl[source] = value
+        summaries.append(
+            RepeatSummary(
+                source=source,
+                repeat=repeat,
+                n_docs=len({r.doc_idx for r in cell}),
+                n_tokens=sum(r.n_tokens for r in cell),
+                ppl=value,
+                delta_from_first=first_ppl[source] - value,
             )
         )
     return tuple(summaries)

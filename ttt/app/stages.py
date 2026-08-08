@@ -96,11 +96,25 @@ def balance(data: Data) -> Data:
     return _balanced(data, "balance", target)
 
 
+TOKENIZE_BATCH_SIZE = 2000
+
+
 def tokenize(data: Data) -> Data:
-    """The one impure stage. Sized by limit_docs and the over-fetch above."""
-    encoded = data.tokenizer.encode_batch(
-        data.table.column(data.spec.text_column), max_length=data.cfg.max_seq_len
-    )
+    """The one impure stage. Sized by limit_docs and the over-fetch above.
+
+    Batched, not one `encode_batch` over the whole table: on the unrestricted
+    default dataset (slimpajama-6b, ~6M rows) a single call has no progress
+    signal and holds every document's ids in memory at once — indistinguishable
+    from a hang for as long as it runs."""
+    texts = data.table.column(data.spec.text_column)
+    encoded: list[list[int]] = []
+    for start in range(0, len(texts), TOKENIZE_BATCH_SIZE):
+        encoded.extend(
+            data.tokenizer.encode_batch(
+                texts[start : start + TOKENIZE_BATCH_SIZE],
+                max_length=data.cfg.max_seq_len,
+            )
+        )
     return data.keeping(
         "tokenize", data.table.with_column(TOKENS_COLUMN, encoded)
     )
@@ -130,7 +144,13 @@ def cap(data: Data) -> Data:
 
 def _balanced(data: Data, stage: str, target: int) -> Data:
     if not data.weights:
-        return data.keeping(stage, data.table, "no preset")
+        if not data.limit_docs:
+            return data.keeping(stage, data.table, "no preset")
+        # No ratios to balance to, but limit_docs still bounds how much of
+        # the pool survives to tokenize — the pre-shuffled table's own order
+        # is already a uniform sample, so a plain head-take is a fair cap.
+        capped = data.table.select(range(min(target, len(data.table))))
+        return data.keeping(stage, capped, "no preset, capped")
     result = balance_math.balanced_indices(
         data.sources, data.weights, min(target, len(data.table))
     )

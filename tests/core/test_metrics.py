@@ -252,3 +252,46 @@ def test_a_diverged_loss_saturates_rather_than_overflowing():
 
 def test_a_nonfinite_loss_stays_nonfinite():
     assert math.isnan(metrics.perplexity(float("nan")))
+
+
+def _replays(source: str, *ppls: float, doc_idx: int = 0) -> list:
+    return [
+        build.repeat_row(doc_idx=doc_idx, source=source, repeat=index, ppl=value)
+        for index, value in enumerate(ppls)
+    ]
+
+
+def test_repeat_summaries_cover_every_source_and_an_all_rollup():
+    rows = _replays("c4", 10.0, 8.0) + _replays("book", 20.0, 16.0)
+
+    summaries = metrics.summarise_by_repeat(rows)
+
+    assert {s.source for s in summaries} == {"c4", "book", metrics.ALL_SOURCES}
+
+
+def test_a_repeats_delta_is_measured_against_that_sources_first_repeat():
+    rows = _replays("c4", 10.0, 8.0, 5.0)
+
+    by_repeat = {
+        s.repeat: s for s in metrics.summarise_by_repeat(rows) if s.source == "c4"
+    }
+
+    assert by_repeat[0].delta_from_first == pytest.approx(0.0)
+    assert by_repeat[2].delta_from_first == pytest.approx(10.0 - 5.0)
+
+
+def test_the_all_rollup_aggregates_every_source_at_that_repeat():
+    rows = _replays("c4", 10.0, 8.0, doc_idx=0) + _replays("book", 10.0, 8.0, doc_idx=1)
+
+    (rollup,) = [
+        s
+        for s in metrics.summarise_by_repeat(rows)
+        if s.source == metrics.ALL_SOURCES and s.repeat == 0
+    ]
+
+    assert rollup.n_docs == 2
+    assert rollup.ppl == pytest.approx(10.0)
+
+
+def test_summarising_no_repeats_yields_nothing():
+    assert metrics.summarise_by_repeat([]) == ()

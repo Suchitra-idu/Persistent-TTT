@@ -6,7 +6,7 @@ import random
 
 import torch
 
-from ttt.core.types import DocRef, EvalRow, PplRow, SliceRow, WorkItem
+from ttt.core.types import DocRef, EvalRow, PplRow, RepeatRow, SliceRow, WorkItem
 
 FP64 = torch.float64
 
@@ -75,6 +75,19 @@ def slice_row(
         slice_index=slice_index,
         n_tokens=n_tokens,
         ppl=ppl,
+    )
+
+
+def repeat_row(
+    *,
+    doc_idx: int = 0,
+    source: str = "RedPajamaC4",
+    repeat: int = 0,
+    n_tokens: int = 1000,
+    ppl: float = 10.0,
+) -> RepeatRow:
+    return RepeatRow(
+        doc_idx=doc_idx, source=source, repeat=repeat, n_tokens=n_tokens, ppl=ppl
     )
 
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Sequence
 
-from ttt.core.metrics import SliceSummary, SourceSummary
+from ttt.core.metrics import ALL_SOURCES, RepeatSummary, SliceSummary, SourceSummary
 from ttt.core.ruler_types import RulerResult
 from ttt.core.types import CARRY, COLD_CARRY, COLD_CARRY_OFF, FRESH, LORA_ONLY
 
@@ -138,6 +138,31 @@ def slice_gap_table(summaries: Sequence[SliceSummary]) -> Table:
         rows.append(tuple(cells))
 
     return Table(headers=tuple(headers), rows=tuple(rows), aligns=tuple(aligns))
+
+
+def repeat_table(summaries: Sequence[RepeatSummary]) -> Table:
+    """One row per (source, repeat), `ALL_SOURCES` last within each block —
+    a per-doc carry either compounds by the last repeat or it doesn't, and
+    that's a within-source trend before it's an aggregate one."""
+    ordering = sorted(
+        summaries, key=lambda s: (s.source == ALL_SOURCES, s.source, s.repeat)
+    )
+    rows = tuple(
+        (
+            s.source,
+            str(s.repeat),
+            str(s.n_docs),
+            f"{s.n_tokens:,d}",
+            ppl(s.ppl),
+            delta(s.delta_from_first),
+        )
+        for s in ordering
+    )
+    return Table(
+        headers=("source", "repeat", "n_docs", "n_tok", "ppl", "Δfirst"),
+        rows=rows,
+        aligns=(LEFT, RIGHT, RIGHT, RIGHT, RIGHT, RIGHT),
+    )
 
 
 def ruler_table(results: Sequence[RulerResult]) -> Table:

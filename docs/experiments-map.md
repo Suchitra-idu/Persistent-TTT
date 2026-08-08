@@ -23,6 +23,7 @@ arguments into frozen config and touches nothing else — the
 | `plot_pilot.py` | `plot_pilot.py` | `python -m ttt.experiments.plot_pilot <json>` |
 | `ruler_prepare_v1.py` | — | `modal run ttt/experiments/ruler_prepare_v1.py` |
 | `ruler_eval_v1.py` | — | `modal run ttt/experiments/ruler_eval_v1.py` |
+| `repeat_carry_eval_v1.py` | — | `modal run ttt/experiments/repeat_carry_eval_v1.py` |
 
 ## Passing configuration
 

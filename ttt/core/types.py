@@ -177,6 +177,24 @@ class SliceRow:
 
 
 @dataclass(frozen=True)
+class RepeatRow:
+    """The same document measured again, `repeat` sessions after the first,
+    with the carry never reset in between — the replay eval's unit."""
+
+    doc_idx: int
+    source: str
+    repeat: int
+    n_tokens: int
+    ppl: float
+
+    def __post_init__(self) -> None:
+        if self.repeat < 0:
+            raise ValueError(f"repeat must be >= 0, got {self.repeat}")
+        if self.ppl <= 0.0:
+            raise ValueError(f"ppl must be positive, got {self.ppl}")
+
+
+@dataclass(frozen=True)
 class EvalRow:
     """One document measured under one regime."""
 

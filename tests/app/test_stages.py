@@ -108,6 +108,14 @@ class TestBalance:
 
         assert len(stages.balance(data).table) == len(MIXED)
 
+    def test_no_preset_still_caps_when_a_limit_is_given(self):
+        """The bug: limit_docs with no source preset was silently ignored
+        until the final `cap` stage, so `tokenize` (in between) still ground
+        through the whole pool regardless of limit_docs."""
+        data = _builders.pipeline_data(MIXED, weights=None, limit_docs=1)
+
+        assert len(stages.balance(data).table) == stages.PRESET_OVERSAMPLE
+
     def test_a_preset_pulls_the_pool_to_its_ratios(self):
         data = _builders.pipeline_data(
             ("alpha", "beta") * 6, weights={"alpha": 1, "beta": 3}, limit_docs=2
@@ -162,6 +170,25 @@ class TestTokenize:
         data = _builders.pipeline_data(("beta",))
 
         assert stages.tokenize(data).table.column(SOURCE_COLUMN) == ["beta"]
+
+    def test_it_batches_instead_of_one_call_over_the_whole_table(self, monkeypatch):
+        monkeypatch.setattr(stages, "TOKENIZE_BATCH_SIZE", 2)
+        data = _builders.pipeline_data(("alpha",) * 5)
+
+        result = stages.tokenize(data)
+
+        assert len(result.table.column(TOKENS_COLUMN)) == 5
+
+    def test_batching_does_not_change_the_result(self, monkeypatch):
+        unbatched = stages.tokenize(_builders.pipeline_data(("alpha",) * 5)).table.column(
+            TOKENS_COLUMN
+        )
+        monkeypatch.setattr(stages, "TOKENIZE_BATCH_SIZE", 2)
+        batched = stages.tokenize(_builders.pipeline_data(("alpha",) * 5)).table.column(
+            TOKENS_COLUMN
+        )
+
+        assert batched == unbatched
 
 
 class TestDropShort:

@@ -7,10 +7,12 @@ import json
 import pytest
 
 from tests.experiments import _builders
+from ttt.core import metrics
 from ttt.experiments import (
     compounding_pilot_v1,
     holdout_eval_v1,
     holdout_generate_v1,
+    repeat_carry_eval_v1,
     single_doc_eval_v1,
     train_v1,
 )
@@ -271,6 +273,57 @@ class TestSingleDocEval:
         )
 
         assert rows == ()
+
+
+class TestRepeatCarryEval:
+    def test_it_replays_every_document_n_repeats_times(self):
+        summaries = repeat_carry_eval_v1.run(
+            _builders.resolved(), engine=_builders.engine(),
+            source=_builders.data_source(), n_repeats=3, announce=lines(),
+        )
+
+        per_source = [s for s in summaries if s.source != metrics.ALL_SOURCES]
+        assert {s.repeat for s in per_source} == {0, 1, 2}
+
+    def test_it_covers_every_source_plus_an_all_rollup(self):
+        summaries = repeat_carry_eval_v1.run(
+            _builders.resolved(), engine=_builders.engine(),
+            source=_builders.data_source(), n_repeats=2, announce=lines(),
+        )
+
+        assert set(_builders.SOURCES) <= {s.source for s in summaries}
+        assert metrics.ALL_SOURCES in {s.source for s in summaries}
+
+    def test_ppl_improves_across_repeats_with_the_scripted_losses(self):
+        summaries = repeat_carry_eval_v1.run(
+            _builders.resolved(), engine=_builders.engine(),
+            source=_builders.data_source(), n_repeats=3, announce=lines(),
+        )
+
+        by_repeat = {
+            s.repeat: s.ppl for s in summaries if s.source == metrics.ALL_SOURCES
+        }
+        assert by_repeat[2] < by_repeat[0]
+
+    def test_it_prints_the_repeat_table(self):
+        spoken = []
+
+        repeat_carry_eval_v1.run(
+            _builders.resolved(), engine=_builders.engine(),
+            source=_builders.data_source(), n_repeats=2, announce=spoken.append,
+        )
+
+        assert any("Δfirst" in line for line in spoken)
+
+    def test_an_empty_holdout_measures_nothing(self):
+        resolution = _builders.nothing_held_out(_builders.resolved())
+
+        summaries = repeat_carry_eval_v1.run(
+            resolution, engine=_builders.engine(resolution),
+            source=_builders.data_source(), announce=lines(),
+        )
+
+        assert summaries == ()
 
 
 class TestHoldoutGenerate:
