@@ -35,11 +35,17 @@ PIPELINE = (
 
 @dataclass(frozen=True)
 class Doc:
-    """A tokenized document. `source` is never empty (D9)."""
+    """A tokenized document. `source` is never empty (D9).
+
+    `n_bytes` is the raw text's UTF-8 length, 0 where untracked (the train
+    path never needs it; only `holdout`'s eval docs populate it, for
+    `metrics.bits_per_byte`).
+    """
 
     index: int
     source: str
     token_ids: tuple[int, ...]
+    n_bytes: int = 0
 
     @property
     def n_tokens(self) -> int:
@@ -115,6 +121,7 @@ def holdout(
 
     labels = pool.column(SOURCE_COLUMN)
     picked, shortfalls = _pick(labels, cfg, rng)
+    shortfalls = shortfalls + _starved(held, pool, cfg.eval_n_docs_per_source)
     return Holdout(
         docs=_encode(pool, spec, cfg, tokenizer, picked),
         shortfalls=tuple(shortfalls),
@@ -122,10 +129,25 @@ def holdout(
 
 
 def _long_enough(table: Table, spec: DatasetSpec, min_tokens: int) -> Table:
-    """Falls back to the unfiltered pool rather than evaluating on nothing."""
+    """No fallback: a source with nothing long enough is a shortfall
+    (`_starved`), not silent short-document data standing in for it."""
     minimum = tokens.min_chars_for(min_tokens, tokens.HOLDOUT_CHARS_PER_TOKEN)
-    filtered = table.filter(spec.text_column, lambda text: len(text) >= minimum)
-    return filtered if len(filtered) else table
+    return table.filter(spec.text_column, lambda text: len(text) >= minimum)
+
+
+def _starved(
+    before: Table, after: Table, n_per_source: int
+) -> list[sampling.SourceShortfall]:
+    """A source present before the length filter and absent after it: zero
+    documents, not the silent absence `n_per_source_indices` alone would
+    produce (it only iterates sources the filtered pool still has)."""
+    if n_per_source <= 0:
+        return []
+    eliminated = set(before.column(SOURCE_COLUMN)) - set(after.column(SOURCE_COLUMN))
+    return [
+        sampling.SourceShortfall(source=source, got=0, wanted=n_per_source)
+        for source in sorted(eliminated)
+    ]
 
 
 def _pick(
@@ -143,11 +165,20 @@ def _encode(
     tokenizer: Tokenizer,
     picked: Sequence[int],
 ) -> tuple[Doc, ...]:
+    # n_bytes is the full row's length, not the post-truncation length: for
+    # eval_min_tokens-sized holdout docs well under max_seq_len this is exact;
+    # it only overstates bits_per_byte's denominator for a document long
+    # enough to be truncated by encode_batch below.
     rows = [pool.row(index) for index in picked]
     encoded = tokenizer.encode_batch(
         [row[spec.text_column] for row in rows], max_length=cfg.max_seq_len
     )
     return tuple(
-        Doc(index=index, source=row[SOURCE_COLUMN], token_ids=tuple(ids))
+        Doc(
+            index=index,
+            source=row[SOURCE_COLUMN],
+            token_ids=tuple(ids),
+            n_bytes=len(row[spec.text_column].encode("utf-8")),
+        )
         for index, (row, ids) in zip(picked, zip(rows, encoded, strict=True))
     )

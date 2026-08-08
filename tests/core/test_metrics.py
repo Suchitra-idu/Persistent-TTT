@@ -52,6 +52,30 @@ def test_zero_tokens_aggregate_to_nan_rather_than_dividing_by_zero():
     assert math.isnan(metrics.token_weighted_ppl(build.ppl_rows((0, 5.0))))
 
 
+def test_bits_per_byte_matches_a_hand_computed_value():
+    from ttt.core.types import PplRow
+
+    nll_per_token = math.log(10.0)
+    row = PplRow(n_tokens=100, ppl=10.0, n_bytes=250)
+
+    expected = (nll_per_token * 100) / math.log(2) / 250
+    assert metrics.bits_per_byte([row]) == pytest.approx(expected)
+
+
+def test_bits_per_byte_is_lower_for_a_more_efficient_tokenizer():
+    """Same ppl, same tokens, more bytes per token => fewer bits per byte."""
+    from ttt.core.types import PplRow
+
+    efficient = PplRow(n_tokens=100, ppl=10.0, n_bytes=400)
+    fragmented = PplRow(n_tokens=100, ppl=10.0, n_bytes=100)
+
+    assert metrics.bits_per_byte([efficient]) < metrics.bits_per_byte([fragmented])
+
+
+def test_zero_bytes_aggregate_to_nan_rather_than_dividing_by_zero():
+    assert math.isnan(metrics.bits_per_byte(build.ppl_rows((100, 5.0))))
+
+
 @given(values=st.lists(ppl_values, min_size=1, max_size=12))
 @settings(max_examples=40, deadline=None)
 def test_the_document_aggregate_is_the_geometric_mean(values):
@@ -183,6 +207,32 @@ def test_a_summary_aggregates_each_regime_by_tokens():
     expected = math.exp((math.log(8.0) * 3000 + math.log(32.0) * 1000) / 4000)
     assert summary.ppl_by_regime[COLD_CARRY] == pytest.approx(expected)
     assert summary.n_tokens == 4000
+
+
+def test_a_summary_aggregates_bytes_the_same_way_as_tokens():
+    rows = [
+        build.eval_row(doc_idx=0, source="c4", regime=COLD_CARRY, n_bytes=3000),
+        build.eval_row(doc_idx=1, source="c4", regime=COLD_CARRY, n_bytes=1000),
+    ]
+
+    (summary,) = metrics.summarise_by_source(rows)
+
+    assert summary.n_bytes == 4000
+
+
+def test_a_summary_carries_bits_per_byte_by_regime():
+    rows = _five_regime_rows("c4", 0, 20.0)
+    rows = [
+        build.eval_row(
+            doc_idx=r.doc_idx, source=r.source, regime=r.regime,
+            n_tokens=r.n_tokens, ppl=r.ppl, n_bytes=4000,
+        )
+        for r in rows
+    ]
+
+    (summary,) = metrics.summarise_by_source(rows)
+
+    assert set(summary.bpb_by_regime) == {FRESH, LORA_ONLY, COLD_CARRY_OFF, COLD_CARRY, CARRY}
 
 
 def test_summarising_nothing_yields_nothing():

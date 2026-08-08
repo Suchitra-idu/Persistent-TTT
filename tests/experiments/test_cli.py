@@ -207,6 +207,18 @@ class TestFromFlags:
     def test_a_zero_document_limit_means_no_limit(self):
         assert cli.from_flags(limit_docs=0).limit_docs is None
 
+    def test_num_layers_zero_is_a_value_not_an_omission(self):
+        """The bug: num_layers=0 (no TTT layers, a LoRA-only ablation) went
+        through the blanket 0-means-unset path and silently trained with
+        every default TTT layer still active (docs/experiments-map.md)."""
+        assert cli.from_flags(num_layers=0).ttt.layer_indices == ()
+
+    def test_num_layers_unset_still_derives_lazily(self):
+        assert cli.from_flags().ttt.layer_indices is None
+
+    def test_layer_start_zero_is_a_value_not_an_omission(self):
+        assert cli.from_flags(num_layers=6, layer_start=0).ttt.layer_indices == (0, 2, 4)
+
     def test_a_document_limit_is_taken(self):
         assert cli.from_flags(limit_docs=500).limit_docs == 500
 

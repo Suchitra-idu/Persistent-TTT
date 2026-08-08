@@ -23,6 +23,8 @@ arguments into frozen config and touches nothing else — the
 | `plot_pilot.py` | `plot_pilot.py` | `python -m ttt.experiments.plot_pilot <json>` |
 | `ruler_prepare_v1.py` | — | `modal run ttt/experiments/ruler_prepare_v1.py` |
 | `ruler_eval_v1.py` | — | `modal run ttt/experiments/ruler_eval_v1.py` |
+| `lang_corpus_prepare_v1.py` | — | `modal run ttt/experiments/lang_corpus_prepare_v1.py --role train` |
+| `lang_scan_v1.py` | — | `modal run ttt/experiments/lang_scan_v1.py` |
 
 ## Passing configuration
 
@@ -128,6 +130,79 @@ at once, which OOMs on one H100 well before 32k tokens. `_stream_forward`
 O(1) in sequence length. Known gap versus the scan path: a trailing partial
 chunk is never committed, which is negligible since a prompt's last tokens
 are its query/answer cue, never the needle.
+
+---
+
+## Language transfer
+
+Targets `hybrid` (`core.config.train.DEFAULT_STRATEGY`): does training on a
+language the model is weak at actually lower its perplexity? `everlasting`'s
+per-source seeds are orthogonal to this question and are not the eval's main
+path.
+
+`core.config.lang_transfer.TRAIN_LANGUAGES` / `EVAL_LANGUAGES` are currently
+the *same* ten languages — the worst base-model ppl readings a real
+`lang_scan_v1` run found (see below). An earlier version of this eval trained
+on one set and evaluated a disjoint set, to test transfer to an untrained
+language; that showed a weak signal, while training directly on a weak
+language showed a strong one, so the design moved to direct train+eval on
+the worst offenders. `TRAIN_LANGUAGES` and `EVAL_LANGUAGES` stay two separate
+names rather than collapsing into one, specifically so a future transfer
+attempt is one assignment away — point `EVAL_LANGUAGES` at a tuple that pulls
+in a few `CANDIDATE_LANGUAGES` instead of copying `TRAIN_LANGUAGES`.
+
+`lang_corpus_prepare_v1` (CPU only) streams each language's
+`wikimedia/wikipedia` config, stopping at `target_rows`, into two *separate*
+corpora — `TRAIN_LANGS` and `EVAL_LANGS` (`extensions/datasets/
+lang_transfer.py`) — not one shared spec. A single `DatasetSpec`'s
+`holdout_boundary` is one cut point on one table; this eval needs languages
+that are eval-only and must never reach training, which one cut point can't
+express without fragile row-placement engineering.
+
+Two steps per corpus, not one write: `prepare()` fetches each language into
+its own file (`core.config.lang_transfer.corpus_dir`, resumable per
+language), then `combine()` merges and shuffles all of a role's languages
+into the single file a DatasetSpec actually reads (`combined_dir`). This
+matters because `holdout_boundary`'s "the last N rows are a fair eval
+sample" assumes rows are already mixed — true for a natively-mixed corpus
+like SlimPajama, false for one built by concatenating one file per language,
+where an unshuffled tail lands entirely inside whichever language sorts
+last by filename. `TRAIN_LANGS` is read through both `load()` (training)
+and `holdout()` (`train_v1`'s periodic in-loop eval, over its own holdout —
+not `EVAL_LANGS` — sized as `TRAIN_HOLDOUT_FRACTION` of the raw train pool,
+so it can't go stale if `DEFAULT_TARGET_ROWS` changes); `EVAL_LANGS` only
+through `holdout()`, with `holdout_last_n` large enough that its whole
+(small) pool is eligible.
+
+Unlike `prepare()`, which is correctly keyed per language (`corpus_dir`) so a
+changed language list only re-fetches what's new, `combine()` writes to one
+fixed path per role and always rebuilds rather than checking it first —
+the language list is not part of that path, so an exists()-guard would go on
+serving whichever mix built the file first, which is exactly what happened
+the first time `TRAIN_LANGUAGES` changed: a stale seven-language file with
+none of the new ten in it, silently emptying the training pool. Rebuilding
+is CPU-only and cheap, unlike the network fetch `prepare()` genuinely wants
+to skip on a repeat run.
+
+Tokenizer efficiency varies by up to 3x across this project's language sweep
+— see `metrics.bits_per_byte` and the `bpb`/`Δbpb` columns
+`report.per_source_table`/`slice_gap_table` add.
+Raw perplexity is not comparable across these languages; bits-per-byte is.
+`Doc.n_bytes` (the row's raw UTF-8 length, captured once in
+`data_pipeline._encode`) is what makes that possible — it is 0 (untracked)
+on the plain training path, which never needs it.
+
+`lang_scan_v1` is the scouting pass that picks the next languages to add:
+base model, no LoRA, no carry (`Compute.eval_loss(..., lora=False)`, carry
+reset before every document) against `core.config.lang_transfer.
+CANDIDATE_LANGUAGES` — languages Qwen3 itself claims to support, each with a
+real `wikimedia/wikipedia` config, excluding the three whose article counts
+are bot-inflated (`ceb`, `war`, `min`), `lmo`/`pag`/`bjn` (a real scan
+returned under 2000 tokens total across 5 docs for each — mostly stubs,
+too thin to trust), and anything already in `TRAIN_LANGUAGES`/
+`EVAL_LANGUAGES`. Sorted worst-bpb-first
+(`report.language_scan_table`) — bpb, not raw ppl, for the same
+tokenizer-fairness reason as the trained eval above.
 
 ---
 

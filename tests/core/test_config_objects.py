@@ -144,6 +144,17 @@ def test_a_spec_may_not_label_rows_two_ways_at_once():
         )
 
 
+def test_a_spec_defaults_to_no_named_config():
+    """Most Hub datasets have one config; naming one is opt-in."""
+    assert SLIM.config is None
+
+
+def test_a_spec_can_name_a_hub_config():
+    spec = DatasetSpec(name="wiki-mg", source="wikimedia/wikipedia", config="20231101.mg", constant_source="mg")
+
+    assert spec.config == "20231101.mg"
+
+
 def test_the_tokens_est_column_is_gone():
     """Token counts are always estimated now (D9)."""
     fields = {f.name for f in dataclasses.fields(DatasetSpec)}
@@ -225,6 +236,14 @@ def test_the_research_preset_downweights_c4_against_the_paper_preset():
 def test_presets_cannot_be_mutated():
     with pytest.raises(TypeError):
         presets.SOURCE_PRESETS["slim-paper"]["RedPajamaC4"] = 1
+
+
+def test_the_lang_transfer_preset_weighs_every_train_language_equally():
+    from ttt.core.config.lang_transfer import TRAIN_LANGUAGES
+
+    weights = presets.get_preset("lang-transfer-balanced")
+
+    assert dict(weights) == {code: 1 for code, _ in TRAIN_LANGUAGES}
 
 
 def test_an_unknown_preset_names_the_known_ones():

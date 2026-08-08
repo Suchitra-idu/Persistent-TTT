@@ -235,9 +235,13 @@ class TestTorchFastWeights(FastWeightsConformance):
         ids = torch.tensor([_builders.token_ids(n_tokens, seed=n_tokens)])
         fast_weights.model(input_ids=ids)
 
-    def test_a_model_with_no_ttt_layers_is_rejected(self):
-        with pytest.raises(ValueError, match="no InPlaceTTTMLP layers"):
-            TorchFastWeights(_builders.TinyCausalLM(), TTTConfig())
+    def test_a_model_with_no_ttt_layers_is_accepted_not_rejected(self):
+        """num_layers=0 (cli.py) is a real LoRA-only ablation, not a mistake —
+        the layer set is legitimately empty, not unpatched."""
+        fast_weights = TorchFastWeights(_builders.TinyCausalLM(), TTTConfig())
+
+        assert fast_weights.layer_indices == ()
+        assert fast_weights.state_ratio(family=CARRY) == 0.0
 
     def test_a_carry_shaped_for_another_model_is_rejected(self, fast_weights):
         wrong = Carry(deltas={_builders.LAYER_INDICES[0]: torch.zeros(1, 2, 2)})

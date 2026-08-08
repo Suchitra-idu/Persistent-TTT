@@ -36,6 +36,11 @@ class TokenizerConformance:
 
         assert tokenizer.encode_batch(texts) == [tokenizer.encode(t) for t in texts]
 
+    def test_an_empty_batch_encodes_to_no_rows(self, tokenizer):
+        """A holdout pool a length filter has emptied out still calls this
+        (data_pipeline._encode) — must return [], not raise."""
+        assert tokenizer.encode_batch([]) == []
+
     def test_the_eos_token_has_an_id(self, tokenizer):
         assert isinstance(tokenizer.eos_token_id, int)
 

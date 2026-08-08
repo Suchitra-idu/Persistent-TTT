@@ -54,11 +54,12 @@ def config(**overrides) -> TrainConfig:
     return TrainConfig(**{**defaults, **overrides})
 
 
-def doc(index: int, *, source: str = "alpha", n_tokens: int = 8) -> Doc:
+def doc(index: int, *, source: str = "alpha", n_tokens: int = 8, n_bytes: int = 0) -> Doc:
     return Doc(
         index=index,
         source=source,
         token_ids=tuple((index + offset) % 251 + 5 for offset in range(n_tokens)),
+        n_bytes=n_bytes,
     )
 
 

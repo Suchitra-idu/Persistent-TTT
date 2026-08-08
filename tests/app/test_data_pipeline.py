@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from tests.app import _builders
+from ttt.adapters.fake_data_source import FakeDataSource
 from ttt.adapters.fake_tokenizer import FakeTokenizer
 from ttt.adapters.scripted_rng import ScriptedRng
 from ttt.app import data_pipeline
@@ -151,7 +152,9 @@ class TestHoldout:
 
         assert [(s.source, s.got, s.wanted) for s in held.shortfalls] == [("beta", 1, 2)]
 
-    def test_it_falls_back_rather_than_evaluating_on_nothing(self):
+    def test_a_length_bar_nothing_can_clear_yields_no_docs_not_short_ones(self):
+        """No silent substitution: a source with nothing long enough is a
+        reported shortfall, not short documents standing in for it."""
         held = data_pipeline.holdout(
             source=_builders.data_source(MIXED),
             spec=_builders.SPEC,
@@ -160,7 +163,49 @@ class TestHoldout:
             tokenizer=FakeTokenizer(),
         )
 
-        assert held.docs
+        assert held.docs == ()
+
+    def test_a_source_eliminated_by_the_length_bar_is_a_reported_shortfall(self):
+        held = data_pipeline.holdout(
+            source=_builders.data_source(MIXED),
+            spec=_builders.SPEC,
+            cfg=_builders.config(eval_min_tokens=10_000, eval_n_docs_per_source=1),
+            rng=ScriptedRng(),
+            tokenizer=FakeTokenizer(),
+        )
+
+        assert {(s.source, s.got, s.wanted) for s in held.shortfalls} == {
+            ("alpha", 0, 1),
+            ("beta", 0, 1),
+        }
+
+    def test_only_the_source_the_length_bar_eliminates_is_reported(self):
+        """A generous length bar that only some sources clear should not
+        blame the sources that made it."""
+        rows = [
+            {"text": "x" * 40, "meta": {"set_name": "alpha"}},
+            {"text": "y" * 4000, "meta": {"set_name": "beta"}},
+        ]
+        source = FakeDataSource({_builders.SPEC.name: rows})
+
+        held = data_pipeline.holdout(
+            source=source,
+            spec=DatasetSpec(
+                name=_builders.SPEC.name,
+                source="_fixture",
+                source_meta_column="meta",
+                source_meta_key="set_name",
+                include_sources=_builders.SOURCES,
+                holdout_last_n=2,
+            ),
+            cfg=_builders.config(eval_min_tokens=500, eval_n_docs_per_source=1),
+            rng=ScriptedRng(),
+            tokenizer=FakeTokenizer(),
+        )
+
+        assert [(s.source, s.got, s.wanted) for s in held.shortfalls] == [
+            ("alpha", 0, 1)
+        ]
 
     def test_every_held_out_document_is_tokenized(self):
         held = data_pipeline.holdout(
@@ -172,6 +217,20 @@ class TestHoldout:
         )
 
         assert all(doc.n_tokens > 0 for doc in held.docs)
+
+    def test_every_held_out_document_tracks_its_raw_byte_length(self):
+        """FakeTokenizer is byte-level (D9 fixture), so bytes and tokens
+        match 1:1 here — a real tokenizer's ratio is what `n_bytes` exists
+        to make comparable across languages that ratio differs for."""
+        held = data_pipeline.holdout(
+            source=_builders.data_source(MIXED),
+            spec=_builders.SPEC,
+            cfg=_builders.config(),
+            rng=ScriptedRng(),
+            tokenizer=FakeTokenizer(),
+        )
+
+        assert all(doc.n_bytes == doc.n_tokens for doc in held.docs)
 
 
 def test_the_holdout_and_the_train_pool_do_not_overlap():

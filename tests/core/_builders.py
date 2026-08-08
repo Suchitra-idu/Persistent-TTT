@@ -48,6 +48,7 @@ def eval_row(
     n_tokens: int = 1000,
     ppl: float = 10.0,
     state_ratio_final: float = 0.0,
+    n_bytes: int = 0,
 ) -> EvalRow:
     return EvalRow(
         doc_idx=doc_idx,
@@ -56,6 +57,7 @@ def eval_row(
         n_tokens=n_tokens,
         ppl=ppl,
         state_ratio_final=state_ratio_final,
+        n_bytes=n_bytes,
     )
 
 
@@ -67,6 +69,7 @@ def slice_row(
     slice_index: int = 0,
     n_tokens: int = 1000,
     ppl: float = 10.0,
+    n_bytes: int = 0,
 ) -> SliceRow:
     return SliceRow(
         doc_idx=doc_idx,
@@ -75,6 +78,7 @@ def slice_row(
         slice_index=slice_index,
         n_tokens=n_tokens,
         ppl=ppl,
+        n_bytes=n_bytes,
     )
 
 

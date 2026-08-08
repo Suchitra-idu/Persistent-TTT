@@ -135,15 +135,24 @@ def from_flags(
     num_epochs: int = 0,
     grad_accum: int = 0,
     limit_docs: int = 0,
+    num_layers: int = UNSET_FLAG,
+    layer_start: int = UNSET_FLAG,
     **flags: Any,
 ) -> Resolved:
-    """Maps a Modal entrypoint's 0 / "" / -1 sentinels onto None."""
+    """Maps a Modal entrypoint's 0 / "" / -1 sentinels onto None. num_layers
+    and layer_start get session's -1 treatment, not the blanket one below:
+    0 is a real value for both (no TTT layers; start at the first layer),
+    and `only_set`'s 0-means-unset would silently discard it otherwise —
+    exactly the bug that made a `num_layers=0` LoRA-only ablation silently
+    train with every default TTT layer still active (docs/experiments-map.md)."""
     given = resolve_mod.only_set({**flags, "num_epochs": num_epochs}, unset=(0, "", 0.0))
     if grad_accum:
         given["grad_accum_steps"] = grad_accum
     return resolve(
         session_training=bool(session) if session in (0, 1) else None,
         limit_docs=limit_docs or None,
+        num_layers=num_layers if num_layers != UNSET_FLAG else None,
+        layer_start=layer_start if layer_start != UNSET_FLAG else None,
         **given,
     )
 

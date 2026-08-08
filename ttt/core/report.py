@@ -7,7 +7,14 @@ from typing import Sequence
 
 from ttt.core.metrics import SliceSummary, SourceSummary
 from ttt.core.ruler_types import RulerResult
-from ttt.core.types import CARRY, COLD_CARRY, COLD_CARRY_OFF, FRESH, LORA_ONLY
+from ttt.core.types import (
+    CARRY,
+    COLD_CARRY,
+    COLD_CARRY_OFF,
+    FRESH,
+    LORA_ONLY,
+    LanguageScan,
+)
 
 LEFT = "left"
 RIGHT = "right"
@@ -40,6 +47,10 @@ def delta(value: float) -> str:
 
 def ratio(value: float) -> str:
     return f"{value:.2e}"
+
+
+def bpb(value: float) -> str:
+    return f"{value:.3f}"
 
 
 def render(table: Table) -> str:
@@ -77,10 +88,13 @@ def per_source_table(summaries: Sequence[SourceSummary]) -> Table:
     else:
         headers += ["cold-c", "cold-co", "lora", "fresh", "Δlora", "Δwithin", "Δbetween"]
         aligns += [RIGHT] * 7
+    headers += ["bpb", "Δbpb"]
+    aligns += [RIGHT] * 2
 
     rows = []
     for summary in summaries:
         by_regime = summary.ppl_by_regime
+        by_bpb = summary.bpb_by_regime
         cells = [summary.source, str(summary.n_docs), f"{summary.n_tokens:,d}"]
         if seeded:
             cells.append(ppl(by_regime.get(CARRY, float("nan"))))
@@ -95,6 +109,7 @@ def per_source_table(summaries: Sequence[SourceSummary]) -> Table:
         ]
         if seeded:
             cells.append(delta(summary.gaps.seed))
+        cells += [bpb(by_bpb.get(COLD_CARRY, float("nan"))), delta(_bpb_gap(by_bpb))]
         rows.append(tuple(cells))
 
     return Table(headers=tuple(headers), rows=tuple(rows), aligns=tuple(aligns))
@@ -117,10 +132,13 @@ def slice_gap_table(summaries: Sequence[SliceSummary]) -> Table:
     else:
         headers += ["cold-c", "cold-co", "lora", "fresh", "Δlora", "Δwithin", "Δbetween"]
         aligns += [RIGHT] * 7
+    headers += ["bpb", "Δbpb"]
+    aligns += [RIGHT] * 2
 
     rows = []
     for summary in sorted(summaries, key=lambda s: s.slice_index):
         by_regime = summary.ppl_by_regime
+        by_bpb = summary.bpb_by_regime
         cells = [str(summary.slice_index), str(summary.n_docs), f"{summary.n_tokens:,d}"]
         if seeded:
             cells.append(ppl(by_regime.get(CARRY, float("nan"))))
@@ -135,9 +153,17 @@ def slice_gap_table(summaries: Sequence[SliceSummary]) -> Table:
         ]
         if seeded:
             cells.append(delta(summary.gaps.seed))
+        cells += [bpb(by_bpb.get(COLD_CARRY, float("nan"))), delta(_bpb_gap(by_bpb))]
         rows.append(tuple(cells))
 
     return Table(headers=tuple(headers), rows=tuple(rows), aligns=tuple(aligns))
+
+
+def _bpb_gap(by_bpb) -> float:
+    """Positive means carry costs fewer bits/byte than fresh — the one number
+    that stays comparable across a language-transfer eval's differently
+    tokenized languages, where raw ppl does not."""
+    return by_bpb.get(FRESH, float("nan")) - by_bpb.get(COLD_CARRY, float("nan"))
 
 
 def ruler_table(results: Sequence[RulerResult]) -> Table:
@@ -164,6 +190,20 @@ def ruler_table(results: Sequence[RulerResult]) -> Table:
         headers=("task", "length", *regimes),
         rows=tuple(rows),
         aligns=(LEFT, RIGHT, *([RIGHT] * len(regimes))),
+    )
+
+
+def language_scan_table(scans: Sequence[LanguageScan]) -> Table:
+    """Worst (highest bpb, the tokenizer-fair unit) first."""
+    ordered = sorted(scans, key=lambda s: s.bpb, reverse=True)
+    rows = tuple(
+        (s.code, s.name, str(s.n_docs), f"{s.n_tokens:,d}", bpb(s.bpb), ppl(s.ppl))
+        for s in ordered
+    )
+    return Table(
+        headers=("code", "language", "docs", "tokens", "bpb", "ppl"),
+        rows=rows,
+        aligns=(LEFT, LEFT, RIGHT, RIGHT, RIGHT, RIGHT),
     )
 
 

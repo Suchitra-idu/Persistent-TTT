@@ -118,11 +118,20 @@ def _measure(
                 n_tokens=end - start,
                 ppl=metrics.perplexity(loss),
                 state_ratio=fast_weights.state_ratio(family=CARRY_FAMILY),
+                n_bytes=_slice_bytes(doc, start, end),
             )
         )
         if reset_between:
             _restart(fast_weights, seed)
     return tuple(rows)
+
+
+def _slice_bytes(doc: Doc, start: int, end: int) -> int:
+    """A slice's share of the doc's bytes, split proportionally to its share
+    of the doc's tokens — exact per-token byte offsets aren't tracked."""
+    if doc.n_tokens == 0:
+        return 0
+    return round(doc.n_bytes * (end - start) / doc.n_tokens)
 
 
 def _restart(fast_weights, seed: Carry | None) -> None:
@@ -139,6 +148,7 @@ def _row(doc: Doc, regime: str, measured: Sequence[PplRow]) -> EvalRow:
         n_tokens=sum(row.n_tokens for row in measured),
         ppl=metrics.token_weighted_ppl(measured),
         state_ratio_final=measured[-1].state_ratio if measured else 0.0,
+        n_bytes=sum(row.n_bytes for row in measured),
     )
 
 
@@ -151,6 +161,7 @@ def _slice_rows(doc: Doc, regime: str, measured: Sequence[PplRow]) -> tuple[Slic
             slice_index=index,
             n_tokens=row.n_tokens,
             ppl=row.ppl,
+            n_bytes=row.n_bytes,
         )
         for index, row in enumerate(measured)
     )

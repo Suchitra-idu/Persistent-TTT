@@ -54,7 +54,9 @@ class SourceSummary:
     source: str
     n_docs: int
     n_tokens: int
+    n_bytes: int
     ppl_by_regime: Mapping[str, float]
+    bpb_by_regime: Mapping[str, float]
     gaps: Gaps
 
 
@@ -66,7 +68,9 @@ class SliceSummary:
     slice_index: int
     n_docs: int
     n_tokens: int
+    n_bytes: int
     ppl_by_regime: Mapping[str, float]
+    bpb_by_regime: Mapping[str, float]
     gaps: Gaps
 
 
@@ -85,6 +89,18 @@ def token_weighted_ppl(rows: Sequence[PplRow]) -> float:
     if total_tokens == 0:
         return float("nan")
     return math.exp(total_log / total_tokens)
+
+
+def bits_per_byte(rows: Sequence[PplRow]) -> float:
+    """The cross-language-comparable unit: perplexity is per-token, and a
+    tokenizer can cost 3x the tokens per byte on one script versus another
+    (see the RULER/language-transfer eval), which makes raw ppl incomparable
+    across them. NaN over zero bytes, same convention as `token_weighted_ppl`."""
+    total_nats = sum(math.log(row.ppl) * row.n_tokens for row in rows)
+    total_bytes = sum(row.n_bytes for row in rows)
+    if total_bytes == 0:
+        return float("nan")
+    return total_nats / math.log(2) / total_bytes
 
 
 def geometric_mean_ppl(ppls: Sequence[float]) -> float:
@@ -130,9 +146,15 @@ def summarise_by_source(rows: Sequence[EvalRow]) -> tuple[SourceSummary, ...]:
         source_rows = by_source[source]
         by_regime: dict[str, list[PplRow]] = defaultdict(list)
         for row in source_rows:
-            by_regime[row.regime].append(PplRow(n_tokens=row.n_tokens, ppl=row.ppl))
+            by_regime[row.regime].append(
+                PplRow(n_tokens=row.n_tokens, ppl=row.ppl, n_bytes=row.n_bytes)
+            )
         ppls = {
             regime: token_weighted_ppl(regime_rows)
+            for regime, regime_rows in by_regime.items()
+        }
+        bpbs = {
+            regime: bits_per_byte(regime_rows)
             for regime, regime_rows in by_regime.items()
         }
         reference = by_regime.get(COLD_CARRY) or next(iter(by_regime.values()))
@@ -141,7 +163,9 @@ def summarise_by_source(rows: Sequence[EvalRow]) -> tuple[SourceSummary, ...]:
                 source=source,
                 n_docs=len({row.doc_idx for row in source_rows}),
                 n_tokens=sum(row.n_tokens for row in reference),
+                n_bytes=sum(row.n_bytes for row in reference),
                 ppl_by_regime=ppls,
+                bpb_by_regime=bpbs,
                 gaps=gap_decomposition(
                     fresh=ppls.get(FRESH, float("nan")),
                     lora_only=ppls.get(LORA_ONLY, float("nan")),
@@ -168,9 +192,15 @@ def summarise_by_slice_index(slices: Sequence[SliceRow]) -> tuple[SliceSummary, 
         index_rows = by_index[index]
         by_regime: dict[str, list[PplRow]] = defaultdict(list)
         for row in index_rows:
-            by_regime[row.regime].append(PplRow(n_tokens=row.n_tokens, ppl=row.ppl))
+            by_regime[row.regime].append(
+                PplRow(n_tokens=row.n_tokens, ppl=row.ppl, n_bytes=row.n_bytes)
+            )
         ppls = {
             regime: token_weighted_ppl(regime_rows)
+            for regime, regime_rows in by_regime.items()
+        }
+        bpbs = {
+            regime: bits_per_byte(regime_rows)
             for regime, regime_rows in by_regime.items()
         }
         reference = by_regime.get(COLD_CARRY) or next(iter(by_regime.values()))
@@ -179,7 +209,9 @@ def summarise_by_slice_index(slices: Sequence[SliceRow]) -> tuple[SliceSummary, 
                 slice_index=index,
                 n_docs=len({row.doc_idx for row in index_rows}),
                 n_tokens=sum(row.n_tokens for row in reference),
+                n_bytes=sum(row.n_bytes for row in reference),
                 ppl_by_regime=ppls,
+                bpb_by_regime=bpbs,
                 gaps=gap_decomposition(
                     fresh=ppls.get(FRESH, float("nan")),
                     lora_only=ppls.get(LORA_ONLY, float("nan")),

@@ -267,6 +267,37 @@ class TestSliceRows:
         assert report.slices == ()
 
 
+class TestByteAccounting:
+    def test_an_untracked_doc_reports_zero_bytes_throughout(self):
+        report, _ = measure(n_docs=1)
+
+        assert all(row.n_bytes == 0 for row in report.rows)
+        assert all(s.n_bytes == 0 for s in report.slices)
+
+    def test_a_docs_bytes_split_proportionally_to_its_slices_tokens(self):
+        wiring = _builders.Wiring(losses=(1.0, 0.9, 0.8, 0.7))
+        doc = _builders.doc(0, n_tokens=8, n_bytes=40)
+        report = eval_loop.evaluate(
+            docs=[doc], compute=wiring.compute, fast_weights=wiring.fast_weights,
+            n_slices=SLICES,
+        )
+        slices = [s for s in report.slices if s.regime == COLD_CARRY]
+
+        # 8 tokens split into 4 equal slices of 2; 40 bytes at 5 bytes/token.
+        assert [s.n_bytes for s in slices] == [10, 10, 10, 10]
+
+    def test_a_docs_slice_bytes_sum_back_to_the_row_total(self):
+        wiring = _builders.Wiring(losses=(1.0, 0.9, 0.8, 0.7))
+        doc = _builders.doc(0, n_tokens=8, n_bytes=40)
+        report = eval_loop.evaluate(
+            docs=[doc], compute=wiring.compute, fast_weights=wiring.fast_weights,
+            n_slices=SLICES,
+        )
+        row = next(r for r in report.rows if r.regime == COLD_CARRY)
+
+        assert row.n_bytes == doc.n_bytes
+
+
 class TestPerSourceSummaries:
     def test_it_summarises_each_source(self):
         report, _ = measure(n_docs=4)

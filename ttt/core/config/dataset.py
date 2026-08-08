@@ -15,6 +15,7 @@ from typing import Any, Mapping
 class DatasetSpec:
     name: str
     source: str
+    config: str | None = None
     text_column: str = "text"
     source_meta_column: str | None = None
     source_meta_key: str | None = None

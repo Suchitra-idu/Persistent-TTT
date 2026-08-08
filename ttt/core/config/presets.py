@@ -9,6 +9,8 @@ from __future__ import annotations
 from types import MappingProxyType
 from typing import Mapping, Sequence
 
+from ttt.core.config.lang_transfer import TRAIN_LANGUAGES
+
 ONLY_PREFIX = "_only_"
 NONE = "none"
 
@@ -35,6 +37,13 @@ SOURCE_PRESETS: Mapping[str, Mapping[str, int]] = MappingProxyType(
                 "RedPajamaWikipedia": 10,
                 "RedPajamaStackExchange": 10,
             }
+        ),
+        # Equal weight per language: tokenizer efficiency differs up to 3x
+        # across them (see metrics.bits_per_byte), so an unweighted pool
+        # would silently over-represent whichever survive min_doc_tokens
+        # filtering most easily.
+        "lang-transfer-balanced": MappingProxyType(
+            {code: 1 for code, _ in TRAIN_LANGUAGES}
         ),
     }
 )

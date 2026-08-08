@@ -21,14 +21,14 @@ _LAYER_RE = re.compile(r"layers\.(\d+)\.")
 
 class TorchFastWeights:
     def __init__(self, model: torch.nn.Module, cfg: TTTConfig) -> None:
+        """Zero patched layers is accepted, not rejected: `num_layers=0`
+        (cli.py) is how a LoRA-only ablation asks for none at all, and
+        `build_model` always runs `patch_model_with_ttt` first regardless —
+        every method below already degrades to a no-op / neutral value over
+        an empty `_modules` (docs/experiments-map.md)."""
         self.model = model
         self.cfg = cfg
         self._modules = _by_layer_index(model)
-        if not self._modules:
-            raise ValueError(
-                "model has no InPlaceTTTMLP layers; patch it before building "
-                "the FastWeights adapter"
-            )
 
     @property
     def layer_indices(self) -> tuple[int, ...]:

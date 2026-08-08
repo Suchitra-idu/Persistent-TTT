@@ -23,8 +23,9 @@ from ttt.experiments._runtime import Engine
 app = modal.App("ttt-holdout-eval-v2")
 image = modal_runtime.build_image()
 
-# A standalone run wants the tighter estimate; a --flags override still wins.
-MIN_DOCS_PER_SOURCE = 50
+# A standalone run wants a tighter estimate than the in-loop default; a
+# --flags override still wins.
+MIN_DOCS_PER_SOURCE = 10
 
 
 def run(

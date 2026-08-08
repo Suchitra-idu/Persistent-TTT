@@ -7,7 +7,14 @@ import pytest
 from tests.core import _builders as build
 from ttt.core import metrics, report
 from ttt.core.ruler_types import RulerResult
-from ttt.core.types import CARRY, COLD_CARRY, COLD_CARRY_OFF, FRESH, LORA_ONLY
+from ttt.core.types import (
+    CARRY,
+    COLD_CARRY,
+    COLD_CARRY_OFF,
+    FRESH,
+    LORA_ONLY,
+    LanguageScan,
+)
 
 
 def _summaries(*, seeded: bool):
@@ -88,6 +95,27 @@ def test_an_empty_summary_list_still_produces_headers():
     assert table.rows == () and table.headers[0] == "source"
 
 
+def test_the_source_table_reports_bits_per_byte():
+    table = report.per_source_table(_summaries(seeded=False))
+
+    assert "bpb" in table.headers and "Δbpb" in table.headers
+
+
+def test_bpb_gap_is_positive_when_carry_costs_fewer_bits_per_byte():
+    rows = [
+        build.eval_row(doc_idx=0, source="c4", regime=FRESH, ppl=20.0, n_bytes=1000),
+        build.eval_row(doc_idx=0, source="c4", regime=LORA_ONLY, ppl=19.0, n_bytes=1000),
+        build.eval_row(
+            doc_idx=0, source="c4", regime=COLD_CARRY_OFF, ppl=15.0, n_bytes=1000
+        ),
+        build.eval_row(doc_idx=0, source="c4", regime=COLD_CARRY, ppl=10.0, n_bytes=1000),
+    ]
+    table = report.per_source_table(metrics.summarise_by_source(rows))
+    gap = float(table.rows[0][table.headers.index("Δbpb")])
+
+    assert gap > 0
+
+
 def _slice_summaries(*, seeded: bool):
     rows = []
     for index in (0, 1):
@@ -120,6 +148,12 @@ def test_an_empty_slice_summary_list_still_produces_headers():
     table = report.slice_gap_table([])
 
     assert table.rows == () and table.headers[0] == "slice"
+
+
+def test_the_slice_table_reports_bits_per_byte_too():
+    table = report.slice_gap_table(_slice_summaries(seeded=False))
+
+    assert "bpb" in table.headers and "Δbpb" in table.headers
 
 
 def test_the_composition_table_totals_every_column():
@@ -198,6 +232,17 @@ def test_the_ruler_table_marks_a_regime_a_task_was_not_run_under():
     table = report.ruler_table(results)
 
     assert table.rows[0] == ("niah_single", "4096", "n/a", "1.000")
+
+
+def test_the_language_scan_table_sorts_worst_bpb_first():
+    scans = [
+        LanguageScan(code="aa", name="A", n_docs=5, n_tokens=100, n_bytes=100, ppl=10.0, bpb=1.0),
+        LanguageScan(code="bb", name="B", n_docs=5, n_tokens=100, n_bytes=100, ppl=50.0, bpb=3.0),
+    ]
+
+    table = report.language_scan_table(scans)
+
+    assert [row[0] for row in table.rows] == ["bb", "aa"]
 
 
 def test_formatters_pin_their_precision():

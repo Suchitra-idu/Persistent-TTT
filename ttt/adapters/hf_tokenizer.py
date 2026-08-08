@@ -34,6 +34,10 @@ class HfTokenizer:
     def encode_batch(
         self, texts: Sequence[str], *, max_length: int | None = None
     ) -> list[list[int]]:
+        # The fast tokenizer indexes into its own output unconditionally and
+        # raises IndexError on an empty batch instead of returning [].
+        if not texts:
+            return []
         batch = self._tokenizer(list(texts), add_special_tokens=False).input_ids
         if max_length is None:
             return [list(ids) for ids in batch]

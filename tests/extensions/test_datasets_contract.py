@@ -21,7 +21,12 @@ MULTI_SOURCE_CASES = [
 
 
 def test_the_registry_has_the_corpus_and_the_fixture():
-    assert sorted(DATASETS) == ["fixture", "slimpajama-6b"]
+    assert sorted(DATASETS) == [
+        "fixture",
+        "lang-transfer-eval",
+        "lang-transfer-train",
+        "slimpajama-6b",
+    ]
 
 
 def test_the_default_spec_is_registered():

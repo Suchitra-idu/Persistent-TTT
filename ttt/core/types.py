@@ -139,17 +139,26 @@ class GradStats:
 
 @dataclass(frozen=True)
 class PplRow:
-    """One measured slice. `state_ratio` is ||eta*S||_F / ||W0||_F at its end."""
+    """One measured slice. `state_ratio` is ||eta*S||_F / ||W0||_F at its end.
+
+    `n_bytes` is UTF-8 byte length, not token count: tokenizers fragment some
+    scripts far more than others, so token-per-token comparisons across
+    languages are not comparable but byte-per-byte ones are (`metrics.
+    bits_per_byte`). 0 means untracked, not measured-empty.
+    """
 
     n_tokens: int
     ppl: float
     state_ratio: float = 0.0
+    n_bytes: int = 0
 
     def __post_init__(self) -> None:
         if self.n_tokens < 0:
             raise ValueError(f"n_tokens must be >= 0, got {self.n_tokens}")
         if self.ppl <= 0.0:
             raise ValueError(f"ppl must be positive, got {self.ppl}")
+        if self.n_bytes < 0:
+            raise ValueError(f"n_bytes must be >= 0, got {self.n_bytes}")
 
 
 @dataclass(frozen=True)
@@ -164,6 +173,7 @@ class SliceRow:
     slice_index: int
     n_tokens: int
     ppl: float
+    n_bytes: int = 0
 
     def __post_init__(self) -> None:
         if self.regime not in REGIMES:
@@ -174,6 +184,8 @@ class SliceRow:
             raise ValueError(f"slice_index must be >= 0, got {self.slice_index}")
         if self.ppl <= 0.0:
             raise ValueError(f"ppl must be positive, got {self.ppl}")
+        if self.n_bytes < 0:
+            raise ValueError(f"n_bytes must be >= 0, got {self.n_bytes}")
 
 
 @dataclass(frozen=True)
@@ -186,6 +198,7 @@ class EvalRow:
     n_tokens: int
     ppl: float
     state_ratio_final: float = 0.0
+    n_bytes: int = 0
 
     def __post_init__(self) -> None:
         if self.regime not in REGIMES:
@@ -194,3 +207,29 @@ class EvalRow:
             )
         if self.ppl <= 0.0:
             raise ValueError(f"ppl must be positive, got {self.ppl}")
+        if self.n_bytes < 0:
+            raise ValueError(f"n_bytes must be >= 0, got {self.n_bytes}")
+
+
+@dataclass(frozen=True)
+class LanguageScan:
+    """One candidate language's base-model (no LoRA, no carry) reading —
+    `lang_scan_v1`'s scouting pass, not part of the trained lang-transfer set."""
+
+    code: str
+    name: str
+    n_docs: int
+    n_tokens: int
+    n_bytes: int
+    ppl: float
+    bpb: float
+
+    def __post_init__(self) -> None:
+        if not self.code:
+            raise ValueError("a LanguageScan needs a non-empty code")
+        if self.n_docs <= 0:
+            raise ValueError(f"n_docs must be > 0, got {self.n_docs}")
+        if self.ppl <= 0.0:
+            raise ValueError(f"ppl must be positive, got {self.ppl}")
+        if self.n_bytes <= 0:
+            raise ValueError(f"n_bytes must be > 0, got {self.n_bytes}")

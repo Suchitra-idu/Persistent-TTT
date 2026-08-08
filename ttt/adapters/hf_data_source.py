@@ -49,7 +49,7 @@ def _load(spec: DatasetSpec):
     from datasets import load_dataset, load_from_disk
 
     if not os.path.isdir(spec.source):
-        return load_dataset(spec.source, split="train")
+        return load_dataset(spec.source, spec.config, split="train")
     shards = sorted(glob.glob(os.path.join(spec.source, "**", "*.parquet"), recursive=True))
     if shards:
         return load_dataset("parquet", data_files=shards, split="train")
