@@ -45,6 +45,26 @@ class TestLoad:
             stage.__name__ for stage in data_pipeline.PIPELINE
         ]
 
+    def test_it_announces_one_summary_line_per_stage(self):
+        """`tokenize` also announces its own batch progress — a different,
+        more frequent line shape than the rest, filtered out here."""
+        spoken = []
+
+        loaded(announce=spoken.append)
+
+        summaries = [line for line in spoken if " rows in " in line]
+        assert len(summaries) == len(data_pipeline.PIPELINE)
+        assert all(
+            stage.__name__ in line for stage, line in zip(data_pipeline.PIPELINE, summaries)
+        )
+
+    def test_tokenize_announces_its_own_batch_progress(self):
+        spoken = []
+
+        loaded(announce=spoken.append)
+
+        assert any("tokenize: batch" in line for line in spoken)
+
     def test_a_preset_reaches_the_balancer_as_data(self):
         data = loaded(weights={"alpha": 1}, limit_docs=2)
 

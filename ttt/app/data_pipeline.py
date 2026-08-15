@@ -6,8 +6,9 @@ holdout half lives here too, since both halves must agree on the split.
 
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass
-from typing import Mapping, Sequence
+from typing import Callable, Mapping, Sequence
 
 from ttt.app import stages
 from ttt.app.stages import Data
@@ -70,6 +71,7 @@ def load(
     limit_docs: int | None = None,
     weights: Mapping[str, int] | None = None,
     pipeline: Sequence = PIPELINE,
+    announce: Callable[[str], None] = lambda _: None,
 ) -> Data:
     """`weights=None` resolves from cfg and spec; pass a mapping to override,
     which is how --only-sources reaches the balancer as plain data (D5)."""
@@ -81,13 +83,28 @@ def load(
         tokenizer=tokenizer,
         limit_docs=limit_docs,
         weights=weights if weights is not None else resolve_weights(cfg, spec),
+        announce=announce,
     )
-    return run(data, pipeline)
+    return run(data, pipeline, announce=announce)
 
 
-def run(data: Data, pipeline: Sequence = PIPELINE) -> Data:
+def run(
+    data: Data,
+    pipeline: Sequence = PIPELINE,
+    *,
+    announce: Callable[[str], None] = lambda _: None,
+) -> Data:
+    """Each stage timed and announced as it runs — the pipeline's own
+    StageLog is only assembled afterward, too late to explain a slow stage
+    while it's still running."""
     for stage in pipeline:
+        before = len(data.table)
+        t0 = time.time()
         data = stage(data)
+        announce(
+            f"  {stage.__name__}: {before:,d} -> {len(data.table):,d} rows "
+            f"in {time.time() - t0:.1f}s"
+        )
     return data
 
 

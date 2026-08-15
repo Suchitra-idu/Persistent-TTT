@@ -25,6 +25,7 @@ def run(
     *,
     n_docs: int = 4,
     losses=(1.0,),
+    total_norm=1.0,
     strategy=EVERLASTING,
     cfg=None,
     carries=None,
@@ -33,7 +34,7 @@ def run(
     announce=None,
     docs=None,
 ):
-    wiring = _builders.Wiring(losses=losses)
+    wiring = _builders.Wiring(losses=losses, total_norm=total_norm)
     result = train_loop.train(
         docs=docs if docs is not None else _builders.docs(n_docs),
         compute=wiring.compute,
@@ -137,6 +138,43 @@ class TestNonfiniteLoss:
         _, wiring = run(n_docs=2, losses=(NAN,))
 
         assert all(math.isnan(v) for v in wiring.tracker.values_of("micro/doc_loss"))
+
+
+class TestNonfiniteGradient:
+    """A finite loss whose backward pass still produced a non-finite gradient
+    — a different failure mode than TestNonfiniteLoss, and the one that used
+    to let AdamW step on nan and corrupt every parameter permanently."""
+
+    def test_it_does_not_step_the_optimizer(self):
+        _, wiring = run(n_docs=4, total_norm=NAN)
+
+        assert wiring.compute.steps == []
+
+    def test_it_still_clears_the_gradients(self):
+        _, wiring = run(n_docs=4, total_norm=NAN)
+
+        assert wiring.compute.zero_grads == 2
+
+    def test_it_does_not_count_as_a_step(self):
+        result, _ = run(n_docs=4, total_norm=NAN)
+
+        assert result.steps == 0
+
+    def test_it_is_counted_separately_from_a_nonfinite_loss(self):
+        result, _ = run(n_docs=4, total_norm=NAN)
+
+        assert (result.nonfinite_steps, result.nonfinite) == (2, 0)
+
+    def test_it_still_processes_every_micro_step(self):
+        result, _ = run(n_docs=4, total_norm=NAN)
+
+        assert result.micro_steps == 4
+
+    def test_a_finite_run_steps_and_counts_nothing(self):
+        result, wiring = run(n_docs=4, total_norm=1.0)
+
+        assert (result.steps, result.nonfinite_steps) == (2, 0)
+        assert len(wiring.compute.steps) == 2
 
 
 class TestCarryLifecycle:
@@ -278,7 +316,13 @@ class TestLogging:
         lines = []
         run(n_docs=4, cfg=_builders.config(log_every=1), announce=lines.append)
 
-        assert len(lines) == 2
+        assert len([line for line in lines if not line.startswith("  first micro-step")]) == 2
+
+    def test_the_first_micro_step_is_announced_once(self):
+        lines = []
+        run(n_docs=4, announce=lines.append)
+
+        assert len([line for line in lines if line.startswith("  first micro-step")]) == 2
 
 
 class TestCheckpointing:

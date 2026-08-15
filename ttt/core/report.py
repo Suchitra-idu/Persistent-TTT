@@ -141,28 +141,49 @@ def slice_gap_table(summaries: Sequence[SliceSummary]) -> Table:
 
 
 def repeat_table(summaries: Sequence[RepeatSummary]) -> Table:
-    """One row per (source, repeat), `ALL_SOURCES` last within each block —
-    a per-doc carry either compounds by the last repeat or it doesn't, and
-    that's a within-source trend before it's an aggregate one."""
+    """Same columns as `per_source_table`, one row per (source, repeat),
+    `ALL_SOURCES` last within each block. Only `cold-c` moves across a
+    source's own repeats; the rest are that source's flat reference line."""
+    seeded = any(CARRY in s.ppl_by_regime for s in summaries)
+
+    headers = ["source", "repeat", "n_docs", "n_tok"]
+    aligns = [LEFT, RIGHT, RIGHT, RIGHT]
+    if seeded:
+        headers += [
+            "carry", "cold-c", "cold-co", "lora", "fresh",
+            "Δlora", "Δwithin", "Δbetween", "Δseed",
+        ]
+        aligns += [RIGHT] * 9
+    else:
+        headers += ["cold-c", "cold-co", "lora", "fresh", "Δlora", "Δwithin", "Δbetween"]
+        aligns += [RIGHT] * 7
+    headers.append("state/W0")
+    aligns.append(RIGHT)
+
     ordering = sorted(
         summaries, key=lambda s: (s.source == ALL_SOURCES, s.source, s.repeat)
     )
-    rows = tuple(
-        (
-            s.source,
-            str(s.repeat),
-            str(s.n_docs),
-            f"{s.n_tokens:,d}",
-            ppl(s.ppl),
-            delta(s.delta_from_first),
-        )
-        for s in ordering
-    )
-    return Table(
-        headers=("source", "repeat", "n_docs", "n_tok", "ppl", "Δfirst"),
-        rows=rows,
-        aligns=(LEFT, RIGHT, RIGHT, RIGHT, RIGHT, RIGHT),
-    )
+    rows = []
+    for s in ordering:
+        by_regime = s.ppl_by_regime
+        cells = [s.source, str(s.repeat), str(s.n_docs), f"{s.n_tokens:,d}"]
+        if seeded:
+            cells.append(ppl(by_regime.get(CARRY, float("nan"))))
+        cells += [
+            ppl(by_regime.get(COLD_CARRY, float("nan"))),
+            ppl(by_regime.get(COLD_CARRY_OFF, float("nan"))),
+            ppl(by_regime.get(LORA_ONLY, float("nan"))),
+            ppl(by_regime.get(FRESH, float("nan"))),
+            delta(s.gaps.lora),
+            delta(s.gaps.within),
+            delta(s.gaps.between),
+        ]
+        if seeded:
+            cells.append(delta(s.gaps.seed))
+        cells.append(ratio(s.state_ratio))
+        rows.append(tuple(cells))
+
+    return Table(headers=tuple(headers), rows=tuple(rows), aligns=tuple(aligns))
 
 
 def ruler_table(results: Sequence[RulerResult]) -> Table:

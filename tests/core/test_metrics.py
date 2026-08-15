@@ -269,15 +269,15 @@ def test_repeat_summaries_cover_every_source_and_an_all_rollup():
     assert {s.source for s in summaries} == {"c4", "book", metrics.ALL_SOURCES}
 
 
-def test_a_repeats_delta_is_measured_against_that_sources_first_repeat():
+def test_cold_carry_ppl_is_tracked_per_repeat():
     rows = _replays("c4", 10.0, 8.0, 5.0)
 
     by_repeat = {
         s.repeat: s for s in metrics.summarise_by_repeat(rows) if s.source == "c4"
     }
 
-    assert by_repeat[0].delta_from_first == pytest.approx(0.0)
-    assert by_repeat[2].delta_from_first == pytest.approx(10.0 - 5.0)
+    assert by_repeat[0].ppl_by_regime[COLD_CARRY] == pytest.approx(10.0)
+    assert by_repeat[2].ppl_by_regime[COLD_CARRY] == pytest.approx(5.0)
 
 
 def test_the_all_rollup_aggregates_every_source_at_that_repeat():
@@ -290,7 +290,54 @@ def test_the_all_rollup_aggregates_every_source_at_that_repeat():
     ]
 
     assert rollup.n_docs == 2
-    assert rollup.ppl == pytest.approx(10.0)
+    assert rollup.ppl_by_regime[COLD_CARRY] == pytest.approx(10.0)
+
+
+def test_a_repeats_reference_regimes_stay_flat_across_the_replay():
+    """fresh/lora_only/cold_carry_off are measured once and repeated —
+    unlike cold_carry, they must not vary by repeat index."""
+    rows = [
+        build.repeat_row(source="c4", regime=FRESH, repeat=r, ppl=20.0)
+        for r in range(3)
+    ] + _replays("c4", 10.0, 8.0, 5.0)
+
+    by_repeat = {
+        s.repeat: s for s in metrics.summarise_by_repeat(rows) if s.source == "c4"
+    }
+
+    values = {s.ppl_by_regime[FRESH] for s in by_repeat.values()}
+    assert len(values) == 1
+    assert values.pop() == pytest.approx(20.0)
+
+
+def test_the_between_gap_grows_as_cold_carry_improves():
+    rows = [
+        build.repeat_row(source="c4", regime=COLD_CARRY_OFF, repeat=r, ppl=20.0)
+        for r in range(2)
+    ] + _replays("c4", 20.0, 12.0)
+
+    by_repeat = {
+        s.repeat: s for s in metrics.summarise_by_repeat(rows) if s.source == "c4"
+    }
+
+    assert by_repeat[0].gaps.between == pytest.approx(0.0)
+    assert by_repeat[1].gaps.between == pytest.approx(8.0)
+
+
+def test_state_ratio_is_averaged_over_cold_carry_rows_only():
+    rows = [
+        build.repeat_row(source="c4", regime=FRESH, repeat=0, state_ratio=99.0),
+        build.repeat_row(source="c4", regime=COLD_CARRY, repeat=0, state_ratio=0.2),
+        build.repeat_row(
+            source="c4", regime=COLD_CARRY, repeat=0, doc_idx=1, state_ratio=0.4,
+        ),
+    ]
+
+    (summary,) = [
+        s for s in metrics.summarise_by_repeat(rows) if s.source == "c4"
+    ]
+
+    assert summary.state_ratio == pytest.approx(0.3)
 
 
 def test_summarising_no_repeats_yields_nothing():

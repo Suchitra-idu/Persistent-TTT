@@ -1,11 +1,14 @@
 """FakeCompute — scripted losses. The train loop's whole test surface.
 
 Losses cycle, and a scripted `nan` is how the nonfinite-loss guard gets tested
-without a model that can diverge.
+without a model that can diverge. `total_norm` does the same for the
+nonfinite-*gradient* guard — a finite loss whose backward pass still didn't
+produce a usable gradient.
 """
 
 from __future__ import annotations
 
+import math
 from typing import Mapping, Sequence
 
 from ttt.core.types import GradStats
@@ -62,8 +65,9 @@ class FakeCompute:
     def clip_and_step(
         self, *, max_grad_norm: float, learning_rates: Mapping[str, float]
     ) -> GradStats:
-        self.steps.append(dict(learning_rates))
         self.clipped_at.append(max_grad_norm)
+        if math.isfinite(self._total_norm):
+            self.steps.append(dict(learning_rates))
         return GradStats(total_norm=self._total_norm, **self._grad_norms)
 
     def eval_loss(self, token_ids: Sequence[int], *, lora: bool = True) -> float:

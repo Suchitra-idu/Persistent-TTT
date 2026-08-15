@@ -48,6 +48,10 @@ class TrainConfig:
     log_every: int = 10
     save_every: int = 200
     run_name: str = "ttt-v1.1"
+    # torch.autograd.set_detect_anomaly: a real slowdown, opt-in only, for
+    # pinpointing exactly which backward op first produces a non-finite
+    # gradient — not something to leave on for a real run.
+    debug_anomaly: bool = False
     wandb_enabled: bool = True
     wandb_project: str = "inplace-ttt"
 

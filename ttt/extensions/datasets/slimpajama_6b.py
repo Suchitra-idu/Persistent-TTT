@@ -29,8 +29,10 @@ SLIMPAJAMA_6B = register(
         # Without it, --limit-docs takes the raw ~77%-C4 head and the gap
         # signal is web text. "none" opts out.
         default_source_preset="slim-research",
-        # Wide enough that per-source eval sampling still finds Books/ArXiv
-        # rows, which are ~0.1% and ~0.9% of this subsample.
-        holdout_last_n=5000,
+        # Books are ~0.1% of this subsample: 5000 gave an *expected* count of
+        # 5, no margin against the default eval_n_docs_per_source=5 — real
+        # runs saw shortfalls. 15000 gives Books ~3x headroom (ArXiv, ~0.9%,
+        # already clears it easily at either size).
+        holdout_last_n=15000,
     )
 )

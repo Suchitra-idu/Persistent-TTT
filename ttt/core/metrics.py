@@ -75,16 +75,17 @@ class SliceSummary:
 
 @dataclass(frozen=True)
 class RepeatSummary:
-    """One (source, repeat) cell of the replay eval. `source=ALL_SOURCES`
-    rolls up every source at that repeat. `delta_from_first` is repeat 0's
-    ppl minus this one's — positive means the replay improved."""
+    """Same shape as `SourceSummary`, grouped by (source, repeat) instead of
+    by source alone. `source=ALL_SOURCES` rolls every source up at that
+    repeat. `state_ratio` is `cold_carry`'s only — the regime that evolves."""
 
     source: str
     repeat: int
     n_docs: int
     n_tokens: int
-    ppl: float
-    delta_from_first: float
+    ppl_by_regime: Mapping[str, float]
+    gaps: Gaps
+    state_ratio: float
 
 
 def perplexity(nll: float) -> float:
@@ -211,38 +212,54 @@ def summarise_by_slice_index(slices: Sequence[SliceRow]) -> tuple[SliceSummary, 
 
 def summarise_by_repeat(rows: Sequence[RepeatRow]) -> tuple[RepeatSummary, ...]:
     """Per (source, repeat), plus an `ALL_SOURCES` rollup — whether a doc's
-    own carry pays off across replays is a within-source question first.
-    Assumes every source has a repeat-0 row to diff the rest against."""
+    own carry pays off across replays is a within-source question first."""
     return _repeat_summaries(rows, key=lambda row: row.source) + _repeat_summaries(
         rows, key=lambda row: ALL_SOURCES
     )
 
 
-def _repeat_summaries(
-    rows: Sequence[RepeatRow], *, key
-) -> tuple[RepeatSummary, ...]:
+def _repeat_summaries(rows: Sequence[RepeatRow], *, key) -> tuple[RepeatSummary, ...]:
     by_cell: dict[tuple[str, int], list[RepeatRow]] = defaultdict(list)
     for row in rows:
         by_cell[(key(row), row.repeat)].append(row)
 
-    first_ppl: dict[str, float] = {}
     summaries = []
     for source, repeat in sorted(by_cell):
         cell = by_cell[(source, repeat)]
-        value = token_weighted_ppl([PplRow(n_tokens=r.n_tokens, ppl=r.ppl) for r in cell])
-        if repeat == 0:
-            first_ppl[source] = value
+        by_regime: dict[str, list[RepeatRow]] = defaultdict(list)
+        for row in cell:
+            by_regime[row.regime].append(row)
+        ppls = {
+            regime: token_weighted_ppl(
+                [PplRow(n_tokens=r.n_tokens, ppl=r.ppl) for r in regime_rows]
+            )
+            for regime, regime_rows in by_regime.items()
+        }
+        reference = by_regime.get(COLD_CARRY) or next(iter(by_regime.values()))
         summaries.append(
             RepeatSummary(
                 source=source,
                 repeat=repeat,
-                n_docs=len({r.doc_idx for r in cell}),
-                n_tokens=sum(r.n_tokens for r in cell),
-                ppl=value,
-                delta_from_first=first_ppl[source] - value,
+                n_docs=len({r.doc_idx for r in reference}),
+                n_tokens=sum(r.n_tokens for r in reference),
+                ppl_by_regime=ppls,
+                gaps=gap_decomposition(
+                    fresh=ppls.get(FRESH, float("nan")),
+                    lora_only=ppls.get(LORA_ONLY, float("nan")),
+                    cold_carry_off=ppls.get(COLD_CARRY_OFF, float("nan")),
+                    cold_carry=ppls.get(COLD_CARRY, float("nan")),
+                    carry=ppls.get(CARRY),
+                ),
+                state_ratio=_mean_state_ratio(by_regime.get(COLD_CARRY, ())),
             )
         )
     return tuple(summaries)
+
+
+def _mean_state_ratio(rows: Sequence[RepeatRow]) -> float:
+    if not rows:
+        return 0.0
+    return sum(row.state_ratio for row in rows) / len(rows)
 
 
 def clip_ratio(total_norm: float, max_grad_norm: float) -> float:

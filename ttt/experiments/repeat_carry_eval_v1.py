@@ -1,6 +1,8 @@
 """X held-out documents per source, each replayed for `n_repeats` sessions
 with a fresh carry that is never reset between replays — does perplexity on
-a document already seen improve the more times its own carry has seen it.
+a document already seen improve the more times its own carry has seen it,
+against the same fresh/lora/cold-carry-off reference `eval_loop` uses
+elsewhere.
 
 X is `--flags eval_n_docs_per_source=N`, an existing knob; SlimPajama is the
 default dataset already.
@@ -10,15 +12,15 @@ default dataset already.
 
 from __future__ import annotations
 
-from typing import Callable
+from typing import Callable, Sequence
 
 import modal
 
 from ttt import cli
 from ttt.adapters import modal_runtime
-from ttt.app import data_pipeline, session_eval
+from ttt.app import data_pipeline, eval_loop, session_eval
 from ttt.core import metrics, report
-from ttt.core.types import RepeatRow
+from ttt.core.types import COLD_CARRY, EvalRow, RepeatRow
 from ttt.experiments import _runtime
 from ttt.experiments._runtime import Engine
 
@@ -48,13 +50,22 @@ def run(
         announce("no held-out documents matched the eval filters")
         return ()
 
-    rows = tuple(
+    reference = eval_loop.evaluate(
+        docs=holdout.docs,
+        compute=engine.compute,
+        fast_weights=engine.fast_weights,
+        n_slices=1,
+        session_training=resolved.train.session_training,
+    )
+    rows = _reference_rows(reference.rows, n_repeats) + tuple(
         RepeatRow(
             doc_idx=item.doc_idx,
             source=item.source,
+            regime=COLD_CARRY,
             repeat=item.position,
             n_tokens=item.n_tokens,
             ppl=item.ppl,
+            state_ratio=item.state_ratio,
         )
         for doc in holdout.docs
         for item in _replay(engine, doc, n_repeats)
@@ -63,6 +74,29 @@ def run(
     announce(f"{len(holdout.docs)} documents x {n_repeats} repeats")
     announce(report.render(report.repeat_table(summaries)))
     return summaries
+
+
+def _reference_rows(
+    eval_rows: Sequence[EvalRow], n_repeats: int
+) -> tuple[RepeatRow, ...]:
+    """fresh / lora_only / cold_carry_off never evolve across a replay of the
+    same document — measured once each (`eval_loop`, whole doc, one slice)
+    and repeated so every index has a full row to diff against. `cold_carry`
+    is dropped here: its real, evolving trend comes from `_replay` below."""
+    return tuple(
+        RepeatRow(
+            doc_idx=row.doc_idx,
+            source=row.source,
+            regime=row.regime,
+            repeat=repeat,
+            n_tokens=row.n_tokens,
+            ppl=row.ppl,
+            state_ratio=row.state_ratio_final,
+        )
+        for row in eval_rows
+        if row.regime != COLD_CARRY
+        for repeat in range(n_repeats)
+    )
 
 
 def _replay(engine: Engine, doc, n_repeats: int):

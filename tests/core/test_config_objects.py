@@ -48,6 +48,8 @@ def test_the_cut_fields_are_gone():
         ({"conv_kernel_size": 0}, "conv_kernel_size must be >= 1"),
         ({"clip_tau": 0.0}, "clip_tau must be > 0"),
         ({"carried_decay": 1.5}, r"carried_decay must be in \[0, 1\]"),
+        ({"update_rule": "gradient"}, "update_rule must be"),
+        ({"truncate_every": 0}, "truncate_every must be >= 1"),
         ({"layer_indices": (1, 1, 3)}, "duplicates"),
         ({"layer_indices": (-1,)}, "non-negative"),
     ],

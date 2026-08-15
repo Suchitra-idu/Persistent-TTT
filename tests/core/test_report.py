@@ -122,13 +122,30 @@ def test_an_empty_slice_summary_list_still_produces_headers():
     assert table.rows == () and table.headers[0] == "slice"
 
 
-def _repeat_summaries():
+def _repeat_summaries(*, seeded: bool = False):
     rows = [
-        build.repeat_row(doc_idx=0, source="RedPajamaC4", repeat=0, ppl=10.0),
-        build.repeat_row(doc_idx=0, source="RedPajamaC4", repeat=1, ppl=8.0),
-        build.repeat_row(doc_idx=1, source="RedPajamaBook", repeat=0, ppl=20.0),
-        build.repeat_row(doc_idx=1, source="RedPajamaBook", repeat=1, ppl=16.0),
+        build.repeat_row(doc_idx=0, source="RedPajamaC4", regime=FRESH, repeat=0, ppl=25.0),
+        build.repeat_row(doc_idx=0, source="RedPajamaC4", regime=FRESH, repeat=1, ppl=25.0),
+        build.repeat_row(doc_idx=0, source="RedPajamaC4", regime=LORA_ONLY, repeat=0, ppl=22.0),
+        build.repeat_row(doc_idx=0, source="RedPajamaC4", regime=LORA_ONLY, repeat=1, ppl=22.0),
+        build.repeat_row(doc_idx=0, source="RedPajamaC4", regime=COLD_CARRY_OFF, repeat=0, ppl=20.0),
+        build.repeat_row(doc_idx=0, source="RedPajamaC4", regime=COLD_CARRY_OFF, repeat=1, ppl=20.0),
+        build.repeat_row(doc_idx=0, source="RedPajamaC4", regime=COLD_CARRY, repeat=0, ppl=10.0),
+        build.repeat_row(doc_idx=0, source="RedPajamaC4", regime=COLD_CARRY, repeat=1, ppl=8.0),
+        build.repeat_row(doc_idx=1, source="RedPajamaBook", regime=FRESH, repeat=0, ppl=30.0),
+        build.repeat_row(doc_idx=1, source="RedPajamaBook", regime=FRESH, repeat=1, ppl=30.0),
+        build.repeat_row(doc_idx=1, source="RedPajamaBook", regime=LORA_ONLY, repeat=0, ppl=26.0),
+        build.repeat_row(doc_idx=1, source="RedPajamaBook", regime=LORA_ONLY, repeat=1, ppl=26.0),
+        build.repeat_row(doc_idx=1, source="RedPajamaBook", regime=COLD_CARRY_OFF, repeat=0, ppl=22.0),
+        build.repeat_row(doc_idx=1, source="RedPajamaBook", regime=COLD_CARRY_OFF, repeat=1, ppl=22.0),
+        build.repeat_row(doc_idx=1, source="RedPajamaBook", regime=COLD_CARRY, repeat=0, ppl=20.0),
+        build.repeat_row(doc_idx=1, source="RedPajamaBook", regime=COLD_CARRY, repeat=1, ppl=16.0),
     ]
+    if seeded:
+        rows += [
+            build.repeat_row(doc_idx=0, source="RedPajamaC4", regime=CARRY, repeat=0, ppl=9.0),
+            build.repeat_row(doc_idx=0, source="RedPajamaC4", regime=CARRY, repeat=1, ppl=7.0),
+        ]
     return metrics.summarise_by_repeat(rows)
 
 
@@ -152,11 +169,38 @@ def test_the_repeat_table_orders_repeats_ascending_within_a_source():
     assert c4_repeats == ["0", "1"]
 
 
-def test_the_repeat_deltas_carry_an_explicit_sign():
+def test_an_unseeded_repeat_table_has_no_carry_column():
+    table = report.repeat_table(_repeat_summaries(seeded=False))
+
+    assert "carry" not in table.headers
+    assert "Δseed" not in table.headers
+
+
+def test_a_seeded_repeat_table_gets_the_carry_and_seed_columns():
+    table = report.repeat_table(_repeat_summaries(seeded=True))
+
+    assert "carry" in table.headers
+    assert "Δseed" in table.headers
+
+
+def test_the_repeat_table_carries_the_full_regime_columns():
     table = report.repeat_table(_repeat_summaries())
-    delta_col = table.headers.index("Δfirst")
+
+    for header in ("cold-c", "cold-co", "lora", "fresh", "Δlora", "Δwithin", "Δbetween"):
+        assert header in table.headers
+
+
+def test_the_repeat_gaps_carry_an_explicit_sign():
+    table = report.repeat_table(_repeat_summaries())
+    delta_col = table.headers.index("Δwithin")
 
     assert all(row[delta_col].startswith(("+", "-")) for row in table.rows)
+
+
+def test_the_repeat_table_reports_the_carry_state_ratio():
+    table = report.repeat_table(_repeat_summaries())
+
+    assert "state/W0" in table.headers
 
 
 def test_an_empty_repeat_summary_list_still_produces_headers():

@@ -37,20 +37,46 @@ class TTTConfig:
     normalize_delta_by_chunk: bool = True
     conv_kernel_size: int = 8
 
+    # "hebbian" is ttt_math.scan; "delta"/"delta_chunk" are error-corrected
+    # alternatives, O(N)- and O(N/chunk_size)-sequential respectively. See
+    # delta_scan's and chunked_delta_scan's docstrings.
+    update_rule: str = "hebbian"
+
     # Breaks chunk-causality under next-token prediction; a knowingly invalid
     # ablation kept pending a research call (PLAN §9.2).
     v_bidirectional: bool = False
 
     output_gate: bool = True
+    # Was tried at -0.5 (less damped) alongside the RULER retention change;
+    # reverted with it — letting a still-untrained carry influence the output
+    # 3x more this early looks like why carry-on regimes were worse than
+    # fresh/lora, not just neutral, at step 20.
     output_gate_bias_init: float = -2.0
 
     # tau is in units of ||eta*S||_F, so it needs retuning per model size.
+    # Was tried at 10.0 alongside a higher carried_decay for RULER retention;
+    # reverted — clip only bounds the snapshot applied to the output, never
+    # the stored, accumulating carry, so it did nothing to stop `everlasting`
+    # (which never resets) from diverging (state_ratio_final > 100).
     clip_enabled: bool = True
     clip_tau: float = 5.0
     clip_at_inference_only: bool = False
 
-    # 1.0 = pure sum (unbounded), 0.0 = last item only.
+    # 1.0 = pure sum (unbounded), 0.0 = last item only. Was tried at 0.98 for
+    # RULER's long-range retention; reverted — over `everlasting`'s never-reset
+    # accumulation that's slow enough forgetting to let the carry diverge, not
+    # just retain a needle longer. Revisit with a cap on the stored carry
+    # itself, not just clip_tau's cap on its use, before trying this again.
     carried_decay: float = 0.9
+
+    # carried_decay's recurrence, one chunk at a time instead of one item at
+    # a time (see ttt_math.exclusive_decayed_cumsum). Defaults to 1.0, the
+    # prior unbounded-sum behaviour, so this is opt-in.
+    chunk_decay: float = 1.0
+
+    # delta/delta_chunk's truncated-BPTT window (see delta_scan's docstring);
+    # 1 starves the target projection of gradient entirely.
+    truncate_every: int = 5
 
     def __post_init__(self) -> None:
         if self.chunk_size < 1:
@@ -64,6 +90,17 @@ class TTTConfig:
         if not 0.0 <= self.carried_decay <= 1.0:
             raise ValueError(
                 f"carried_decay must be in [0, 1], got {self.carried_decay}"
+            )
+        if not 0.0 <= self.chunk_decay <= 1.0:
+            raise ValueError(f"chunk_decay must be in [0, 1], got {self.chunk_decay}")
+        if self.truncate_every < 1:
+            raise ValueError(
+                f"truncate_every must be >= 1, got {self.truncate_every}"
+            )
+        if self.update_rule not in ("hebbian", "delta", "delta_chunk"):
+            raise ValueError(
+                "update_rule must be 'hebbian', 'delta', or 'delta_chunk', got "
+                f"{self.update_rule!r}"
             )
         if self.layer_indices is not None:
             indices = tuple(self.layer_indices)

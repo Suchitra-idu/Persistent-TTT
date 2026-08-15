@@ -7,7 +7,7 @@ re-reading a corpus that no longer exists in the shape it was read in.
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
-from typing import Any, Mapping, Sequence
+from typing import Any, Callable, Mapping, Sequence
 
 from ttt.core import balance as balance_math
 from ttt.core import tokens
@@ -48,6 +48,10 @@ class Data:
     limit_docs: int | None = None
     weights: Mapping[str, int] | None = None
     log: tuple[StageLog, ...] = ()
+    # tokenize's only use: the run()-level per-stage line covers the rest,
+    # but tokenize is the one impure stage, real minutes of tokenizer work
+    # with nothing else to report progress within it.
+    announce: Callable[[str], None] = lambda _: None
 
     @property
     def sources(self) -> list[str]:
@@ -107,13 +111,18 @@ def tokenize(data: Data) -> Data:
     signal and holds every document's ids in memory at once — indistinguishable
     from a hang for as long as it runs."""
     texts = data.table.column(data.spec.text_column)
+    starts = range(0, len(texts), TOKENIZE_BATCH_SIZE)
     encoded: list[list[int]] = []
-    for start in range(0, len(texts), TOKENIZE_BATCH_SIZE):
+    for batch_index, start in enumerate(starts, start=1):
         encoded.extend(
             data.tokenizer.encode_batch(
                 texts[start : start + TOKENIZE_BATCH_SIZE],
                 max_length=data.cfg.max_seq_len,
             )
+        )
+        data.announce(
+            f"    tokenize: batch {batch_index}/{len(starts)} "
+            f"({len(encoded):,d}/{len(texts):,d} docs)"
         )
     return data.keeping(
         "tokenize", data.table.with_column(TOKENS_COLUMN, encoded)

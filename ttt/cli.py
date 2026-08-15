@@ -20,6 +20,7 @@ from ttt.extensions import datasets, strategies
 from ttt.extensions.strategies import Strategy
 
 UNSET_FLAG = -1
+DEFAULT_LIMIT_DOCS = 500
 
 DEFAULT_MODEL_SIZE = "0.6B"
 ENV_DATASET = "TTT_DATASET"
@@ -143,9 +144,20 @@ def from_flags(
         given["grad_accum_steps"] = grad_accum
     return resolve(
         session_training=bool(session) if session in (0, 1) else None,
-        limit_docs=limit_docs or None,
+        limit_docs=_resolved_limit_docs(limit_docs),
         **given,
     )
+
+
+def _resolved_limit_docs(limit_docs: int) -> int | None:
+    """0 (not given) is the smoke-test-sized default — a launch never
+    silently trains on the full corpus. A negative value opts into that
+    explicitly."""
+    if limit_docs == 0:
+        return DEFAULT_LIMIT_DOCS
+    if limit_docs < 0:
+        return None
+    return limit_docs
 
 
 def _train_config(

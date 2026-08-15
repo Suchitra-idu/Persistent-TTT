@@ -178,16 +178,25 @@ class SliceRow:
 
 @dataclass(frozen=True)
 class RepeatRow:
-    """The same document measured again, `repeat` sessions after the first,
-    with the carry never reset in between — the replay eval's unit."""
+    """One regime, `repeat` replays into the same document. Only
+    `cold_carry` (and `carry`, if ever seeded) actually changes across
+    replays — `fresh`/`lora_only`/`cold_carry_off` reset or never evolve, so
+    a caller measures them once per doc and repeats the row rather than
+    recomputing an identical pass."""
 
     doc_idx: int
     source: str
+    regime: str
     repeat: int
     n_tokens: int
     ppl: float
+    state_ratio: float = 0.0
 
     def __post_init__(self) -> None:
+        if self.regime not in REGIMES:
+            raise ValueError(
+                f"unknown regime {self.regime!r}; expected one of {list(REGIMES)}"
+            )
         if self.repeat < 0:
             raise ValueError(f"repeat must be >= 0, got {self.repeat}")
         if self.ppl <= 0.0:

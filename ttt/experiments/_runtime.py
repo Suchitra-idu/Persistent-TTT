@@ -60,7 +60,12 @@ class Engine:
 
 
 def build(
-    resolved: cli.Resolved, *, storage: Storage, root: str, trainable: bool
+    resolved: cli.Resolved,
+    *,
+    storage: Storage,
+    root: str,
+    trainable: bool,
+    announce: Callable[[str], None] = lambda _: None,
 ) -> Engine:
     """The real thing: transformers, PEFT, torch adapters. Needs a GPU.
 
@@ -102,11 +107,11 @@ def build(
         model=model,
         root=root,
     )
-    engine.save = _checkpointer(engine)
+    engine.save = _checkpointer(engine, announce)
     return engine
 
 
-def _checkpointer(engine: Engine) -> Callable[..., None]:
+def _checkpointer(engine: Engine, announce: Callable[[str], None]) -> Callable[..., None]:
     """Both artefacts, the adapter, then one commit — in that order, so a
     partially written step directory is never visible as a complete one."""
 
@@ -126,6 +131,7 @@ def _checkpointer(engine: Engine) -> Callable[..., None]:
         )
         engine.model.save_pretrained(f"{engine.root}/{prefix}/{ADAPTER_DIR}")
         engine.storage.commit()
+        announce(f"  checkpoint saved: {prefix}")
 
     return save
 

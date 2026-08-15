@@ -5,6 +5,7 @@ from __future__ import annotations
 import glob
 import os
 import sys
+import time
 
 from ttt.adapters.hf_table import HfTable
 from ttt.core.config.dataset import DatasetSpec
@@ -12,8 +13,23 @@ from ttt.ports.table import SOURCE_COLUMN
 
 
 class HfDataSource:
+    """`load` is called twice per run — the training pool, then `holdout`'s own
+    pool — on the same spec; caching per instance turns the second call from a
+    full re-load-and-relabel of the raw corpus into a dict lookup. Scoped to
+    the instance (not module-level) so it dies with the entrypoint that made
+    it, not leak across separate Modal invocations."""
+
+    def __init__(self) -> None:
+        self._cache: dict[DatasetSpec, HfTable] = {}
+
     def load(self, spec: DatasetSpec) -> HfTable:
+        cached = self._cache.get(spec)
+        if cached is not None:
+            return cached
+        print(f"loading {spec.source!r}...")
+        t0 = time.time()
         dataset = _load(spec)
+        print(f"  loaded {len(dataset):,d} rows in {time.time() - t0:.1f}s")
         missing = spec.source_meta_column and (
             spec.source_meta_column not in dataset.column_names
         )
@@ -23,7 +39,12 @@ class HfDataSource:
                 f"column to read a source label from (columns: "
                 f"{dataset.column_names})"
             )
-        return HfTable(dataset.add_column(SOURCE_COLUMN, source_labels(dataset, spec)))
+        t0 = time.time()
+        labels = source_labels(dataset, spec)
+        print(f"  labeled sources in {time.time() - t0:.1f}s")
+        table = HfTable(dataset.add_column(SOURCE_COLUMN, labels))
+        self._cache[spec] = table
+        return table
 
 
 def source_labels(dataset, spec: DatasetSpec) -> list[str]:

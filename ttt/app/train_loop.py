@@ -26,6 +26,7 @@ class TrainResult:
     micro_steps: int
     sessions: int
     nonfinite: int
+    nonfinite_steps: int
     total_tokens: int
     total_steps: int
     carries: Mapping[str, Carry]
@@ -74,7 +75,7 @@ def train(
     n_updates: dict[str, int] = {}
 
     fast_weights.set_mode(evolve=True, stream=False, session=cfg.session_training)
-    step = micro = sessions = nonfinite = total_tokens = 0
+    step = micro = sessions = nonfinite = nonfinite_steps = total_tokens = 0
     accumulated = 0
     step_loss = window_loss = 0.0
 
@@ -86,7 +87,11 @@ def train(
             for item in session.items:
                 doc = docs[item.doc_idx]
                 token_ids = doc.token_ids[item.start : item.end]
+                if micro == 0:
+                    announce(f"  first micro-step: {len(token_ids):,d} tokens, starting forward")
                 loss = compute.loss(token_ids)
+                if micro == 0:
+                    announce("  first micro-step: forward+backward-eligible loss returned")
                 micro += 1
                 total_tokens += len(token_ids)
 
@@ -127,6 +132,15 @@ def train(
                     max_grad_norm=cfg.max_grad_norm, learning_rates=rates
                 )
                 compute.zero_grad()
+                if not math.isfinite(stats.total_norm):
+                    # The optimizer never stepped (see TorchCompute.clip_and_step):
+                    # a finite loss can still backward into a non-finite gradient,
+                    # and applying that would make every parameter nan forever.
+                    nonfinite_steps += 1
+                    step_loss = 0.0
+                    accumulated = 0
+                    announce(f"  step {step + 1}: non-finite gradient, skipped")
+                    continue
                 step += 1
                 accumulated = 0
                 tracker.log(_step_metrics(step, step_loss, rates, stats, cfg))
@@ -150,6 +164,7 @@ def train(
         micro_steps=micro,
         sessions=sessions,
         nonfinite=nonfinite,
+        nonfinite_steps=nonfinite_steps,
         total_tokens=total_tokens,
         total_steps=total_steps,
         carries=carried,

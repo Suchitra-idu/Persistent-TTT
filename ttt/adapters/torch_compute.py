@@ -7,6 +7,7 @@ hard error: silently dropping one would train it at no learning rate at all.
 from __future__ import annotations
 
 import contextlib
+import math
 from typing import Mapping, Sequence
 
 import torch
@@ -27,6 +28,8 @@ class TorchCompute:
         train_cfg: TrainConfig,
         device: str = "cuda",
     ) -> None:
+        if train_cfg.debug_anomaly:
+            torch.autograd.set_detect_anomaly(True)
         self.model = model
         self.device = device
         self._groups = _group_parameters(model, ttt_cfg)
@@ -77,10 +80,17 @@ class TorchCompute:
         total = torch.nn.utils.clip_grad_norm_(
             [p for params in self._groups.values() for p in params], max_grad_norm
         )
+        stats = GradStats(total_norm=float(total), **norms)
+        if not math.isfinite(stats.total_norm):
+            # A finite loss can still backward into a non-finite gradient.
+            # Stepping anyway makes every parameter nan, permanently — the
+            # caller sees this by total_norm, not a raised error, and owns
+            # zeroing the gradient either way.
+            return stats
         for group, name in zip(self._optimizer.param_groups, GROUPS):
             group["lr"] = learning_rates[name]
         self._optimizer.step()
-        return GradStats(total_norm=float(total), **norms)
+        return stats
 
     @torch.no_grad()
     def eval_loss(self, token_ids: Sequence[int], *, lora: bool = True) -> float:

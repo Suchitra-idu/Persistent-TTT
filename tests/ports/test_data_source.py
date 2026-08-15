@@ -102,3 +102,14 @@ class TestHfDataSource(DataSourceConformance):
     @pytest.fixture
     def source(self):
         return HfDataSource()
+
+    def test_loading_the_same_spec_twice_reuses_the_table(self, source, spec):
+        assert source.load(spec) is source.load(spec)
+
+    def test_loading_different_specs_does_not_share_a_cache_entry(
+        self, source, spec, unlabelled_spec
+    ):
+        with pytest.raises(ValueError, match="source label"):
+            source.load(unlabelled_spec)
+
+        assert len(source.load(spec)) == len(SOURCES)

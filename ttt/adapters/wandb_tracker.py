@@ -6,6 +6,7 @@ programmer bugs and must still surface.
 
 from __future__ import annotations
 
+import sys
 from typing import Mapping
 
 from ttt.adapters.console_tracker import ConsoleTracker
@@ -18,6 +19,7 @@ class WandbTracker:
     def __init__(self, run, *, fallback: ConsoleTracker | None = None) -> None:
         self._run = run
         self._fallback = fallback or ConsoleTracker()
+        self._warned = False
         self._define_axes()
 
     @classmethod
@@ -41,14 +43,28 @@ class WandbTracker:
     def log(self, metrics: Mapping[str, float]) -> None:
         try:
             self._run.log(dict(metrics))
-        except _wandb_errors():
+        except _wandb_errors() as exc:
+            self._warn(exc)
             self._fallback.log(metrics)
 
     def finish(self) -> None:
         try:
             self._run.finish()
-        except _wandb_errors():
+        except _wandb_errors() as exc:
+            self._warn(exc)
             self._fallback.finish()
+
+    def _warn(self, exc: BaseException) -> None:
+        """Once, not every call: the fallback already runs from here on, and
+        a warning per step would just be the silence it replaces, louder."""
+        if self._warned:
+            return
+        self._warned = True
+        print(
+            f"wandb logging failed ({type(exc).__name__}: {exc}); falling back "
+            "to console for the rest of this run",
+            file=sys.stderr,
+        )
 
 
 def _wandb_errors() -> tuple[type[BaseException], ...]:

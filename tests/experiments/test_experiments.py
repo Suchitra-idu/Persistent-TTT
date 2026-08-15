@@ -8,6 +8,7 @@ import pytest
 
 from tests.experiments import _builders
 from ttt.core import metrics
+from ttt.core.types import COLD_CARRY, FRESH
 from ttt.experiments import (
     compounding_pilot_v1,
     holdout_eval_v1,
@@ -74,6 +75,20 @@ class TestTrain:
         )
 
         assert engine.save.calls
+
+    def test_on_data_ready_fires_once_before_training_starts(self):
+        calls = []
+
+        def mark():
+            calls.append(len(engine.compute.forwards))
+
+        engine = _builders.engine()
+        train_v1.run(
+            _builders.resolved(), engine=engine, source=_builders.data_source(),
+            announce=lines(), on_data_ready=mark,
+        )
+
+        assert calls == [0]
 
     def test_it_resumes_from_the_carriers_the_engine_hands_it(self):
         engine = _builders.engine(carries={"FixtureProse": _builders.carry()})
@@ -301,9 +316,24 @@ class TestRepeatCarryEval:
         )
 
         by_repeat = {
-            s.repeat: s.ppl for s in summaries if s.source == metrics.ALL_SOURCES
+            s.repeat: s.ppl_by_regime[COLD_CARRY]
+            for s in summaries
+            if s.source == metrics.ALL_SOURCES
         }
         assert by_repeat[2] < by_repeat[0]
+
+    def test_the_reference_regimes_stay_flat_across_repeats(self):
+        summaries = repeat_carry_eval_v1.run(
+            _builders.resolved(), engine=_builders.engine(),
+            source=_builders.data_source(), n_repeats=3, announce=lines(),
+        )
+
+        by_repeat = {
+            s.repeat: s.ppl_by_regime[FRESH]
+            for s in summaries
+            if s.source == metrics.ALL_SOURCES
+        }
+        assert by_repeat[0] == pytest.approx(by_repeat[2])
 
     def test_it_prints_the_repeat_table(self):
         spoken = []
@@ -313,7 +343,7 @@ class TestRepeatCarryEval:
             source=_builders.data_source(), n_repeats=2, announce=spoken.append,
         )
 
-        assert any("Δfirst" in line for line in spoken)
+        assert any("Δwithin" in line for line in spoken)
 
     def test_an_empty_holdout_measures_nothing(self):
         resolution = _builders.nothing_held_out(_builders.resolved())

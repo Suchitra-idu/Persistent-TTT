@@ -82,12 +82,20 @@ def repeat_row(
     *,
     doc_idx: int = 0,
     source: str = "RedPajamaC4",
+    regime: str = "cold_carry",
     repeat: int = 0,
     n_tokens: int = 1000,
     ppl: float = 10.0,
+    state_ratio: float = 0.0,
 ) -> RepeatRow:
     return RepeatRow(
-        doc_idx=doc_idx, source=source, repeat=repeat, n_tokens=n_tokens, ppl=ppl
+        doc_idx=doc_idx,
+        source=source,
+        regime=regime,
+        repeat=repeat,
+        n_tokens=n_tokens,
+        ppl=ppl,
+        state_ratio=state_ratio,
     )
 
 

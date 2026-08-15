@@ -1,10 +1,12 @@
 """In-Place TTT kernels: chunk deltas, exclusive cumsum, clip, apply.
 
     dS_k = V_k^T Z_k / C_k
-    S_k  = S_carried + sum_{j<k} dS_j
+    S_k  = S_carried + sum_{j<k} decay**(k-1-j) dS_j
     out  = Z_k W0^T + eta * Z_k S_k^T
 
-The exclusive cumsum is the chunk-causality guarantee.
+The exclusive cumsum (decay=1.0) is the chunk-causality guarantee; decay<1.0
+is the same recurrence `core.carry.advance` uses across items, one chunk at
+a time — otherwise a long enough document diverges on `clip_tau` alone.
 """
 
 from __future__ import annotations
@@ -79,6 +81,24 @@ def exclusive_cumsum(deltas: torch.Tensor) -> torch.Tensor:
     return torch.cat([torch.zeros_like(cum[:, :1]), cum[:, :-1]], dim=1)
 
 
+def exclusive_decayed_cumsum(deltas: torch.Tensor, *, decay: float) -> torch.Tensor:
+    """S_0 = 0; S_k = decay*S_{k-1} + delta_{k-1} — `core.carry.advance`'s
+    recurrence, one chunk at a time instead of one item at a time. decay=1.0
+    is `exclusive_cumsum`; a plain matmul against a decay-weighted lower
+    triangle stays stable for decay<1 where rescaling the running sum by
+    decay**-k would overflow for a long document."""
+    if not 0.0 <= decay <= 1.0:
+        raise ValueError(f"decay must be in [0, 1], got {decay}")
+    if decay == 1.0:
+        return exclusive_cumsum(deltas)
+    k = deltas.shape[1]
+    row = torch.arange(k, device=deltas.device).unsqueeze(1)
+    col = torch.arange(k, device=deltas.device).unsqueeze(0)
+    age = (row - col - 1).clamp(min=0).to(deltas.dtype)
+    weights = torch.where(row > col, decay**age, torch.zeros_like(age))
+    return torch.einsum("rc,bcxy->brxy", weights, deltas)
+
+
 def frobenius_clip(state: torch.Tensor, *, eta: float, tau: float) -> torch.Tensor:
     """Scale each state so ||eta*S||_F <= tau, preserving direction."""
     if tau <= 0.0:
@@ -104,6 +124,7 @@ def scan(
     normalize_delta_by_chunk: bool = True,
     carried: torch.Tensor | None = None,
     clip_tau: float | None = None,
+    decay: float = 1.0,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """Return (ttt_out [B,N,d_model], item_delta [B,d_model,d_ff]).
 
@@ -111,7 +132,9 @@ def scan(
     are deliberate: the clip applies to the state at apply time and is never
     fed back into the accumulation, so it does not compound; and `item_delta`
     is unclipped, since the EMA in `core.carry` is what bounds the carry.
-    Nothing here detaches or casts — the TBPTT boundary is the caller's.
+    `decay` only reaches the intra-session accumulation; `carried` (the
+    cross-item state) is added on top at full strength either way. Nothing
+    here detaches or casts — the TBPTT boundary is the caller's.
     """
     if z.shape[:2] != v.shape[:2]:
         raise ValueError(
@@ -126,7 +149,7 @@ def scan(
     deltas = chunk_deltas(
         v_chunks, z_chunks, normalize=normalize_delta_by_chunk, token_counts=counts
     )
-    state = exclusive_cumsum(deltas)
+    state = exclusive_decayed_cumsum(deltas, decay=decay)
     if carried is not None:
         state = state + carried.unsqueeze(1).to(state.dtype)
     if clip_tau is not None:
@@ -135,6 +158,144 @@ def scan(
     ttt_out = apply_state(z_chunks, state, eta=eta)
     ttt_out = ttt_out.reshape(z.shape[0], -1, ttt_out.shape[-1])[:, :n_tokens, :]
     return ttt_out, deltas.sum(dim=1)
+
+
+def _adaptive_eta(z: torch.Tensor, eta: float) -> torch.Tensor:
+    """Normalized-LMS step size: eta / (1 + ||z||^2), per row.
+
+    The delta rule's per-token transition is (I - eta*z(x)z^T); stable
+    iteration needs eta*||z||^2 below ~2, same condition as gradient descent
+    diverging when step_size*curvature is too large. A fixed eta (tuned for
+    `scan`, which has no such term) is nowhere close to safe once z has any
+    outlier-scale dims — real trained models produce exactly that. This
+    keeps the effective step size bounded regardless of z's scale.
+    """
+    return eta / (1.0 + z.pow(2).sum(dim=-1, keepdim=True))
+
+
+def delta_scan(
+    z: torch.Tensor,
+    v: torch.Tensor,
+    *,
+    eta: float,
+    carried: torch.Tensor | None = None,
+    clip_tau: float | None = None,
+    decay: float = 1.0,
+    truncate_every: int = 1,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Per-token online gradient descent: dS_t = (v_t - eta*S_t@z_t) (x) z_t.
+
+    `scan`'s ablation companion (Sun et al. 2024's actual inner-loop update,
+    vs. `scan`'s Hebbian write with no error term): the residual is against
+    `read_state`, the same (possibly clipped) state that produced `pred`. No
+    chunk-parallel closed form exists for this recurrence, so it's O(N)
+    Python-level steps, not O(N/chunk_size). Three things this recurrence
+    needs that `scan` doesn't, each covered where it's used: the clip feeds
+    back into the accumulator (`frobenius_clip`, else an unclipped `state`
+    reaches inf and clip turns that into nan); `pred` uses `_adaptive_eta`,
+    not raw `eta` (`_adaptive_eta`); and `state` is detached every
+    `truncate_every` tokens, bounding how much backward chain through
+    `frobenius_clip` can compound — 1 is safest but starves anything that
+    only shapes `v` (e.g. the target projection) of gradient entirely, since
+    that's the only path it has to the loss. Forward values never depend on
+    `truncate_every`, only what backward can reach through the recurrence.
+    """
+    if z.shape[:2] != v.shape[:2]:
+        raise ValueError(
+            f"z and v must agree on [B, N], got {tuple(z.shape)} and {tuple(v.shape)}"
+        )
+    if truncate_every < 1:
+        raise ValueError(f"truncate_every must be >= 1, got {truncate_every}")
+    b, n, d_ff = z.shape
+    d_model = v.shape[-1]
+    state = (
+        carried.clone().to(z.dtype) if carried is not None else z.new_zeros(b, d_model, d_ff)
+    )
+    item_delta = torch.zeros_like(state)
+    outputs = z.new_empty(b, n, d_model)
+
+    for t in range(n):
+        read_state = state
+        if clip_tau is not None:
+            read_state = frobenius_clip(read_state.unsqueeze(1), eta=eta, tau=clip_tau).squeeze(1)
+        pred = _adaptive_eta(z[:, t], eta) * torch.einsum("bf,bdf->bd", z[:, t], read_state)
+        outputs[:, t] = pred
+        delta = torch.einsum("bd,bf->bdf", v[:, t] - pred, z[:, t])
+        item_delta = item_delta + delta
+        state = decay * state + delta
+        if clip_tau is not None:
+            state = frobenius_clip(state.unsqueeze(1), eta=eta, tau=clip_tau).squeeze(1)
+        if (t + 1) % truncate_every == 0:
+            state = state.detach()
+
+    return outputs, item_delta
+
+
+def chunked_delta_scan(
+    z: torch.Tensor,
+    v: torch.Tensor,
+    *,
+    chunk_size: int,
+    eta: float,
+    normalize_delta_by_chunk: bool = True,
+    carried: torch.Tensor | None = None,
+    clip_tau: float | None = None,
+    decay: float = 1.0,
+    truncate_every: int = 1,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Mini-batch gradient descent: the state is frozen at each chunk's start.
+
+    `delta_scan`'s cheaper sibling: Sun et al. 2024's own parallel/dual-form
+    approximation to per-token GD, not a further simplification of it — every
+    token in a chunk computes its residual against the same chunk-start state,
+    so the chunk's write is one batched matmul, same as `scan`. Sequential
+    only across the ~N/chunk_size chunks, not across all N tokens. Same
+    per-chunk causality as `scan` and clip-affects-item_delta convention as
+    `delta_scan` (the residual is against what chunk actually saw). Also like
+    `delta_scan`, the clip feeds back into the accumulator itself,
+    `truncate_every` (here counting chunks, not tokens) bounds the same
+    backward-chain instability the same way, and `pred` uses `_adaptive_eta`
+    per chunk-row rather than the raw `eta` — see `delta_scan`'s docstring
+    for all three.
+    """
+    if z.shape[:2] != v.shape[:2]:
+        raise ValueError(
+            f"z and v must agree on [B, N], got {tuple(z.shape)} and {tuple(v.shape)}"
+        )
+    if truncate_every < 1:
+        raise ValueError(f"truncate_every must be >= 1, got {truncate_every}")
+    n_tokens = z.shape[1]
+    counts = chunk_token_counts(n_tokens, chunk_size)
+    z_chunks = to_chunks(z, chunk_size)
+    v_chunks = to_chunks(v, chunk_size)
+    b, k, c, d_ff = z_chunks.shape
+    d_model = v.shape[-1]
+
+    state = (
+        carried.clone().to(z.dtype) if carried is not None else z.new_zeros(b, d_model, d_ff)
+    )
+    item_delta = torch.zeros_like(state)
+    out_chunks = z.new_empty(b, k, c, d_model)
+
+    for idx in range(k):
+        read_state = state
+        if clip_tau is not None:
+            read_state = frobenius_clip(read_state.unsqueeze(1), eta=eta, tau=clip_tau).squeeze(1)
+        z_k, v_k = z_chunks[:, idx], v_chunks[:, idx]
+        pred = _adaptive_eta(z_k, eta) * torch.einsum("bcf,bdf->bcd", z_k, read_state)
+        out_chunks[:, idx] = pred
+        delta = torch.einsum("bcd,bcf->bdf", v_k - pred, z_k)
+        if normalize_delta_by_chunk:
+            delta = delta / max(counts[idx], 1)
+        item_delta = item_delta + delta
+        state = decay * state + delta
+        if clip_tau is not None:
+            state = frobenius_clip(state.unsqueeze(1), eta=eta, tau=clip_tau).squeeze(1)
+        if (idx + 1) % truncate_every == 0:
+            state = state.detach()
+
+    out = out_chunks.reshape(b, k * c, d_model)[:, :n_tokens, :]
+    return out, item_delta
 
 
 def stream_chunk_delta(

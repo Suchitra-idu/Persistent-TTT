@@ -83,6 +83,7 @@ class Wiring:
     layers: Sequence[int] = LAYERS
     chunk_size: int = CHUNK
     decay: float = 0.9
+    total_norm: float = 1.0
     fast_weights: FakeFastWeights = field(init=False)
     compute: FakeCompute = field(init=False)
     tracker: InMemoryTracker = field(init=False)
@@ -93,7 +94,7 @@ class Wiring:
             self.layers, chunk_size=self.chunk_size, decay=self.decay
         )
         self.compute = FakeCompute(
-            losses=self.losses, fast_weights=self.fast_weights
+            losses=self.losses, fast_weights=self.fast_weights, total_norm=self.total_norm
         )
         self.tracker = InMemoryTracker()
         self.rng = ScriptedRng()

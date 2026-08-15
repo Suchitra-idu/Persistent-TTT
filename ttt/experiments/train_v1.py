@@ -26,8 +26,16 @@ def run(
     engine: Engine,
     source,
     announce: Callable[[str], None] = print,
+    on_data_ready: Callable[[], None] = lambda: None,
 ) -> train_loop.TrainResult:
-    """The composition. Every costly thing arrives through `engine`."""
+    """The composition. Every costly thing arrives through `engine`.
+
+    `on_data_ready` fires once, after loading and before training starts —
+    Modal's hook to commit the HF cache volume here rather than only in
+    `train`'s outer `finally`, so a run killed mid-training (stop, OOM, a
+    bad LR) still keeps the corpus preprocessing instead of redoing it next
+    launch.
+    """
     docs = data_pipeline.documents(
         data_pipeline.load(
             source=source,
@@ -37,6 +45,7 @@ def run(
             tokenizer=engine.tokenizer,
             limit_docs=resolved.limit_docs,
             weights=resolved.weights,
+            announce=announce,
         )
     )
     _runtime.announce_boot(engine, docs, announce)
@@ -53,6 +62,7 @@ def run(
             f"  holdout: {shortfall.source} has {shortfall.got} of "
             f"{shortfall.wanted} requested documents"
         )
+    on_data_ready()
 
     carries, _ = engine.carries()
     return train_loop.train(
@@ -111,10 +121,21 @@ def train(**flags):
         storage=modal_runtime.checkpoint_storage(),
         root=modal_runtime.CKPT_MOUNT,
         trainable=True,
+        announce=print,
     )
     engine.tracker = _runtime.tracker(resolved, job_type="train")
-    result = run(resolved, engine=engine, source=HfDataSource())
-    print(f"done: {result.steps} steps, {result.total_tokens:,d} tokens")
+    result = run(
+        resolved,
+        engine=engine,
+        source=HfDataSource(),
+        on_data_ready=modal_runtime.commit_cache,
+    )
+    print(
+        f"done: {result.steps}/{result.total_steps} steps "
+        f"({result.nonfinite_steps} skipped, non-finite gradient), "
+        f"{result.micro_steps} micro-steps ({result.nonfinite} nonfinite loss), "
+        f"{result.total_tokens:,d} tokens"
+    )
     return result.steps
 
 

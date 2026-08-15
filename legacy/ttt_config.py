@@ -260,7 +260,7 @@ class TrainConfig:
     # Three parameter groups, three learning rates.
     lr_lora: float = 1e-5
     lr_wdown: float = 3e-5          # pretrained fast weight init, move gently
-    lr_new_modules: float = 2e-5
+    lr_new_modules: float = 2e-4
 
     weight_decay_full: float = 0.1
     weight_decay_lora: float = 0.0

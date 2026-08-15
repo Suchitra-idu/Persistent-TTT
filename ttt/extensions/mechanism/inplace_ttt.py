@@ -4,6 +4,9 @@ Two paths over one state family each: `_scan_forward` trains (chunked scan,
 carry across items via TBPTT), `_stream_forward` generates (apply-then-buffer,
 one chunk at a time). Assembly onto a real model is Ring 3's job.
 
+`cfg.update_rule` only branches `_scan_forward`; `_stream_forward` is always
+the hebbian stream kernels — generation-time delta-rule stays unimplemented.
+
 Reset ladder:
     reset_stream()      stream delta + pending + conv left-context
     reset_v_context()   conv left-context only, so the stream delta survives
@@ -186,24 +189,52 @@ class InPlaceTTTMLP(nn.Module):
         carried = self._carried_for(z.shape[0])
 
         # One chunk with nothing carried in contributes nothing — but in a
-        # session its delta is still what the next item starts from.
+        # session its delta is still what the next item starts from. Holds
+        # for "hebbian" and "delta_chunk" (both freeze the whole first chunk
+        # at zero); not "delta", whose per-token causality means token 1 of a
+        # single chunk already sees token 0's write.
         if (
-            z.shape[1] <= self.cfg.chunk_size
+            self.cfg.update_rule != "delta"
+            and z.shape[1] <= self.cfg.chunk_size
             and carried is None
             and not self.session_mode
         ):
             return base_out
 
         v = self._targets(self.v_source_norm(hidden_states), left_context=None)
-        ttt_out, item_delta = ttt_math.scan(
-            z,
-            v,
-            chunk_size=self.cfg.chunk_size,
-            eta=self.cfg.eta,
-            normalize_delta_by_chunk=self.cfg.normalize_delta_by_chunk,
-            carried=carried,
-            clip_tau=self._clip_tau(),
-        )
+        if self.cfg.update_rule == "delta":
+            ttt_out, item_delta = ttt_math.delta_scan(
+                z,
+                v,
+                eta=self.cfg.eta,
+                carried=carried,
+                clip_tau=self._clip_tau(),
+                decay=self.cfg.chunk_decay,
+                truncate_every=self.cfg.truncate_every,
+            )
+        elif self.cfg.update_rule == "delta_chunk":
+            ttt_out, item_delta = ttt_math.chunked_delta_scan(
+                z,
+                v,
+                chunk_size=self.cfg.chunk_size,
+                eta=self.cfg.eta,
+                normalize_delta_by_chunk=self.cfg.normalize_delta_by_chunk,
+                carried=carried,
+                clip_tau=self._clip_tau(),
+                decay=self.cfg.chunk_decay,
+                truncate_every=self.cfg.truncate_every,
+            )
+        else:
+            ttt_out, item_delta = ttt_math.scan(
+                z,
+                v,
+                chunk_size=self.cfg.chunk_size,
+                eta=self.cfg.eta,
+                normalize_delta_by_chunk=self.cfg.normalize_delta_by_chunk,
+                carried=carried,
+                clip_tau=self._clip_tau(),
+                decay=self.cfg.chunk_decay,
+            )
 
         if self.session_mode:
             # fp32 and detached: bf16 drifts over a long session, and the detach
@@ -261,7 +292,11 @@ class InPlaceTTTMLP(nn.Module):
             chunk_size=self.cfg.chunk_size,
             normalize=self.cfg.normalize_delta_by_chunk,
         )
-        total = delta if state.delta is None else state.delta + delta
+        total = (
+            delta
+            if state.delta is None
+            else self.cfg.chunk_decay * state.delta + delta
+        )
         tau = self._clip_tau()
         state.delta = (
             total

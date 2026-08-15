@@ -92,6 +92,84 @@ def test_the_conv_left_context_spans_a_call_boundary():
     assert torch.allclose(whole(h), piecewise, atol=1e-5)
 
 
+def test_a_freshly_built_delta_module_is_identity_to_the_base_mlp():
+    module = scanning(update_rule="delta")
+    h = _builders.hidden_states(LONG)
+
+    assert torch.allclose(module(h), base_mlp_out(module, h), atol=1e-6)
+
+
+def test_a_single_chunk_delta_item_still_evolves_within_itself():
+    """Where the hebbian path skips a lone chunk entirely (see
+    `test_a_single_chunk_item_outside_a_session_skips_the_scan`), delta's
+    per-token causality means it can't: token 1 already sees token 0's write."""
+    module = scanning(update_rule="delta", w_target_scale=SCALE)
+    h = _builders.hidden_states(CHUNK)
+
+    module(h)
+
+    assert module.gate_mean is not None
+
+
+def test_the_delta_rule_actually_contributes_something():
+    frozen = scanning(update_rule="delta", w_target_scale=SCALE)
+    evolving = scanning(update_rule="delta", w_target_scale=SCALE)
+    frozen.evolve = False
+    h = _builders.hidden_states(LONG)
+
+    assert not torch.allclose(evolving(h), frozen(h), atol=1e-6)
+
+
+def test_a_freshly_built_delta_chunk_module_is_identity_to_the_base_mlp():
+    module = scanning(update_rule="delta_chunk")
+    h = _builders.hidden_states(LONG)
+
+    assert torch.allclose(module(h), base_mlp_out(module, h), atol=1e-6)
+
+
+def test_a_single_chunk_delta_chunk_item_outside_a_session_skips_the_scan():
+    """Unlike "delta", "delta_chunk" freezes the whole first chunk at zero,
+    same as "hebbian" — the shortcut in `_scan_forward` still applies."""
+    module = scanning(update_rule="delta_chunk", w_target_scale=SCALE)
+    h = _builders.hidden_states(CHUNK)
+
+    module(h)
+
+    assert module.gate_mean is None
+
+
+def test_the_delta_chunk_rule_actually_contributes_something():
+    frozen = scanning(update_rule="delta_chunk", w_target_scale=SCALE)
+    evolving = scanning(update_rule="delta_chunk", w_target_scale=SCALE)
+    frozen.evolve = False
+    h = _builders.hidden_states(LONG)
+
+    assert not torch.allclose(evolving(h), frozen(h), atol=1e-6)
+
+
+def test_truncate_every_one_starves_w_target_of_gradient():
+    """The bug a real run surfaced: v only ever shapes a *later* read, never
+    its own chunk's, so fully truncating the recurrence (the only setting
+    safe from the backward-chain instability on its own) leaves w_target —
+    and anything else that only shapes v — with no path to the loss at all."""
+    module = scanning(update_rule="delta_chunk", w_target_scale=SCALE, truncate_every=1)
+    h = _builders.hidden_states(LONG)
+
+    module(h).sum().backward()
+
+    assert module.w_target.grad is None or module.w_target.grad.abs().sum() == 0
+
+
+def test_a_wider_truncation_window_lets_w_target_learn():
+    module = scanning(update_rule="delta_chunk", w_target_scale=SCALE, truncate_every=5)
+    h = _builders.hidden_states(LONG)
+
+    module(h).sum().backward()
+
+    assert module.w_target.grad is not None
+    assert module.w_target.grad.abs().sum() > 0
+
+
 def test_a_zero_decay_carry_keeps_only_the_last_items_delta():
     first, second = _builders.hidden_states(LONG), _builders.hidden_states(LONG, seed=8)
     both = scanning(w_target_scale=SCALE, carried_decay=0.0)

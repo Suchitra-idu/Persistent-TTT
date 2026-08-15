@@ -204,11 +204,14 @@ class TestFromFlags:
 
         assert cases == (True, False, True)
 
-    def test_a_zero_document_limit_means_no_limit(self):
-        assert cli.from_flags(limit_docs=0).limit_docs is None
+    def test_an_unset_document_limit_defaults_to_the_smoke_size(self):
+        assert cli.from_flags(limit_docs=0).limit_docs == cli.DEFAULT_LIMIT_DOCS
+
+    def test_a_negative_document_limit_means_no_limit(self):
+        assert cli.from_flags(limit_docs=-1).limit_docs is None
 
     def test_a_document_limit_is_taken(self):
-        assert cli.from_flags(limit_docs=500).limit_docs == 500
+        assert cli.from_flags(limit_docs=1000).limit_docs == 1000
 
     def test_a_float_zero_means_unset(self):
         assert cli.from_flags(eta=0.0).ttt.eta == TTTConfig().eta
