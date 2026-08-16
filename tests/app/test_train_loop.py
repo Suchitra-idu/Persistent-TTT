@@ -307,6 +307,13 @@ class TestLogging:
 
         assert wiring.tracker.values_of("train/grad_clip_ratio") == [1.0, 1.0]
 
+    def test_a_clipped_step_reports_a_ratio_below_one(self):
+        """max_grad_norm is 10.0 by default (_builders.config doesn't
+        override it); 50.0 forces the clip on."""
+        _, wiring = run(n_docs=4, total_norm=50.0)
+
+        assert all(r < 1.0 for r in wiring.tracker.values_of("train/grad_clip_ratio"))
+
     def test_the_tracker_is_finished(self):
         _, wiring = run(n_docs=4)
 
@@ -323,7 +330,6 @@ class TestLogging:
         run(n_docs=4, announce=lines.append)
 
         assert len([line for line in lines if line.startswith("  first micro-step")]) == 2
-
 
 class TestCheckpointing:
     def test_it_saves_on_cadence(self):

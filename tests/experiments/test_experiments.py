@@ -246,48 +246,148 @@ class TestHoldoutEval:
 
 
 class TestSingleDocEval:
-    def test_it_measures_one_document_in_slices(self):
-        rows = single_doc_eval_v1.run(
+    def test_it_measures_one_document_per_source(self):
+        by_source = single_doc_eval_v1.run(
             _builders.resolved(), engine=_builders.engine(),
             source=_builders.data_source(), n_slices=4, announce=lines(),
         )
 
-        assert len(rows) == 4
+        assert [source for source, _ in by_source] == sorted(_builders.SOURCES)
+
+    def test_it_measures_each_documents_slices(self):
+        by_source = single_doc_eval_v1.run(
+            _builders.resolved(), engine=_builders.engine(),
+            source=_builders.data_source(), n_slices=4, announce=lines(),
+        )
+
+        assert all(len(rows) == 4 for _, rows in by_source)
 
     def test_the_slices_partition_the_document(self):
-        rows = single_doc_eval_v1.run(
+        by_source = single_doc_eval_v1.run(
             _builders.resolved(), engine=_builders.engine(),
             source=_builders.data_source(), n_slices=4, announce=lines(),
         )
+        _, rows = by_source[0]
 
         assert sum(row.n_tokens for row in rows) == rows[0].n_tokens * 4
 
     def test_the_carry_compounds_across_slices(self):
-        rows = single_doc_eval_v1.run(
+        by_source = single_doc_eval_v1.run(
             _builders.resolved(), engine=_builders.engine(),
             source=_builders.data_source(), n_slices=4, announce=lines(),
         )
+        _, rows = by_source[0]
 
         assert rows[0].state_ratio < rows[-1].state_ratio
 
     def test_the_table_has_one_row_per_slice(self):
         engine = _builders.engine()
-        rows = single_doc_eval_v1.run(
+        by_source = single_doc_eval_v1.run(
             _builders.resolved(), engine=engine, source=_builders.data_source(),
             n_slices=4, announce=lines(),
         )
+        _, rows = by_source[0]
 
         assert len(single_doc_eval_v1.slice_table(rows, rows).rows) == 4
 
     def test_an_empty_holdout_measures_nothing(self):
         resolution = _builders.nothing_held_out(_builders.resolved())
 
-        rows = single_doc_eval_v1.run(
+        by_source = single_doc_eval_v1.run(
             resolution, engine=_builders.engine(resolution),
             source=_builders.data_source(), announce=lines(),
         )
 
-        assert rows == ()
+        assert by_source == ()
+
+
+class TestSingleDocEvalChained:
+    def test_it_chains_n_docs_worth_of_slices_per_source(self):
+        by_source = single_doc_eval_v1.run_chained(
+            _builders.wider_holdout(
+                _builders.resolved(eval_n_docs_per_source=3), holdout_last_n=12
+            ),
+            engine=_builders.engine(),
+            source=_builders.data_source(), n_slices=4, n_docs=3, announce=lines(),
+        )
+
+        assert all(len(rows) == 4 * 3 for _, rows in by_source)
+
+    def test_positions_run_continuously_across_documents(self):
+        by_source = single_doc_eval_v1.run_chained(
+            _builders.wider_holdout(
+                _builders.resolved(eval_n_docs_per_source=3), holdout_last_n=12
+            ),
+            engine=_builders.engine(),
+            source=_builders.data_source(), n_slices=4, n_docs=3, announce=lines(),
+        )
+        _, rows = by_source[0]
+
+        assert [row.position for row in rows] == list(range(12))
+
+    def test_the_carry_is_never_reset_at_a_document_boundary(self):
+        """The whole point: state_ratio keeps climbing past the first
+        document's own slices, into the second and third."""
+        by_source = single_doc_eval_v1.run_chained(
+            _builders.wider_holdout(
+                _builders.resolved(eval_n_docs_per_source=3), holdout_last_n=12
+            ),
+            engine=_builders.engine(),
+            source=_builders.data_source(), n_slices=4, n_docs=3, announce=lines(),
+        )
+        _, rows = by_source[0]
+
+        assert rows[0].state_ratio < rows[4].state_ratio < rows[8].state_ratio
+
+    def test_the_table_names_each_rows_document(self):
+        by_source = single_doc_eval_v1.run_chained(
+            _builders.wider_holdout(
+                _builders.resolved(eval_n_docs_per_source=3), holdout_last_n=12
+            ),
+            engine=_builders.engine(),
+            source=_builders.data_source(), n_slices=4, n_docs=3, announce=lines(),
+        )
+        _, rows = by_source[0]
+
+        table = single_doc_eval_v1.chain_table(rows, rows)
+
+        assert len(table.rows) == 12
+        assert len({row[1] for row in table.rows}) == 3
+
+    def test_it_covers_every_source_not_just_one(self):
+        by_source = single_doc_eval_v1.run_chained(
+            _builders.wider_holdout(
+                _builders.resolved(eval_n_docs_per_source=3), holdout_last_n=12
+            ),
+            engine=_builders.engine(),
+            source=_builders.data_source(), n_slices=4, n_docs=3, announce=lines(),
+        )
+
+        assert {src for src, _ in by_source} == set(_builders.SOURCES)
+
+    def test_each_sources_chain_never_crosses_into_another_source(self):
+        """carry_scope=SOURCE keeps each source's carrier separate in
+        production (train_loop._seed) — a chain must not mix sources."""
+        by_source = single_doc_eval_v1.run_chained(
+            _builders.wider_holdout(
+                _builders.resolved(eval_n_docs_per_source=3), holdout_last_n=12
+            ),
+            engine=_builders.engine(),
+            source=_builders.data_source(), n_slices=4, n_docs=3, announce=lines(),
+        )
+
+        for src, rows in by_source:
+            assert {row.source for row in rows} == {src}
+
+    def test_an_empty_holdout_measures_nothing(self):
+        resolution = _builders.nothing_held_out(_builders.resolved())
+
+        by_source = single_doc_eval_v1.run_chained(
+            resolution, engine=_builders.engine(resolution),
+            source=_builders.data_source(), announce=lines(),
+        )
+
+        assert by_source == ()
 
 
 class TestRepeatCarryEval:

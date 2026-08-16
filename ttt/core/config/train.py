@@ -27,7 +27,7 @@ class TrainConfig:
 
     lr_lora: float = 1e-5
     lr_wdown: float = 3e-5
-    lr_new_modules: float = 2e-5
+    lr_new_modules: float = 2e-2
 
     weight_decay_full: float = 0.1
     weight_decay_lora: float = 0.0

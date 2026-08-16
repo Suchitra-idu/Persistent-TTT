@@ -104,5 +104,16 @@ def nothing_held_out(resolution: cli.Resolved) -> cli.Resolved:
     )
 
 
+def wider_holdout(resolution: cli.Resolved, holdout_last_n: int) -> cli.Resolved:
+    """More than the fixture dataset's default holdout_last_n=4 — for tests
+    that need several documents per source in the eval pool."""
+    import dataclasses
+
+    return dataclasses.replace(
+        resolution,
+        spec=dataclasses.replace(resolution.spec, holdout_last_n=holdout_last_n),
+    )
+
+
 def carry(value: float = 1.0) -> Carry:
     return app_builders.carry(value)

@@ -33,7 +33,7 @@ class TTTConfig:
     layer_indices: tuple[int, ...] | None = None
 
     chunk_size: int = 50
-    eta: float = 7e-2
+    eta: float = 2
     normalize_delta_by_chunk: bool = True
     conv_kernel_size: int = 8
 
@@ -53,13 +53,9 @@ class TTTConfig:
     # fresh/lora, not just neutral, at step 20.
     output_gate_bias_init: float = -2.0
 
-    # tau is in units of ||eta*S||_F, so it needs retuning per model size.
-    # Was tried at 10.0 alongside a higher carried_decay for RULER retention;
-    # reverted — clip only bounds the snapshot applied to the output, never
-    # the stored, accumulating carry, so it did nothing to stop `everlasting`
-    # (which never resets) from diverging (state_ratio_final > 100).
+ 
     clip_enabled: bool = True
-    clip_tau: float = 5.0
+    clip_tau: float = 2000000.0
     clip_at_inference_only: bool = False
 
     # 1.0 = pure sum (unbounded), 0.0 = last item only. Was tried at 0.98 for
