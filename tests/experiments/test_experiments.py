@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import pytest
 
@@ -311,7 +312,20 @@ class TestSingleDocEvalChained:
             source=_builders.data_source(), n_slices=4, n_docs=3, announce=lines(),
         )
 
-        assert all(len(rows) == 4 * 3 for _, rows in by_source)
+        assert all(len(rows) == 4 * 3 for _, rows, _ in by_source)
+
+    def test_n_docs_beyond_the_configured_eval_cap_still_chains_that_many(self):
+        """The trap: train.eval_n_docs_per_source (default 5) caps the
+        holdout pool before run_chained ever sees it, so n_docs=6 used to
+        silently chain only 5 — the default cap, not what was asked for."""
+        by_source = single_doc_eval_v1.run_chained(
+            _builders.wider_holdout(_builders.resolved(), holdout_last_n=48),
+            engine=_builders.engine(),
+            source=_builders.data_source(sources=_builders.SOURCES * 8),
+            n_slices=2, n_docs=6, announce=lines(),
+        )
+
+        assert all(len(rows) == 2 * 6 for _, rows, _ in by_source)
 
     def test_positions_run_continuously_across_documents(self):
         by_source = single_doc_eval_v1.run_chained(
@@ -321,7 +335,7 @@ class TestSingleDocEvalChained:
             engine=_builders.engine(),
             source=_builders.data_source(), n_slices=4, n_docs=3, announce=lines(),
         )
-        _, rows = by_source[0]
+        _, rows, _ = by_source[0]
 
         assert [row.position for row in rows] == list(range(12))
 
@@ -335,7 +349,7 @@ class TestSingleDocEvalChained:
             engine=_builders.engine(),
             source=_builders.data_source(), n_slices=4, n_docs=3, announce=lines(),
         )
-        _, rows = by_source[0]
+        _, rows, _ = by_source[0]
 
         assert rows[0].state_ratio < rows[4].state_ratio < rows[8].state_ratio
 
@@ -347,9 +361,9 @@ class TestSingleDocEvalChained:
             engine=_builders.engine(),
             source=_builders.data_source(), n_slices=4, n_docs=3, announce=lines(),
         )
-        _, rows = by_source[0]
+        _, rows, rows_off = by_source[0]
 
-        table = single_doc_eval_v1.chain_table(rows, rows)
+        table = single_doc_eval_v1.chain_table(rows, rows_off)
 
         assert len(table.rows) == 12
         assert len({row[1] for row in table.rows}) == 3
@@ -363,7 +377,7 @@ class TestSingleDocEvalChained:
             source=_builders.data_source(), n_slices=4, n_docs=3, announce=lines(),
         )
 
-        assert {src for src, _ in by_source} == set(_builders.SOURCES)
+        assert {src for src, _, _ in by_source} == set(_builders.SOURCES)
 
     def test_each_sources_chain_never_crosses_into_another_source(self):
         """carry_scope=SOURCE keeps each source's carrier separate in
@@ -376,7 +390,7 @@ class TestSingleDocEvalChained:
             source=_builders.data_source(), n_slices=4, n_docs=3, announce=lines(),
         )
 
-        for src, rows in by_source:
+        for src, rows, _ in by_source:
             assert {row.source for row in rows} == {src}
 
     def test_an_empty_holdout_measures_nothing(self):
@@ -388,6 +402,36 @@ class TestSingleDocEvalChained:
         )
 
         assert by_source == ()
+
+
+class TestPlotChained:
+    def _by_source(self):
+        return single_doc_eval_v1.run_chained(
+            _builders.wider_holdout(
+                _builders.resolved(eval_n_docs_per_source=3), holdout_last_n=12
+            ),
+            engine=_builders.engine(),
+            source=_builders.data_source(), n_slices=4, n_docs=3, announce=lines(),
+        )
+
+    def test_it_writes_a_png_named_with_the_resumed_step(self, tmp_path):
+        pytest.importorskip("matplotlib")
+
+        path = single_doc_eval_v1.plot_chained(
+            self._by_source(), resume_from="step_600", out_dir=str(tmp_path)
+        )
+
+        assert Path(path).is_file()
+        assert Path(path).name.startswith("single_doc_eval_step_600_")
+
+    def test_an_empty_resume_from_still_names_the_file(self, tmp_path):
+        pytest.importorskip("matplotlib")
+
+        path = single_doc_eval_v1.plot_chained(
+            self._by_source(), resume_from="", out_dir=str(tmp_path)
+        )
+
+        assert Path(path).name.startswith("single_doc_eval_no-resume_")
 
 
 class TestRepeatCarryEval:

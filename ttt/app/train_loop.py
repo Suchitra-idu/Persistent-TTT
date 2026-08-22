@@ -64,6 +64,7 @@ def train(
     announce: Callable[[str], None] = lambda _: None,
 ) -> TrainResult:
     doc_lengths = [doc.n_tokens for doc in docs]
+    sources = [doc.source for doc in docs]
     total_steps = lr_schedule.total_optimizer_steps(
         strategy.count(doc_lengths), cfg.grad_accum_steps, cfg.num_epochs
     )
@@ -80,7 +81,7 @@ def train(
     step_loss = window_loss = 0.0
 
     for _ in range(cfg.num_epochs):
-        for session in strategy.build(doc_lengths, rng):
+        for session in strategy.build(doc_lengths, sources, rng):
             fast_weights.reset_carry()
             _seed(fast_weights, carried, docs, session, per_source)
 

@@ -13,7 +13,7 @@ planting an `import torch` in `ttt/app/` and expecting the lint to reject it.
 | `stages.py` | The nine pipeline stages, each `Data -> Data` | `Table`, `Tokenizer`, `Rng` |
 | `data_pipeline.py` | `PIPELINE`, the holdout split, `Doc` | `DataSource` + the above |
 | `train_loop.py` | Accumulate, clip, step, log, save, eval, carry | `Compute`, `FastWeights`, `Tracker` |
-| `eval_loop.py` | Five-regime held-out perplexity, gap decomposition | `Compute`, `FastWeights` |
+| `eval_loop.py` | Six-regime held-out perplexity, gap decomposition | `Compute`, `FastWeights` |
 | `session_eval.py` | Per-item perplexity with the carry persisting | `Compute`, `FastWeights` |
 | `pilot.py` | Cold / persist / seeded compounding, over `session_eval` | — |
 | `generate.py` | The one token loop | `Generation` |

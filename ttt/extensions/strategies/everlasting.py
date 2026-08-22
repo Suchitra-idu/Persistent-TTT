@@ -19,9 +19,12 @@ class Everlasting:
     name: str = "everlasting"
     carry_scope: str = SOURCE
 
-    def build(self, doc_lengths: Sequence[int], rng) -> tuple[Session, ...]:
+    def build(
+        self, doc_lengths: Sequence[int], sources: Sequence[str], rng
+    ) -> tuple[Session, ...]:
         """Shuffled, so each source's carrier sees interleaved updates rather
-        than one long same-source run."""
+        than one long same-source run. `sources` unused — the carrier is
+        looked up per item at train time (train_loop._seed), not scheduled."""
         return tuple(
             Session(
                 items=(

@@ -157,8 +157,8 @@ def repeat_table(summaries: Sequence[RepeatSummary]) -> Table:
     else:
         headers += ["cold-c", "cold-co", "lora", "fresh", "Δlora", "Δwithin", "Δbetween"]
         aligns += [RIGHT] * 7
-    headers.append("state/W0")
-    aligns.append(RIGHT)
+    headers += ["state/W0", "gate"]
+    aligns += [RIGHT, RIGHT]
 
     ordering = sorted(
         summaries, key=lambda s: (s.source == ALL_SOURCES, s.source, s.repeat)
@@ -180,7 +180,7 @@ def repeat_table(summaries: Sequence[RepeatSummary]) -> Table:
         ]
         if seeded:
             cells.append(delta(s.gaps.seed))
-        cells.append(ratio(s.state_ratio))
+        cells += [ratio(s.state_ratio), f"{s.gate_mean:.3f}"]
         rows.append(tuple(cells))
 
     return Table(headers=tuple(headers), rows=tuple(rows), aligns=tuple(aligns))

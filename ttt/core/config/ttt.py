@@ -47,15 +47,13 @@ class TTTConfig:
     v_bidirectional: bool = False
 
     output_gate: bool = True
-    # Was tried at -0.5 (less damped) alongside the RULER retention change;
-    # reverted with it — letting a still-untrained carry influence the output
-    # 3x more this early looks like why carry-on regimes were worse than
-    # fresh/lora, not just neutral, at step 20.
+    # -0.5 and +2.0 (less damped) were both tried and both hurt early
+    # training — an undertrained carry let through at higher weight is
+    # noise, not signal, this early. -2.0 is the value that's actually held up.
     output_gate_bias_init: float = -2.0
 
- 
     clip_enabled: bool = True
-    clip_tau: float = 2000000.0
+    clip_tau: float = 20.0
     clip_at_inference_only: bool = False
 
     # 1.0 = pure sum (unbounded), 0.0 = last item only. Was tried at 0.98 for

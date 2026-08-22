@@ -27,6 +27,7 @@ class ItemRow:
     end: int
     ppl: float
     state_ratio: float
+    gate_mean: float = 1.0  # fraction of the TTT term reaching the output; 1.0 = ungated
 
     @property
     def n_tokens(self) -> int:
@@ -62,6 +63,7 @@ def session_perplexity(
         for start, end in schedule.equal_token_slices(doc.n_tokens, n_slices):
             loss = compute.eval_loss(doc.token_ids[start:end])
             fast_weights.advance_carry()
+            gate_stats = fast_weights.gate_stats()
             rows.append(
                 ItemRow(
                     doc_idx=doc.index,
@@ -71,6 +73,7 @@ def session_perplexity(
                     end=end,
                     ppl=metrics.perplexity(loss),
                     state_ratio=fast_weights.state_ratio(family=CARRY),
+                    gate_mean=1.0 if gate_stats is None else gate_stats[0],
                 )
             )
             position += 1

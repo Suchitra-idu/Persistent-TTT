@@ -191,6 +191,7 @@ class RepeatRow:
     n_tokens: int
     ppl: float
     state_ratio: float = 0.0
+    gate_mean: float = 1.0
 
     def __post_init__(self) -> None:
         if self.regime not in REGIMES:

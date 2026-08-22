@@ -19,7 +19,9 @@ class Strategy(Protocol):
     name: str
     carry_scope: str
 
-    def build(self, doc_lengths: Sequence[int], rng) -> tuple[Session, ...]:
+    def build(
+        self, doc_lengths: Sequence[int], sources: Sequence[str], rng
+    ) -> tuple[Session, ...]:
         """The epoch's schedule. Deterministic given `rng`'s seed."""
 
     def count(self, doc_lengths: Sequence[int]) -> int:

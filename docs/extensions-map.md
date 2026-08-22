@@ -13,23 +13,27 @@ A strategy turns doc lengths into one epoch of `Session`s.
 | [_registry.py](../ttt/extensions/strategies/_registry.py) | The `Strategy` protocol, `STRATEGIES`, `register`, `get` |
 | [hybrid.py](../ttt/extensions/strategies/hybrid.py) | Training on SlimPajama |
 | [everlasting.py](../ttt/extensions/strategies/everlasting.py) | Producing the per-source seeds |
+| [minilasting.py](../ttt/extensions/strategies/minilasting.py) | A carry that outlives one document but not the epoch |
 
-| | hybrid | everlasting |
-|---|---|---|
-| session | one doc | one doc |
-| items per doc | 1 if short, else 2–6 slices | always 1, the whole doc |
-| `carry_scope` | `"session"` — dies at the doc boundary | `"source"` — outlives the epoch |
-| what it teaches | using a non-zero `S_0` | what a good `S_0` *is* |
+| | hybrid | everlasting | minilasting |
+|---|---|---|---|
+| session | one doc | one doc | `docs_per_session` docs, one source |
+| items per doc | 1 if short, else 2–6 slices | always 1, the whole doc | same length gate as hybrid, per doc |
+| `carry_scope` | `"session"` — dies at the doc boundary | `"source"` — outlives the epoch | `"session"` — dies at the group boundary |
+| what it teaches | using a non-zero `S_0` | what a good `S_0` *is* | compounding across several docs, bounded |
 
 Hybrid's length gate is the point: docs under `carry_min_tokens` (2100) become
 single-item sessions, so the model keeps seeing the `S_0 = 0` case instead of
-only ever starting warm.
+only ever starting warm. `minilasting` reuses the same gate per document, but
+groups `docs_per_session` documents of one source (round-robin across
+sources) into a session before resetting — see
+[research.md](research.md#minilasting-the-third-strategy).
 
 Four methods, all pure:
 
 | Method | Returns |
 |---|---|
-| `build(doc_lengths, rng)` | the epoch's sessions; same seed, same schedule |
+| `build(doc_lengths, sources, rng)` | the epoch's sessions; same seed, same schedule |
 | `count(doc_lengths)` | total work items, without drawing cuts — this sizes the LR schedule |
 | `compose(doc_lengths, sources)` | `CompositionRow`s for the boot log |
 | `describe()` | one line |

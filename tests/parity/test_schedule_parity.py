@@ -65,7 +65,7 @@ def test_hybrid_reproduces_the_old_hybrid_schedule():
         slices_max=HYBRID.slices_max,
     )
 
-    assert spans(HYBRID.build(LENGTHS, rng(7))) == old_spans(old)
+    assert spans(HYBRID.build(LENGTHS, [""] * len(LENGTHS), rng(7))) == old_spans(old)
 
 
 def test_hybrid_reproduces_the_old_item_count():
@@ -81,6 +81,6 @@ def test_hybrid_reproduces_the_old_item_count():
 
 
 def test_everlasting_reproduces_the_old_whole_doc_schedule():
-    assert spans(EVERLASTING.build(LENGTHS, rng(7))) == old_spans(
+    assert spans(EVERLASTING.build(LENGTHS, [""] * len(LENGTHS), rng(7))) == old_spans(
         old_everlasting(LENGTHS, rng(7))
     )

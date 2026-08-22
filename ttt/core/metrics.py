@@ -77,7 +77,8 @@ class SliceSummary:
 class RepeatSummary:
     """Same shape as `SourceSummary`, grouped by (source, repeat) instead of
     by source alone. `source=ALL_SOURCES` rolls every source up at that
-    repeat. `state_ratio` is `cold_carry`'s only — the regime that evolves."""
+    repeat. `state_ratio` and `gate_mean` are `cold_carry`'s only — the
+    regime that evolves."""
 
     source: str
     repeat: int
@@ -86,6 +87,7 @@ class RepeatSummary:
     ppl_by_regime: Mapping[str, float]
     gaps: Gaps
     state_ratio: float
+    gate_mean: float = 1.0
 
 
 def perplexity(nll: float) -> float:
@@ -251,6 +253,7 @@ def _repeat_summaries(rows: Sequence[RepeatRow], *, key) -> tuple[RepeatSummary,
                     carry=ppls.get(CARRY),
                 ),
                 state_ratio=_mean_state_ratio(by_regime.get(COLD_CARRY, ())),
+                gate_mean=_mean_gate(by_regime.get(COLD_CARRY, ())),
             )
         )
     return tuple(summaries)
@@ -260,6 +263,12 @@ def _mean_state_ratio(rows: Sequence[RepeatRow]) -> float:
     if not rows:
         return 0.0
     return sum(row.state_ratio for row in rows) / len(rows)
+
+
+def _mean_gate(rows: Sequence[RepeatRow]) -> float:
+    if not rows:
+        return 1.0
+    return sum(row.gate_mean for row in rows) / len(rows)
 
 
 def clip_ratio(total_norm: float, max_grad_norm: float) -> float:

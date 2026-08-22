@@ -66,6 +66,7 @@ validation:
 nav:
   - Home: README.md
   - Mechanism: mechanism.md
+  - Research reference: research.md
   - Glossary: glossary.md
   - Ring 0 map: core-map.md
   - Ring 1 map: extensions-map.md

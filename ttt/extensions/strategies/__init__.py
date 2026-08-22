@@ -15,16 +15,19 @@ from ttt.extensions.strategies._registry import (
 )
 from ttt.extensions.strategies.everlasting import EVERLASTING, Everlasting
 from ttt.extensions.strategies.hybrid import HYBRID, Hybrid
+from ttt.extensions.strategies.minilasting import MINILASTING, Minilasting
 
 __all__ = [
     "CARRY_SCOPES",
     "EVERLASTING",
     "HYBRID",
+    "MINILASTING",
     "SESSION",
     "SOURCE",
     "STRATEGIES",
     "Everlasting",
     "Hybrid",
+    "Minilasting",
     "Strategy",
     "get",
     "register",

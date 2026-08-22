@@ -21,7 +21,7 @@ SOURCES = _builders.sources_for(LENGTHS, seed=12)
 
 
 def build(strategy, seed):
-    return strategy.build(LENGTHS, _builders.FakeRng(seed))
+    return strategy.build(LENGTHS, SOURCES, _builders.FakeRng(seed))
 
 
 def spans_by_doc(sessions):
@@ -32,8 +32,8 @@ def spans_by_doc(sessions):
     return spans
 
 
-def test_the_registry_has_both_surviving_strategies():
-    assert sorted(STRATEGIES) == ["everlasting", "hybrid"]
+def test_the_registry_has_every_surviving_strategy():
+    assert sorted(STRATEGIES) == ["everlasting", "hybrid", "minilasting"]
 
 
 @pytest.mark.parametrize("strategy", CASES)
@@ -138,7 +138,7 @@ def test_compose_rejects_a_source_list_of_the_wrong_length(strategy):
 
 @pytest.mark.parametrize("strategy", CASES)
 def test_an_empty_pool_builds_no_sessions(strategy):
-    assert strategy.build([], _builders.FakeRng(1)) == ()
+    assert strategy.build([], [], _builders.FakeRng(1)) == ()
 
 
 def test_registering_a_name_twice_is_an_error():

@@ -8,13 +8,17 @@
 | **carry** | The fast weight persisted across items in a session. Always this, never the streaming buffer |
 | **stream_state** | The separate buffer used by generation and chat |
 | **chunk** | `chunk_size` tokens (default 50); one fast-weight update |
-| **η (eta)** | Inner-loop learning rate of the fast weight (default 0.07) |
+| **η (eta)** | Inner-loop learning rate of the fast weight (default `2`) |
+| **η̃ (adaptive eta)** | `η/(1+‖z‖²)` — `delta`/`delta_chunk`-only normalized-LMS step size, keeping the delta rule's own stability bound satisfied regardless of `z`'s scale |
 | **W0 / W_down** | The `down_proj` weight the fast weight adds to |
 | **W_target** | Learned projection producing the update target `V`. Zero-init, so TTT starts as identity |
-| **carried_decay** | EMA factor when an item's delta folds into the carry |
+| **update_rule** | Which inner-loop update builds `S`: `hebbian` (default, no error term), `delta`, `delta_chunk` (both online gradient descent) — see [mechanism.md](mechanism.md#the-update-rules) |
+| **output gate** | Learned per-token sigmoid gating how much of the TTT term reaches the output. Zero-init weight, so it starts uniform at `sigmoid(output_gate_bias_init)` |
+| **gate_mean / gate_std** | The gate's value, captured every forward under `no_grad` |
+| **carried_decay** | EMA factor when an item's delta folds into the carry. Applies every item, not just cross-session |
 | **state ratio** | `‖η·S‖_F / ‖W0‖_F` — the carry's magnitude relative to the base weight |
 | **clip / tau** | Frobenius bound on `‖η·S‖_F` at apply time |
-| **TBPTT** | Truncated backprop through time: the carry crosses an item boundary detached |
+| **TBPTT / truncate_every** | `delta`/`delta_chunk`-only: the state detaches from the autograd graph every `truncate_every` steps, bounding the backward chain through the clip |
 
 ## Scheduling
 
@@ -24,7 +28,7 @@
 | **work item** | A contiguous token range of one doc: one forward, one backward |
 | **session** | The carry's lifetime — the items it spans before being reset |
 | **slice** | A work item cut out of a longer doc |
-| **strategy** | The plugin deciding how docs become sessions. `hybrid` or `everlasting` |
+| **strategy** | The plugin deciding how docs become sessions. `hybrid`, `everlasting`, or `minilasting` |
 | **carry scope** | `session` (reset at each boundary) or `source` (per-source carriers persist) |
 | **epoch** | One pass over the document pool |
 
@@ -42,13 +46,14 @@
 
 | Term | Means |
 |---|---|
-| **regime** | One of the five ways to run a doc — see [mechanism.md](mechanism.md#regimes) |
+| **regime** | One of the six ways to run a doc — see [mechanism.md](mechanism.md#regimes) |
 | **ppl** | Perplexity, `exp(mean token loss)`. Lower is better |
 | **token-weighted** | Combining perplexities in log space weighted by token count. The only correct way |
+| **Δlora** | LoRA's own effect, TTT silent |
 | **Δwithin** | Gain from the within-item chunk scan |
 | **Δbetween** | Gain from carrying across items |
 | **Δseed** | Gain from starting at the trained per-source carrier |
-| **Δtotal** | `Δwithin + Δbetween + Δseed` |
+| **Δtotal** | `Δlora + Δwithin + Δbetween + Δseed` |
 
 ## Architecture
 
