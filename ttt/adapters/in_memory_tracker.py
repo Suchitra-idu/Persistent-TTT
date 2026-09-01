@@ -8,10 +8,14 @@ from typing import Mapping
 class InMemoryTracker:
     def __init__(self) -> None:
         self.records: list[dict[str, float]] = []
+        self.images: list[tuple[str, str]] = []
         self.finished = False
 
     def log(self, metrics: Mapping[str, float]) -> None:
         self.records.append(dict(metrics))
+
+    def log_image(self, key: str, path: str) -> None:
+        self.images.append((key, path))
 
     def finish(self) -> None:
         self.finished = True

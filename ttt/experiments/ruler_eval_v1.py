@@ -1,4 +1,5 @@
 """RULER's GPU half: score example sets `ruler_prepare_v1` already built.
+Logs the aggregate and per-task/length/regime scores to wandb.
 
 `resume_from` travels inside `--flags`, not as its own CLI option — Modal
 builds the CLI from `main`'s literal parameters (`cli.py`'s note), and this
@@ -55,6 +56,14 @@ def run(
         announce=announce,
     )
     announce(report.render(report.ruler_table(result.results)))
+    engine.tracker.log(dict(result.metrics))
+    for r in result.results:
+        engine.tracker.log(
+            {
+                "context_length": float(r.length_bucket),
+                f"ruler/{r.task}/{r.regime}": r.score,
+            }
+        )
     return result
 
 
@@ -69,15 +78,21 @@ def run(
     timeout=60 * 60,
 )
 @modal_runtime.caching
-def ruler_eval(ruler_flags: str = "", **flags):
+def ruler_eval(ruler_flags: str = "", invocation: str = "", **flags):
     resolved = cli.from_flags(**{**cli.env_defaults(), **flags})
     storage = modal_runtime.checkpoint_storage()
     engine = _runtime.build(
         resolved, storage=storage, root=modal_runtime.CKPT_MOUNT, trainable=False
     )
-    return run(parse_ruler_flags(ruler_flags), engine=engine, storage=storage).metrics
+    engine.tracker = _runtime.tracker(resolved, job_type="eval", invocation=invocation)
+    try:
+        return run(parse_ruler_flags(ruler_flags), engine=engine, storage=storage).metrics
+    finally:
+        engine.tracker.finish()
 
 
 @app.local_entrypoint()
 def main(ruler_flags: str = "", flags: str = ""):
-    ruler_eval.remote(ruler_flags=ruler_flags, **cli.parse_flags(flags))
+    ruler_eval.remote(
+        ruler_flags=ruler_flags, invocation=cli.invocation(), **cli.parse_flags(flags)
+    )

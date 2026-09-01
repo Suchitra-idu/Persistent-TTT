@@ -1,9 +1,10 @@
 """Carry-on against carry-off continuation of the same held-out prefix.
 
 Both arms draw from the same seeded generator, so the only difference between
-them is whether the fast weight evolved while the prompt streamed.
+them is whether the fast weight evolved while the prompt streamed. Logs each
+document's state_ratio to wandb; the generated text itself stays console-only.
 
-    modal run ttt/experiments/holdout_generate_v1.py --resume-from step_600
+    modal run ttt/experiments/holdout_generate_v1.py --flags "resume_from=step_600"
 """
 
 from __future__ import annotations
@@ -88,6 +89,9 @@ def run(
             )
         )
         _announce(out[-1], announce)
+        engine.tracker.log(
+            {f"generate/{doc.source}/state_ratio": out[-1].state_ratio}
+        )
     return tuple(out)
 
 
@@ -128,7 +132,7 @@ def _announce(continuation: Continuation, announce) -> None:
     timeout=60 * 60,
 )
 @modal_runtime.caching
-def holdout_generate(n_docs: int = 1, temperature: float = 0.0, **flags):
+def holdout_generate(n_docs: int = 1, temperature: float = 0.0, invocation: str = "", **flags):
     from ttt.adapters.hf_data_source import HfDataSource
 
     resolved = cli.from_flags(**{**cli.env_defaults(), **flags})
@@ -138,17 +142,22 @@ def holdout_generate(n_docs: int = 1, temperature: float = 0.0, **flags):
         root=modal_runtime.CKPT_MOUNT,
         trainable=False,
     )
-    run(
-        resolved,
-        engine=engine,
-        source=HfDataSource(),
-        n_docs=n_docs,
-        temperature=temperature,
-    )
+    engine.tracker = _runtime.tracker(resolved, job_type="eval", invocation=invocation)
+    try:
+        run(
+            resolved,
+            engine=engine,
+            source=HfDataSource(),
+            n_docs=n_docs,
+            temperature=temperature,
+        )
+    finally:
+        engine.tracker.finish()
 
 
 @app.local_entrypoint()
 def main(n_docs: int = 1, temperature: float = 0.0, flags: str = ""):
     holdout_generate.remote(
-        n_docs=n_docs, temperature=temperature, **cli.parse_flags(flags)
+        n_docs=n_docs, temperature=temperature, invocation=cli.invocation(),
+        **cli.parse_flags(flags),
     )

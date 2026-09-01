@@ -47,6 +47,15 @@ class WandbTracker:
             self._warn(exc)
             self._fallback.log(metrics)
 
+    def log_image(self, key: str, path: str) -> None:
+        try:
+            import wandb
+
+            self._run.log({key: wandb.Image(path)})
+        except _wandb_errors() as exc:
+            self._warn(exc)
+            self._fallback.log_image(key, path)
+
     def finish(self) -> None:
         try:
             self._run.finish()

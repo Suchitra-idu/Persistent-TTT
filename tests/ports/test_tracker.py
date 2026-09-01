@@ -11,6 +11,14 @@ from ttt.ports.tracker import BUDGET, MICRO_STEP, TRAIN_STEP, Tracker, outside_b
 METRICS = {TRAIN_STEP: 4, "train/loss": 2.5}
 
 
+def _make_png(tmp_path):
+    from PIL import Image
+
+    path = tmp_path / "chart.png"
+    Image.new("RGB", (2, 2)).save(path)
+    return path
+
+
 class ExplodingRun:
     """A wandb run that fails every call, which is the case telemetry must survive."""
 
@@ -62,6 +70,11 @@ class TrackerConformance:
         tracker.finish()
         tracker.log(METRICS)
 
+    def test_logging_an_image_does_not_raise(self, tracker, tmp_path):
+        path = _make_png(tmp_path)
+
+        tracker.log_image("chart", str(path))
+
 
 class TestInMemoryTracker(TrackerConformance):
     @pytest.fixture
@@ -83,6 +96,13 @@ class TestInMemoryTracker(TrackerConformance):
         tracker.log(METRICS)
 
         assert tracker.keys_logged == frozenset(METRICS)
+
+    def test_it_records_images_in_order(self, tracker, tmp_path):
+        path = _make_png(tmp_path)
+
+        tracker.log_image("chart", str(path))
+
+        assert tracker.images == [("chart", str(path))]
 
 
 class TestConsoleTracker(TrackerConformance):
@@ -106,6 +126,13 @@ class TestConsoleTracker(TrackerConformance):
     def test_a_zero_interval_is_rejected(self):
         with pytest.raises(ValueError, match="every must be >= 1"):
             ConsoleTracker(every=0)
+
+    def test_it_prints_the_image_key_and_path(self, tracker, tmp_path, capsys):
+        path = _make_png(tmp_path)
+
+        tracker.log_image("chart", str(path))
+
+        assert str(path) in capsys.readouterr().out
 
 
 class TestWandbTracker(TrackerConformance):
@@ -138,6 +165,22 @@ class TestWandbTracker(TrackerConformance):
         tracker.finish()
 
         assert "finished" in capsys.readouterr().out
+
+    def test_it_forwards_an_image_wrapped_for_wandb(self, tracker, tmp_path):
+        path = _make_png(tmp_path)
+
+        tracker.log_image("chart", str(path))
+
+        [logged] = tracker._run.logged
+        assert isinstance(logged["chart"], wandb.Image)
+
+    def test_an_image_outage_degrades_to_the_fallback(self, tmp_path, capsys):
+        tracker = WandbTracker(ExplodingRun())
+        path = _make_png(tmp_path)
+
+        tracker.log_image("chart", str(path))
+
+        assert str(path) in capsys.readouterr().out
 
 
 def test_a_key_d12_cut_is_reported_outside_the_budget():

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import dataclasses
 import os
+import sys
 from dataclasses import dataclass
 from typing import Any, Mapping
 
@@ -317,6 +318,16 @@ def env_defaults(environ: Mapping[str, str] | None = None) -> dict[str, str]:
 
 def step_path(run_name: str, step: int) -> str:
     return f"{run_name}/step_{step}"
+
+
+def invocation() -> str:
+    """The command line that launched this process, for run provenance.
+
+    Read on the laptop, in a local entrypoint — a Modal remote function has
+    its own argv, not the `modal run ...` the user typed. Callers thread the
+    result through as an explicit argument to reach a remote tracker.
+    """
+    return " ".join(sys.argv)
 
 
 def resume_path(resume_from: str, run_name: str) -> str:

@@ -48,6 +48,10 @@ class Tracker(Protocol):
     def log(self, metrics: Mapping[str, float]) -> None:
         """Must not raise: a telemetry outage is not a training failure."""
 
+    def log_image(self, key: str, path: str) -> None:
+        """A pre-rendered image file under a key. Same never-raises contract
+        as `log` — a path is a plain string so this port stays framework-free."""
+
     def finish(self) -> None: ...
 
 

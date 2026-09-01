@@ -96,7 +96,7 @@ def run(
     timeout=60 * 20,
 )
 @modal_runtime.caching
-def sanity_check(**flags):
+def sanity_check(invocation: str = "", **flags):
     resolved = cli.from_flags(**{**cli.env_defaults(), **flags})
     engine = _runtime.build(
         resolved,
@@ -104,20 +104,31 @@ def sanity_check(**flags):
         root=modal_runtime.CKPT_MOUNT,
         trainable=False,
     )
-    text = "Test-time training updates a subset of weights during inference. " * 20
-    result = run(
-        engine.model,
-        engine.tokenizer.encode(text),
-        fast_weights=engine.fast_weights,
-    )
-    if not result.passed:
-        raise AssertionError(
-            f"TTT path is not exact-zero at W_target=0 "
-            f"(max diff {result.diff_at_zero:.6f}); the wiring is broken"
+    tracker = _runtime.tracker(resolved, job_type="eval", invocation=invocation)
+    try:
+        text = "Test-time training updates a subset of weights during inference. " * 20
+        result = run(
+            engine.model,
+            engine.tokenizer.encode(text),
+            fast_weights=engine.fast_weights,
         )
-    return result.diff_at_zero
+        tracker.log(
+            {
+                "sanity/diff_at_init": result.diff_at_init,
+                "sanity/diff_at_zero": result.diff_at_zero,
+                "sanity/passed": float(result.passed),
+            }
+        )
+        if not result.passed:
+            raise AssertionError(
+                f"TTT path is not exact-zero at W_target=0 "
+                f"(max diff {result.diff_at_zero:.6f}); the wiring is broken"
+            )
+        return result.diff_at_zero
+    finally:
+        tracker.finish()
 
 
 @app.local_entrypoint()
 def main(flags: str = ""):
-    sanity_check.remote(**cli.parse_flags(flags))
+    sanity_check.remote(invocation=cli.invocation(), **cli.parse_flags(flags))

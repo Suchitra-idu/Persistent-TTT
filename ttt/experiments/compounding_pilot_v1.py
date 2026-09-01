@@ -1,9 +1,10 @@
 """Does the carry compound with session length, and does the trained seed help?
 
 Three regimes over one document sequence: cold (reset per document), persist,
-and seeded. Emits JSON; plot it with `ttt/experiments/plot_pilot.py`.
+and seeded. Emits JSON (replot later with `ttt/experiments/plot_pilot.py`) and
+logs per-position scalars plus the same chart to wandb.
 
-    modal run ttt/experiments/compounding_pilot_v1.py --resume-from step_600
+    modal run ttt/experiments/compounding_pilot_v1.py --flags "resume_from=step_600"
 """
 
 from __future__ import annotations
@@ -59,6 +60,13 @@ def run(
             f"  [{row.regime:>7s}] pos {row.position:>2d} "
             f"nll {row.nll:.4f} ppl {row.ppl:.3f} state/W0 {row.state_ratio:.3e}"
         )
+        engine.tracker.log(
+            {
+                "position": float(row.position),
+                f"pilot/{row.regime}/ppl": row.ppl,
+                f"pilot/{row.regime}/state_ratio": row.state_ratio,
+            }
+        )
     if meta.get("n_updates"):
         announce(f"  carrier updates: {dict(sorted(meta['n_updates'].items()))}")
     return rows
@@ -101,7 +109,12 @@ def payload(resolved: cli.Resolved, rows) -> bytes:
     timeout=60 * 60,
 )
 @modal_runtime.caching
-def compounding_pilot(pilot_source: str = "", n_docs: int = 10, out_name: str = "", **flags):
+def compounding_pilot(
+    pilot_source: str = "", n_docs: int = 10, out_name: str = "",
+    invocation: str = "", **flags,
+):
+    import json
+
     from ttt.adapters.hf_data_source import HfDataSource
     from ttt.experiments.holdout_eval_v1 import _EvalCompute
 
@@ -111,19 +124,39 @@ def compounding_pilot(pilot_source: str = "", n_docs: int = 10, out_name: str = 
         resolved, storage=storage, root=modal_runtime.CKPT_MOUNT, trainable=False
     )
     engine.compute = _EvalCompute(engine.model)
+    engine.tracker = _runtime.tracker(resolved, job_type="eval", invocation=invocation)
+    try:
+        rows = run(
+            resolved,
+            engine=engine,
+            source=HfDataSource(),
+            pilot_source=pilot_source,
+            n_docs=n_docs,
+        )
+        path = f"{PILOT_DIR}/{out_name or _default_name(engine, pilot_source, len(rows))}"
+        record = payload(resolved, rows)
+        storage.write_bytes(path, record)
+        storage.commit()
+        print(f"saved -> {path}")
+        if rows:
+            _log_pilot_chart(engine.tracker, json.loads(record))
+        return path
+    finally:
+        engine.tracker.finish()
 
-    rows = run(
-        resolved,
-        engine=engine,
-        source=HfDataSource(),
-        pilot_source=pilot_source,
-        n_docs=n_docs,
-    )
-    path = f"{PILOT_DIR}/{out_name or _default_name(engine, pilot_source, len(rows))}"
-    storage.write_bytes(path, payload(resolved, rows))
-    storage.commit()
-    print(f"saved -> {path}")
-    return path
+
+def _log_pilot_chart(tracker, record) -> None:
+    import os
+    import tempfile
+
+    from ttt.experiments import plot_pilot
+
+    with tempfile.TemporaryDirectory() as tmp:
+        try:
+            path = plot_pilot.render([record], "ppl", os.path.join(tmp, "pilot.png"))
+        except ImportError:
+            return
+        tracker.log_image("pilot/compounding", str(path))
 
 
 def _default_name(engine: Engine, pilot_source: str, n_rows: int) -> str:
@@ -136,5 +169,6 @@ def main(pilot_source: str = "", n_docs: int = 10, out_name: str = "", flags: st
         pilot_source=pilot_source,
         n_docs=n_docs,
         out_name=out_name,
+        invocation=cli.invocation(),
         **cli.parse_flags(flags),
     )

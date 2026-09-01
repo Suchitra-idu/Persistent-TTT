@@ -1,7 +1,8 @@
 """Six-regime perplexity, plus the same gap broken out by distance into the
 document. v1's aggregate can't tell a win concentrated in the first slice
 from one that holds up in the last — exactly the failure mode plain
-perplexity has for long-context claims (arXiv 2410.23771).
+perplexity has for long-context claims (arXiv 2410.23771). Logs the
+aggregate, per-source, and per-slice-index gaps to wandb.
 
     modal run ttt/experiments/holdout_eval_v2.py --flags "resume_from=step_600"
 """
@@ -58,6 +59,24 @@ def run(
         carries=_seeds(carries, holdout.docs, seeded, force_source),
     )
     _announce(measured, holdout, meta, announce)
+    engine.tracker.log(dict(measured.metrics))
+    for s in measured.summaries:
+        engine.tracker.log(
+            {
+                f"eval/{s.source}/gap_lora": s.gaps.lora,
+                f"eval/{s.source}/gap_within": s.gaps.within,
+                f"eval/{s.source}/gap_between": s.gaps.between,
+            }
+        )
+    if measured.slices:
+        for s in metrics.summarise_by_slice_index(measured.slices):
+            engine.tracker.log(
+                {
+                    "slice_index": float(s.slice_index),
+                    "eval_slice/gap_within": s.gaps.within,
+                    "eval_slice/gap_between": s.gaps.between,
+                }
+            )
     return measured
 
 
@@ -101,7 +120,7 @@ def _announce(measured, holdout, meta, announce) -> None:
     timeout=60 * 60,
 )
 @modal_runtime.caching
-def holdout_eval(seeded: bool = True, force_source: str = "", **flags):
+def holdout_eval(seeded: bool = True, force_source: str = "", invocation: str = "", **flags):
     from ttt.adapters.hf_data_source import HfDataSource
 
     resolved = cli.from_flags(
@@ -114,13 +133,17 @@ def holdout_eval(seeded: bool = True, force_source: str = "", **flags):
         trainable=False,
     )
     engine.compute = _EvalCompute(engine.model)
-    return run(
-        resolved,
-        engine=engine,
-        source=HfDataSource(),
-        seeded=seeded,
-        force_source=force_source,
-    ).metrics
+    engine.tracker = _runtime.tracker(resolved, job_type="eval", invocation=invocation)
+    try:
+        return run(
+            resolved,
+            engine=engine,
+            source=HfDataSource(),
+            seeded=seeded,
+            force_source=force_source,
+        ).metrics
+    finally:
+        engine.tracker.finish()
 
 
 class _EvalCompute:
@@ -143,5 +166,6 @@ class _EvalCompute:
 @app.local_entrypoint()
 def main(seeded: bool = True, force_source: str = "", flags: str = ""):
     holdout_eval.remote(
-        seeded=seeded, force_source=force_source, **cli.parse_flags(flags)
+        seeded=seeded, force_source=force_source, invocation=cli.invocation(),
+        **cli.parse_flags(flags),
     )

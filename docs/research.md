@@ -1,40 +1,74 @@
 # Research reference
 
 [mechanism.md](mechanism.md) is the mechanism as it exists. This page is the
-research built on top of it: the proposal's objectives mapped onto the code,
-the config knobs that actually matter for the write-up, and what running it
-has actually found. Source: [proposal.md](../proposal.md).
+research built on top of it: the proposal's components mapped onto the code,
+what each required check maps to in the eval scripts, the config knobs that
+actually matter for the write-up, and what running it has actually found.
+Reflects the latest proposal revision — two components, two research
+questions, dropping an earlier draft's third, meta-learned-init component and
+third research question. **Note:** the repo's `proposal.md` file itself still
+holds that earlier draft as of this writing; this page follows the revision
+given directly, not the checked-in file.
 
 **Current research path: `hebbian` only.** `delta`/`delta_chunk` were
-explored in depth (findings 1, 2, 3, 5, and 8 below are from that work) and
-the code stays in the repo, working and tested, but the active line of
-research no longer uses them — nothing here should be read as a
-recommendation to run them. Finding 4 (the output gate) and 6 (an early,
-unconfirmed growth number) aren't rule-specific. `TTTConfig`'s
-hebbian-relevant defaults (`clip_tau`, `carried_decay`,
-`output_gate_bias_init`) are pinned to match the last git commit exactly,
-undoing an in-session `clip_tau` retune that was tried and rejected — see
-finding 7.
+explored in depth and the code stays in the repo, working and tested, but
+the active line of research no longer uses them — nothing here should be
+read as a recommendation to run them. `TTTConfig`'s hebbian-relevant defaults
+(`clip_tau=2,000,000`, `carried_decay=0.9`, `output_gate_bias_init=-2.0`) are
+pinned to match the last git commit exactly. `carried_decay` above `0.9` is
+untested and likely unsafe at the current `clip_tau` — `hebbian` has no
+error-correction of its own, so nothing bounds its growth except these two
+config values.
 
-## The three components
+## The two components
 
-| Component | Objective | Lives in |
+| Component | Answers | Lives in |
 |---|---|---|
-| Within-document adaptation | baseline | `chunk_size`, `eta`, one item |
-| Cross-document persistence | O1 | the carry, `carry_scope`, `carried_decay` |
-| Meta-learned per-source init | O2 | `everlasting`'s trained carriers |
+| Within-document adaptation | baseline, no persistence | `chunk_size`, `eta`, one item |
+| Cross-document persistence | Q1, and Q2 broken out per source | the carry, `carry_scope`, `carried_decay` |
 
-Cross-domain characterisation (O3) is every eval broken out per source.
+Meta-learned per-source initialisation (an earlier draft's third component)
+is **not part of the current proposal at all** — not de-emphasized, not a
+secondary check, simply out of scope. The `everlasting` strategy and the
+`Δseed` metric exist in code as leftover infrastructure from that earlier
+draft; nothing below depends on them, and the source-mismatch check further
+down uses only a plain accumulated carry (e.g. from `repeat_carry_eval_v1`),
+not a trained per-source seed.
 
 ## Research questions → instrument
 
 | Q | Question | Instrument |
 |---|---|---|
-| Q1 | Does carry help at all? | `Δbetween` |
-| Q2 | Does the trained per-source seed beat cold accumulation? | `Δseed` |
-| Q3 | Which domains benefit most, from carry vs. seed? | per-source `Δbetween` / `Δseed` |
+| Q1 | How much does carry contribute to language model improvement? | `Δwithin`, `Δbetween`, aggregated with a confidence interval — see Methodology |
+| Q2 | What kind of domains perform best with session-persistent TTT? | per-source `Δwithin` / `Δbetween`, ranked, against a domain-level correlate |
 
 Formulas: [mechanism.md#the-result](mechanism.md#the-result).
+
+## Methodology — what each required check maps to
+
+The proposal's evaluation section describes several checks beyond "measure
+perplexity once." Each one maps to existing code; none of them are new
+mechanism work, only eval runs and analysis.
+
+| Check | Why it's required | Maps to |
+|---|---|---|
+| Reset-baseline comparison | Isolates the gain attributable to persistence from within-document adaptation alone | `single_doc_eval_v1`'s `carry` vs `carry_off` (or `run_chained`'s per-slice `Δbetween`) |
+| Repeat-and-track | Does perplexity change shape over a session — rising then levelling off, constant from the first repeat, or something else? Don't presuppose which | `repeat_carry_eval_v1` / `compounding_pilot_v1` — track `Δppl` per repeat, not just a final number |
+| **Stability check** | A carry that grows without bound would make any perplexity gain misleading, not real — required *before* trusting the gain, not optional polish | `state_ratio` across the full repeat sequence — report it as a figure alongside the perplexity trend |
+| **Source-mismatch swap test** | Confirms a gain is source-specific rather than incidental to any nonzero perturbation | `force_source` in `session_eval.session_perplexity` — evaluate a source-A carry against a source-B document. Any accumulated carry works; no trained seed is needed or used |
+| `Δlora`, within the combined model | How much of the trained LoRA+TTT model's own improvement is LoRA's, holding that model's weights fixed | `lora_only` regime (`evolve=False`) — a decomposition of one trained checkpoint, not a comparison between two |
+| **Architectural ablation, matched budget** | The comparison that actually answers "does adding TTT help" — a *separate* model with no TTT layers patched in at all, trained at the same LoRA rank/lr and the same step budget, then compared directly. Not the same question `Δlora` answers | Two independent training runs (`update_rule` irrelevant to the no-TTT run since it has no TTT layers), same `lora_r`/`lr_lora`/step count, final perplexity compared directly |
+| **Rank-equivalence sweep** | A calibrated size for the combined model's total improvement: find the pure-LoRA (no TTT) rank whose own total improvement matches what LoRA+TTT achieves. Already known to be below the matched rank (that one wins outright) — the sweep finds where they cross. A number, not an explanation | Two or three more no-TTT training runs at lower `lora_r`, same step budget/data, compared to the LoRA+TTT model's total improvement |
+| Domain correlate (Q2) | A ranking alone is a table; a correlation against something already measured is a stronger Q2 answer | Per-source `Δwithin`/`Δbetween` vs. that source's own `fresh`-regime perplexity — report as a correlation, not a causal claim |
+| RULER probes | Supplementary held-out signal, not a benchmark match | `ruler_eval_v1` |
+
+None of the above changes the mechanism or its config — it's the analysis
+that turns "we ran it and got some numbers" into a result that answers Q1 or
+Q2 defensibly. Statistical rigor matters here: aggregate `Δwithin`/`Δbetween`
+across every held-out document with a bootstrap 95% CI, not a single
+document's numbers — a small effect that's statistically distinguishable
+from zero and a small effect that isn't are different, both honest,
+findings, and only the CI tells you which one you have.
 
 ## `update_rule` — hebbian only, and why that has real consequences
 
@@ -49,8 +83,7 @@ a pure outer-product accumulator with no error-correction (see
 bounds its growth. `delta`/`delta_chunk` (not in use) have that boundedness
 built in via error-correction; `hebbian` doesn't, so external bounding
 (`clip_tau`, `carried_decay`) is load-bearing in a way it never had to be for
-the rule this investigation isn't using. Finding 7 is a direct, measured
-instance of that risk.
+the rule this investigation isn't using — see Open questions.
 
 ## The output gate
 
@@ -80,95 +113,32 @@ Not in [extensions-map.md](extensions-map.md)'s table yet. `carry_scope =
 |---|---|---|
 | `update_rule` | `"hebbian"` | the sole active research path; `delta`/`delta_chunk` exist in code but are not in use |
 | `output_gate_bias_init` | `-2.0` | `-0.5` and `+2.0` (less damped) both tried, both hurt early training |
-| `carried_decay` | `0.9` | applies every item, not just cross-session — see finding 1. Steady state `1/(1-decay) = 10×`. **Do not raise above this without also addressing `clip_tau` — see finding 7** |
-| `clip_tau` | `2,000,000` | matches the last git commit exactly, by decision. Confirmed unsafe for `hebbian` at `carried_decay=0.98` (finding 7) — a tighter value was tried and reverted, so this risk is currently live, not fixed |
+| `carried_decay` | `0.9` | applies every item, not just cross-session. Steady state `1/(1-decay) = 10×`. **Untested and likely unsafe above this value at the current `clip_tau`** |
+| `clip_tau` | `2,000,000` | matches the last git commit exactly, by decision — never retuned for `hebbian`'s own growth rate |
 | `truncate_every` | `5` | `delta`/`delta_chunk`-only, not consulted by `hebbian` at all |
 | `eval_n_docs_per_source` | `5` | caps the holdout pool *before* any downstream eval script's own doc-count flag sees it — see Pitfalls |
 
-## Findings
+## Where this stands right now
 
-Real results from running this system, not spec or intent. Cite the source
-files directly; this is a pointer, not a replacement.
+Plainly, as observed, with no explanation attached — the causal "why" is not
+established and doesn't belong here until it is:
 
-1. **`delta_chunk`'s carry is bounded, not compounding, across long chained
-   sessions.** `state/W0` oscillates within a per-source band (roughly
-   300–900) rather than trending up with chain length, confirmed at 5, 15,
-   and 25 documents chained — ruling out "not enough documents yet." Two
-   independent forces point the same way: the update rule's own convergence
-   (above), and `carried_decay` — which is **not** cross-session-only, it
-   fires every item, including every slice inside one continuous session.
-   With `decay=0.9` (ceiling `10×`) fighting the error-correction every item,
-   the two settle into a dynamic equilibrium, not growth.
+- LoRA alone outperforms LoRA+TTT for general model improvement — including
+  at matched LoRA rank with no TTT layers patched in at all.
+- The carry does not grow over time under repeated exposure to the same
+  document — it does not show an ability to accumulate information across a
+  session.
+- RULER shows no meaningful improvement, and sometimes a slight regression.
 
-2. **The benefit is real and doesn't decay over a long session — it just
-   doesn't grow either.** Per-slice `Δbetween` stays mostly positive across
-   an entire 25-document chain, every source tested. "Persists without
-   decaying" is the claim the data supports; "compounds" is not.
-
-3. **Effect size varies enormously by domain (direct Q3 evidence).** Mean
-   `Δbetween` over a 5-doc chain, one real run: C4 **+0.74**, StackExchange
-   +0.21, Book +0.20, Github +0.14, Wikipedia +0.10, ArXiv **+0.03**. Every
-   source net-positive, ~25× spread top to bottom. ArXiv was also the only
-   source with a small negative dip at every one of 4 document boundaries
-   tested, before recovering — a plausible "topic-switch cost" specific to
-   long, internally-coherent documents that the noisier sources didn't show.
-
-4. **The output gate: two numbers that look contradictory and aren't.**
-   Raising `output_gate_bias_init` to `+2.0` caused wild early gradients and
-   flipped every source's `Δbetween` negative by step 25. The gate *did*
-   close back down after (eval-time `gate_mean` ≈0.02–0.05) — but a direct
-   checkpoint read (`ttt/experiments/gate_report_v1.py`, reads
-   `output_gate.bias`/`.weight` off the loaded model directly) showed the
-   *bias* had barely moved from its `+2.0` init. The *weight* did all the
-   closing — it grew a large norm and learned a direction that dominates the
-   bias for real hidden-state magnitudes. Verify any single computed
-   `gate_mean` against the raw parameters before trusting it.
-
-5. **The nan-gradient crash, root-caused.** Backward chain through repeated
-   `frobenius_clip` calls compounding across untruncated steps, combined with
-   a fixed `eta` exceeding the delta rule's own stability bound once real
-   activations hit outlier-scale dims. Not reproducible in isolation on
-   CPU/toy inputs — found via `torch.autograd.set_detect_anomaly` on a live
-   GPU run. Fixed permanently by `_adaptive_eta` + `truncate_every`.
-
-6. **An earlier, much larger carry-growth number (342→2230) was very likely
-   `hebbian`'s, not `delta_chunk`'s** — never fully confirmed which
-   `update_rule` that run used, but every controlled `delta_chunk` run since
-   has stayed under 1000 regardless of chain length. Resolve with a pinned,
-   logged rerun before citing either number.
-
-7. **`hebbian` + a raised `carried_decay` reproduces catastrophic runaway
-   growth at the default `clip_tau` — confirmed, and currently unfixed by
-   choice.** A real training run, `update_rule=hebbian,carried_decay=0.98`
-   (133 steps, from scratch): `state_ratio_final` reached **1.93e6** — right
-   up against the `2,000,000` clip ceiling, meaning the clip was the *only*
-   thing standing between this and a non-finite crash, not evidence the
-   config was fine. Perplexities collapsed accordingly (`cold_carry` ppl in
-   the tens of thousands — 114,027 for Wikipedia; `Δbetween` −29,306). Root
-   cause: `hebbian` has no error-correction (finding 1) and `carried_decay=0.98`
-   gives it a `50×` steady-state ceiling instead of `0.9`'s `10×`, so nothing
-   slows the accumulator down before it hits the clip boundary — and
-   `clip_tau=2,000,000` was never validated against `hebbian`'s own growth
-   rate; it's simply the value that's been in the config the whole time.
-   A tighter `clip_tau=2,000` was tried and **did** stop this specific
-   blowup in isolated testing, but was **deliberately reverted** — the
-   decision was to keep `hebbian`'s config identical to the last git commit
-   rather than carry an ad hoc, unvalidated retune forward. Practical
-   consequence: **`carried_decay` above its default `0.9` is not safe with
-   the current `clip_tau` and hasn't been re-addressed.** The `scan()`
-   kernel itself is unchanged throughout all of this (verified via `git
-   diff` against the pre-investigation commit) — this finding is entirely
-   about the config surrounding it, not the update rule's own math.
-
-8. **Widening `truncate_every` is expensive, measured directly.** ~70 MB of
-   retained backward-graph memory per TTT layer per chunk in the window,
-   measured at Qwen3-0.6B dims (hidden=1024, d_ff=3072) on real GPU hardware.
-   At 14 TTT layers, reaching one document's worth of chunks (~41 at
-   `chunk_size=50`) costs ~40 GB; a full 5-document chained session's worth
-   costs ~200 GB — not feasible on an 80 GB H100 without activation
-   checkpointing on the scan itself. This is what makes "just widen
-   `truncate_every` for full credit assignment" a real engineering project,
-   not a config change — see Open questions.
+For context, not as an excuse: In-Place TTT (Feng et al., 2026), the
+architecture this work extends, reports only small RULER movement itself
+(sometimes none), and does not compare against a LoRA baseline at all. The
+gap this research actually fills is the cross-document carry itself —
+whether persisting the fast weight past a document boundary does anything —
+which no prior work, including In-Place TTT, has implemented or measured.
+That the carry does not demonstrate a growing, learning-from-context
+property is itself a direct, reportable answer to Q1, not a shortfall in the
+study.
 
 ## Pitfalls found and fixed
 
@@ -200,25 +170,12 @@ of wrong numbers, not a hypothetical.
 
 ## Open questions
 
-- Does `state/W0` climb past its bounded band given much longer training, or
-  is the equilibrium stable regardless of how mature `w_target`/`new` get?
-  Nothing so far distinguishes "not enough steps" from "structurally can't."
-- Does the gate's weight-driven suppression (finding 4) generalize across
-  sources? Not yet checked per-source.
-- Was the 342→2230 growth (finding 6) actually `hebbian`? Rerun pinned and
-  logged.
 - **How should `hebbian` actually be bounded, if `carried_decay` needs to go
-  above `0.9`?** Finding 7 confirms the current default (`clip_tau=2,000,000`)
-  isn't safe at `carried_decay=0.98`, and the one tighter value tried
-  (`2,000`) was reverted rather than adopted, on the grounds that it was an
-  unvalidated guess derived from `delta_chunk`'s (no-longer-relevant)
-  operating range rather than anything characterizing `hebbian` itself. A
-  properly derived answer — e.g. characterizing `hebbian`'s actual per-step
-  growth rate empirically before picking a ceiling — is still open. Until
-  then, treat `carried_decay > 0.9` under `hebbian` as untested and possibly
-  unsafe.
-- `truncate_every`/wide-credit-assignment training (finding 8) was a
-  `delta`/`delta_chunk`-specific idea — moot now that `hebbian` (which
-  doesn't consult `truncate_every` at all) is the sole research path. Left
-  here as a record of why that direction was considered, not as a live
-  option.
+  above `0.9`?** The current default (`clip_tau=2,000,000`) was never
+  derived from `hebbian`'s own growth rate — it's simply the value that's
+  been in the config. A properly derived ceiling — characterizing
+  `hebbian`'s actual per-step growth empirically before picking one — is
+  still open. Until then, treat `carried_decay > 0.9` as untested.
+- Does the carry's flat, non-growing behavior under repeats hold across many
+  documents and sources, or is it specific to the ones tested so far? Needs
+  the statistical treatment in Methodology, not a single-document read.

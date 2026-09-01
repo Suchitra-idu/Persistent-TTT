@@ -301,6 +301,19 @@ class TestSingleDocEval:
 
         assert by_source == ()
 
+    def test_it_logs_a_delta_between_mean_per_source(self):
+        engine = _builders.engine()
+
+        single_doc_eval_v1.run(
+            _builders.resolved(), engine=engine,
+            source=_builders.data_source(), n_slices=4, announce=lines(),
+        )
+
+        assert any(
+            key.startswith("eval/") and key.endswith("/delta_between_mean")
+            for key in engine.tracker.keys_logged
+        )
+
 
 class TestSingleDocEvalChained:
     def test_it_chains_n_docs_worth_of_slices_per_source(self):
@@ -403,6 +416,22 @@ class TestSingleDocEvalChained:
 
         assert by_source == ()
 
+    def test_it_logs_a_delta_between_mean_per_source(self):
+        engine = _builders.engine()
+
+        single_doc_eval_v1.run_chained(
+            _builders.wider_holdout(
+                _builders.resolved(eval_n_docs_per_source=3), holdout_last_n=12
+            ),
+            engine=engine, source=_builders.data_source(),
+            n_slices=4, n_docs=3, announce=lines(),
+        )
+
+        assert any(
+            key.startswith("eval/") and key.endswith("/delta_between_mean")
+            for key in engine.tracker.keys_logged
+        )
+
 
 class TestPlotChained:
     def _by_source(self):
@@ -443,6 +472,19 @@ class TestRepeatCarryEval:
 
         per_source = [s for s in summaries if s.source != metrics.ALL_SOURCES]
         assert {s.repeat for s in per_source} == {0, 1, 2}
+
+    def test_it_logs_a_gap_between_per_source_per_repeat(self):
+        engine = _builders.engine()
+
+        repeat_carry_eval_v1.run(
+            _builders.resolved(), engine=engine,
+            source=_builders.data_source(), n_repeats=3, announce=lines(),
+        )
+
+        assert any(
+            key.startswith("eval/") and key.endswith("/gap_between")
+            for key in engine.tracker.keys_logged
+        )
 
     def test_it_covers_every_source_plus_an_all_rollup(self):
         summaries = repeat_carry_eval_v1.run(

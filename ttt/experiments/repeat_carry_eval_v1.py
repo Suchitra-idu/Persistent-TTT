@@ -9,8 +9,8 @@ default dataset already.
 
     modal run ttt/experiments/repeat_carry_eval_v1.py --flags "resume_from=step_600"
 
-Also writes a PNG of Δbetween/state/gate against repeat count to `graphs/`
-(needs the `plot` extra: `pip install -e ".[plot]"`).
+Logs per-repeat scalars to wandb always, plus the Δbetween/state/gate chart
+there and to `graphs/` locally.
 """
 
 from __future__ import annotations
@@ -78,6 +78,15 @@ def run(
     summaries = metrics.summarise_by_repeat(rows)
     announce(f"{len(holdout.docs)} documents x {n_repeats} repeats")
     announce(report.render(report.repeat_table(summaries)))
+    for s in summaries:
+        engine.tracker.log(
+            {
+                "repeat": float(s.repeat),
+                f"eval/{s.source}/gap_between": s.gaps.between,
+                f"eval/{s.source}/state_ratio": s.state_ratio,
+                f"eval/{s.source}/gate_mean": s.gate_mean,
+            }
+        )
     return summaries
 
 
@@ -130,7 +139,7 @@ def plot_repeats(
     ALL_SOURCES rollup — same three-column layout as
     single_doc_eval_v1.plot_chained, no document boundaries since every
     repeat is the same document(s) again. Filename carries the resumed step
-    and a timestamp. Needs the `plot` extra."""
+    and a timestamp."""
     import os
     from datetime import datetime
 
@@ -222,7 +231,7 @@ def plot_repeats(
     timeout=60 * 60,
 )
 @modal_runtime.caching
-def repeat_carry_eval(n_repeats: int = 20, **flags):
+def repeat_carry_eval(n_repeats: int = 20, invocation: str = "", **flags):
     from ttt.adapters.hf_data_source import HfDataSource
     from ttt.experiments.holdout_eval_v1 import _EvalCompute
 
@@ -234,19 +243,32 @@ def repeat_carry_eval(n_repeats: int = 20, **flags):
         trainable=False,
     )
     engine.compute = _EvalCompute(engine.model)
-    return run(resolved, engine=engine, source=HfDataSource(), n_repeats=n_repeats)
+    engine.tracker = _runtime.tracker(resolved, job_type="eval", invocation=invocation)
+    try:
+        summaries = run(resolved, engine=engine, source=HfDataSource(), n_repeats=n_repeats)
+        if summaries:
+            try:
+                path = plot_repeats(summaries, resume_from=resolved.resume_from)
+                engine.tracker.log_image("eval/repeat_carry", path)
+            except ImportError:
+                pass
+        return summaries
+    finally:
+        engine.tracker.finish()
 
 
 @app.local_entrypoint()
 def main(n_repeats: int = 20, flags: str = ""):
     parsed = cli.parse_flags(flags)
-    summaries = repeat_carry_eval.remote(n_repeats=n_repeats, **parsed)
+    summaries = repeat_carry_eval.remote(
+        n_repeats=n_repeats, invocation=cli.invocation(), **parsed
+    )
     if not summaries:
         return
     resolved = cli.from_flags(**{**cli.env_defaults(), **parsed})
     try:
         path = plot_repeats(summaries, resume_from=resolved.resume_from)
     except ImportError:
-        print("skipped the graph: pip install -e '.[plot]' for matplotlib")
+        print("skipped the local graph: matplotlib not importable")
         return
     print(f"wrote {path}")

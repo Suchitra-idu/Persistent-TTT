@@ -1,6 +1,7 @@
 """Six-regime perplexity on the held-out tail, with the per-source breakdown.
+Logs the aggregate metrics and a per-source gap breakdown to wandb.
 
-    modal run ttt/experiments/holdout_eval_v1.py --resume-from step_600
+    modal run ttt/experiments/holdout_eval_v1.py --flags "resume_from=step_600"
 """
 
 from __future__ import annotations
@@ -55,6 +56,15 @@ def run(
         carries=_seeds(carries, holdout.docs, seeded, force_source),
     )
     _announce(measured, holdout, meta, announce)
+    engine.tracker.log(dict(measured.metrics))
+    for s in measured.summaries:
+        engine.tracker.log(
+            {
+                f"eval/{s.source}/gap_lora": s.gaps.lora,
+                f"eval/{s.source}/gap_within": s.gaps.within,
+                f"eval/{s.source}/gap_between": s.gaps.between,
+            }
+        )
     return measured
 
 
@@ -95,7 +105,7 @@ def _announce(measured, holdout, meta, announce) -> None:
     timeout=60 * 60,
 )
 @modal_runtime.caching
-def holdout_eval(seeded: bool = True, force_source: str = "", **flags):
+def holdout_eval(seeded: bool = True, force_source: str = "", invocation: str = "", **flags):
     from ttt.adapters.hf_data_source import HfDataSource
 
     resolved = cli.from_flags(
@@ -108,13 +118,17 @@ def holdout_eval(seeded: bool = True, force_source: str = "", **flags):
         trainable=False,
     )
     engine.compute = _EvalCompute(engine.model)
-    return run(
-        resolved,
-        engine=engine,
-        source=HfDataSource(),
-        seeded=seeded,
-        force_source=force_source,
-    ).metrics
+    engine.tracker = _runtime.tracker(resolved, job_type="eval", invocation=invocation)
+    try:
+        return run(
+            resolved,
+            engine=engine,
+            source=HfDataSource(),
+            seeded=seeded,
+            force_source=force_source,
+        ).metrics
+    finally:
+        engine.tracker.finish()
 
 
 class _EvalCompute:
@@ -137,5 +151,6 @@ class _EvalCompute:
 @app.local_entrypoint()
 def main(seeded: bool = True, force_source: str = "", flags: str = ""):
     holdout_eval.remote(
-        seeded=seeded, force_source=force_source, **cli.parse_flags(flags)
+        seeded=seeded, force_source=force_source, invocation=cli.invocation(),
+        **cli.parse_flags(flags),
     )

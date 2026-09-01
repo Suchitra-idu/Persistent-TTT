@@ -140,8 +140,13 @@ def _resume_dir(resolved: cli.Resolved) -> str:
     return cli.resume_path(resolved.resume_from, resolved.train.run_name)
 
 
-def tracker(resolved: cli.Resolved, *, job_type: str) -> Tracker:
-    """Console when wandb is off, so a run without telemetry still reports."""
+def tracker(resolved: cli.Resolved, *, job_type: str, invocation: str = "") -> Tracker:
+    """Console when wandb is off, so a run without telemetry still reports.
+
+    `invocation` is the exact command line that launched the run (`cli.invocation()`,
+    read locally and threaded in — see its docstring), stored in the wandb
+    run's config for provenance.
+    """
     from ttt.adapters.console_tracker import ConsoleTracker
 
     if not resolved.train.wandb_enabled:
@@ -149,11 +154,14 @@ def tracker(resolved: cli.Resolved, *, job_type: str) -> Tracker:
 
     from ttt.adapters.wandb_tracker import WandbTracker
 
+    config = dict(resolved.describe())
+    if invocation:
+        config["invocation"] = invocation
     return WandbTracker.start(
         project=resolved.train.wandb_project,
         run_name=resolved.train.run_name,
         job_type=job_type,
-        config=dict(resolved.describe()),
+        config=config,
     )
 
 

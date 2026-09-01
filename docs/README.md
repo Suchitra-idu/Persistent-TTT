@@ -9,7 +9,7 @@ Read as files, or run `make docs` from the repo root and open
 | Page | Read it for |
 |---|---|
 | [mechanism.md](mechanism.md) | What In-Place TTT does, with the formulas |
-| [research.md](research.md) | The proposal's O1–O3/Q1–Q3 mapped onto the code, the config knobs that matter for the write-up, and empirical findings |
+| [research.md](research.md) | The proposal's two components/Q1–Q2 mapped onto the code, what each required check maps to, the config knobs that matter for the write-up, and empirical findings |
 | [glossary.md](glossary.md) | Every term used in the code |
 | [core-map.md](core-map.md) | What is in each Ring 0 file |
 | [extensions-map.md](extensions-map.md) | The Ring 1 plugins and the TTT module |

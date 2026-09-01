@@ -112,7 +112,7 @@ def _evaluator(resolved, engine, holdout_docs, announce):
     timeout=24 * 60 * 60,
 )
 @modal_runtime.caching
-def train(**flags):
+def train(invocation: str = "", **flags):
     from ttt.adapters.hf_data_source import HfDataSource
 
     resolved = cli.from_flags(**{**cli.env_defaults(), **flags})
@@ -123,7 +123,7 @@ def train(**flags):
         trainable=True,
         announce=print,
     )
-    engine.tracker = _runtime.tracker(resolved, job_type="train")
+    engine.tracker = _runtime.tracker(resolved, job_type="train", invocation=invocation)
     result = run(
         resolved,
         engine=engine,
@@ -141,4 +141,4 @@ def train(**flags):
 
 @app.local_entrypoint()
 def main(flags: str = ""):
-    train.remote(**cli.parse_flags(flags))
+    train.remote(invocation=cli.invocation(), **cli.parse_flags(flags))

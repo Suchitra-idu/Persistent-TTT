@@ -29,6 +29,7 @@ REQUIREMENTS = (
     "datasets>=4.0",
     "accelerate>=1.0",
     "wandb>=0.21",
+    "matplotlib>=3.8",
 )
 
 # The env lives on the laptop `modal run` is invoked from, not on the Modal

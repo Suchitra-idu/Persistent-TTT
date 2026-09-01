@@ -5,8 +5,8 @@ Was `single_paper_eval` — SlimPajama has documents, not papers (D10).
     modal run ttt/experiments/single_doc_eval_v1.py --n-docs 5 \\
         --flags "resume_from=step_600"
 
-`--n-docs` > 1 also writes a PNG of the chained run to `graphs/` (needs the
-`plot` extra: `pip install -e ".[plot]"`).
+Logs per-source scalars to wandb always; `--n-docs` > 1 also logs the
+chained-session chart there and writes the same PNG to `graphs/` locally.
 """
 
 from __future__ import annotations
@@ -60,6 +60,7 @@ def run(
         carry_off = _measure(engine, [doc], n_slices, reset_between_items=True)
         announce(f"document {doc.index} [{doc.source}], {doc.n_tokens:,d} tokens")
         announce(report.render(slice_table(carry, carry_off)))
+        _log_source_metrics(engine.tracker, doc.source, carry, carry_off)
         results.append((doc.source, carry))
     return tuple(results)
 
@@ -111,8 +112,28 @@ def run_chained(
             "each, carry kept across every slice and document boundary"
         )
         announce(report.render(chain_table(carry, carry_off)))
+        _log_source_metrics(engine.tracker, src, carry, carry_off)
         results.append((src, carry, carry_off))
     return tuple(results)
+
+
+def _log_source_metrics(
+    tracker,
+    source: str,
+    carry: Sequence[session_eval.ItemRow],
+    carry_off: Sequence[session_eval.ItemRow],
+) -> None:
+    """One source's whole run, boiled down to scalars wandb can chart across
+    eval runs — the per-position detail stays in the table/plot."""
+    deltas = [off.ppl - on.ppl for on, off in zip(carry, carry_off, strict=True)]
+    tracker.log(
+        {
+            f"eval/{source}/delta_between_mean": sum(deltas) / len(deltas),
+            f"eval/{source}/state_ratio_final": carry[-1].state_ratio,
+            f"eval/{source}/gate_mean_final": carry[-1].gate_mean,
+            f"eval/{source}/n_positions": float(len(carry)),
+        }
+    )
 
 
 def _ensure_docs_available(resolved: cli.Resolved, n_docs: int) -> cli.Resolved:
@@ -217,8 +238,7 @@ def plot_chained(by_source: BySource, *, resume_from: str, out_dir: str = "graph
     boundaries marked. gate_mean shares this plot rather than state/W0's
     axis (D: never dual-axis) so a damped-but-informative carry is visible
     as two separate, comparable curves. Filename carries the resumed step
-    and a timestamp, so successive runs are never overwritten. Needs the
-    `plot` extra."""
+    and a timestamp, so successive runs are never overwritten."""
     import os
     from datetime import datetime
 
@@ -310,7 +330,7 @@ def plot_chained(by_source: BySource, *, resume_from: str, out_dir: str = "graph
     timeout=60 * 60,
 )
 @modal_runtime.caching
-def single_doc_eval(n_slices: int = 8, n_docs: int = 1, **flags):
+def single_doc_eval(n_slices: int = 8, n_docs: int = 1, invocation: str = "", **flags):
     from ttt.adapters.hf_data_source import HfDataSource
     from ttt.experiments.holdout_eval_v1 import _EvalCompute
 
@@ -322,13 +342,28 @@ def single_doc_eval(n_slices: int = 8, n_docs: int = 1, **flags):
         trainable=False,
     )
     engine.compute = _EvalCompute(engine.model)
+    engine.tracker = _runtime.tracker(resolved, job_type="eval", invocation=invocation)
     source = HfDataSource()
-    if n_docs > 1:
-        return run_chained(
-            resolved, engine=engine, source=source, n_slices=n_slices, n_docs=n_docs
-        )
-    run(resolved, engine=engine, source=source, n_slices=n_slices)
-    return ()
+    try:
+        if n_docs > 1:
+            by_source = run_chained(
+                resolved, engine=engine, source=source, n_slices=n_slices, n_docs=n_docs
+            )
+            if by_source:
+                _log_chart(engine.tracker, by_source, resume_from=resolved.resume_from)
+            return by_source
+        run(resolved, engine=engine, source=source, n_slices=n_slices)
+        return ()
+    finally:
+        engine.tracker.finish()
+
+
+def _log_chart(tracker, by_source: BySource, *, resume_from: str) -> None:
+    try:
+        path = plot_chained(by_source, resume_from=resume_from)
+    except ImportError:
+        return
+    tracker.log_image("eval/chained_session", path)
 
 
 @app.local_entrypoint()
@@ -336,16 +371,19 @@ def main(n_slices: int = 8, n_docs: int = 1, flags: str = ""):
     """n_docs=1 (default): one document per source, measured independently.
     n_docs>1: that many documents *of each source*, chained into one
     per-source session instead — carry kept across every document boundary
-    within a source, never across sources — see `run_chained`. Also writes
-    a PNG of the chained result to `graphs/`."""
+    within a source, never across sources — see `run_chained`. Logs to
+    wandb (scalars and the chained-session chart) and also writes the chart
+    to `graphs/` locally."""
     parsed = cli.parse_flags(flags)
-    by_source = single_doc_eval.remote(n_slices=n_slices, n_docs=n_docs, **parsed)
+    by_source = single_doc_eval.remote(
+        n_slices=n_slices, n_docs=n_docs, invocation=cli.invocation(), **parsed
+    )
     if not by_source:
         return
     resolved = cli.from_flags(**{**cli.env_defaults(), **parsed})
     try:
         path = plot_chained(by_source, resume_from=resolved.resume_from)
     except ImportError:
-        print("skipped the graph: pip install -e '.[plot]' for matplotlib")
+        print("skipped the local graph: matplotlib not importable")
         return
     print(f"wrote {path}")
