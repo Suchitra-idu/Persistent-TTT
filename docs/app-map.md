@@ -16,6 +16,10 @@ planting an `import torch` in `ttt/app/` and expecting the lint to reject it.
 | `eval_loop.py` | Six-regime held-out perplexity, gap decomposition | `Compute`, `FastWeights` |
 | `session_eval.py` | Per-item perplexity with the carry persisting | `Compute`, `FastWeights` |
 | `pilot.py` | Cold / persist / seeded compounding, over `session_eval` | — |
+| `boundary_eval.py` | persist / doc_reset / slice_reset arms over a same-source chain | `Compute`, `FastWeights` |
+| `repeat_eval.py` | One document replayed with an unreset carry | `Compute`, `FastWeights` |
+| `swap_eval.py` | Carry built on source A, read on a source-B document | `Compute`, `FastWeights` |
+| `evidence.py` | Paired document bootstrap over all of the above; JSON rows | `Rng`, `Storage` |
 | `generate.py` | The one token loop | `Generation` |
 | `chat.py` | Turn orchestration and the four D14 switches | `Generation`, `FastWeights`, `Tokenizer`, `Rng` |
 

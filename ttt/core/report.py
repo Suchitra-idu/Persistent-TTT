@@ -7,6 +7,7 @@ from typing import Sequence
 
 from ttt.core.metrics import ALL_SOURCES, RepeatSummary, SliceSummary, SourceSummary
 from ttt.core.ruler_types import RulerResult
+from ttt.core.stats import Estimate
 from ttt.core.types import CARRY, COLD_CARRY, COLD_CARRY_OFF, FRESH, LORA_ONLY
 
 LEFT = "left"
@@ -240,4 +241,26 @@ def composition_table(rows: Sequence[CompositionRow]) -> Table:
         headers=("source", "no-carry docs", "carry docs", "total items"),
         rows=tuple(body),
         aligns=(LEFT, RIGHT, RIGHT, RIGHT),
+    )
+
+
+def estimate_table(estimates: Sequence[Estimate]) -> Table:
+    """`*` marks an interval that excludes zero."""
+    rows = tuple(
+        (
+            e.measure,
+            e.source,
+            str(e.n_docs),
+            delta(e.interval.point),
+            f"[{delta(e.interval.low)}, {delta(e.interval.high)}]",
+            "*" if e.interval.excludes_zero else "",
+            f"{100 * e.relative:+.2f}%",
+            f"{e.win_rate:.2f}",
+        )
+        for e in estimates
+    )
+    return Table(
+        headers=("measure", "source", "n_docs", "Δppl", "95% CI", "", "rel", "win"),
+        rows=rows,
+        aligns=(LEFT, LEFT, RIGHT, RIGHT, RIGHT, LEFT, RIGHT, RIGHT),
     )

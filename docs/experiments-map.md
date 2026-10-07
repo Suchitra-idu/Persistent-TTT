@@ -24,6 +24,8 @@ arguments into frozen config and touches nothing else — the
 | `ruler_prepare_v1.py` | — | `modal run ttt/experiments/ruler_prepare_v1.py` |
 | `ruler_eval_v1.py` | — | `modal run ttt/experiments/ruler_eval_v1.py` |
 | `repeat_carry_eval_v1.py` | — | `modal run ttt/experiments/repeat_carry_eval_v1.py` |
+| `paper_eval_v1.py` | — | `modal run ttt/experiments/paper_eval_v1.py --checkpoint <run>/<step>` → `results/<run>/<step>/<stamp>/` |
+| `compare_checkpoints_v1.py` | — | `python -m ttt.experiments.compare_checkpoints_v1 <baseline bundle> <candidate bundle>` |
 
 ## Passing configuration
 

@@ -168,3 +168,19 @@ def token_weighted_ppl(pairs: list[tuple[int, float]]) -> float:
     if total_tokens == 0:
         return float("nan")
     return math.exp(total_log / total_tokens)
+
+
+def quantile(values, q: float) -> float:
+    """numpy's default (linear) quantile — the definition `stats.quantile` claims."""
+    import numpy
+
+    return float(numpy.quantile(numpy.asarray(values, dtype=float), q))
+
+
+def spearman_without_ties(xs, ys) -> float:
+    """The textbook closed form, valid only when neither side has ties."""
+    n = len(xs)
+    rank_x = {v: i + 1 for i, v in enumerate(sorted(xs))}
+    rank_y = {v: i + 1 for i, v in enumerate(sorted(ys))}
+    d2 = sum((rank_x[x] - rank_y[y]) ** 2 for x, y in zip(xs, ys))
+    return 1.0 - 6.0 * d2 / (n * (n * n - 1))

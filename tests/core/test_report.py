@@ -7,6 +7,7 @@ import pytest
 from tests.core import _builders as build
 from ttt.core import metrics, report
 from ttt.core.ruler_types import RulerResult
+from ttt.core.stats import Estimate, Interval
 from ttt.core.types import CARRY, COLD_CARRY, COLD_CARRY_OFF, FRESH, LORA_ONLY
 
 
@@ -293,3 +294,9 @@ def test_formatters_pin_their_precision():
         "-0.500",
         "1.23e-03",
     )
+
+
+def test_an_estimate_table_stars_an_interval_that_excludes_zero():
+    estimate = Estimate(measure="m", source="s", n_docs=3, interval=Interval(1.0, 0.5, 1.5), win_rate=0.8)
+
+    assert report.estimate_table([estimate]).rows[0][5] == "*"
