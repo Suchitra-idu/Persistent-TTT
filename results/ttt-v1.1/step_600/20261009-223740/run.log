@@ -7,11 +7,6 @@ https://modal.com/apps/suchitra-idu/main/ap-Rl2EtZACMDrNpu0zFBY7Dn
 ├── 🔨 Created mount PythonPackage:ttt
 └── 🔨 Created function paper_eval.
 
-[1ALoading weights:   0%|          | 0/311 [00:00<?, ?it/s]
-[1ALoading weights:   1%|          | 2/311 [00:00<00:33,  9.19it/s]
-[1ALoading weights:  15%|█▌        | 48/311 [00:00<00:01, 183.00it/s]
-[1ALoading weights:  44%|████▍     | 137/311 [00:00<00:00, 423.10it/s]
-[1ALoading weights:  74%|███████▎  | 229/311 [00:00<00:00, 587.03it/s]Loading weights: 100%|██████████| 311/311 [00:00<00:00, 505.37it/s]
 loading 'DKYoon/SlimPajama-6B'...
   loaded 5,489,000 rows in 13.3s
   labeled sources in 4.4s
@@ -21,3 +16,6 @@ regimes ...
 boundary ...
 repeat ...
 swap ...
+bundle -> results/ttt-v1.1/step_600/20261009-223740
+✓ App completed. View run at 
+https://modal.com/apps/suchitra-idu/main/ap-Rl2EtZACMDrNpu0zFBY7Dn
