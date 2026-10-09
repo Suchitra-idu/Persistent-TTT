@@ -20,3 +20,5 @@ coverage.json
 # MkDocs build output
 /site/
 /Literature_Review
+# downloaded Modal volume snapshots and eval bundles
+checkpoints/

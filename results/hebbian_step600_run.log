@@ -1,0 +1,23 @@
+Note that running a local entrypoint in detached mode only keeps the last triggered Modal function alive after the parent process has been killed or disconnected.
+✓ Initialized. View run at 
+https://modal.com/apps/suchitra-idu/main/ap-Rl2EtZACMDrNpu0zFBY7Dn
+✓ Created objects.
+├── 🔨 Created mount 
+│   /home/suchitra/MyStuff/TTT/Our-TTT/ttt/experiments/paper_eval_v1.py
+├── 🔨 Created mount PythonPackage:ttt
+└── 🔨 Created function paper_eval.
+
+[1ALoading weights:   0%|          | 0/311 [00:00<?, ?it/s]
+[1ALoading weights:   1%|          | 2/311 [00:00<00:33,  9.19it/s]
+[1ALoading weights:  15%|█▌        | 48/311 [00:00<00:01, 183.00it/s]
+[1ALoading weights:  44%|████▍     | 137/311 [00:00<00:00, 423.10it/s]
+[1ALoading weights:  74%|███████▎  | 229/311 [00:00<00:00, 587.03it/s]Loading weights: 100%|██████████| 311/311 [00:00<00:00, 505.37it/s]
+loading 'DKYoon/SlimPajama-6B'...
+  loaded 5,489,000 rows in 13.3s
+  labeled sources in 4.4s
+  RedPajamaBook: 6 of 20 held out
+106 documents across 6 sources
+regimes ...
+boundary ...
+repeat ...
+swap ...

@@ -1,0 +1,1682 @@
+[
+  {
+    "doc_idx": 53,
+    "n_tokens": 16384,
+    "ppl": 3.576994420973473,
+    "prime_source": "",
+    "state_ratio": 59626.78327345341,
+    "target_source": "RedPajamaArXiv"
+  },
+  {
+    "doc_idx": 53,
+    "n_tokens": 16384,
+    "ppl": 3.577129169375966,
+    "prime_source": "RedPajamaArXiv",
+    "state_ratio": 114749.61057247811,
+    "target_source": "RedPajamaArXiv"
+  },
+  {
+    "doc_idx": 53,
+    "n_tokens": 16384,
+    "ppl": 3.575767846979123,
+    "prime_source": "RedPajamaBook",
+    "state_ratio": 107910.39105737595,
+    "target_source": "RedPajamaArXiv"
+  },
+  {
+    "doc_idx": 53,
+    "n_tokens": 16384,
+    "ppl": 3.576221421432202,
+    "prime_source": "RedPajamaC4",
+    "state_ratio": 61481.52645563633,
+    "target_source": "RedPajamaArXiv"
+  },
+  {
+    "doc_idx": 53,
+    "n_tokens": 16384,
+    "ppl": 3.5776089319511115,
+    "prime_source": "RedPajamaGithub",
+    "state_ratio": 81283.92205617939,
+    "target_source": "RedPajamaArXiv"
+  },
+  {
+    "doc_idx": 53,
+    "n_tokens": 16384,
+    "ppl": 3.5771675480142666,
+    "prime_source": "RedPajamaStackExchange",
+    "state_ratio": 62351.61349010953,
+    "target_source": "RedPajamaArXiv"
+  },
+  {
+    "doc_idx": 53,
+    "n_tokens": 16384,
+    "ppl": 3.5771432414955333,
+    "prime_source": "RedPajamaWikipedia",
+    "state_ratio": 74177.26982602409,
+    "target_source": "RedPajamaArXiv"
+  },
+  {
+    "doc_idx": 475,
+    "n_tokens": 16384,
+    "ppl": 3.159900659653797,
+    "prime_source": "",
+    "state_ratio": 62081.654220612174,
+    "target_source": "RedPajamaArXiv"
+  },
+  {
+    "doc_idx": 475,
+    "n_tokens": 16384,
+    "ppl": 3.1594497944756434,
+    "prime_source": "RedPajamaArXiv",
+    "state_ratio": 115246.39375563718,
+    "target_source": "RedPajamaArXiv"
+  },
+  {
+    "doc_idx": 475,
+    "n_tokens": 16384,
+    "ppl": 3.1590189525388537,
+    "prime_source": "RedPajamaBook",
+    "state_ratio": 110454.85191210413,
+    "target_source": "RedPajamaArXiv"
+  },
+  {
+    "doc_idx": 475,
+    "n_tokens": 16384,
+    "ppl": 3.1614963424974523,
+    "prime_source": "RedPajamaC4",
+    "state_ratio": 63633.04459872252,
+    "target_source": "RedPajamaArXiv"
+  },
+  {
+    "doc_idx": 475,
+    "n_tokens": 16384,
+    "ppl": 3.1602736042778647,
+    "prime_source": "RedPajamaGithub",
+    "state_ratio": 82602.9358631967,
+    "target_source": "RedPajamaArXiv"
+  },
+  {
+    "doc_idx": 475,
+    "n_tokens": 16384,
+    "ppl": 3.160632652147064,
+    "prime_source": "RedPajamaStackExchange",
+    "state_ratio": 64412.799129664796,
+    "target_source": "RedPajamaArXiv"
+  },
+  {
+    "doc_idx": 475,
+    "n_tokens": 16384,
+    "ppl": 3.161611669799166,
+    "prime_source": "RedPajamaWikipedia",
+    "state_ratio": 76409.07769182893,
+    "target_source": "RedPajamaArXiv"
+  },
+  {
+    "doc_idx": 260,
+    "n_tokens": 6444,
+    "ppl": 12.556621865749984,
+    "prime_source": "",
+    "state_ratio": 16963.243802816254,
+    "target_source": "RedPajamaArXiv"
+  },
+  {
+    "doc_idx": 260,
+    "n_tokens": 6444,
+    "ppl": 12.56311095903226,
+    "prime_source": "RedPajamaArXiv",
+    "state_ratio": 110225.86654138767,
+    "target_source": "RedPajamaArXiv"
+  },
+  {
+    "doc_idx": 260,
+    "n_tokens": 6444,
+    "ppl": 12.555639960066149,
+    "prime_source": "RedPajamaBook",
+    "state_ratio": 87895.14234882782,
+    "target_source": "RedPajamaArXiv"
+  },
+  {
+    "doc_idx": 260,
+    "n_tokens": 6444,
+    "ppl": 12.560496352520214,
+    "prime_source": "RedPajamaC4",
+    "state_ratio": 22045.866968297258,
+    "target_source": "RedPajamaArXiv"
+  },
+  {
+    "doc_idx": 260,
+    "n_tokens": 6444,
+    "ppl": 12.555193936810532,
+    "prime_source": "RedPajamaGithub",
+    "state_ratio": 52927.01913798863,
+    "target_source": "RedPajamaArXiv"
+  },
+  {
+    "doc_idx": 260,
+    "n_tokens": 6444,
+    "ppl": 12.554720989861773,
+    "prime_source": "RedPajamaStackExchange",
+    "state_ratio": 22441.085769575024,
+    "target_source": "RedPajamaArXiv"
+  },
+  {
+    "doc_idx": 260,
+    "n_tokens": 6444,
+    "ppl": 12.564581727137627,
+    "prime_source": "RedPajamaWikipedia",
+    "state_ratio": 50973.973514004094,
+    "target_source": "RedPajamaArXiv"
+  },
+  {
+    "doc_idx": 239,
+    "n_tokens": 8206,
+    "ppl": 7.655039208178537,
+    "prime_source": "",
+    "state_ratio": 26015.01525389932,
+    "target_source": "RedPajamaArXiv"
+  },
+  {
+    "doc_idx": 239,
+    "n_tokens": 8206,
+    "ppl": 7.660315575076654,
+    "prime_source": "RedPajamaArXiv",
+    "state_ratio": 120497.98197197194,
+    "target_source": "RedPajamaArXiv"
+  },
+  {
+    "doc_idx": 239,
+    "n_tokens": 8206,
+    "ppl": 7.656223792041237,
+    "prime_source": "RedPajamaBook",
+    "state_ratio": 90067.75118843229,
+    "target_source": "RedPajamaArXiv"
+  },
+  {
+    "doc_idx": 239,
+    "n_tokens": 8206,
+    "ppl": 7.657567394017157,
+    "prime_source": "RedPajamaC4",
+    "state_ratio": 30229.81835214714,
+    "target_source": "RedPajamaArXiv"
+  },
+  {
+    "doc_idx": 239,
+    "n_tokens": 8206,
+    "ppl": 7.660410546466222,
+    "prime_source": "RedPajamaGithub",
+    "state_ratio": 56693.028350881206,
+    "target_source": "RedPajamaArXiv"
+  },
+  {
+    "doc_idx": 239,
+    "n_tokens": 8206,
+    "ppl": 7.65762033968398,
+    "prime_source": "RedPajamaStackExchange",
+    "state_ratio": 31135.854072818787,
+    "target_source": "RedPajamaArXiv"
+  },
+  {
+    "doc_idx": 239,
+    "n_tokens": 8206,
+    "ppl": 7.660163988567456,
+    "prime_source": "RedPajamaWikipedia",
+    "state_ratio": 52804.6108947429,
+    "target_source": "RedPajamaArXiv"
+  },
+  {
+    "doc_idx": 33,
+    "n_tokens": 16384,
+    "ppl": 2.9950088699402606,
+    "prime_source": "",
+    "state_ratio": 66721.57884967989,
+    "target_source": "RedPajamaArXiv"
+  },
+  {
+    "doc_idx": 33,
+    "n_tokens": 16384,
+    "ppl": 2.995698022672856,
+    "prime_source": "RedPajamaArXiv",
+    "state_ratio": 150215.9870377648,
+    "target_source": "RedPajamaArXiv"
+  },
+  {
+    "doc_idx": 33,
+    "n_tokens": 16384,
+    "ppl": 2.994538337570453,
+    "prime_source": "RedPajamaBook",
+    "state_ratio": 115923.79851664939,
+    "target_source": "RedPajamaArXiv"
+  },
+  {
+    "doc_idx": 33,
+    "n_tokens": 16384,
+    "ppl": 2.995046715664609,
+    "prime_source": "RedPajamaC4",
+    "state_ratio": 68521.29309880965,
+    "target_source": "RedPajamaArXiv"
+  },
+  {
+    "doc_idx": 33,
+    "n_tokens": 16384,
+    "ppl": 2.9951716813584794,
+    "prime_source": "RedPajamaGithub",
+    "state_ratio": 90368.28225266354,
+    "target_source": "RedPajamaArXiv"
+  },
+  {
+    "doc_idx": 33,
+    "n_tokens": 16384,
+    "ppl": 2.9953398577075325,
+    "prime_source": "RedPajamaStackExchange",
+    "state_ratio": 70202.32077474907,
+    "target_source": "RedPajamaArXiv"
+  },
+  {
+    "doc_idx": 33,
+    "n_tokens": 16384,
+    "ppl": 2.9951524005969734,
+    "prime_source": "RedPajamaWikipedia",
+    "state_ratio": 81242.91560919637,
+    "target_source": "RedPajamaArXiv"
+  },
+  {
+    "doc_idx": 13,
+    "n_tokens": 16384,
+    "ppl": 25.412324186885503,
+    "prime_source": "",
+    "state_ratio": 49840.4299886326,
+    "target_source": "RedPajamaBook"
+  },
+  {
+    "doc_idx": 13,
+    "n_tokens": 16384,
+    "ppl": 25.416026365141104,
+    "prime_source": "RedPajamaArXiv",
+    "state_ratio": 115544.1215445352,
+    "target_source": "RedPajamaBook"
+  },
+  {
+    "doc_idx": 13,
+    "n_tokens": 16384,
+    "ppl": 25.415911231996922,
+    "prime_source": "RedPajamaBook",
+    "state_ratio": 109480.27367022344,
+    "target_source": "RedPajamaBook"
+  },
+  {
+    "doc_idx": 13,
+    "n_tokens": 16384,
+    "ppl": 25.425462996108536,
+    "prime_source": "RedPajamaC4",
+    "state_ratio": 54936.432899410174,
+    "target_source": "RedPajamaBook"
+  },
+  {
+    "doc_idx": 13,
+    "n_tokens": 16384,
+    "ppl": 25.41041574592947,
+    "prime_source": "RedPajamaGithub",
+    "state_ratio": 69283.01165588354,
+    "target_source": "RedPajamaBook"
+  },
+  {
+    "doc_idx": 13,
+    "n_tokens": 16384,
+    "ppl": 25.405121330068848,
+    "prime_source": "RedPajamaStackExchange",
+    "state_ratio": 51580.25647403461,
+    "target_source": "RedPajamaBook"
+  },
+  {
+    "doc_idx": 13,
+    "n_tokens": 16384,
+    "ppl": 25.397853906216444,
+    "prime_source": "RedPajamaWikipedia",
+    "state_ratio": 79285.77376690235,
+    "target_source": "RedPajamaBook"
+  },
+  {
+    "doc_idx": 464,
+    "n_tokens": 16384,
+    "ppl": 23.819102402603146,
+    "prime_source": "",
+    "state_ratio": 55050.730237308286,
+    "target_source": "RedPajamaBook"
+  },
+  {
+    "doc_idx": 464,
+    "n_tokens": 16384,
+    "ppl": 23.818926356840663,
+    "prime_source": "RedPajamaArXiv",
+    "state_ratio": 123202.91407069805,
+    "target_source": "RedPajamaBook"
+  },
+  {
+    "doc_idx": 464,
+    "n_tokens": 16384,
+    "ppl": 23.814747071844444,
+    "prime_source": "RedPajamaBook",
+    "state_ratio": 110507.02126876722,
+    "target_source": "RedPajamaBook"
+  },
+  {
+    "doc_idx": 464,
+    "n_tokens": 16384,
+    "ppl": 23.809768093252572,
+    "prime_source": "RedPajamaC4",
+    "state_ratio": 58957.39849413004,
+    "target_source": "RedPajamaBook"
+  },
+  {
+    "doc_idx": 464,
+    "n_tokens": 16384,
+    "ppl": 23.818233544218174,
+    "prime_source": "RedPajamaGithub",
+    "state_ratio": 72093.40137244828,
+    "target_source": "RedPajamaBook"
+  },
+  {
+    "doc_idx": 464,
+    "n_tokens": 16384,
+    "ppl": 23.81541707089178,
+    "prime_source": "RedPajamaStackExchange",
+    "state_ratio": 56242.02941245007,
+    "target_source": "RedPajamaBook"
+  },
+  {
+    "doc_idx": 464,
+    "n_tokens": 16384,
+    "ppl": 23.816762803893884,
+    "prime_source": "RedPajamaWikipedia",
+    "state_ratio": 83160.18246232157,
+    "target_source": "RedPajamaBook"
+  },
+  {
+    "doc_idx": 263,
+    "n_tokens": 16384,
+    "ppl": 25.689627538202195,
+    "prime_source": "",
+    "state_ratio": 55331.288962363964,
+    "target_source": "RedPajamaBook"
+  },
+  {
+    "doc_idx": 263,
+    "n_tokens": 16384,
+    "ppl": 25.691734584873164,
+    "prime_source": "RedPajamaArXiv",
+    "state_ratio": 111775.20331570107,
+    "target_source": "RedPajamaBook"
+  },
+  {
+    "doc_idx": 263,
+    "n_tokens": 16384,
+    "ppl": 25.67510341947065,
+    "prime_source": "RedPajamaBook",
+    "state_ratio": 109551.26599817716,
+    "target_source": "RedPajamaBook"
+  },
+  {
+    "doc_idx": 263,
+    "n_tokens": 16384,
+    "ppl": 25.688163732513534,
+    "prime_source": "RedPajamaC4",
+    "state_ratio": 60111.541418368295,
+    "target_source": "RedPajamaBook"
+  },
+  {
+    "doc_idx": 263,
+    "n_tokens": 16384,
+    "ppl": 25.693235348483775,
+    "prime_source": "RedPajamaGithub",
+    "state_ratio": 81740.95139250754,
+    "target_source": "RedPajamaBook"
+  },
+  {
+    "doc_idx": 263,
+    "n_tokens": 16384,
+    "ppl": 25.693866307931437,
+    "prime_source": "RedPajamaStackExchange",
+    "state_ratio": 58803.6803623245,
+    "target_source": "RedPajamaBook"
+  },
+  {
+    "doc_idx": 263,
+    "n_tokens": 16384,
+    "ppl": 25.690895420579142,
+    "prime_source": "RedPajamaWikipedia",
+    "state_ratio": 84782.645376123,
+    "target_source": "RedPajamaBook"
+  },
+  {
+    "doc_idx": 94,
+    "n_tokens": 16384,
+    "ppl": 23.08366783029499,
+    "prime_source": "",
+    "state_ratio": 52208.32133527275,
+    "target_source": "RedPajamaBook"
+  },
+  {
+    "doc_idx": 94,
+    "n_tokens": 16384,
+    "ppl": 23.09163838306523,
+    "prime_source": "RedPajamaArXiv",
+    "state_ratio": 116179.16462671843,
+    "target_source": "RedPajamaBook"
+  },
+  {
+    "doc_idx": 94,
+    "n_tokens": 16384,
+    "ppl": 23.091935680662093,
+    "prime_source": "RedPajamaBook",
+    "state_ratio": 127558.64865702458,
+    "target_source": "RedPajamaBook"
+  },
+  {
+    "doc_idx": 94,
+    "n_tokens": 16384,
+    "ppl": 23.080872183353534,
+    "prime_source": "RedPajamaC4",
+    "state_ratio": 55276.204367358754,
+    "target_source": "RedPajamaBook"
+  },
+  {
+    "doc_idx": 94,
+    "n_tokens": 16384,
+    "ppl": 23.08387146347869,
+    "prime_source": "RedPajamaGithub",
+    "state_ratio": 72732.25620138155,
+    "target_source": "RedPajamaBook"
+  },
+  {
+    "doc_idx": 94,
+    "n_tokens": 16384,
+    "ppl": 23.093317614181164,
+    "prime_source": "RedPajamaStackExchange",
+    "state_ratio": 53340.62948585348,
+    "target_source": "RedPajamaBook"
+  },
+  {
+    "doc_idx": 94,
+    "n_tokens": 16384,
+    "ppl": 23.083337618139783,
+    "prime_source": "RedPajamaWikipedia",
+    "state_ratio": 83584.90893489608,
+    "target_source": "RedPajamaBook"
+  },
+  {
+    "doc_idx": 125,
+    "n_tokens": 16384,
+    "ppl": 11.707139615522292,
+    "prime_source": "",
+    "state_ratio": 43018.601425181274,
+    "target_source": "RedPajamaBook"
+  },
+  {
+    "doc_idx": 125,
+    "n_tokens": 16384,
+    "ppl": 11.708635794101918,
+    "prime_source": "RedPajamaArXiv",
+    "state_ratio": 111932.03461388891,
+    "target_source": "RedPajamaBook"
+  },
+  {
+    "doc_idx": 125,
+    "n_tokens": 16384,
+    "ppl": 11.70879770548733,
+    "prime_source": "RedPajamaBook",
+    "state_ratio": 109910.27539754061,
+    "target_source": "RedPajamaBook"
+  },
+  {
+    "doc_idx": 125,
+    "n_tokens": 16384,
+    "ppl": 11.705855734114312,
+    "prime_source": "RedPajamaC4",
+    "state_ratio": 46068.9163087692,
+    "target_source": "RedPajamaBook"
+  },
+  {
+    "doc_idx": 125,
+    "n_tokens": 16384,
+    "ppl": 11.705333848665468,
+    "prime_source": "RedPajamaGithub",
+    "state_ratio": 70062.16767777917,
+    "target_source": "RedPajamaBook"
+  },
+  {
+    "doc_idx": 125,
+    "n_tokens": 16384,
+    "ppl": 11.70432084333158,
+    "prime_source": "RedPajamaStackExchange",
+    "state_ratio": 45695.20056932072,
+    "target_source": "RedPajamaBook"
+  },
+  {
+    "doc_idx": 125,
+    "n_tokens": 16384,
+    "ppl": 11.704884543469579,
+    "prime_source": "RedPajamaWikipedia",
+    "state_ratio": 73481.3341571121,
+    "target_source": "RedPajamaBook"
+  },
+  {
+    "doc_idx": 483,
+    "n_tokens": 3075,
+    "ppl": 45.02155180030346,
+    "prime_source": "",
+    "state_ratio": 9925.076019217739,
+    "target_source": "RedPajamaC4"
+  },
+  {
+    "doc_idx": 483,
+    "n_tokens": 3075,
+    "ppl": 45.02072529186059,
+    "prime_source": "RedPajamaArXiv",
+    "state_ratio": 103645.54436947712,
+    "target_source": "RedPajamaC4"
+  },
+  {
+    "doc_idx": 483,
+    "n_tokens": 3075,
+    "ppl": 45.00050739640844,
+    "prime_source": "RedPajamaBook",
+    "state_ratio": 87890.28059147477,
+    "target_source": "RedPajamaC4"
+  },
+  {
+    "doc_idx": 483,
+    "n_tokens": 3075,
+    "ppl": 45.004337797079764,
+    "prime_source": "RedPajamaC4",
+    "state_ratio": 16006.654884069812,
+    "target_source": "RedPajamaC4"
+  },
+  {
+    "doc_idx": 483,
+    "n_tokens": 3075,
+    "ppl": 45.026575580598184,
+    "prime_source": "RedPajamaGithub",
+    "state_ratio": 47811.41866182145,
+    "target_source": "RedPajamaC4"
+  },
+  {
+    "doc_idx": 483,
+    "n_tokens": 3075,
+    "ppl": 44.97386455728655,
+    "prime_source": "RedPajamaStackExchange",
+    "state_ratio": 16573.097594799994,
+    "target_source": "RedPajamaC4"
+  },
+  {
+    "doc_idx": 483,
+    "n_tokens": 3075,
+    "ppl": 44.9864224805364,
+    "prime_source": "RedPajamaWikipedia",
+    "state_ratio": 48953.47062106348,
+    "target_source": "RedPajamaC4"
+  },
+  {
+    "doc_idx": 403,
+    "n_tokens": 2391,
+    "ppl": 35.18394217626353,
+    "prime_source": "",
+    "state_ratio": 7747.1417640566215,
+    "target_source": "RedPajamaC4"
+  },
+  {
+    "doc_idx": 403,
+    "n_tokens": 2391,
+    "ppl": 35.14861914579927,
+    "prime_source": "RedPajamaArXiv",
+    "state_ratio": 100397.46127049884,
+    "target_source": "RedPajamaC4"
+  },
+  {
+    "doc_idx": 403,
+    "n_tokens": 2391,
+    "ppl": 35.216026052385175,
+    "prime_source": "RedPajamaBook",
+    "state_ratio": 83869.50539061891,
+    "target_source": "RedPajamaC4"
+  },
+  {
+    "doc_idx": 403,
+    "n_tokens": 2391,
+    "ppl": 35.172007357611086,
+    "prime_source": "RedPajamaC4",
+    "state_ratio": 15447.55083129844,
+    "target_source": "RedPajamaC4"
+  },
+  {
+    "doc_idx": 403,
+    "n_tokens": 2391,
+    "ppl": 35.20870536633381,
+    "prime_source": "RedPajamaGithub",
+    "state_ratio": 48754.1729328963,
+    "target_source": "RedPajamaC4"
+  },
+  {
+    "doc_idx": 403,
+    "n_tokens": 2391,
+    "ppl": 35.19254144509965,
+    "prime_source": "RedPajamaStackExchange",
+    "state_ratio": 15589.503880773857,
+    "target_source": "RedPajamaC4"
+  },
+  {
+    "doc_idx": 403,
+    "n_tokens": 2391,
+    "ppl": 35.17491730200746,
+    "prime_source": "RedPajamaWikipedia",
+    "state_ratio": 48003.83807356115,
+    "target_source": "RedPajamaC4"
+  },
+  {
+    "doc_idx": 339,
+    "n_tokens": 1645,
+    "ppl": 36.221747237049975,
+    "prime_source": "",
+    "state_ratio": 5096.401711681443,
+    "target_source": "RedPajamaC4"
+  },
+  {
+    "doc_idx": 339,
+    "n_tokens": 1645,
+    "ppl": 36.23294114137729,
+    "prime_source": "RedPajamaArXiv",
+    "state_ratio": 101954.22817400636,
+    "target_source": "RedPajamaC4"
+  },
+  {
+    "doc_idx": 339,
+    "n_tokens": 1645,
+    "ppl": 36.179335089783315,
+    "prime_source": "RedPajamaBook",
+    "state_ratio": 85788.06005420432,
+    "target_source": "RedPajamaC4"
+  },
+  {
+    "doc_idx": 339,
+    "n_tokens": 1645,
+    "ppl": 36.14853675677967,
+    "prime_source": "RedPajamaC4",
+    "state_ratio": 15250.95655586524,
+    "target_source": "RedPajamaC4"
+  },
+  {
+    "doc_idx": 339,
+    "n_tokens": 1645,
+    "ppl": 36.22779289778137,
+    "prime_source": "RedPajamaGithub",
+    "state_ratio": 46753.24911544022,
+    "target_source": "RedPajamaC4"
+  },
+  {
+    "doc_idx": 339,
+    "n_tokens": 1645,
+    "ppl": 36.144357034297755,
+    "prime_source": "RedPajamaStackExchange",
+    "state_ratio": 12904.325603203473,
+    "target_source": "RedPajamaC4"
+  },
+  {
+    "doc_idx": 339,
+    "n_tokens": 1645,
+    "ppl": 36.214346994656886,
+    "prime_source": "RedPajamaWikipedia",
+    "state_ratio": 46136.73400683947,
+    "target_source": "RedPajamaC4"
+  },
+  {
+    "doc_idx": 24,
+    "n_tokens": 3522,
+    "ppl": 38.61220839935222,
+    "prime_source": "",
+    "state_ratio": 15627.48468779706,
+    "target_source": "RedPajamaC4"
+  },
+  {
+    "doc_idx": 24,
+    "n_tokens": 3522,
+    "ppl": 38.58127067252744,
+    "prime_source": "RedPajamaArXiv",
+    "state_ratio": 99037.50018168999,
+    "target_source": "RedPajamaC4"
+  },
+  {
+    "doc_idx": 24,
+    "n_tokens": 3522,
+    "ppl": 38.59098550269837,
+    "prime_source": "RedPajamaBook",
+    "state_ratio": 82807.44584487395,
+    "target_source": "RedPajamaC4"
+  },
+  {
+    "doc_idx": 24,
+    "n_tokens": 3522,
+    "ppl": 38.563494084607704,
+    "prime_source": "RedPajamaC4",
+    "state_ratio": 24008.669029340937,
+    "target_source": "RedPajamaC4"
+  },
+  {
+    "doc_idx": 24,
+    "n_tokens": 3522,
+    "ppl": 38.60077640414811,
+    "prime_source": "RedPajamaGithub",
+    "state_ratio": 53299.2575604958,
+    "target_source": "RedPajamaC4"
+  },
+  {
+    "doc_idx": 24,
+    "n_tokens": 3522,
+    "ppl": 38.59574261357846,
+    "prime_source": "RedPajamaStackExchange",
+    "state_ratio": 21861.786822934402,
+    "target_source": "RedPajamaC4"
+  },
+  {
+    "doc_idx": 24,
+    "n_tokens": 3522,
+    "ppl": 38.58422350136599,
+    "prime_source": "RedPajamaWikipedia",
+    "state_ratio": 52494.10668928682,
+    "target_source": "RedPajamaC4"
+  },
+  {
+    "doc_idx": 77,
+    "n_tokens": 5023,
+    "ppl": 11.258750826963244,
+    "prime_source": "",
+    "state_ratio": 14581.84051730992,
+    "target_source": "RedPajamaC4"
+  },
+  {
+    "doc_idx": 77,
+    "n_tokens": 5023,
+    "ppl": 11.265938979343776,
+    "prime_source": "RedPajamaArXiv",
+    "state_ratio": 100829.87337634426,
+    "target_source": "RedPajamaC4"
+  },
+  {
+    "doc_idx": 77,
+    "n_tokens": 5023,
+    "ppl": 11.272199119335948,
+    "prime_source": "RedPajamaBook",
+    "state_ratio": 83985.42668799275,
+    "target_source": "RedPajamaC4"
+  },
+  {
+    "doc_idx": 77,
+    "n_tokens": 5023,
+    "ppl": 11.261059557668377,
+    "prime_source": "RedPajamaC4",
+    "state_ratio": 22860.09460939874,
+    "target_source": "RedPajamaC4"
+  },
+  {
+    "doc_idx": 77,
+    "n_tokens": 5023,
+    "ppl": 11.264424172024347,
+    "prime_source": "RedPajamaGithub",
+    "state_ratio": 52198.435567419925,
+    "target_source": "RedPajamaC4"
+  },
+  {
+    "doc_idx": 77,
+    "n_tokens": 5023,
+    "ppl": 11.261695884105169,
+    "prime_source": "RedPajamaStackExchange",
+    "state_ratio": 20914.236581273366,
+    "target_source": "RedPajamaC4"
+  },
+  {
+    "doc_idx": 77,
+    "n_tokens": 5023,
+    "ppl": 11.264512798757176,
+    "prime_source": "RedPajamaWikipedia",
+    "state_ratio": 50162.99902548448,
+    "target_source": "RedPajamaC4"
+  },
+  {
+    "doc_idx": 141,
+    "n_tokens": 16384,
+    "ppl": 1.3950449416260884,
+    "prime_source": "",
+    "state_ratio": 50939.71793841345,
+    "target_source": "RedPajamaGithub"
+  },
+  {
+    "doc_idx": 141,
+    "n_tokens": 16384,
+    "ppl": 1.3951162455664292,
+    "prime_source": "RedPajamaArXiv",
+    "state_ratio": 120031.82804066096,
+    "target_source": "RedPajamaGithub"
+  },
+  {
+    "doc_idx": 141,
+    "n_tokens": 16384,
+    "ppl": 1.3951028991872465,
+    "prime_source": "RedPajamaBook",
+    "state_ratio": 97564.16336960522,
+    "target_source": "RedPajamaGithub"
+  },
+  {
+    "doc_idx": 141,
+    "n_tokens": 16384,
+    "ppl": 1.3952167424967488,
+    "prime_source": "RedPajamaC4",
+    "state_ratio": 53356.326133638504,
+    "target_source": "RedPajamaGithub"
+  },
+  {
+    "doc_idx": 141,
+    "n_tokens": 16384,
+    "ppl": 1.3954144311445151,
+    "prime_source": "RedPajamaGithub",
+    "state_ratio": 66892.8304065907,
+    "target_source": "RedPajamaGithub"
+  },
+  {
+    "doc_idx": 141,
+    "n_tokens": 16384,
+    "ppl": 1.3952011082414606,
+    "prime_source": "RedPajamaStackExchange",
+    "state_ratio": 55851.094710486745,
+    "target_source": "RedPajamaGithub"
+  },
+  {
+    "doc_idx": 141,
+    "n_tokens": 16384,
+    "ppl": 1.395129093136158,
+    "prime_source": "RedPajamaWikipedia",
+    "state_ratio": 71669.1791019163,
+    "target_source": "RedPajamaGithub"
+  },
+  {
+    "doc_idx": 124,
+    "n_tokens": 3541,
+    "ppl": 4.997003531009691,
+    "prime_source": "",
+    "state_ratio": 11134.57825657101,
+    "target_source": "RedPajamaGithub"
+  },
+  {
+    "doc_idx": 124,
+    "n_tokens": 3541,
+    "ppl": 4.994430815999933,
+    "prime_source": "RedPajamaArXiv",
+    "state_ratio": 103110.14715856021,
+    "target_source": "RedPajamaGithub"
+  },
+  {
+    "doc_idx": 124,
+    "n_tokens": 3541,
+    "ppl": 4.9952269059081695,
+    "prime_source": "RedPajamaBook",
+    "state_ratio": 85052.38208911868,
+    "target_source": "RedPajamaGithub"
+  },
+  {
+    "doc_idx": 124,
+    "n_tokens": 3541,
+    "ppl": 4.9977773912492,
+    "prime_source": "RedPajamaC4",
+    "state_ratio": 17790.140381585665,
+    "target_source": "RedPajamaGithub"
+  },
+  {
+    "doc_idx": 124,
+    "n_tokens": 3541,
+    "ppl": 4.993753911916547,
+    "prime_source": "RedPajamaGithub",
+    "state_ratio": 58808.818212503465,
+    "target_source": "RedPajamaGithub"
+  },
+  {
+    "doc_idx": 124,
+    "n_tokens": 3541,
+    "ppl": 4.994368301223506,
+    "prime_source": "RedPajamaStackExchange",
+    "state_ratio": 18034.05317435177,
+    "target_source": "RedPajamaGithub"
+  },
+  {
+    "doc_idx": 124,
+    "n_tokens": 3541,
+    "ppl": 4.994011684272949,
+    "prime_source": "RedPajamaWikipedia",
+    "state_ratio": 48300.824435899136,
+    "target_source": "RedPajamaGithub"
+  },
+  {
+    "doc_idx": 471,
+    "n_tokens": 6716,
+    "ppl": 3.642159120056737,
+    "prime_source": "",
+    "state_ratio": 17195.616380127987,
+    "target_source": "RedPajamaGithub"
+  },
+  {
+    "doc_idx": 471,
+    "n_tokens": 6716,
+    "ppl": 3.6433064021654373,
+    "prime_source": "RedPajamaArXiv",
+    "state_ratio": 103978.8503893962,
+    "target_source": "RedPajamaGithub"
+  },
+  {
+    "doc_idx": 471,
+    "n_tokens": 6716,
+    "ppl": 3.6441503758292644,
+    "prime_source": "RedPajamaBook",
+    "state_ratio": 85675.10308087963,
+    "target_source": "RedPajamaGithub"
+  },
+  {
+    "doc_idx": 471,
+    "n_tokens": 6716,
+    "ppl": 3.643927526939261,
+    "prime_source": "RedPajamaC4",
+    "state_ratio": 22835.25784406992,
+    "target_source": "RedPajamaGithub"
+  },
+  {
+    "doc_idx": 471,
+    "n_tokens": 6716,
+    "ppl": 3.6438762692783984,
+    "prime_source": "RedPajamaGithub",
+    "state_ratio": 59502.98643666031,
+    "target_source": "RedPajamaGithub"
+  },
+  {
+    "doc_idx": 471,
+    "n_tokens": 6716,
+    "ppl": 3.6430809991510116,
+    "prime_source": "RedPajamaStackExchange",
+    "state_ratio": 24560.183648348862,
+    "target_source": "RedPajamaGithub"
+  },
+  {
+    "doc_idx": 471,
+    "n_tokens": 6716,
+    "ppl": 3.6417627360173332,
+    "prime_source": "RedPajamaWikipedia",
+    "state_ratio": 52043.92343244916,
+    "target_source": "RedPajamaGithub"
+  },
+  {
+    "doc_idx": 15,
+    "n_tokens": 3189,
+    "ppl": 7.4177196066696,
+    "prime_source": "",
+    "state_ratio": 11865.169731935554,
+    "target_source": "RedPajamaGithub"
+  },
+  {
+    "doc_idx": 15,
+    "n_tokens": 3189,
+    "ppl": 7.421871489722718,
+    "prime_source": "RedPajamaArXiv",
+    "state_ratio": 101977.84374124142,
+    "target_source": "RedPajamaGithub"
+  },
+  {
+    "doc_idx": 15,
+    "n_tokens": 3189,
+    "ppl": 7.43463887101229,
+    "prime_source": "RedPajamaBook",
+    "state_ratio": 83249.000210313,
+    "target_source": "RedPajamaGithub"
+  },
+  {
+    "doc_idx": 15,
+    "n_tokens": 3189,
+    "ppl": 7.432666277879601,
+    "prime_source": "RedPajamaC4",
+    "state_ratio": 18185.149700575992,
+    "target_source": "RedPajamaGithub"
+  },
+  {
+    "doc_idx": 15,
+    "n_tokens": 3189,
+    "ppl": 7.419428195831695,
+    "prime_source": "RedPajamaGithub",
+    "state_ratio": 52152.907882984844,
+    "target_source": "RedPajamaGithub"
+  },
+  {
+    "doc_idx": 15,
+    "n_tokens": 3189,
+    "ppl": 7.4241916826153265,
+    "prime_source": "RedPajamaStackExchange",
+    "state_ratio": 19525.861773232442,
+    "target_source": "RedPajamaGithub"
+  },
+  {
+    "doc_idx": 15,
+    "n_tokens": 3189,
+    "ppl": 7.426528536420789,
+    "prime_source": "RedPajamaWikipedia",
+    "state_ratio": 49237.90611446038,
+    "target_source": "RedPajamaGithub"
+  },
+  {
+    "doc_idx": 214,
+    "n_tokens": 2883,
+    "ppl": 2.327688310624198,
+    "prime_source": "",
+    "state_ratio": 7123.4552033564205,
+    "target_source": "RedPajamaGithub"
+  },
+  {
+    "doc_idx": 214,
+    "n_tokens": 2883,
+    "ppl": 2.3273381545918728,
+    "prime_source": "RedPajamaArXiv",
+    "state_ratio": 102342.4707837255,
+    "target_source": "RedPajamaGithub"
+  },
+  {
+    "doc_idx": 214,
+    "n_tokens": 2883,
+    "ppl": 2.3261078932979533,
+    "prime_source": "RedPajamaBook",
+    "state_ratio": 84007.2998371411,
+    "target_source": "RedPajamaGithub"
+  },
+  {
+    "doc_idx": 214,
+    "n_tokens": 2883,
+    "ppl": 2.326432210851175,
+    "prime_source": "RedPajamaC4",
+    "state_ratio": 14687.872265150816,
+    "target_source": "RedPajamaGithub"
+  },
+  {
+    "doc_idx": 214,
+    "n_tokens": 2883,
+    "ppl": 2.3261646005445513,
+    "prime_source": "RedPajamaGithub",
+    "state_ratio": 50721.176145499645,
+    "target_source": "RedPajamaGithub"
+  },
+  {
+    "doc_idx": 214,
+    "n_tokens": 2883,
+    "ppl": 2.3248509835082674,
+    "prime_source": "RedPajamaStackExchange",
+    "state_ratio": 16111.066931904115,
+    "target_source": "RedPajamaGithub"
+  },
+  {
+    "doc_idx": 214,
+    "n_tokens": 2883,
+    "ppl": 2.325825764100201,
+    "prime_source": "RedPajamaWikipedia",
+    "state_ratio": 46538.748151828055,
+    "target_source": "RedPajamaGithub"
+  },
+  {
+    "doc_idx": 368,
+    "n_tokens": 3614,
+    "ppl": 10.595099859415969,
+    "prime_source": "",
+    "state_ratio": 11102.58575076894,
+    "target_source": "RedPajamaStackExchange"
+  },
+  {
+    "doc_idx": 368,
+    "n_tokens": 3614,
+    "ppl": 10.578826804538929,
+    "prime_source": "RedPajamaArXiv",
+    "state_ratio": 103235.58608114238,
+    "target_source": "RedPajamaStackExchange"
+  },
+  {
+    "doc_idx": 368,
+    "n_tokens": 3614,
+    "ppl": 10.583138103568231,
+    "prime_source": "RedPajamaBook",
+    "state_ratio": 83719.57966050696,
+    "target_source": "RedPajamaStackExchange"
+  },
+  {
+    "doc_idx": 368,
+    "n_tokens": 3614,
+    "ppl": 10.582958956695323,
+    "prime_source": "RedPajamaC4",
+    "state_ratio": 17753.109465644495,
+    "target_source": "RedPajamaStackExchange"
+  },
+  {
+    "doc_idx": 368,
+    "n_tokens": 3614,
+    "ppl": 10.581341725718381,
+    "prime_source": "RedPajamaGithub",
+    "state_ratio": 51023.45932795764,
+    "target_source": "RedPajamaStackExchange"
+  },
+  {
+    "doc_idx": 368,
+    "n_tokens": 3614,
+    "ppl": 10.574265148689685,
+    "prime_source": "RedPajamaStackExchange",
+    "state_ratio": 15711.074479934812,
+    "target_source": "RedPajamaStackExchange"
+  },
+  {
+    "doc_idx": 368,
+    "n_tokens": 3614,
+    "ppl": 10.589276346110852,
+    "prime_source": "RedPajamaWikipedia",
+    "state_ratio": 47331.92509221349,
+    "target_source": "RedPajamaStackExchange"
+  },
+  {
+    "doc_idx": 283,
+    "n_tokens": 1901,
+    "ppl": 14.946662623308013,
+    "prime_source": "",
+    "state_ratio": 5081.99831461728,
+    "target_source": "RedPajamaStackExchange"
+  },
+  {
+    "doc_idx": 283,
+    "n_tokens": 1901,
+    "ppl": 14.968673118837565,
+    "prime_source": "RedPajamaArXiv",
+    "state_ratio": 101816.03093003182,
+    "target_source": "RedPajamaStackExchange"
+  },
+  {
+    "doc_idx": 283,
+    "n_tokens": 1901,
+    "ppl": 14.954358334303455,
+    "prime_source": "RedPajamaBook",
+    "state_ratio": 84135.2541769521,
+    "target_source": "RedPajamaStackExchange"
+  },
+  {
+    "doc_idx": 283,
+    "n_tokens": 1901,
+    "ppl": 14.952950068854586,
+    "prime_source": "RedPajamaC4",
+    "state_ratio": 15008.799318133559,
+    "target_source": "RedPajamaStackExchange"
+  },
+  {
+    "doc_idx": 283,
+    "n_tokens": 1901,
+    "ppl": 14.951306665999084,
+    "prime_source": "RedPajamaGithub",
+    "state_ratio": 48601.41481587943,
+    "target_source": "RedPajamaStackExchange"
+  },
+  {
+    "doc_idx": 283,
+    "n_tokens": 1901,
+    "ppl": 14.968102120164405,
+    "prime_source": "RedPajamaStackExchange",
+    "state_ratio": 14524.32567100076,
+    "target_source": "RedPajamaStackExchange"
+  },
+  {
+    "doc_idx": 283,
+    "n_tokens": 1901,
+    "ppl": 14.966635467158502,
+    "prime_source": "RedPajamaWikipedia",
+    "state_ratio": 46241.40646165643,
+    "target_source": "RedPajamaStackExchange"
+  },
+  {
+    "doc_idx": 127,
+    "n_tokens": 1923,
+    "ppl": 3.9766054470936236,
+    "prime_source": "",
+    "state_ratio": 5133.16459875271,
+    "target_source": "RedPajamaStackExchange"
+  },
+  {
+    "doc_idx": 127,
+    "n_tokens": 1923,
+    "ppl": 3.9826555829663612,
+    "prime_source": "RedPajamaArXiv",
+    "state_ratio": 102053.91491356376,
+    "target_source": "RedPajamaStackExchange"
+  },
+  {
+    "doc_idx": 127,
+    "n_tokens": 1923,
+    "ppl": 3.9759958676931566,
+    "prime_source": "RedPajamaBook",
+    "state_ratio": 84101.83183261592,
+    "target_source": "RedPajamaStackExchange"
+  },
+  {
+    "doc_idx": 127,
+    "n_tokens": 1923,
+    "ppl": 3.976861915499447,
+    "prime_source": "RedPajamaC4",
+    "state_ratio": 13764.45455413818,
+    "target_source": "RedPajamaStackExchange"
+  },
+  {
+    "doc_idx": 127,
+    "n_tokens": 1923,
+    "ppl": 3.9766400527708403,
+    "prime_source": "RedPajamaGithub",
+    "state_ratio": 48903.54446566132,
+    "target_source": "RedPajamaStackExchange"
+  },
+  {
+    "doc_idx": 127,
+    "n_tokens": 1923,
+    "ppl": 3.975283072227353,
+    "prime_source": "RedPajamaStackExchange",
+    "state_ratio": 14533.657120726011,
+    "target_source": "RedPajamaStackExchange"
+  },
+  {
+    "doc_idx": 127,
+    "n_tokens": 1923,
+    "ppl": 3.9780012902415183,
+    "prime_source": "RedPajamaWikipedia",
+    "state_ratio": 45859.86171393528,
+    "target_source": "RedPajamaStackExchange"
+  },
+  {
+    "doc_idx": 326,
+    "n_tokens": 4008,
+    "ppl": 5.545469144909417,
+    "prime_source": "",
+    "state_ratio": 14625.359885889358,
+    "target_source": "RedPajamaStackExchange"
+  },
+  {
+    "doc_idx": 326,
+    "n_tokens": 4008,
+    "ppl": 5.5461646356703325,
+    "prime_source": "RedPajamaArXiv",
+    "state_ratio": 104282.41347701641,
+    "target_source": "RedPajamaStackExchange"
+  },
+  {
+    "doc_idx": 326,
+    "n_tokens": 4008,
+    "ppl": 5.5463986892473045,
+    "prime_source": "RedPajamaBook",
+    "state_ratio": 84874.38807079259,
+    "target_source": "RedPajamaStackExchange"
+  },
+  {
+    "doc_idx": 326,
+    "n_tokens": 4008,
+    "ppl": 5.545700524739289,
+    "prime_source": "RedPajamaC4",
+    "state_ratio": 20862.588466380956,
+    "target_source": "RedPajamaStackExchange"
+  },
+  {
+    "doc_idx": 326,
+    "n_tokens": 4008,
+    "ppl": 5.547584977045082,
+    "prime_source": "RedPajamaGithub",
+    "state_ratio": 55638.933353059525,
+    "target_source": "RedPajamaStackExchange"
+  },
+  {
+    "doc_idx": 326,
+    "n_tokens": 4008,
+    "ppl": 5.5479592988668776,
+    "prime_source": "RedPajamaStackExchange",
+    "state_ratio": 22836.96962959942,
+    "target_source": "RedPajamaStackExchange"
+  },
+  {
+    "doc_idx": 326,
+    "n_tokens": 4008,
+    "ppl": 5.546132900352522,
+    "prime_source": "RedPajamaWikipedia",
+    "state_ratio": 48823.90633263002,
+    "target_source": "RedPajamaStackExchange"
+  },
+  {
+    "doc_idx": 425,
+    "n_tokens": 2272,
+    "ppl": 12.946766816793586,
+    "prime_source": "",
+    "state_ratio": 6827.504075261787,
+    "target_source": "RedPajamaStackExchange"
+  },
+  {
+    "doc_idx": 425,
+    "n_tokens": 2272,
+    "ppl": 12.965297477327603,
+    "prime_source": "RedPajamaArXiv",
+    "state_ratio": 102481.54292125498,
+    "target_source": "RedPajamaStackExchange"
+  },
+  {
+    "doc_idx": 425,
+    "n_tokens": 2272,
+    "ppl": 12.952620617297656,
+    "prime_source": "RedPajamaBook",
+    "state_ratio": 83053.056224299,
+    "target_source": "RedPajamaStackExchange"
+  },
+  {
+    "doc_idx": 425,
+    "n_tokens": 2272,
+    "ppl": 12.959178409503396,
+    "prime_source": "RedPajamaC4",
+    "state_ratio": 15572.8670952577,
+    "target_source": "RedPajamaStackExchange"
+  },
+  {
+    "doc_idx": 425,
+    "n_tokens": 2272,
+    "ppl": 12.946874853485543,
+    "prime_source": "RedPajamaGithub",
+    "state_ratio": 50101.87677508746,
+    "target_source": "RedPajamaStackExchange"
+  },
+  {
+    "doc_idx": 425,
+    "n_tokens": 2272,
+    "ppl": 12.950221350559781,
+    "prime_source": "RedPajamaStackExchange",
+    "state_ratio": 15615.525396261413,
+    "target_source": "RedPajamaStackExchange"
+  },
+  {
+    "doc_idx": 425,
+    "n_tokens": 2272,
+    "ppl": 12.953525475505609,
+    "prime_source": "RedPajamaWikipedia",
+    "state_ratio": 46625.85800401256,
+    "target_source": "RedPajamaStackExchange"
+  },
+  {
+    "doc_idx": 329,
+    "n_tokens": 12561,
+    "ppl": 15.552704742438092,
+    "prime_source": "",
+    "state_ratio": 41430.63251066579,
+    "target_source": "RedPajamaWikipedia"
+  },
+  {
+    "doc_idx": 329,
+    "n_tokens": 12561,
+    "ppl": 15.552482260803455,
+    "prime_source": "RedPajamaArXiv",
+    "state_ratio": 107340.43704425203,
+    "target_source": "RedPajamaWikipedia"
+  },
+  {
+    "doc_idx": 329,
+    "n_tokens": 12561,
+    "ppl": 15.558579408832074,
+    "prime_source": "RedPajamaBook",
+    "state_ratio": 107159.33075785427,
+    "target_source": "RedPajamaWikipedia"
+  },
+  {
+    "doc_idx": 329,
+    "n_tokens": 12561,
+    "ppl": 15.554113866700828,
+    "prime_source": "RedPajamaC4",
+    "state_ratio": 47557.78047847939,
+    "target_source": "RedPajamaWikipedia"
+  },
+  {
+    "doc_idx": 329,
+    "n_tokens": 12561,
+    "ppl": 15.551655398623648,
+    "prime_source": "RedPajamaGithub",
+    "state_ratio": 67249.7364723505,
+    "target_source": "RedPajamaWikipedia"
+  },
+  {
+    "doc_idx": 329,
+    "n_tokens": 12561,
+    "ppl": 15.56109462219609,
+    "prime_source": "RedPajamaStackExchange",
+    "state_ratio": 44311.35557277648,
+    "target_source": "RedPajamaWikipedia"
+  },
+  {
+    "doc_idx": 329,
+    "n_tokens": 12561,
+    "ppl": 15.549586581842664,
+    "prime_source": "RedPajamaWikipedia",
+    "state_ratio": 64121.613308597785,
+    "target_source": "RedPajamaWikipedia"
+  },
+  {
+    "doc_idx": 373,
+    "n_tokens": 5497,
+    "ppl": 15.430252529038519,
+    "prime_source": "",
+    "state_ratio": 27938.45557378591,
+    "target_source": "RedPajamaWikipedia"
+  },
+  {
+    "doc_idx": 373,
+    "n_tokens": 5497,
+    "ppl": 15.41599250762251,
+    "prime_source": "RedPajamaArXiv",
+    "state_ratio": 106946.18302352459,
+    "target_source": "RedPajamaWikipedia"
+  },
+  {
+    "doc_idx": 373,
+    "n_tokens": 5497,
+    "ppl": 15.423205445130138,
+    "prime_source": "RedPajamaBook",
+    "state_ratio": 93123.40583189801,
+    "target_source": "RedPajamaWikipedia"
+  },
+  {
+    "doc_idx": 373,
+    "n_tokens": 5497,
+    "ppl": 15.431315755885072,
+    "prime_source": "RedPajamaC4",
+    "state_ratio": 31988.35290319059,
+    "target_source": "RedPajamaWikipedia"
+  },
+  {
+    "doc_idx": 373,
+    "n_tokens": 5497,
+    "ppl": 15.41940371095614,
+    "prime_source": "RedPajamaGithub",
+    "state_ratio": 55750.055250753285,
+    "target_source": "RedPajamaWikipedia"
+  },
+  {
+    "doc_idx": 373,
+    "n_tokens": 5497,
+    "ppl": 15.421503005345365,
+    "prime_source": "RedPajamaStackExchange",
+    "state_ratio": 31078.013584428125,
+    "target_source": "RedPajamaWikipedia"
+  },
+  {
+    "doc_idx": 373,
+    "n_tokens": 5497,
+    "ppl": 15.433769918971695,
+    "prime_source": "RedPajamaWikipedia",
+    "state_ratio": 60893.49058105053,
+    "target_source": "RedPajamaWikipedia"
+  },
+  {
+    "doc_idx": 306,
+    "n_tokens": 8038,
+    "ppl": 15.714012672291599,
+    "prime_source": "",
+    "state_ratio": 26038.362499575065,
+    "target_source": "RedPajamaWikipedia"
+  },
+  {
+    "doc_idx": 306,
+    "n_tokens": 8038,
+    "ppl": 15.713413241713173,
+    "prime_source": "RedPajamaArXiv",
+    "state_ratio": 107429.14830063617,
+    "target_source": "RedPajamaWikipedia"
+  },
+  {
+    "doc_idx": 306,
+    "n_tokens": 8038,
+    "ppl": 15.720671635635654,
+    "prime_source": "RedPajamaBook",
+    "state_ratio": 97523.31753280407,
+    "target_source": "RedPajamaWikipedia"
+  },
+  {
+    "doc_idx": 306,
+    "n_tokens": 8038,
+    "ppl": 15.707075662641031,
+    "prime_source": "RedPajamaC4",
+    "state_ratio": 29449.485487808346,
+    "target_source": "RedPajamaWikipedia"
+  },
+  {
+    "doc_idx": 306,
+    "n_tokens": 8038,
+    "ppl": 15.712064606514293,
+    "prime_source": "RedPajamaGithub",
+    "state_ratio": 55262.41368797939,
+    "target_source": "RedPajamaWikipedia"
+  },
+  {
+    "doc_idx": 306,
+    "n_tokens": 8038,
+    "ppl": 15.711648800675231,
+    "prime_source": "RedPajamaStackExchange",
+    "state_ratio": 28841.631448247055,
+    "target_source": "RedPajamaWikipedia"
+  },
+  {
+    "doc_idx": 306,
+    "n_tokens": 8038,
+    "ppl": 15.713948981706926,
+    "prime_source": "RedPajamaWikipedia",
+    "state_ratio": 61033.57809893495,
+    "target_source": "RedPajamaWikipedia"
+  },
+  {
+    "doc_idx": 314,
+    "n_tokens": 2572,
+    "ppl": 11.812202870183711,
+    "prime_source": "",
+    "state_ratio": 9759.793174619295,
+    "target_source": "RedPajamaWikipedia"
+  },
+  {
+    "doc_idx": 314,
+    "n_tokens": 2572,
+    "ppl": 11.827406307265107,
+    "prime_source": "RedPajamaArXiv",
+    "state_ratio": 101750.26934079763,
+    "target_source": "RedPajamaWikipedia"
+  },
+  {
+    "doc_idx": 314,
+    "n_tokens": 2572,
+    "ppl": 11.830263184005345,
+    "prime_source": "RedPajamaBook",
+    "state_ratio": 86667.45290825974,
+    "target_source": "RedPajamaWikipedia"
+  },
+  {
+    "doc_idx": 314,
+    "n_tokens": 2572,
+    "ppl": 11.836077775381632,
+    "prime_source": "RedPajamaC4",
+    "state_ratio": 16392.381004555467,
+    "target_source": "RedPajamaWikipedia"
+  },
+  {
+    "doc_idx": 314,
+    "n_tokens": 2572,
+    "ppl": 11.844665233166559,
+    "prime_source": "RedPajamaGithub",
+    "state_ratio": 49792.485061433064,
+    "target_source": "RedPajamaWikipedia"
+  },
+  {
+    "doc_idx": 314,
+    "n_tokens": 2572,
+    "ppl": 11.82800413553564,
+    "prime_source": "RedPajamaStackExchange",
+    "state_ratio": 16382.946282282792,
+    "target_source": "RedPajamaWikipedia"
+  },
+  {
+    "doc_idx": 314,
+    "n_tokens": 2572,
+    "ppl": 11.81750987440447,
+    "prime_source": "RedPajamaWikipedia",
+    "state_ratio": 50484.434915310405,
+    "target_source": "RedPajamaWikipedia"
+  },
+  {
+    "doc_idx": 28,
+    "n_tokens": 6367,
+    "ppl": 11.978898786637531,
+    "prime_source": "",
+    "state_ratio": 32489.443107484516,
+    "target_source": "RedPajamaWikipedia"
+  },
+  {
+    "doc_idx": 28,
+    "n_tokens": 6367,
+    "ppl": 11.967126463961636,
+    "prime_source": "RedPajamaArXiv",
+    "state_ratio": 106576.06946249197,
+    "target_source": "RedPajamaWikipedia"
+  },
+  {
+    "doc_idx": 28,
+    "n_tokens": 6367,
+    "ppl": 11.98315211369917,
+    "prime_source": "RedPajamaBook",
+    "state_ratio": 91616.5876633184,
+    "target_source": "RedPajamaWikipedia"
+  },
+  {
+    "doc_idx": 28,
+    "n_tokens": 6367,
+    "ppl": 11.985297917380215,
+    "prime_source": "RedPajamaC4",
+    "state_ratio": 35934.83013224129,
+    "target_source": "RedPajamaWikipedia"
+  },
+  {
+    "doc_idx": 28,
+    "n_tokens": 6367,
+    "ppl": 11.968410466219012,
+    "prime_source": "RedPajamaGithub",
+    "state_ratio": 61516.49654098678,
+    "target_source": "RedPajamaWikipedia"
+  },
+  {
+    "doc_idx": 28,
+    "n_tokens": 6367,
+    "ppl": 11.970336727920737,
+    "prime_source": "RedPajamaStackExchange",
+    "state_ratio": 36124.69908607543,
+    "target_source": "RedPajamaWikipedia"
+  },
+  {
+    "doc_idx": 28,
+    "n_tokens": 6367,
+    "ppl": 11.981560866961855,
+    "prime_source": "RedPajamaWikipedia",
+    "state_ratio": 65100.34099938314,
+    "target_source": "RedPajamaWikipedia"
+  }
+]
