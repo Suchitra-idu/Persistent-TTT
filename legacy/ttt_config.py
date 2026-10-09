@@ -229,7 +229,7 @@ class TTTConfig:
     # per-commit in stream. Bounds carry/W0 ratio; retune for other model
     # sizes (||W0||_F scales ~ sqrt(d * d_ff)).
     clip_enabled: bool = True
-    clip_tau: float = 5.0
+    clip_tau: float = 20.0
     clip_at_inference_only: bool = False
 
     # EMA decay on the session-persistent carry:

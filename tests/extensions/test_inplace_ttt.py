@@ -300,6 +300,58 @@ def test_a_disabled_gate_leaves_the_ttt_term_unscaled():
     assert not torch.allclose(gated(h), ungated(h), atol=1e-6)
 
 
+def test_state_aware_gate_is_off_by_default():
+    module = scanning(w_target_scale=SCALE)
+
+    assert module.output_gate_state_scale is None
+
+
+def test_state_aware_gate_has_no_effect_without_output_gate():
+    module = scanning(w_target_scale=SCALE, output_gate=False, state_aware_gate=True)
+
+    assert module.output_gate_state_scale is None
+
+
+def test_a_freshly_built_state_aware_gate_module_is_identity_to_the_base_mlp():
+    module = scanning(state_aware_gate=True)
+    h = _builders.hidden_states(LONG)
+
+    assert torch.allclose(module(h), base_mlp_out(module, h), atol=1e-6)
+
+
+def test_state_aware_gate_is_a_noop_at_zero_init_even_with_a_carry_present():
+    with_carry = scanning(w_target_scale=SCALE, state_aware_gate=True)
+    with_carry.session_mode = True
+    with torch.no_grad():
+        with_carry.carried = torch.ones(1, 6, 8) * 5.0
+    without_carry = scanning(w_target_scale=SCALE, state_aware_gate=True)
+    without_carry.session_mode = True
+    h = _builders.hidden_states(LONG)
+
+    with_carry(h)
+    without_carry(h)
+
+    assert with_carry.gate_mean == without_carry.gate_mean
+
+
+def test_a_present_carry_shifts_the_gate_once_the_scale_is_trained():
+    with_carry = scanning(w_target_scale=SCALE, state_aware_gate=True)
+    with_carry.session_mode = True
+    with torch.no_grad():
+        with_carry.output_gate_state_scale.fill_(1.0)
+        with_carry.carried = torch.ones(1, 6, 8) * 5.0
+    without_carry = scanning(w_target_scale=SCALE, state_aware_gate=True)
+    without_carry.session_mode = True
+    with torch.no_grad():
+        without_carry.output_gate_state_scale.fill_(1.0)
+    h = _builders.hidden_states(LONG)
+
+    with_carry(h)
+    without_carry(h)
+
+    assert abs(with_carry.gate_mean - without_carry.gate_mean) > 1e-3
+
+
 def test_iter_ttt_modules_finds_every_patched_layer():
     holder = torch.nn.ModuleList([scanning(), scanning(), _builders.FakeMLP(6, 8, seed=1)])
 

@@ -158,6 +158,22 @@ every forward, are on `session_eval.ItemRow` — a gate pinned near zero means
 the TTT term cannot be reaching the output, whatever the carry itself is
 doing.
 
+### `state_aware_gate` — an opt-in second term
+
+```
+gate = sigmoid(W_gate · h + b_gate + state_scale · ||eta·S||_F / ||W0||_F)
+```
+
+Off by default (`TTTConfig.state_aware_gate = False`). The gate above reads
+only the current token — it treats an empty carry and a heavily-loaded one
+identically for the same `h`. `state_scale` is a second, zero-init learned
+scalar (`InPlaceTTTMLP.output_gate_state_scale`) on the incoming carry's own
+Frobenius norm (the same normalization as `carry.state_ratio`), so the gate
+can learn to open further as the carry actually grows instead of by a fixed
+amount regardless of it. Zero-init means it starts as an exact no-op, same
+convention as `w_target`; it only does anything once trained with the flag
+on. No effect if `output_gate` is `False`.
+
 ## Three levels of memory
 
 | Level | Spans | Controlled by |

@@ -52,6 +52,13 @@ class TTTConfig:
     # noise, not signal, this early. -2.0 is the value that's actually held up.
     output_gate_bias_init: float = -2.0
 
+    # Off by default. The gate normally reads only the current token; this
+    # adds a learned, zero-init scalar term on the incoming carry's magnitude
+    # (see mechanism.md#the-output-gate), so it can open further as the carry
+    # actually grows instead of treating an empty and a loaded carry alike.
+    # No effect if output_gate is False.
+    state_aware_gate: bool = False
+
     clip_enabled: bool = True
     clip_tau: float = 20.0
     clip_at_inference_only: bool = False

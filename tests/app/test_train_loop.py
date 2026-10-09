@@ -278,6 +278,24 @@ class TestLearningRate:
 
         assert wiring.tracker.values_of("train/lr_lora")[0] == 0.0
 
+    def test_freeze_lora_after_zeroes_its_rate_from_that_step_on(self):
+        cfg = _builders.config(freeze_lora_after=1)
+        _, wiring = run(n_docs=4, cfg=cfg)
+
+        assert wiring.tracker.values_of("train/lr_lora") == pytest.approx([1e-5, 0.0])
+
+    def test_freeze_lora_after_leaves_the_other_groups_alone(self):
+        cfg = _builders.config(freeze_lora_after=1)
+        _, wiring = run(n_docs=4, cfg=cfg)
+
+        assert wiring.tracker.values_of("train/lr_new")[1] > 0.0
+        assert wiring.tracker.values_of("train/lr_wdown")[1] > 0.0
+
+    def test_zero_is_never_freeze(self):
+        _, wiring = run(n_docs=4, cfg=_builders.config(freeze_lora_after=0))
+
+        assert 0.0 not in wiring.tracker.values_of("train/lr_lora")
+
 
 class TestLogging:
     def test_nothing_outside_the_budget_is_logged(self):

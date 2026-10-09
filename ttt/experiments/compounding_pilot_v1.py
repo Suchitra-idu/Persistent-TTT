@@ -165,10 +165,10 @@ def _default_name(engine: Engine, pilot_source: str, n_rows: int) -> str:
 
 @app.local_entrypoint()
 def main(pilot_source: str = "", n_docs: int = 10, out_name: str = "", flags: str = ""):
-    compounding_pilot.remote(
+    compounding_pilot.spawn(
         pilot_source=pilot_source,
         n_docs=n_docs,
         out_name=out_name,
         invocation=cli.invocation(),
         **cli.parse_flags(flags),
-    )
+    ).get()

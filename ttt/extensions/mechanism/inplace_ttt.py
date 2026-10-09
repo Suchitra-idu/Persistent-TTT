@@ -74,6 +74,15 @@ class InPlaceTTTMLP(nn.Module):
         else:
             self.output_gate = None
 
+        # Named so "output_gate" still matches it for checkpointing/optimizer
+        # grouping (naming.TTT_PARAM_MARKERS) without touching output_gate's
+        # own shape. Zero-init: starts as a no-op, same convention as w_target.
+        self.output_gate_state_scale = (
+            nn.Parameter(torch.zeros(1))
+            if cfg.output_gate and cfg.state_aware_gate
+            else None
+        )
+
         self.gate_mean: float | None = None
         self.gate_std: float | None = None
 
@@ -166,12 +175,29 @@ class InPlaceTTTMLP(nn.Module):
         )
         self._hidden_context = joined[:, -width:, :].detach()
 
+    def _state_feature(self, carried: torch.Tensor | None) -> torch.Tensor | None:
+        """||eta*carried||_F / ||W0||_F per batch element — same normalization
+        as carry.state_ratio — the signal a state-aware gate opens against."""
+        if carried is None or self.output_gate_state_scale is None:
+            return None
+        w0_norm = self.down_proj.weight.norm(p="fro")
+        state_norm = carried.detach().float().norm(p="fro", dim=(1, 2))
+        return self.cfg.eta * state_norm / w0_norm
+
     def _gated(
-        self, ttt_term: torch.Tensor, hidden_states: torch.Tensor
+        self,
+        ttt_term: torch.Tensor,
+        hidden_states: torch.Tensor,
+        *,
+        state_feature: torch.Tensor | None = None,
     ) -> torch.Tensor:
         if self.output_gate is None:
             return ttt_term
-        gate = torch.sigmoid(self.output_gate(hidden_states))
+        logit = self.output_gate(hidden_states)
+        if state_feature is not None:
+            scale = self.output_gate_state_scale.to(logit.dtype)
+            logit = logit + scale * state_feature.to(logit.dtype)[:, None, None]
+        gate = torch.sigmoid(logit)
         # Under no_grad so eval and chat record them too (D14 turn diagnostics):
         # a gate pinned near 0 means the TTT term cannot be reaching the output.
         with torch.no_grad():
@@ -245,7 +271,8 @@ class InPlaceTTTMLP(nn.Module):
                 decay=self.cfg.carried_decay,
             )
 
-        return base_out + self._gated(ttt_out, hidden_states)
+        state_feature = self._state_feature(carried)
+        return base_out + self._gated(ttt_out, hidden_states, state_feature=state_feature)
 
     @torch.no_grad()
     def _stream_forward(

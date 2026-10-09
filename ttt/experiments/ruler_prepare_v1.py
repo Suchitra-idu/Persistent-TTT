@@ -80,4 +80,4 @@ def ruler_prepare(ruler_flags: str = "", **flags):
 
 @app.local_entrypoint()
 def main(ruler_flags: str = "", flags: str = ""):
-    ruler_prepare.remote(ruler_flags=ruler_flags, **cli.parse_flags(flags))
+    ruler_prepare.spawn(ruler_flags=ruler_flags, **cli.parse_flags(flags)).get()

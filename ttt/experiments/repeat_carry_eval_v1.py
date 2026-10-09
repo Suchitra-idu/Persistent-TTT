@@ -260,9 +260,9 @@ def repeat_carry_eval(n_repeats: int = 20, invocation: str = "", **flags):
 @app.local_entrypoint()
 def main(n_repeats: int = 20, flags: str = ""):
     parsed = cli.parse_flags(flags)
-    summaries = repeat_carry_eval.remote(
+    summaries = repeat_carry_eval.spawn(
         n_repeats=n_repeats, invocation=cli.invocation(), **parsed
-    )
+    ).get()
     if not summaries:
         return
     resolved = cli.from_flags(**{**cli.env_defaults(), **parsed})

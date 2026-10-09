@@ -1,7 +1,7 @@
-"""Per-layer output_gate.bias/weight straight off a loaded checkpoint —
-independent of any eval's own gate_mean, so a suspiciously-flat reading can
-be checked against the actual trained parameter rather than trusted. Logs
-per-layer scalars and a bar chart to wandb.
+"""Per-layer output_gate.bias/weight/state_scale straight off a loaded
+checkpoint — independent of any eval's own gate_mean, so a suspiciously-flat
+reading can be checked against the actual trained parameter rather than
+trusted. Logs per-layer scalars and a bar chart to wandb.
 
     modal run ttt/experiments/gate_report_v1.py --flags "resume_from=step_600"
 """
@@ -31,27 +31,35 @@ def run(engine: Engine, *, announce: Callable[[str], None] = print) -> report.Ta
             float(module.output_gate.bias),
             float(torch.sigmoid(module.output_gate.bias)),
             float(module.output_gate.weight.norm()),
+            _state_scale(module),
         )
         for index, module in enumerate(iter_ttt_modules(engine.model))
     ]
     table = report.Table(
-        headers=("layer", "bias", "sigmoid(bias)", "|weight|"),
+        headers=("layer", "bias", "sigmoid(bias)", "|weight|", "state_scale"),
         rows=tuple(
-            (str(i), f"{bias:+.3f}", f"{sig:.3f}", f"{norm:.4f}")
-            for i, bias, sig, norm in values
+            (str(i), f"{bias:+.3f}", f"{sig:.3f}", f"{norm:.4f}", f"{scale:+.4f}")
+            for i, bias, sig, norm, scale in values
         ),
-        aligns=(report.LEFT,) + (report.RIGHT,) * 3,
+        aligns=(report.LEFT,) + (report.RIGHT,) * 4,
     )
     announce(report.render(table))
-    for i, bias, sig, norm in values:
+    for i, bias, sig, norm, scale in values:
         engine.tracker.log(
             {
                 f"gate/layer_{i}/bias": bias,
                 f"gate/layer_{i}/sigmoid_bias": sig,
                 f"gate/layer_{i}/weight_norm": norm,
+                f"gate/layer_{i}/state_scale": scale,
             }
         )
     return table
+
+
+def _state_scale(module) -> float:
+    """0.0 when state_aware_gate is off — a real trained value is never 0."""
+    scale = module.output_gate_state_scale
+    return float(scale) if scale is not None else 0.0
 
 
 @app.function(
@@ -112,4 +120,4 @@ def _log_chart(tracker, table: report.Table) -> None:
 
 @app.local_entrypoint()
 def main(flags: str = ""):
-    gate_report.remote(invocation=cli.invocation(), **cli.parse_flags(flags))
+    gate_report.spawn(invocation=cli.invocation(), **cli.parse_flags(flags)).get()

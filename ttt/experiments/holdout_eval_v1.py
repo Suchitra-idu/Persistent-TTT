@@ -150,7 +150,7 @@ class _EvalCompute:
 
 @app.local_entrypoint()
 def main(seeded: bool = True, force_source: str = "", flags: str = ""):
-    holdout_eval.remote(
+    holdout_eval.spawn(
         seeded=seeded, force_source=force_source, invocation=cli.invocation(),
         **cli.parse_flags(flags),
-    )
+    ).get()

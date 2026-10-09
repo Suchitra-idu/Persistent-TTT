@@ -190,8 +190,9 @@ def _learning_rates(
     scale = lr_schedule.multiplier(
         step, num_warmup_steps=warmup, num_training_steps=total_steps
     )
+    frozen = cfg.freeze_lora_after and step >= cfg.freeze_lora_after
     return {
-        LORA: cfg.lr_lora * scale,
+        LORA: 0.0 if frozen else cfg.lr_lora * scale,
         WDOWN: cfg.lr_wdown * scale,
         NEW: cfg.lr_new_modules * scale,
     }

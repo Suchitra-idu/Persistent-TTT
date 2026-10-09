@@ -375,9 +375,9 @@ def main(n_slices: int = 8, n_docs: int = 1, flags: str = ""):
     wandb (scalars and the chained-session chart) and also writes the chart
     to `graphs/` locally."""
     parsed = cli.parse_flags(flags)
-    by_source = single_doc_eval.remote(
+    by_source = single_doc_eval.spawn(
         n_slices=n_slices, n_docs=n_docs, invocation=cli.invocation(), **parsed
-    )
+    ).get()
     if not by_source:
         return
     resolved = cli.from_flags(**{**cli.env_defaults(), **parsed})

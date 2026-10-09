@@ -27,7 +27,7 @@ class TrainConfig:
 
     lr_lora: float = 1e-5
     lr_wdown: float = 3e-5
-    lr_new_modules: float = 2e-2
+    lr_new_modules: float = 6e-2
 
     weight_decay_full: float = 0.1
     weight_decay_lora: float = 0.0
@@ -38,6 +38,12 @@ class TrainConfig:
     lora_r: int = 16
     lora_alpha: int = 32
     lora_dropout: float = 0.05
+
+    # 0 = never freeze. From this optimizer step on, LoRA's rate is forced to
+    # 0 — its weights stop moving, so whatever residual loss remains stays
+    # available for `new`/`wdown` to keep correcting instead of LoRA capturing
+    # it first.
+    freeze_lora_after: int = 0
 
     strategy: str = DEFAULT_STRATEGY
 
@@ -93,5 +99,9 @@ class TrainConfig:
             raise ValueError(f"eval_every must be >= 0, got {self.eval_every}")
         if self.eval_n_slices < 1:
             raise ValueError(f"eval_n_slices must be >= 1, got {self.eval_n_slices}")
+        if self.freeze_lora_after < 0:
+            raise ValueError(
+                f"freeze_lora_after must be >= 0, got {self.freeze_lora_after}"
+            )
         if not self.strategy:
             raise ValueError("strategy must name a registered session strategy")

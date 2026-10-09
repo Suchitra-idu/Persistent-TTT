@@ -14,7 +14,7 @@ given directly, not the checked-in file.
 explored in depth and the code stays in the repo, working and tested, but
 the active line of research no longer uses them — nothing here should be
 read as a recommendation to run them. `TTTConfig`'s hebbian-relevant defaults
-(`clip_tau=2,000,000`, `carried_decay=0.9`, `output_gate_bias_init=-2.0`) are
+(`clip_tau=20.0`, `carried_decay=0.9`, `output_gate_bias_init=-2.0`) are
 pinned to match the last git commit exactly. `carried_decay` above `0.9` is
 untested and likely unsafe at the current `clip_tau` — `hebbian` has no
 error-correction of its own, so nothing bounds its growth except these two
@@ -98,6 +98,64 @@ pinned near zero means the TTT term cannot be reaching the output, whatever
 the carry's own state is doing — check this before concluding the carry is
 inert.
 
+**`state_aware_gate`** (off by default) is the one candidate mechanism change
+this investigation has actually tried, motivated directly by that check:
+`hebbian`'s carry magnitude (`state_ratio`) grows under repeated exposure to
+the same document without a corresponding perplexity gain — and since the
+gate is the sole determinant of how much of that growing state ever reaches
+the output, it's the natural first place to check. It adds a second,
+zero-init learned scalar so the gate can open further as the carry's own norm
+grows, instead of reading only the current token — see
+[mechanism.md#the-output-gate](mechanism.md#the-output-gate) for the exact
+form.
+
+**Result, trained (~100 steps, checked with `gate_report_v1`):**
+`output_gate_state_scale` converged to a *negative* value on every one of the
+14 patched layers (roughly `-0.05` to `-0.10`), while the base
+`sigmoid(bias)` stayed near its `≈0.12` init — the base gate barely moved.
+`state_feature` (the incoming carry's unnormalized `state_ratio`) reaches
+into the hundreds of thousands within ~20 repeats, so a negative scale of
+that size drives the gate's logit deeply negative and saturates it near 0
+almost immediately as the carry grows. This is exactly what the
+`repeat_carry_eval_v1` runs independently showed (`gate ≈ 0.000` from a few
+repeats on): given a lever to condition how much of the carry reaches the
+output on the carry's own size, training consistently learned to close the
+gate *further* as the carry grows — on every layer, independently — not
+open it. A specific, model-driven result against the carry compounding into
+something worth trusting more of over time, not an inconclusive one.
+
+Two caveats on that result: it's a short run — the sign is consistent
+across all 14 layers, which is a real signal, but more training could
+sharpen or shift the magnitude further. And `state_feature` itself is
+unnormalized — it swings from the thousands into the millions, well outside
+the scale anything else in the architecture is built to receive — so part
+of what's being learned may be "large raw numbers here are destabilizing"
+as much as "large carries are unreliable content." This run doesn't
+separate those two.
+
+### No-gate ablation (`output_gate=False`)
+
+A one-off test, not part of the standing checklist: remove the gate
+entirely (`_gated` becomes a no-op — `ttt_out` reaches the output
+unconditionally, at full strength, from step 0), even under aggressive
+clipping (`clip_tau` tried as low as `5.0`). Result: `cold_carry_off` — no
+cross-document persistence at all, carry reset before every document —
+degrades to perplexities in the thousands to tens of thousands on every
+source, while `lora_only`/`fresh` (which bypass the TTT path entirely via
+`evolve=False`) stay normal.
+
+Because `cold_carry_off` fails just as badly as `cold_carry`, this is not a
+carry-accumulation blowup. `ttt_math.scan`'s `frobenius_clip` re-clips the
+applied state to `tau` at every single forward pass, regardless of how large
+the underlying accumulation is — verified directly from the code, not
+inferred — so magnitude isn't what's escaping. What breaks is the
+*within-document* TTT contribution alone, applied unconditionally across
+roughly half the model's layers (`derive_layer_indices`, stride 2), with no
+learned mechanism to suppress it when it isn't helping. `clip_tau` bounds
+size; only the gate ever provided selectivity — whether to trust this
+contribution at all — and the two aren't substitutes: shrinking `clip_tau`
+further cannot recover what removing the gate lost.
+
 ## `minilasting` — the third strategy
 
 Not in [extensions-map.md](extensions-map.md)'s table yet. `carry_scope =
@@ -114,8 +172,9 @@ Not in [extensions-map.md](extensions-map.md)'s table yet. `carry_scope =
 | `update_rule` | `"hebbian"` | the sole active research path; `delta`/`delta_chunk` exist in code but are not in use |
 | `output_gate_bias_init` | `-2.0` | `-0.5` and `+2.0` (less damped) both tried, both hurt early training |
 | `carried_decay` | `0.9` | applies every item, not just cross-session. Steady state `1/(1-decay) = 10×`. **Untested and likely unsafe above this value at the current `clip_tau`** |
-| `clip_tau` | `2,000,000` | matches the last git commit exactly, by decision — never retuned for `hebbian`'s own growth rate |
+| `clip_tau` | `20.0` | matches the last git commit exactly, by decision — never retuned for `hebbian`'s own growth rate |
 | `truncate_every` | `5` | `delta`/`delta_chunk`-only, not consulted by `hebbian` at all |
+| `state_aware_gate` | `False` | opt-in; lets the gate see the carry's own norm, not just the current token. Trained result: the learned scale went *negative* on every layer — see The output gate |
 | `eval_n_docs_per_source` | `5` | caps the holdout pool *before* any downstream eval script's own doc-count flag sees it — see Pitfalls |
 
 ## Where this stands right now
@@ -125,10 +184,14 @@ established and doesn't belong here until it is:
 
 - LoRA alone outperforms LoRA+TTT for general model improvement — including
   at matched LoRA rank with no TTT layers patched in at all.
-- The carry does not grow over time under repeated exposure to the same
-  document — it does not show an ability to accumulate information across a
-  session.
+- The carry's own magnitude (`state_ratio`) does grow under repeated exposure
+  to the same document — but the perplexity gain does not track it: it stays
+  flat from the first repeat, not rising as the carry grows.
 - RULER shows no meaningful improvement, and sometimes a slight regression.
+- Given a lever to condition the output gate on the carry's own size
+  (`state_aware_gate`), training consistently learned to close the gate
+  *further* as the carry grows — on every patched layer, independently. See
+  The output gate below for the numbers.
 
 For context, not as an excuse: In-Place TTT (Feng et al., 2026), the
 architecture this work extends, reports only small RULER movement itself
@@ -171,7 +234,7 @@ of wrong numbers, not a hypothetical.
 ## Open questions
 
 - **How should `hebbian` actually be bounded, if `carried_decay` needs to go
-  above `0.9`?** The current default (`clip_tau=2,000,000`) was never
+  above `0.9`?** The current default (`clip_tau=20.0`) was never
   derived from `hebbian`'s own growth rate — it's simply the value that's
   been in the config. A properly derived ceiling — characterizing
   `hebbian`'s actual per-step growth empirically before picking one — is

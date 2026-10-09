@@ -157,7 +157,7 @@ def holdout_generate(n_docs: int = 1, temperature: float = 0.0, invocation: str 
 
 @app.local_entrypoint()
 def main(n_docs: int = 1, temperature: float = 0.0, flags: str = ""):
-    holdout_generate.remote(
+    holdout_generate.spawn(
         n_docs=n_docs, temperature=temperature, invocation=cli.invocation(),
         **cli.parse_flags(flags),
-    )
+    ).get()

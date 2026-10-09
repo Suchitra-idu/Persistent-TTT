@@ -93,6 +93,6 @@ def ruler_eval(ruler_flags: str = "", invocation: str = "", **flags):
 
 @app.local_entrypoint()
 def main(ruler_flags: str = "", flags: str = ""):
-    ruler_eval.remote(
+    ruler_eval.spawn(
         ruler_flags=ruler_flags, invocation=cli.invocation(), **cli.parse_flags(flags)
-    )
+    ).get()

@@ -141,4 +141,4 @@ def train(invocation: str = "", **flags):
 
 @app.local_entrypoint()
 def main(flags: str = ""):
-    train.remote(invocation=cli.invocation(), **cli.parse_flags(flags))
+    train.spawn(invocation=cli.invocation(), **cli.parse_flags(flags)).get()

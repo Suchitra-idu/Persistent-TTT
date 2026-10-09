@@ -131,4 +131,4 @@ def sanity_check(invocation: str = "", **flags):
 
 @app.local_entrypoint()
 def main(flags: str = ""):
-    sanity_check.remote(invocation=cli.invocation(), **cli.parse_flags(flags))
+    sanity_check.spawn(invocation=cli.invocation(), **cli.parse_flags(flags)).get()
