@@ -68,6 +68,8 @@ def train(
     total_steps = lr_schedule.total_optimizer_steps(
         strategy.count(doc_lengths), cfg.grad_accum_steps, cfg.num_epochs
     )
+    if cfg.max_steps:
+        total_steps = min(total_steps, cfg.max_steps)
     warmup = lr_schedule.warmup_steps(
         total_steps, cfg.warmup_ratio, cfg.warmup_min_steps
     )
@@ -81,11 +83,17 @@ def train(
     step_loss = window_loss = 0.0
 
     for _ in range(cfg.num_epochs):
+        if step == total_steps:
+            break
         for session in strategy.build(doc_lengths, sources, rng):
+            if step == total_steps:
+                break
             fast_weights.reset_carry()
             _seed(fast_weights, carried, docs, session, per_source)
 
             for item in session.items:
+                if step == total_steps:
+                    break
                 doc = docs[item.doc_idx]
                 token_ids = doc.token_ids[item.start : item.end]
                 if micro == 0:

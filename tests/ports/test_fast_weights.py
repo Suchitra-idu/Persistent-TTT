@@ -239,6 +239,22 @@ class TestTorchFastWeights(FastWeightsConformance):
         with pytest.raises(ValueError, match="no InPlaceTTTMLP layers"):
             TorchFastWeights(_builders.TinyCausalLM(), TTTConfig())
 
+    def test_a_model_configured_with_no_ttt_layers_is_accepted(self):
+        fast_weights = TorchFastWeights(
+            _builders.TinyCausalLM(), TTTConfig(layer_indices=())
+        )
+
+        assert fast_weights.layer_indices == ()
+
+    def test_a_lora_only_model_snapshots_an_empty_carry(self):
+        fast_weights = TorchFastWeights(
+            _builders.TinyCausalLM(), TTTConfig(layer_indices=())
+        )
+        fast_weights.reset_carry()
+        fast_weights.advance_carry()
+
+        assert fast_weights.snapshot().deltas == {}
+
     def test_a_carry_shaped_for_another_model_is_rejected(self, fast_weights):
         wrong = Carry(deltas={_builders.LAYER_INDICES[0]: torch.zeros(1, 2, 2)})
 

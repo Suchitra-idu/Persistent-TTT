@@ -117,6 +117,7 @@ def test_paper_vocabulary_is_gone_from_the_eval_knobs():
     [
         ({"micro_batch_size": 4}, "fixed at 1"),
         ({"grad_accum_steps": 0}, "grad_accum_steps must be >= 1"),
+        ({"max_steps": -1}, "max_steps must be >= 0"),
         ({"min_doc_tokens": 0}, "min_doc_tokens must be >= 1"),
         ({"max_seq_len": 512}, "below min_doc_tokens"),
         ({"warmup_ratio": 2.0}, r"warmup_ratio must be in \[0, 1\]"),

@@ -24,7 +24,9 @@ class TorchFastWeights:
         self.model = model
         self.cfg = cfg
         self._modules = _by_layer_index(model)
-        if not self._modules:
+        # () is a deliberate LoRA-only model; anything else with no modules
+        # means the patch step was skipped.
+        if not self._modules and cfg.layer_indices != ():
             raise ValueError(
                 "model has no InPlaceTTTMLP layers; patch it before building "
                 "the FastWeights adapter"
@@ -105,6 +107,8 @@ class TorchFastWeights:
         return carry_math.mean_state_ratio(ratios)
 
     def stream_progress(self) -> tuple[int, int]:
+        if not self._modules:
+            return 0, self.cfg.chunk_size
         first = self._modules[self.layer_indices[0]]
         return first.stream.pending_tokens, self.cfg.chunk_size
 

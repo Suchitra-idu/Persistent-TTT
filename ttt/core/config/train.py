@@ -21,6 +21,8 @@ class TrainConfig:
     micro_batch_size: int = 1
     grad_accum_steps: int = 16
     num_epochs: int = 1
+    # 0 = no cap. A cap, not a target: a run whose data ends first stops there.
+    max_steps: int = 0
 
     # "" falls back to the spec's default; "none" is the explicit opt-out.
     source_preset: str = ""
@@ -83,6 +85,8 @@ class TrainConfig:
             )
         if self.num_epochs < 0:
             raise ValueError(f"num_epochs must be >= 0, got {self.num_epochs}")
+        if self.max_steps < 0:
+            raise ValueError(f"max_steps must be >= 0, got {self.max_steps}")
         if self.min_doc_tokens < 1:
             raise ValueError(f"min_doc_tokens must be >= 1, got {self.min_doc_tokens}")
         if self.max_seq_len < self.min_doc_tokens:

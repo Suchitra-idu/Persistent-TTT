@@ -434,6 +434,33 @@ class TestEpochs:
         assert (result.steps, wiring.compute.forwards) == (0, [])
 
 
+class TestMaxSteps:
+    def test_it_stops_the_run_at_the_cap(self):
+        result, wiring = run(n_docs=4, cfg=_builders.config(num_epochs=3, max_steps=3))
+
+        assert (result.steps, len(wiring.compute.forwards)) == (3, 6)
+
+    def test_the_schedule_is_sized_to_the_cap(self):
+        result, _ = run(n_docs=4, cfg=_builders.config(num_epochs=3, max_steps=3))
+
+        assert result.total_steps == 3
+
+    def test_a_cap_past_the_data_does_not_extend_the_run(self):
+        result, _ = run(n_docs=4, cfg=_builders.config(max_steps=100))
+
+        assert (result.steps, result.total_steps) == (2, 2)
+
+    def test_the_final_checkpoint_is_at_the_cap(self):
+        checkpoint = Recorder()
+        run(
+            n_docs=4,
+            cfg=_builders.config(num_epochs=3, max_steps=3),
+            checkpoint=checkpoint,
+        )
+
+        assert checkpoint.calls[-1]["step"] == 3
+
+
 def test_an_empty_pool_trains_nothing():
     result, _ = run(docs=())
 
