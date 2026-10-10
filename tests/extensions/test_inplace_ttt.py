@@ -7,7 +7,7 @@ from __future__ import annotations
 import pytest
 import torch
 
-from ttt.extensions.mechanism import InPlaceTTTMLP, iter_ttt_modules
+from ttt.extensions.mechanism import InPlaceTTTMLP, iter_ttt_modules, pretrained_mlps
 from tests.extensions import _builders
 
 CHUNK = 4
@@ -38,6 +38,30 @@ def test_a_module_with_evolution_off_takes_the_plain_mlp_path():
     h = _builders.hidden_states(LONG)
 
     assert torch.equal(module(h), base_mlp_out(module, h))
+
+
+def test_the_pretrained_path_ignores_a_trained_w_down():
+    module = scanning(w_target_scale=SCALE)
+    h = _builders.hidden_states(LONG)
+    before = base_mlp_out(module, h)
+    with torch.no_grad():
+        module.down_proj.weight.add_(1.0)
+    module.pretrained = True
+
+    assert torch.equal(module(h), before)
+
+
+def test_the_pretrained_copy_is_never_checkpointed():
+    assert "pretrained_down" not in scanning().state_dict()
+
+
+def test_pretrained_mlps_switches_every_module_and_restores_it():
+    model = torch.nn.Sequential(scanning(), scanning())
+    with pretrained_mlps(model):
+        inside = [m.pretrained for m in iter_ttt_modules(model)]
+
+    assert inside == [True, True]
+    assert not any(m.pretrained for m in iter_ttt_modules(model))
 
 
 def test_a_single_chunk_item_outside_a_session_skips_the_scan():

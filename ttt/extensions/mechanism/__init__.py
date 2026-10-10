@@ -5,6 +5,7 @@ from ttt.extensions.mechanism.inplace_ttt import (
     InPlaceTTTMLP,
     StreamState,
     iter_ttt_modules,
+    pretrained_mlps,
 )
 
-__all__ = ["InPlaceTTTMLP", "StreamState", "iter_ttt_modules"]
+__all__ = ["InPlaceTTTMLP", "StreamState", "iter_ttt_modules", "pretrained_mlps"]

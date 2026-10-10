@@ -1,0 +1,29 @@
+measure         source                  n_docs    Δppl            95% CI         rel   win
+lora            RedPajamaArXiv              20  +0.899  [+0.664, +1.224]  *  +12.06%  1.00
+lora            RedPajamaBook                6  +5.143  [+3.406, +6.990]  *  +17.55%  1.00
+lora            RedPajamaC4                 20  +6.091  [+4.877, +7.490]  *  +16.29%  1.00
+lora            RedPajamaGithub             20  +0.424  [+0.286, +0.600]  *   +8.85%  1.00
+lora            RedPajamaStackExchange      20  +1.196  [+0.840, +1.718]  *  +12.64%  1.00
+lora            RedPajamaWikipedia          20  +2.933  [+2.295, +3.669]  *  +13.62%  1.00
+lora            ALL                        106  +1.670  [+1.349, +2.074]  *  +13.01%  1.00
+within          RedPajamaArXiv              20  +0.072  [+0.053, +0.095]  *   +1.10%  1.00
+within          RedPajamaBook                6  +0.267  [+0.182, +0.359]  *   +1.11%  1.00
+within          RedPajamaC4                 20  +0.521  [+0.400, +0.677]  *   +1.66%  1.00
+within          RedPajamaGithub             20  +0.035  [+0.019, +0.057]  *   +0.80%  1.00
+within          RedPajamaStackExchange      20  +0.110  [+0.079, +0.150]  *   +1.33%  1.00
+within          RedPajamaWikipedia          20  +0.301  [+0.241, +0.369]  *   +1.62%  1.00
+within          ALL                        106  +0.144  [+0.117, +0.179]  *   +1.29%  1.00
+between_slices  RedPajamaArXiv              20  +0.009  [+0.006, +0.013]  *   +0.13%  0.95
+between_slices  RedPajamaBook                6  +0.010  [-0.003, +0.027]      +0.04%  0.67
+between_slices  RedPajamaC4                 20  +0.113  [+0.063, +0.165]  *   +0.37%  0.85
+between_slices  RedPajamaGithub             20  +0.007  [+0.002, +0.014]  *   +0.17%  0.65
+between_slices  RedPajamaStackExchange      20  +0.022  [+0.012, +0.038]  *   +0.27%  0.85
+between_slices  RedPajamaWikipedia          20  +0.068  [+0.043, +0.094]  *   +0.37%  0.90
+between_slices  ALL                        106  +0.027  [+0.019, +0.037]  *   +0.25%  0.83
+total           RedPajamaArXiv              20  +0.980  [+0.715, +1.314]  *  +13.15%  1.00
+total           RedPajamaBook                6  +5.420  [+3.648, +7.384]  *  +18.50%  1.00
+total           RedPajamaC4                 20  +6.724  [+5.469, +8.264]  *  +17.98%  1.00
+total           RedPajamaGithub             20  +0.467  [+0.308, +0.665]  *   +9.74%  1.00
+total           RedPajamaStackExchange      20  +1.328  [+0.923, +1.842]  *  +14.03%  1.00
+total           RedPajamaWikipedia          20  +3.302  [+2.553, +4.027]  *  +15.34%  1.00
+total           ALL                        106  +1.842  [+1.489, +2.284]  *  +14.34%  1.00

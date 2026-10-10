@@ -16,6 +16,7 @@ from ttt.core import naming
 from ttt.core.config.train import TrainConfig
 from ttt.core.config.ttt import TTTConfig
 from ttt.core.types import GradStats
+from ttt.extensions.mechanism import pretrained_mlps
 from ttt.ports.compute import GROUPS
 
 
@@ -99,7 +100,7 @@ class TorchCompute:
         was_training = self.model.training
         self.model.eval()
         try:
-            with contextlib.nullcontext() if lora else self.model.disable_adapter():
+            with weights_for(self.model, lora=lora):
                 return float(self.model(input_ids=ids, labels=ids).loss)
         finally:
             self.model.train(was_training)
@@ -109,6 +110,16 @@ class TorchCompute:
             name: sum(p.numel() for p in params)
             for name, params in self._groups.items()
         }
+
+
+def weights_for(model: torch.nn.Module, *, lora: bool) -> contextlib.AbstractContextManager:
+    """lora=False is the untouched base model: no adapter, pretrained W_down."""
+    if lora:
+        return contextlib.nullcontext()
+    stack = contextlib.ExitStack()
+    stack.enter_context(model.disable_adapter())
+    stack.enter_context(pretrained_mlps(model))
+    return stack
 
 
 def _group_parameters(

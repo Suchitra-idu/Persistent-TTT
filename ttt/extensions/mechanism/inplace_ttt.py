@@ -15,6 +15,7 @@ Reset ladder:
 
 from __future__ import annotations
 
+import contextlib
 from dataclasses import dataclass, field
 
 import torch
@@ -44,6 +45,15 @@ class InPlaceTTTMLP(nn.Module):
         self.down_proj = original_mlp.down_proj
         self.act_fn = original_mlp.act_fn
         self.cfg = cfg
+
+        # Captured before a checkpoint overwrites down_proj, so the `fresh`
+        # regime can measure the untouched base model. Never checkpointed.
+        self.register_buffer(
+            "pretrained_down",
+            original_mlp.down_proj.weight.detach().clone(),
+            persistent=False,
+        )
+        self.pretrained = False
 
         # gamma frozen: a hard rescale, not one the optimizer can re-inflate.
         self.v_source_norm = nn.RMSNorm(hidden_size)
@@ -118,6 +128,8 @@ class InPlaceTTTMLP(nn.Module):
     def forward(self, hidden_states: torch.Tensor) -> torch.Tensor:
         # gate_proj / up_proj called as modules so a LoRA path lands in z.
         z = self.act_fn(self.gate_proj(hidden_states)) * self.up_proj(hidden_states)
+        if self.pretrained:
+            return F.linear(z, self.pretrained_down, self.down_proj.bias)
         if not self.evolve and not self.stateful:
             return self.down_proj(z)
         if self.stateful:
@@ -339,3 +351,16 @@ def iter_ttt_modules(model: nn.Module):
     for module in model.modules():
         if isinstance(module, InPlaceTTTMLP):
             yield module
+
+
+@contextlib.contextmanager
+def pretrained_mlps(model: nn.Module):
+    """Every TTT layer runs as the base MLP: pretrained W_down, no fast weight."""
+    modules = list(iter_ttt_modules(model))
+    for module in modules:
+        module.pretrained = True
+    try:
+        yield
+    finally:
+        for module in modules:
+            module.pretrained = False

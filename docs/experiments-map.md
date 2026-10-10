@@ -26,6 +26,7 @@ arguments into frozen config and touches nothing else — the
 | `repeat_carry_eval_v1.py` | — | `modal run ttt/experiments/repeat_carry_eval_v1.py` |
 | `paper_eval_v1.py` | — | `modal run ttt/experiments/paper_eval_v1.py --checkpoint <run>/<step>` → `results/<run>/<step>/<stamp>/` |
 | `compare_checkpoints_v1.py` | — | `python -m ttt.experiments.compare_checkpoints_v1 <baseline bundle> <candidate bundle>` |
+| `paper_analysis_v1.py` | — | `python -m ttt.experiments.paper_analysis_v1 --control <run> --run <label>=<run> --steps 200,400,600 --w0-norms <json>` → `results/paper/` |
 
 ## Passing configuration
 

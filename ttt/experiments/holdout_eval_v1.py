@@ -6,7 +6,6 @@ Logs the aggregate metrics and a per-source gap breakdown to wandb.
 
 from __future__ import annotations
 
-import contextlib
 from typing import Callable
 
 import modal
@@ -142,9 +141,10 @@ class _EvalCompute:
         self.model = model
 
     def eval_loss(self, token_ids, *, lora: bool = True) -> float:
+        from ttt.adapters.torch_compute import weights_for
+
         ids = self._torch.tensor([list(token_ids)], device="cuda", dtype=self._torch.long)
-        ctx = contextlib.nullcontext() if lora else self.model.disable_adapter()
-        with self._torch.no_grad(), ctx:
+        with self._torch.no_grad(), weights_for(self.model, lora=lora):
             return float(self.model(input_ids=ids, labels=ids).loss)
 
 

@@ -1,0 +1,9 @@
+run,measure,n_docs,delta_ppl,ci_low,ci_high,excludes_zero,win_rate
+hebbian,cross_doc,24,-0.003653,-0.0149892,0.00581202,0,0.3750
+hebbian,cross_slice,30,0.00515844,-0.000628232,0.0136164,0,0.6000
+hebbian,repeat_9_vs_1,106,0.000199256,-0.00087883,0.00115136,0,0.5000
+hebbian,same_vs_other_source,30,0.00963922,0.00356546,0.018407,1,0.7333
+delta_chunk,cross_doc,24,-0.001728,-0.00590792,0.0018573,0,0.3750
+delta_chunk,cross_slice,30,0.0145985,0.00535088,0.0290565,1,0.7333
+delta_chunk,repeat_9_vs_1,106,0.000316711,-0.000573574,0.00124351,0,0.5189
+delta_chunk,same_vs_other_source,30,0.0016622,-0.000260076,0.00439578,0,0.4667

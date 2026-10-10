@@ -1,0 +1,105 @@
+{
+  "boot_seed": 0,
+  "bundles": [
+    {
+      "git": {
+        "commit": "45ebd444f421238f550ce82ad3d7706477fc451c",
+        "dirty": true
+      },
+      "path": "results/lora-only-matched/step_200/20261010-014153",
+      "run": "lora-only-matched",
+      "step": 200
+    },
+    {
+      "git": {
+        "commit": "45ebd444f421238f550ce82ad3d7706477fc451c",
+        "dirty": true
+      },
+      "path": "results/ttt-v1.1/step_200/20261010-011938",
+      "run": "ttt-v1.1",
+      "step": 200
+    },
+    {
+      "git": {
+        "commit": "45ebd444f421238f550ce82ad3d7706477fc451c",
+        "dirty": true
+      },
+      "path": "results/ttt-v1.1-clean-deltachunk/step_200/20261010-015541",
+      "run": "ttt-v1.1-clean-deltachunk",
+      "step": 200
+    },
+    {
+      "git": {
+        "commit": "45ebd444f421238f550ce82ad3d7706477fc451c",
+        "dirty": true
+      },
+      "path": "results/lora-only-matched/step_400/20261010-014155",
+      "run": "lora-only-matched",
+      "step": 400
+    },
+    {
+      "git": {
+        "commit": "45ebd444f421238f550ce82ad3d7706477fc451c",
+        "dirty": true
+      },
+      "path": "results/ttt-v1.1/step_400/20261010-013520",
+      "run": "ttt-v1.1",
+      "step": 400
+    },
+    {
+      "git": {
+        "commit": "45ebd444f421238f550ce82ad3d7706477fc451c",
+        "dirty": true
+      },
+      "path": "results/ttt-v1.1-clean-deltachunk/step_400/20261010-015543",
+      "run": "ttt-v1.1-clean-deltachunk",
+      "step": 400
+    },
+    {
+      "git": {
+        "commit": "45ebd444f421238f550ce82ad3d7706477fc451c",
+        "dirty": true
+      },
+      "path": "results/lora-only-matched/step_600/20261010-011744",
+      "run": "lora-only-matched",
+      "step": 600
+    },
+    {
+      "git": {
+        "commit": "edab6ce052bfead11c892741d48b664bb2d1c059",
+        "dirty": false
+      },
+      "path": "results/ttt-v1.1/step_600/20261009-223740",
+      "run": "ttt-v1.1",
+      "step": 600
+    },
+    {
+      "git": {
+        "commit": "8dc804b25f05c9e449de1ae4ece1f82c0e0f7317",
+        "dirty": true
+      },
+      "path": "results/ttt-v1.1-clean-deltachunk/step_600/20261009-220029",
+      "run": "ttt-v1.1-clean-deltachunk",
+      "step": 600
+    }
+  ],
+  "clip_threshold": 0.42946575603179715,
+  "control": "lora-only-matched",
+  "git": {
+    "commit": "45ebd444f421238f550ce82ad3d7706477fc451c",
+    "dirty": true
+  },
+  "mechanism_step": 600,
+  "n_boot": 1000,
+  "runs": {
+    "delta_chunk": "ttt-v1.1-clean-deltachunk",
+    "hebbian": "ttt-v1.1"
+  },
+  "steps": [
+    200,
+    400,
+    600
+  ],
+  "w0_norm_mean": 46.56948713396191,
+  "w0_norms": "results/paper/inputs/w0_norms.json"
+}
