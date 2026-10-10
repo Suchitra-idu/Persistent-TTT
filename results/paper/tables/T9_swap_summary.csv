@@ -1,0 +1,5 @@
+run,pairs,n_pairs,mean_delta_ppl,significantly_worse,significantly_better,min_delta_ppl
+hebbian,same_source,6,-0.00759214,0,0,-0.0211093
+hebbian,other_source,30,-0.0224012,15,0,-0.0680927
+delta_chunk,same_source,6,0.00343043,1,1,-0.00194237
+delta_chunk,other_source,30,2.78429e-06,2,1,-0.00717649

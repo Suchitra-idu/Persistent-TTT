@@ -1,0 +1,113 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\usepackage{times}
+\usepackage[english]{babel}
+\usepackage{setspace}
+\usepackage{graphicx}
+\onehalfspacing
+
+\begin{document}
+
+% ---------- TITLE PAGE ----------
+\begin{titlepage}
+\centering
+
+\vspace*{1.5cm}
+{\bfseries\large Kandy Innovation Centre,\par}
+{\bfseries\large National Institute of Business Management.\par}
+
+\vspace{2.5cm}
+{\Large \bfseries UNDERGRADUATE RESEARCH LITERATURE REVIEW\par}
+
+\vspace{2.5cm}
+
+% Logos, side by side, matching the screenshot layout.
+% Upload nibm_logo.png and kic_logo.png to the Overleaf project root,
+% then uncomment the two lines below.
+\includegraphics[height=1.6cm]{nibm_logo.jpg}\hspace{2cm}\includegraphics[height=1.6cm]{kic_logo.jpeg}
+
+\vspace{2.5cm}
+
+{\large \bfseries Session-Persistent Test-Time Training for Language Models: Methodology and Empirical Analysis\par}
+
+\vspace{2cm}
+{\normalsize M A S I Malimbada: \textsc{KIC-BSCCSAI-25.1-P-014}\par}
+
+\vfill
+
+{\large Kandy Innovation Centre,\par}
+{\large National Institute of Business Management,\par}
+{\large 1095, Kandy -- Colombo Rd, Getambe.\par}
+
+
+\end{titlepage}
+
+% ---------- MAIN TEXT ----------
+\section*{Literature Review}
+
+\subsection*{Test-time training for inference-time learning}
+
+When it comes to test-time training, the first research that came with the idea of a model updating on its input without labelled supervision was Sun et al. (2020) for image classification under distribution shift. They update a shared feature extractor at test time on a self-supervised loss computed from the test input itself, and it is used to serve the output. But their standard version resets the updated weights upon each input. Even though Sun et al. (2020) propose an online variant, which carries the state across different inputs, it has a major assumption, which is that all the inputs are taken from the same or a similar distribution.
+
+In 2025, Sun et al. (2025) build on this idea by treating hidden states as a small model. They introduce TTT-Linear and TTT-MLP layers, which use a multi-view reconstruction loss and are equivalent to linear attention under certain conditions. They showed that, instead of updating on every token, batching the update results in the best perplexity improvements. They also state that a learnable gate on the update magnitude is highly useful, in order to control how strongly the state should move.
+
+In 2025, Google introduced Titans, which attempts to use test-time training as a long-term memory module (Behrouz, Zhong and Mirrokni, 2025). It has ``memory as context'', where the attention is supplied with compressed historical context by concatenating memory with the input before attention. Titans uses an update rule which combines momentum and a data-dependent weight decay. According to the authors, these update rules resulted in the highest contribution to performance improvements. Even though Titans is one of the most revolutionary pieces of research in the field of test-time training, it does not attempt to implement any kind of session-persistent memory or state, meaning all of Titans' experiments operate within a single continuous context per example and it does not attempt to carry memory across different documents.
+
+\subsection*{In-Place TTT and the specific gap this proposal targets}
+
+Another leap in test-time training came with Feng et al. (2026), who propose In-Place Test-Time Training. In-Place Test-Time Training only uses the down-projection matrix of a gated MLP block as a fast weight, while leaving the other weights frozen. Their update rule is an outer-product accumulation onto the down-projection matrix for each processed chunk, while the target is created by performing a convolution over the raw input embedding and multiplying it with a learned projection matrix. The paper uses the RULER long-context benchmark as the main evaluation method, and In-Place TTT improves the accuracy of Qwen3 models at long context lengths.
+
+The main gap in In-Place TTT is the fact that it resets fast weights back to their pretrained value. Their pipeline ensures that all the fast weights are reset upon document boundaries to prevent any context leakage. Therefore, they do not attempt to test things such as session-persistent carry, or partial carry. This is exactly what my research is trying to achieve, to see how a mechanism similar to In-Place TTT behaves if fast weights are allowed to persist across sessions (Feng et al., 2026).
+
+\subsection*{Recent work on test-time training}
+
+Recent work has attempted to move in the direction of session-persistent fast weights in large language models. Tandon et al. (2025) use a meta-learned initialisation of fast weights so that there is not much mismatch between earlier test-time training and dynamic evaluation work. To bridge the gap between local context and the gradient step, they use sliding attention with the window being larger than the update batch. They also use a mini-batch scheme and only update the MLP layers of the upper quarter of the network. Even though they utilise meta-learned initialisations, this paper does not attempt to let fast weights persist across sessions. This means that fast weights are reset at document boundaries.
+
+Wang et al. (2026) attempt to replace In-Place TTT's reconstruction-style target with a context distillation objective. It uses a long-window teacher and a short-window student, which share the same frozen weights. Here, fast weights are updated to ensure the student's output matches the teacher's. Instead of using additive accumulation, this utilises an error-correcting update by using the residual between the teacher and student output as the write signal. They evaluate their architecture with the RULER benchmark and show a larger improvement compared to In-Place TTT when it comes to long-context texts. This comparison points toward purely additive fast weight updates performing worse than other forms of fast weight updating, although the paper itself does not frame the result in these terms.
+
+Bansal et al. (2025) argue that static softmax attention suffers from score dilution, where the attention mass on a correct target token shrinks as the number of near-tie distractor tokens grows with context length. They propose a method which only updates the query projection using cheap gradient steps. These steps are computed on short spans sampled from the same prompt. In it, they keep the key-value cache frozen and use that frozen KV cache for the forward pass. This is computationally cheaper than having full parameter updates. Even though this method gains large gains on retrieval and multi-hop tasks, it is still bounded by session boundaries and fast weights do not persist across sessions.
+
+According to McDermott, Heath and Parhi (2026), all forms of attention are test-time regression. This is because, in attention, the model builds an online estimator from key-value pairs generated by its forward pass. In that paper, they divide test-time regression into parametric attention and nonparametric attention. Parametric attention includes ones such as linear attention, state-space models, and fast-weight programmers, where the estimator is bound to a fixed-size state update. Nonparametric attention is the one used in transformer models, where the growing key-value cache itself is the estimator. The paper also divides the update rules into different categories, such as the Hebbian rule, the delta rule, and the Omega rule. According to this paper, non-error-correcting updates such as the Hebbian rule provide no guarantee that a new write preserves previously encoded associations.
+
+\subsection*{Persistence through cached activations}
+
+Instead of updating any model parameters, some research has attempted to achieve persistence across document boundaries by caching activations. Transformer-XL (Dai et al., 2019) achieves this by caching the hidden states of the previous segment with a stop-gradient and concatenating them with the current segment's hidden states before computing attention. Rae et al. (2019) take a different approach. When the primary cache is full, instead of discarding the oldest activations, they compress the oldest activations in the cache into a secondary, longer-range store.
+
+Memorizing Transformers (Wu et al., 2022) utilise a non-differentiable key-value memory built from past tokens. They retrieve it via approximate nearest-neighbour search and combine it with local attention through a learned gate. But, similar to In-Place TTT, it resets its state at session boundaries, meaning session-persistent carry is not attempted in this paper. In evaluation, their method showed perplexity improvements and had the highest perplexity gain for specific tokens such as proper names. But this method also showed diminishing returns once the memory exceeded the document length. The Recurrent Memory Transformer (Bulatov, Kuratov and Burtsev, 2022) utilises a learned memory token representation passed between segments and backpropagates through several segments at once. According to this study, backpropagation depth is a key factor that makes the passed memory useful.
+
+\subsection*{Update rule design}
+
+The update rule is one of the most important things in test-time training, because it directly determines both the model's adaptation behaviour and the computational and memory requirements. According to Katharopoulos et al. (2020), removing the softmax from causal self-attention allows it to be written as a recurrent process. At each step, the model simply adds the outer product of the current key and value to a matrix state, without checking how the new information interacts with what is already stored. According to Schlag, Irie and Schmidhuber (2021), even though associations are stored additively and retrieved by a matrix-vector product, keys must remain close to orthogonal to avoid interference, and once the number of stored associations exceeds the key dimensionality, retrieval error appears. According to them, a purely additive rule cannot overwrite the stale association and can only add more interference. To fix this issue, that paper proposes a delta-rule update which subtracts the value currently retrievable for a key before writing the new one. They also test carrying fast weights across segment boundaries within a single training stream, rather than across independently authored documents. From those experiments, they identify that the additive rule becomes unstable without normalisation.
+
+According to Yang et al. (2024a), Hebbian-like rules can produce key collisions once sequence length exceeds the state's dimensionality. This is because the Hebbian rule does not have a mechanism to deallocate old associations. Yang et al. (2025) build on this idea, arguing that gating and the delta rule are complementary to one another. This is because gating provides global controlled forgetting while the delta rule provides targeted, per-key correction. According to that research, a pure delta rule without any gating still struggles to clear outdated information from the fast weights. Mao (2022) attempted to fine-tune pretrained transformers into several different fast-weight update rules. They reported that a plain additive rule can outperform a delta rule under its best configuration in a fine-tuning setting. But an explicitly gated rule and a learned per-cell decay rule still managed to outperform the additive rule. From these studies, we can conclude that whether error correction helps over pure accumulation is highly dependent on stabilisation.
+
+Gu and Dao (2024) show that by making a state-space model's parameters input-dependent, the model can choose to filter or reset its state content-adaptively. The paper states that this is the largest driver of performance improvement. They also state that a state update lacking such selectivity cannot filter relevant from irrelevant history. According to Yang, Wang, Shen, Panda and Kim (2024b), a controlled experiment showed that an ungated linear-attention accumulator, which behaves like a pure Hebbian carry, performed much worse than a simple fixed scalar decay in terms of training perplexity. Beck et al. (2024) demonstrated that gating without the ability to overwrite a stale association fails to update a stored value once a more relevant key arrives later in the sequence. They did this by using a Hebbian update with a learned, exponential input and forget gate.
+
+\subsection*{Continual learning, catastrophic forgetting, and stability under repeated updates}
+
+When fast weights are updated repeatedly without a proper mechanism to protect earlier learning, this can cause issues with stability. French (1999) defines this problem as the stability-plasticity dilemma. According to that paper, interference arises from the overlap of distributed internal representations between old and new patterns. That paper also discusses a dual fast and slow weight scheme, where the fast weight decays rapidly back toward zero while the slow weight decays only slowly. Kirkpatrick et al. (2017) come up with a system which anchors each parameter to its previously learned value with a penalty weighted by an estimate of that parameter's importance. This importance is derived from the Fisher information matrix, and according to that paper, this allows a network to learn a new task while retaining performance on an earlier one.
+
+Shi et al. (2024) is a survey about continual learning for large language models. They identified a phenomenon called anticipatory recovering, a behaviour where a fine-tuned model can recover forgotten information on a document even before re-encountering it. The authors point this out as evidence for non-monotonic, difficult-to-predict memory behaviour that shows up upon repeated exposure. They also identified that LLMs show more resilience to forgetting at the representational level, even when output-level performance still degrades. Maharana et al. (2026) is another research paper which surveys continual test-time adaptation in computer vision. That paper identifies catastrophic forgetting and error accumulation as the most critical issues in the field. They also mention that stochastic parameter restoration is a good technique for reducing long-horizon drift.
+
+\subsection*{Dynamic evaluation and inference-time distributional adaptation}
+
+An older set of work studies inference-time parameter adaptation. Kneser and Steinbiss (1993) showed that even a gradient-free method can improve perplexity by dynamically adjusting the weights of fixed domain-specific language models using online expectation maximisation. According to Krause et al. (2018), dynamic evaluation applies gradient descent to each segment of the test sequence. The paper differentiates the current segment's distribution from the overall training distribution and uses a decay term to pull the updated parameters back toward their original trained values. When they tested a sparse variant, where only a small subset of hidden units is adapted through a low-rank matrix, they identified that it provides most of the performance gain of the full variant at a fraction of the cost. This is evidence that restricting a fast weight to a small subset of a model's parameters, which we are planning to do in this research, is an appropriate approach.
+
+Lazaridou et al. (2021) work on temporal generalisation by trying to apply dynamic evaluation to it. They compare a language model trained only on data before a fixed cutoff against a control model trained on data spanning the evaluation period. As a result, they identify that the stratified model underperforms by a margin that grows the further test data is from the training cutoff. According to them, dynamic evaluation narrows that gap significantly. But they report that catastrophic forgetting can be seen from dynamic evaluation, meaning that when the model learns from new data, it degrades its capacity when it comes to old data. According to these researchers, dynamic evaluation narrows but does not fully solve temporal generalisation.
+
+\subsection*{Evaluation methodology and long-context probes}
+
+The evaluation methodology most commonly found in modern LLM test-time training research papers is RULER (Hsieh et al., 2024). RULER is a benchmark which focuses on how LLMs perform at long contexts, and it consists of four categories, which are retrieval, multi-hop tracing, aggregation, and question answering. That research finds that all evaluated long-context models show substantial performance drops as context length and task complexity increase. The paper shows that non-Transformer recurrent architectures such as Mamba underperform Transformer baselines by a wide margin and also degrade sharply. RULER's own researchers state that it is a convenient behavioural check and not a target to optimise against. This is one of the reasons why we state that RULER is a supplementary evaluation benchmark and not the main benchmark we use.
+
+LongBench (Bai et al., 2023) assesses long-context performance by re-running a question-answering dataset to measure how much of a model's apparent long-context performance is actually genuine context use and not pretraining memorisation. One of its biggest advantages is that it rules out the possibility that the gain reflects the base model already having seen similar material during pretraining, rather than anything carried at inference time. Meister and Cotterell (2021) argue that evaluating perplexity alone is not enough and needs to be complemented with other methods, especially ones that examine the distribution of generated text. They also state that effect size and confidence levels should be reported because, with very large test sets, statistical tests can find significant results even when the actual effect is very small. This is even more important when the evaluated perplexity gain is small.
+
+\subsection*{Synthesis}
+
+When looking at all the literature, we can identify three patterns. One is that, even though test-time training is used to improve a model's performance on the input processed, all of this prior work resets its fast weights at session boundaries, which means that the majority, if not all, of the prior work does not attempt to test session-persistent test-time training. Another pattern is the fact that most prior work shows that an unconstrained carry may behave in ways such as plateauing due to a capacity limit, which is most commonly seen in pure Hebbian accumulators, or becoming unstable in the absence of a decay or anchoring mechanism, or producing noticeable but bounded improvements. When it comes to evaluation methodologies, they range across dynamic evaluation, RULER, and LongBench. These evaluations provide the ability to distinguish persistence-attributable effects from potential confounds, such as pretraining memorisation and statistical noise arising from the evaluation of a large number of replayed documents.
+
+% ---------- BIBLIOGRAPHY (kept in a separate file, see references.tex) ----------
+\newpage
+\section*{References}
+\input{references}
+
+\end{document}

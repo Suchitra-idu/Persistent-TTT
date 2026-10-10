@@ -71,7 +71,10 @@ def _save(fig, path: str) -> str:
     return path
 
 
-def forest(estimates: Sequence[Estimate], path: str, *, title: str) -> str:
+def forest(
+    estimates: Sequence[Estimate], path: str, *, title: str,
+    xlabel: str = "Δppl  (+ = treated arm lower)",
+) -> str:
     """One panel per measure, one row per source; a filled dot means the 95%
     interval excludes zero. Panels keep their own x-scale."""
     from matplotlib.ticker import MaxNLocator
@@ -102,7 +105,7 @@ def forest(estimates: Sequence[Estimate], path: str, *, title: str) -> str:
         ax.axvline(0, color=MUTED, linewidth=1, zorder=2)
         ax.xaxis.set_major_locator(MaxNLocator(nbins=4))
         ax.set_title(measure, loc="left")
-        ax.set_xlabel("Δppl  (+ = treated arm lower)")
+        ax.set_xlabel(xlabel)
         _chrome(ax, grid_axis="x")
     axes[0][0].set_yticks(range(len(sources)), list(reversed(sources)))
     fig.suptitle(title, x=0.01, ha="left", fontsize=11, color=INK, fontweight="bold")

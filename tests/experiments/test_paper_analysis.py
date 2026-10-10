@@ -70,8 +70,8 @@ def test_the_analysis_draws_every_figure(results, tmp_path):
     out = run_analysis(results, tmp_path / "paper")
 
     assert {p.name for p in (out / "figures").iterdir()} == {
-        "F1_gains_vs_step.png", "F2_by_position.png", "F3_repeat_mechanism.png",
-        "F4_per_source_rule.png",
+        "F1_gains_vs_step.pdf", "F2_by_position.pdf", "F3_repeat_mechanism.pdf",
+        "F4_per_source_rule.pdf",
     }
 
 

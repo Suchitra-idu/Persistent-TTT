@@ -23,8 +23,9 @@ Runs compared, all at steps 200 / 400 / 600:
 | 400 | +0.080 * (99%) | +0.191 * (99%) |
 | 600 | +0.106 * (100%) | +0.203 * (100%) |
 
-The lead holds on every source (`T2_per_source`). It is largest on C4, Wikipedia and Book,
-and smallest on Github and ArXiv.
+The lead holds on every source (`T2_per_source`). In absolute perplexity it is largest on C4,
+Wikipedia and Book and smallest on Github and ArXiv. In relative terms
+StackExchange leads for both rules.
 
 **Caveat, to state as a limitation:** a TTT run trains the full `W_down` of 14
 layers on top of LoRA, so it has far more trainable parameters than the
@@ -66,6 +67,12 @@ fast weights and to use the delta-rule ones.
 | cross_doc: carry vs. reset at document boundaries | −0.004 [−0.015, +0.006] | −0.002 [−0.006, +0.002] |
 | repeat_9_vs_1: the same document re-read 9 times vs. once | +0.000 [−0.001, +0.001] | +0.000 [−0.001, +0.001] |
 | same_vs_other_source: primed by the same vs. another source | +0.010 * | +0.002 |
+
+The `same_vs_other_source` +0.010 for hebbian is a foreign state hurting less,
+not a same-source state helping. Priming on a different source raises hebbian
+perplexity in 15 of 30 source pairs (mean −0.022, down to −0.07), and
+same-source priming is about neutral (−0.008). Delta_chunk priming is neutral
+(3 of 30 pairs significant, mixed directions).
 
 `cross_doc` sits inside ±0.008 with a CI that includes zero at 200, 400 and 600,
 for both rules. Three times more training does not move it, which answers
@@ -113,7 +120,7 @@ run's flags; gradient clipping at `max_grad_norm=10` stays on in both):
 
 | probe | steps | result |
 |---|---|---|
-| hebbian, no clip (`hebbian-noclip`, W&B `ygka2rdc`) | 200 | **Collapses.** Loss 25.8 at step 10, with gradient norms 83–132, 8–13× over the gradient clip. It settles at a loss of about 8 (perplexity about 3,000) and never recovers. The clipped runs sit at 2.0–2.6. |
+| hebbian, no clip (`hebbian-noclip`, W&B `ygka2rdc`) | 200 | **Collapses.** Loss 25.8 averaged over the first 10 steps; at step 10 the `W_down` gradient norm is 132, 13× the gradient clip. It settles at a loss of about 8.1 (perplexity about 3,300) and does not recover within 200 steps. The unclipped delta_chunk probe, on the same data order, stays at 1.8–2.8. |
 | delta_chunk, no clip (`delta-noclip-probe`, `delta-noclip`) | 105, 100 | **Stable loss** (1.8–2.8, gradient norms 0.3–1.6, the gradient clip never kicked in), **because the TTT path is shut off** (below). |
 
 - **Hebbian:** the clip is necessary. Its update has no error term and a fixed step,

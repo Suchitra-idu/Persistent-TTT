@@ -86,7 +86,7 @@
   "clip_threshold": 0.42946575603179715,
   "control": "lora-only-matched",
   "git": {
-    "commit": "45ebd444f421238f550ce82ad3d7706477fc451c",
+    "commit": "5917641e907014089b7a503482e6fc3aa4146a4f",
     "dirty": true
   },
   "mechanism_step": 600,

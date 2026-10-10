@@ -24,9 +24,21 @@ def _title(fig, text: str) -> None:
     fig.suptitle(text, x=0.01, ha="left", fontsize=11, color=INK, fontweight="bold")
 
 
-def _end_label(ax, x: float, y: float, text: str, *, above: bool = False) -> None:
-    ax.annotate(text, (x, y), xytext=(6, 4 if above else 0), textcoords="offset points",
+def _end_label(ax, x: float, y: float, text: str, *, above: bool = False, nudge: float = 0.0) -> None:
+    ax.annotate(text, (x, y), xytext=(6, nudge + (4 if above else 0)), textcoords="offset points",
                 va="bottom" if above else "center", fontsize=8, color=INK)
+
+
+def _end_labels(ax, ends: Sequence[tuple[float, float, str]]) -> None:
+    """Labels at line ends, pushed apart vertically when they would collide."""
+    low, high = ax.get_ylim()
+    ordered = sorted(ends, key=lambda e: e[1])
+    for i, (x, y, text) in enumerate(ordered):
+        crowded = len(ordered) > 1 and any(
+            j != i and abs(y - other) < 0.08 * (high - low) for j, (_, other, _) in enumerate(ordered)
+        )
+        nudge = (5 if i == len(ordered) - 1 else -5) if crowded else 0
+        _end_label(ax, x, y, text, nudge=nudge)
 
 
 def gains_vs_step(
@@ -39,14 +51,16 @@ def gains_vs_step(
     plt = _pyplot()
     fig, axes = plt.subplots(1, len(panels), figsize=(4.4 * len(panels), 3.4), squeeze=False)
     for ax, (measure, title) in zip(axes[0], panels):
+        ends = []
         for index, (run, by_step) in enumerate(series.items()):
             steps = sorted(s for s in by_step if measure in by_step[s])
             gaps = [by_step[s][measure].interval for s in steps]
             ax.fill_between(steps, [g.low for g in gaps], [g.high for g in gaps],
                             color=SERIES[index], alpha=BAND_ALPHA, linewidth=0, zorder=2)
             ax.plot(steps, [g.point for g in gaps], label=run, zorder=3, **_style(index))
-            _end_label(ax, steps[-1], gaps[-1].point, run)
+            ends.append((steps[-1], gaps[-1].point, run))
         ax.axhline(0, color=MUTED, linewidth=1, zorder=1)
+        _end_labels(ax, ends)
         ax.set_title(title, loc="left")
         ax.set_xlabel("training step")
         ax.set_ylabel("Δppl  (+ = lower perplexity)")

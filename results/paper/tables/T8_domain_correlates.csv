@@ -1,0 +1,3 @@
+run,n_sources,spearman_rho_within_vs_base_ppl
+hebbian,6,0.2000
+delta_chunk,6,0.0857

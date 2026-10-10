@@ -1,0 +1,11 @@
+{
+  "source": "layer shapes of Qwen/Qwen3-0.6B (safetensors header) and ttt/extensions/mechanism/inplace_ttt.py; LoRA rank 16",
+  "lora_only_control": 10092544,
+  "ttt_model": {
+    "lora": 9175040,
+    "ttt_down_projections": 44040192,
+    "new_ttt_modules": 14809102,
+    "total": 68024334
+  },
+  "ratio_ttt_to_control": 6.74
+}

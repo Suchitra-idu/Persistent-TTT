@@ -34,6 +34,7 @@ OUT_DIR = RESULTS_DIR / "paper"
 TRAINING = "training"
 MAIN_MEASURES = (TRAINING, "within", "between_slices", "total", VS_MATCHED, "cross_doc", "cross_slice")
 PER_SOURCE_MEASURES = (VS_MATCHED, "within", "cross_doc")
+READABLE = {"within": "within document", VS_MATCHED: "vs. matched LoRA", "cross_doc": "cross-document"}
 ROW_TYPES = {
     "regimes": EvalRow,
     "regime_slices": SliceRow,
@@ -278,22 +279,24 @@ def _figures(paper: Paper, out: Path, announce) -> list[str]:
             (VS_MATCHED, "TTT run vs. matched LoRA-only"),
             ("within", "Fast-weight updates within a document"),
             ("cross_doc", "Carrying state across documents"),
-        ), str(folder / "F1_gains_vs_step.png")))
+        ), str(folder / "F1_gains_vs_step.pdf")))
     if paper.positions:
         made.append(figs.by_position(paper.positions, (
             ("within", "Within a slice"), ("between_slices", "Carried from earlier slices"),
-        ), str(folder / "F2_by_position.png")))
+        ), str(folder / "F2_by_position.pdf")))
     if paper.repeat:
         made.append(figs.repeat_mechanism(paper.repeat, paper.clip_threshold,
-                                          str(folder / "F3_repeat_mechanism.png")))
+                                          str(folder / "F3_repeat_mechanism.pdf")))
     if paper.per_source:
         from ttt.experiments import _evidence_figures
 
         for label in paper.labels:
             made.append(_evidence_figures.forest(
-                [e for run, e in paper.per_source if run == label],
-                str(folder / f"F4_per_source_{label}.png"),
-                title=f"Per-source gains, {label}, mechanism step",
+                [dataclasses.replace(e, measure=READABLE.get(e.measure, e.measure))
+                 for run, e in paper.per_source if run == label],
+                str(folder / f"F4_per_source_{label}.pdf"),
+                title=f"Per-source gains, {label}, step {max(p.step for p in paper.bundles)}",
+                xlabel="Δppl  (+ = lower perplexity)",
             ))
     return [str(Path(p).relative_to(out)) for p in made]
 

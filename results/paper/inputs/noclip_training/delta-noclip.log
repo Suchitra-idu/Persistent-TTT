@@ -1,0 +1,10 @@
+step 10/1050 loss 2.5249 |g| lora 0.592 wdown 1.629 new 0.151
+step 20/1050 loss 2.3634 |g| lora 1.623 wdown 2.255 new 0.815
+step 30/1050 loss 2.3683 |g| lora 0.670 wdown 0.983 new 0.053
+step 40/1050 loss 2.3813 |g| lora 0.523 wdown 0.795 new 0.044
+step 50/1050 loss 2.3051 |g| lora 0.379 wdown 0.738 new 0.015
+step 60/1050 loss 2.0468 |g| lora 0.371 wdown 0.718 new 0.025
+step 70/1050 loss 2.2846 |g| lora 0.298 wdown 0.572 new 0.011
+step 80/1050 loss 2.2834 |g| lora 0.480 wdown 0.969 new 0.018
+step 90/1050 loss 2.3849 |g| lora 0.335 wdown 0.618 new 0.010
+step 100/1050 loss 2.4558 |g| lora 0.313 wdown 0.626 new 0.007
