@@ -181,6 +181,31 @@ class TestTorchCompute(ComputeConformance):
 
         assert not compute.model.model.layers[1].mlp.w_target.equal(before)
 
+    def test_eval_loss_runs_the_model_in_eval_mode(self, compute):
+        seen = []
+        compute.model.lm_head.register_forward_hook(
+            lambda module, *_: seen.append(module.training)
+        )
+        compute.model.train()
+
+        compute.eval_loss(IDS)
+
+        assert seen == [False]
+
+    def test_eval_loss_restores_train_mode(self, compute):
+        compute.model.train()
+
+        compute.eval_loss(IDS)
+
+        assert compute.model.training
+
+    def test_eval_loss_leaves_an_eval_mode_model_in_eval_mode(self, compute):
+        compute.model.eval()
+
+        compute.eval_loss(IDS)
+
+        assert not compute.model.training
+
     def test_an_unclassified_trainable_parameter_is_rejected(self):
         model, cfg = _builders.tiny_model()
         model.lm_head.weight.requires_grad_(True)

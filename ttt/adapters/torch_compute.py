@@ -94,9 +94,15 @@ class TorchCompute:
 
     @torch.no_grad()
     def eval_loss(self, token_ids: Sequence[int], *, lora: bool = True) -> float:
+        """Always in eval mode, so LoRA dropout never perturbs a measurement."""
         ids = self._ids(token_ids)
-        with contextlib.nullcontext() if lora else self.model.disable_adapter():
-            return float(self.model(input_ids=ids, labels=ids).loss)
+        was_training = self.model.training
+        self.model.eval()
+        try:
+            with contextlib.nullcontext() if lora else self.model.disable_adapter():
+                return float(self.model(input_ids=ids, labels=ids).loss)
+        finally:
+            self.model.train(was_training)
 
     def parameter_counts(self) -> Mapping[str, int]:
         return {
