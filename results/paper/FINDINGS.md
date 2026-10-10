@@ -80,7 +80,7 @@ Two per-source `cross_doc` estimates are significantly negative (hebbian Book,
 delta_chunk Wikipedia). Each rests on 4 documents, among 12 per-source tests;
 treat them as noise unless they replicate.
 
-## 4. Why: the read-time clip is saturated, so only the direction of the state reaches the output
+## 4. The clip discards the state's size, but removing it does not help
 
 Every fast-weight read is Frobenius-clipped so that ‖η·S‖ ≤ τ, with τ = 20
 (`ttt/core/ttt_math.py`, `frobenius_clip`). With the pretrained ‖W₀‖ averaging
@@ -107,12 +107,50 @@ follow and are both in the data (`F3`):
   direction is an average over earlier documents (carried_decay = 0.9). Once it
   is normalized to τ, it holds nothing specific to the next document.
 
-**What this does not yet show:** the saturation is measured, but its role as the
-cause is inferred. The direct test is an eval-only ablation on existing checkpoints:
-re-run the boundary and repeat suites with the clip disabled or τ raised. If
-`cross_doc` and the repeat curve move, the clip is the bottleneck. If they stay
-flat, the carried state is uninformative no matter how it's read. That costs two GPU evals
-(one per rule) at step 600 and no training.
+**Whether the clip can be removed depends on the update rule.** Two short
+training probes without the clip (`clip_enabled=false`, otherwise the original
+run's flags; gradient clipping at `max_grad_norm=10` stays on in both):
+
+| probe | steps | result |
+|---|---|---|
+| hebbian, no clip (`hebbian-noclip`, W&B `ygka2rdc`) | 200 | **Collapses.** Loss 25.8 at step 10, with gradient norms 83–132, 8–13× over the gradient clip. It settles at a loss of about 8 (perplexity about 3,000) and never recovers. The clipped runs sit at 2.0–2.6. |
+| delta_chunk, no clip (`delta-noclip-probe`, `delta-noclip`) | 105, 100 | **Stable loss** (1.8–2.8, gradient norms 0.3–1.6, the gradient clip never kicked in), **because the TTT path is shut off** (below). |
+
+- **Hebbian:** the clip is necessary. Its update has no error term and a fixed step,
+  so the state grows with every chunk and wrecks the forward pass within 10
+  steps.
+- **Delta_chunk:** training survives without the clip, but only by switching
+  the TTT path off. Evaluated at step 100 against the clipped run at step 100 (same
+  106 documents; bundles `delta-noclip/step_100` and
+  `ttt-v1.1-clean-deltachunk/step_100`):
+
+  | step 100 | with clip | without clip |
+  |---|---|---|
+  | within | +0.276 * | +0.003 |
+  | between_slices | +0.051 * | +0.002 |
+  | cross_doc | −0.002 | −0.005 |
+  | cross_slice | +0.062 * | +0.004 |
+  | output gate, median | 0.92 | **0.00** |
+  | state ratio, median | ≈ 73,600 | ≈ 890 |
+  | full model, without vs. with clip | | −0.167 * (worse on 106/106 documents) |
+
+  Without the clip, the output gate closes completely, so every TTT effect is
+  zero, and the model ends up worse overall. Even unclipped, the state is about 2,000×
+  above the clip threshold. That is far too large to use, and training shuts
+  it out.
+
+**What this establishes.** The clip is what makes the TTT term usable. It brings
+the state down to a fixed scale the model can use, and when it is absent (delta_chunk)
+or insufficient (hebbian's gate stays at 0.002 even with it), training
+shuts the gate. Removing the clip does not let the state's size carry information
+across documents: nothing reaches the output at all. So the clip does not explain the
+cross-document null result. That result holds with the clip, without it, and for both update rules.
+What a document passes to the next is a fixed-norm direction. Measured directly,
+that direction carries nothing, not even when it was built from the same document
+(`repeat_9_vs_1` = +0.000).
+
+Each time the TTT term becomes unusable, the optimizer responds the same
+way: hebbian with the clip, delta_chunk without it, both end with a closed gate.
 
 ## 5. Sanity checks that hold
 
@@ -137,7 +175,7 @@ flat, the carried state is uninformative no matter how it's read. That costs two
 
 1. **Confirm the LR schedules match:** in W&B, the `step N/<total>` progress line should show
    the same `<total>` in all three runs.
-2. **The clip ablation** in §4: two evals, recommended. It turns the explanation
-   from correlational into causal.
+2. **The no-clip probes are short and single-seed** (§4): 100–200 steps, one
+   seed each. Report them as probes, not converged runs.
 3. **Limitations to state:** the capacity confound (§1), one seed, one model size,
    at most 600 training steps, and 6 Book documents in the holdout.
