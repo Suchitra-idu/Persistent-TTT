@@ -1,0 +1,22 @@
+measure             source                  n_docs    Δppl            95% CI         rel   win
+carry_gain          RedPajamaArXiv              20  +0.034  [+0.020, +0.059]  *   +0.56%  1.00
+carry_gain          RedPajamaBook                6  +0.049  [+0.026, +0.083]  *   +0.20%  1.00
+carry_gain          RedPajamaC4                 20  +0.478  [+0.339, +0.627]  *   +1.58%  1.00
+carry_gain          RedPajamaGithub             20  +0.022  [+0.013, +0.033]  *   +0.52%  0.95
+carry_gain          RedPajamaStackExchange      20  +0.121  [+0.066, +0.201]  *   +1.54%  1.00
+carry_gain          RedPajamaWikipedia          20  +0.208  [+0.133, +0.290]  *   +1.13%  0.90
+carry_gain          ALL                        106  +0.110  [+0.082, +0.145]  *   +1.02%  0.97
+context_gain        RedPajamaArXiv              20  +1.361  [+1.035, +1.811]  *  +22.38%  1.00
+context_gain        RedPajamaBook                6  +2.646  [+1.718, +3.935]  *  +10.86%  1.00
+context_gain        RedPajamaC4                 20  +6.133  [+5.026, +7.423]  *  +20.29%  1.00
+context_gain        RedPajamaGithub             20  +1.445  [+1.077, +1.885]  *  +33.72%  1.00
+context_gain        RedPajamaStackExchange      20  +2.500  [+1.889, +3.307]  *  +32.01%  1.00
+context_gain        RedPajamaWikipedia          20  +4.282  [+3.453, +5.304]  *  +23.24%  1.00
+context_gain        ALL                        106  +2.770  [+2.354, +3.202]  *  +25.72%  1.00
+context_over_carry  RedPajamaArXiv              20  +1.327  [+1.000, +1.737]  *  +21.94%  1.00
+context_over_carry  RedPajamaBook                6  +2.597  [+1.701, +3.882]  *  +10.68%  1.00
+context_over_carry  RedPajamaC4                 20  +5.655  [+4.607, +6.882]  *  +19.00%  1.00
+context_over_carry  RedPajamaGithub             20  +1.422  [+1.025, +1.863]  *  +33.38%  1.00
+context_over_carry  RedPajamaStackExchange      20  +2.380  [+1.810, +3.109]  *  +30.94%  1.00
+context_over_carry  RedPajamaWikipedia          20  +4.074  [+3.329, +5.039]  *  +22.36%  1.00
+context_over_carry  ALL                        106  +2.660  [+2.279, +3.113]  *  +24.96%  1.00

@@ -1,0 +1,12 @@
+measure,n_sources,spearman_rho
+cross_doc,6,-0.6000
+cross_slice,6,0.2571
+within,6,0.2571
+
+source,fresh_ppl
+RedPajamaArXiv,7.45405
+RedPajamaBook,29.3002
+RedPajamaC4,37.399
+RedPajamaGithub,4.79115
+RedPajamaStackExchange,9.46691
+RedPajamaWikipedia,21.5295

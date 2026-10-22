@@ -1,0 +1,94 @@
+4000 documents, 30,888,706 tokens, seed=42
+trainable lora 9.2M, new 14.8M, wdown 44.0M
+step 10/1050 loss 2.5347 |g| lora 0.624 wdown 1.432 new 0.136
+step 20/1050 loss 2.3395 |g| lora 1.118 wdown 1.642 new 1.271
+step 30/1050 loss 2.3350 |g| lora 0.449 wdown 0.916 new 0.156
+step 40/1050 loss 2.3528 |g| lora 0.347 wdown 0.678 new 0.075
+step 50/1050 loss 2.2892 |g| lora 0.344 wdown 0.722 new 0.053
+  checkpoint saved: hebbian-carry-600/step_50
+  carry gain by slice (carried minus reset, + = carry helps): s2 +0.311 s3 +0.298 s4 +0.208 s5 +0.252 s6 +0.237 s7 +0.168 s8 +0.251 | trend -0.095
+  [eval] carry_gain_slice_1 0.3114 carry_gain_slice_2 0.2981 carry_gain_slice_3 0.2077 carry_gain_slice_4 0.2516 carry_gain_slice_5 0.2368 carry_gain_slice_6 0.1677 carry_gain_slice_7 0.2511 carry_gain_trend -0.09534 carry_off_ppl 15.18 carry_ppl 14.96 fresh_ppl 17 gap_between 0.2155 gap_lora 1.689 gap_total 2.039 gap_within 0.1352 lora_only_ppl 15.31 state_ratio_final 7.024e+04
+step 60/1050 loss 2.0334 |g| lora 0.366 wdown 0.713 new 0.120
+step 70/1050 loss 2.2786 |g| lora 0.291 wdown 0.582 new 0.062
+step 80/1050 loss 2.2761 |g| lora 0.454 wdown 0.949 new 0.050
+step 90/1050 loss 2.3793 |g| lora 0.321 wdown 0.621 new 0.034
+step 100/1050 loss 2.4516 |g| lora 0.315 wdown 0.619 new 0.041
+  checkpoint saved: hebbian-carry-600/step_100
+  carry gain by slice (carried minus reset, + = carry helps): s2 +0.155 s3 +0.177 s4 +0.137 s5 +0.159 s6 +0.152 s7 +0.091 s8 +0.158 | trend -0.042
+  [eval] carry_gain_slice_1 0.1554 carry_gain_slice_2 0.177 carry_gain_slice_3 0.1368 carry_gain_slice_4 0.1585 carry_gain_slice_5 0.152 carry_gain_slice_6 0.09102 carry_gain_slice_7 0.1585 carry_gain_trend -0.0415 carry_off_ppl 14.8 carry_ppl 14.67 fresh_ppl 17 gap_between 0.1292 gap_lora 2.121 gap_total 2.331 gap_within 0.08081 lora_only_ppl 14.88 state_ratio_final 5.615e+04
+step 110/1050 loss 2.2146 |g| lora 0.371 wdown 0.720 new 0.042
+step 120/1050 loss 2.0804 |g| lora 0.290 wdown 0.580 new 0.054
+step 130/1050 loss 2.2339 |g| lora 0.344 wdown 0.680 new 0.033
+step 140/1050 loss 2.2963 |g| lora 0.342 wdown 0.659 new 0.056
+step 150/1050 loss 2.2254 |g| lora 0.380 wdown 0.755 new 0.025
+  checkpoint saved: hebbian-carry-600/step_150
+  carry gain by slice (carried minus reset, + = carry helps): s2 +0.146 s3 +0.154 s4 +0.110 s5 +0.138 s6 +0.120 s7 +0.100 s8 +0.144 | trend -0.028
+  [eval] carry_gain_slice_1 0.1461 carry_gain_slice_2 0.1539 carry_gain_slice_3 0.1099 carry_gain_slice_4 0.1375 carry_gain_slice_5 0.1197 carry_gain_slice_6 0.1 carry_gain_slice_7 0.1441 carry_gain_trend -0.02793 carry_off_ppl 14.63 carry_ppl 14.52 fresh_ppl 17 gap_between 0.1141 gap_lora 2.32 gap_total 2.483 gap_within 0.04939 lora_only_ppl 14.68 state_ratio_final 3.372e+04
+step 160/1050 loss 2.5408 |g| lora 0.414 wdown 0.861 new 0.025
+step 170/1050 loss 2.3603 |g| lora 0.485 wdown 0.760 new 0.049
+step 180/1050 loss 2.2516 |g| lora 0.314 wdown 0.595 new 0.043
+step 190/1050 loss 2.3906 |g| lora 0.348 wdown 0.668 new 0.034
+step 200/1050 loss 2.5199 |g| lora 0.423 wdown 0.941 new 0.118
+  checkpoint saved: hebbian-carry-600/step_200
+  carry gain by slice (carried minus reset, + = carry helps): s2 +0.158 s3 +0.124 s4 +0.114 s5 +0.122 s6 +0.080 s7 +0.115 s8 +0.113 | trend -0.026
+  [eval] carry_gain_slice_1 0.1576 carry_gain_slice_2 0.1239 carry_gain_slice_3 0.1145 carry_gain_slice_4 0.1225 carry_gain_slice_5 0.08007 carry_gain_slice_6 0.1151 carry_gain_slice_7 0.1135 carry_gain_trend -0.02648 carry_off_ppl 14.55 carry_ppl 14.45 fresh_ppl 17 gap_between 0.1032 gap_lora 2.44 gap_total 2.554 gap_within 0.01123 lora_only_ppl 14.56 state_ratio_final 2.054e+04
+step 210/1050 loss 2.3288 |g| lora 0.358 wdown 0.661 new 0.087
+step 220/1050 loss 2.0411 |g| lora 0.380 wdown 0.641 new 0.027
+step 230/1050 loss 2.5525 |g| lora 0.357 wdown 0.647 new 0.055
+step 240/1050 loss 2.1411 |g| lora 0.684 wdown 1.230 new 0.283
+step 250/1050 loss 2.2375 |g| lora 0.433 wdown 0.638 new 0.059
+  checkpoint saved: hebbian-carry-600/step_250
+  carry gain by slice (carried minus reset, + = carry helps): s2 +0.107 s3 +0.110 s4 +0.082 s5 +0.081 s6 +0.062 s7 +0.061 s8 +0.068 | trend -0.044
+  [eval] carry_gain_slice_1 0.1065 carry_gain_slice_2 0.11 carry_gain_slice_3 0.08169 carry_gain_slice_4 0.08136 carry_gain_slice_5 0.06243 carry_gain_slice_6 0.06089 carry_gain_slice_7 0.06829 carry_gain_trend -0.04367 carry_off_ppl 14.46 carry_ppl 14.39 fresh_ppl 17 gap_between 0.0709 gap_lora 2.528 gap_total 2.615 gap_within 0.01594 lora_only_ppl 14.48 state_ratio_final 4.73e+04
+step 260/1050 loss 2.1711 |g| lora 0.342 wdown 0.604 new 0.025
+step 270/1050 loss 2.4287 |g| lora 0.381 wdown 0.648 new 0.015
+step 280/1050 loss 2.3794 |g| lora 0.432 wdown 0.785 new 0.027
+step 290/1050 loss 2.2971 |g| lora 0.626 wdown 0.985 new 0.142
+step 300/1050 loss 2.3591 |g| lora 0.347 wdown 0.630 new 0.013
+  checkpoint saved: hebbian-carry-600/step_300
+  carry gain by slice (carried minus reset, + = carry helps): s2 +0.065 s3 +0.080 s4 +0.049 s5 +0.083 s6 +0.043 s7 +0.024 s8 +0.021 | trend -0.050
+  [eval] carry_gain_slice_1 0.06508 carry_gain_slice_2 0.07988 carry_gain_slice_3 0.04914 carry_gain_slice_4 0.08312 carry_gain_slice_5 0.04276 carry_gain_slice_6 0.02366 carry_gain_slice_7 0.02142 carry_gain_trend -0.04994 carry_off_ppl 14.38 carry_ppl 14.34 fresh_ppl 17 gap_between 0.04529 gap_lora 2.6 gap_total 2.664 gap_within 0.01946 lora_only_ppl 14.4 state_ratio_final 3.794e+04
+step 310/1050 loss 2.4577 |g| lora 0.324 wdown 0.556 new 0.021
+step 320/1050 loss 2.2720 |g| lora 0.383 wdown 0.654 new 0.067
+step 330/1050 loss 2.3027 |g| lora 0.393 wdown 0.669 new 0.019
+step 340/1050 loss 2.3048 |g| lora 0.314 wdown 0.550 new 0.014
+step 350/1050 loss 2.3409 |g| lora 0.336 wdown 0.572 new 0.019
+  checkpoint saved: hebbian-carry-600/step_350
+  carry gain by slice (carried minus reset, + = carry helps): s2 +0.087 s3 +0.085 s4 +0.087 s5 +0.103 s6 +0.074 s7 +0.062 s8 +0.073 | trend -0.019
+  [eval] carry_gain_slice_1 0.08746 carry_gain_slice_2 0.0853 carry_gain_slice_3 0.0866 carry_gain_slice_4 0.1027 carry_gain_slice_5 0.0743 carry_gain_slice_6 0.06219 carry_gain_slice_7 0.0733 carry_gain_trend -0.01863 carry_off_ppl 14.35 carry_ppl 14.28 fresh_ppl 17 gap_between 0.07201 gap_lora 2.643 gap_total 2.724 gap_within 0.008368 lora_only_ppl 14.36 state_ratio_final 3.366e+04
+step 360/1050 loss 2.1465 |g| lora 0.345 wdown 0.608 new 0.048
+step 370/1050 loss 2.2607 |g| lora 0.398 wdown 0.653 new 0.008
+step 380/1050 loss 2.1881 |g| lora 0.434 wdown 0.671 new 0.100
+step 390/1050 loss 2.5822 |g| lora 0.406 wdown 0.750 new 0.013
+step 400/1050 loss 2.1648 |g| lora 0.368 wdown 0.681 new 0.019
+  checkpoint saved: hebbian-carry-600/step_400
+  carry gain by slice (carried minus reset, + = carry helps): s2 +0.115 s3 +0.102 s4 +0.082 s5 +0.089 s6 +0.054 s7 +0.080 s8 +0.062 | trend -0.038
+  [eval] carry_gain_slice_1 0.1153 carry_gain_slice_2 0.1015 carry_gain_slice_3 0.08167 carry_gain_slice_4 0.08936 carry_gain_slice_5 0.05443 carry_gain_slice_6 0.07979 carry_gain_slice_7 0.06186 carry_gain_trend -0.0376 carry_off_ppl 14.31 carry_ppl 14.24 fresh_ppl 17 gap_between 0.07256 gap_lora 2.684 gap_total 2.761 gap_within 0.004347 lora_only_ppl 14.32 state_ratio_final 2.699e+04
+step 410/1050 loss 2.4067 |g| lora 0.429 wdown 0.695 new 0.017
+step 420/1050 loss 2.0744 |g| lora 0.353 wdown 0.580 new 0.010
+step 430/1050 loss 1.9609 |g| lora 0.359 wdown 0.575 new 0.019
+step 440/1050 loss 2.1295 |g| lora 0.435 wdown 0.732 new 0.014
+step 450/1050 loss 2.1406 |g| lora 0.468 wdown 0.771 new 0.017
+  checkpoint saved: hebbian-carry-600/step_450
+  carry gain by slice (carried minus reset, + = carry helps): s2 +0.145 s3 +0.126 s4 +0.078 s5 +0.125 s6 +0.072 s7 +0.065 s8 +0.083 | trend -0.061
+  [eval] carry_gain_slice_1 0.145 carry_gain_slice_2 0.1256 carry_gain_slice_3 0.07828 carry_gain_slice_4 0.125 carry_gain_slice_5 0.07173 carry_gain_slice_6 0.06488 carry_gain_slice_7 0.08324 carry_gain_trend -0.06121 carry_off_ppl 14.28 carry_ppl 14.2 fresh_ppl 17 gap_between 0.08585 gap_lora 2.708 gap_total 2.807 gap_within 0.01238 lora_only_ppl 14.3 state_ratio_final 1.714e+04
+step 460/1050 loss 2.2744 |g| lora 0.387 wdown 0.609 new 0.019
+step 470/1050 loss 2.2396 |g| lora 0.530 wdown 0.836 new 0.041
+step 480/1050 loss 2.1428 |g| lora 0.403 wdown 0.831 new 0.037
+step 490/1050 loss 2.0366 |g| lora 0.413 wdown 0.755 new 0.012
+step 500/1050 loss 2.2051 |g| lora 0.318 wdown 0.487 new 0.013
+  checkpoint saved: hebbian-carry-600/step_500
+  carry gain by slice (carried minus reset, + = carry helps): s2 +0.134 s3 +0.138 s4 +0.105 s5 +0.136 s6 +0.097 s7 +0.105 s8 +0.086 | trend -0.040
+  [eval] carry_gain_slice_1 0.1338 carry_gain_slice_2 0.1378 carry_gain_slice_3 0.1047 carry_gain_slice_4 0.1361 carry_gain_slice_5 0.09675 carry_gain_slice_6 0.1052 carry_gain_slice_7 0.08642 carry_gain_trend -0.03998 carry_off_ppl 14.25 carry_ppl 14.15 fresh_ppl 17 gap_between 0.1003 gap_lora 2.733 gap_total 2.852 gap_within 0.01841 lora_only_ppl 14.27 state_ratio_final 1.353e+04
+step 510/1050 loss 2.1207 |g| lora 0.452 wdown 0.753 new 0.022
+step 520/1050 loss 2.0384 |g| lora 0.421 wdown 0.641 new 0.024
+step 530/1050 loss 2.1827 |g| lora 0.335 wdown 0.524 new 0.019
+step 540/1050 loss 2.5379 |g| lora 0.367 wdown 0.577 new 0.027
+step 550/1050 loss 2.5162 |g| lora 0.418 wdown 0.729 new 0.025
+  checkpoint saved: hebbian-carry-600/step_550
+  carry gain by slice (carried minus reset, + = carry helps): s2 +0.157 s3 +0.121 s4 +0.084 s5 +0.158 s6 +0.085 s7 +0.127 s8 +0.071 | trend -0.040
+  [eval] carry_gain_slice_1 0.1569 carry_gain_slice_2 0.1209 carry_gain_slice_3 0.08421 carry_gain_slice_4 0.1576 carry_gain_slice_5 0.08466 carry_gain_slice_6 0.1266 carry_gain_slice_7 0.0708 carry_gain_trend -0.04017 carry_off_ppl 14.24 carry_ppl 14.14 fresh_ppl 17 gap_between 0.1003 gap_lora 2.75 gap_total 2.865 gap_within 0.01458 lora_only_ppl 14.25 state_ratio_final 1.337e+04
+step 560/1050 loss 2.4031 |g| lora 0.422 wdown 0.725 new 0.029
+step 570/1050 loss 2.5524 |g| lora 0.459 wdown 0.730 new 0.031
+step 580/1050 loss 2.4508 |g| lora 0.392 wdown 0.605 new 0.018
+step 590/1050 loss 2.2997 |g| lora 0.363 wdown 0.563 new 0.009

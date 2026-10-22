@@ -178,8 +178,23 @@ bias −6.
 
 Carry from earlier slices of the same document helps 7–10× more than the
 original design, from the second slice on and flat after that (no accumulation).
-Carry into a different document is at most a trace. Main gate median 0.0007, so
-the benefit flows through the carry path. Bundled changes, one seed, 200 steps.
+Main gate median 0.0007, so the benefit flows through the carry path.
+
+Trained to 600 (`hebbian-carry-600`, bundles `results/hebbian-carry-600/`, same
+config and seed; boundary chains of 20 documents from step 200 on):
+
+| measure | @200 | @400 | @600 |
+|---|---|---|---|
+| between slices, same document | +0.099 * | +0.062 * | +0.097 * |
+| cross-document (100 docs) | +0.010 * | −0.003 | −0.020 * (hurts on 71%) |
+| vs matched LoRA | +0.215 * | +0.188 * | +0.234 * |
+| carry share of previous-slice context | 3.9% [3.1, 4.6] | | 4.0% [3.3, 4.7] |
+
+So: same-document carry survives full training; cross-document carry turns
+harmful (4 of 6 sources significant). At 600 the design leads matched LoRA by
+more than plain Hebbian (+0.106) or delta (+0.203). Carried state = 44.0M values,
+176 MB fp32, about the bf16 attention cache of 1,536 tokens
+(`inputs/param_counts.json`). Bundled changes, one seed.
 
 Two failed attempts first (`inputs/carry_design_training/README.md`): without
 the zero-initialised scale the carry doubled perplexity (τ = 20 is 4–5× the

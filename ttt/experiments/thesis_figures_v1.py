@@ -24,7 +24,7 @@ from ttt.experiments import paper_eval_v1
 from ttt.experiments._evidence_figures import (
     GRID, INK, MUTED, SERIES, SURFACE, _chrome, _ordered_sources, _pyplot, _save,
 )
-from ttt.experiments.paper_analysis_v1 import RESULTS_DIR, newest_bundle
+from ttt.experiments.paper_analysis_v1 import RESULTS_DIR, Bundle, newest_bundle
 
 OUT = RESULTS_DIR / "paper"
 CONTROL = "lora-only-matched"
@@ -40,6 +40,11 @@ N_BOOT = paper_eval_v1.DEFAULT_N_BOOT
 
 
 def _rows(run: str, step: int, name: str):
+    """From the newest bundle at that step that measured `name`; a step can
+    hold several bundles, each with different suites."""
+    for stamp in sorted((RESULTS_DIR / run / f"step_{step}").glob("*/raw"), reverse=True):
+        if (stamp / f"{name}.json").is_file():
+            return Bundle(run=run, step=step, path=stamp.parent).rows(name)
     return newest_bundle(RESULTS_DIR, run, step).rows(name)
 
 
@@ -324,10 +329,14 @@ def write_tables(estimates, correlates) -> None:
 
 
 CARRY_DESIGN = "hebbian-carry-b"
+CARRY_DESIGN_LONG = "hebbian-carry-600"
 CARRY_DESIGN_CASES = (
     ("plain Hebbian, step 200", "ttt-v1.1", 200),
+    ("plain Hebbian, step 600", "ttt-v1.1", 600),
     ("carry design, step 100", CARRY_DESIGN, 100),
     ("carry design, step 200", CARRY_DESIGN, 200),
+    ("carry design, step 400", CARRY_DESIGN_LONG, 400),
+    ("carry design, step 600", CARRY_DESIGN_LONG, 600),
 )
 CARRY_DESIGN_MEASURES = (
     ("between_slices", "Carried from earlier slices\nof the same document"),
@@ -339,15 +348,15 @@ CARRY_DESIGN_MEASURES = (
 
 def carry_design_estimates() -> dict[tuple[str, str], object]:
     """Pooled estimates for each case; the pre-fix TTT bundle is rebased onto the true base."""
-    base = _rows(CONTROL, 200, "regimes")
     out = {}
     for label, run, step in CARRY_DESIGN_CASES:
+        base = _rows(CONTROL, step if step in STEPS else 200, "regimes")
         rows = paper_analysis.rebased(_rows(run, step, "regimes"), base)
         estimates = (
             evidence.regime_estimates(rows, rng=NumpyRng(0), n_boot=N_BOOT)
             + evidence.boundary_estimates(_rows(run, step, "boundary"), rng=NumpyRng(0), n_boot=N_BOOT)
         )
-        if step == 200:
+        if step in STEPS:
             estimates += paper_analysis.matched_estimates(base, rows, rng=NumpyRng(0), n_boot=N_BOOT)
         for e in estimates:
             if e.source == ALL_SOURCES:
@@ -357,15 +366,16 @@ def carry_design_estimates() -> dict[tuple[str, str], object]:
 
 def carry_design_figure(estimates, path: Path) -> str:
     plt = _pyplot()
-    fig, axes = plt.subplots(1, len(CARRY_DESIGN_MEASURES), figsize=(12, 3.4), squeeze=False)
-    colours = (SERIES[0], SERIES[1], SERIES[1])
+    fig, axes = plt.subplots(1, len(CARRY_DESIGN_MEASURES), figsize=(13, 4.2), squeeze=False)
+    colours = [SERIES[0] if label.startswith("plain") else SERIES[1] for label, _, _ in CARRY_DESIGN_CASES]
+    markers = "ososDv"
     for ax, (measure, title) in zip(axes[0], CARRY_DESIGN_MEASURES):
         for y, (label, _, _) in enumerate(CARRY_DESIGN_CASES):
             e = estimates[(label, measure)]
             i = e.interval
             filled = i.excludes_zero
             ax.hlines(y, i.low, i.high, color=colours[y], linewidth=2)
-            ax.plot(i.point, y, "osD"[y], markersize=7, markeredgewidth=2, markeredgecolor=colours[y],
+            ax.plot(i.point, y, markers[y], markersize=7, markeredgewidth=2, markeredgecolor=colours[y],
                     markerfacecolor=colours[y] if filled else SURFACE)
         ax.axvline(0, color=MUTED, linewidth=1)
         ax.set_yticks(range(len(CARRY_DESIGN_CASES)),
@@ -382,8 +392,9 @@ def carry_design_figure(estimates, path: Path) -> str:
 def carry_design_by_position(path: Path) -> str:
     plt = _pyplot()
     fig, ax = plt.subplots(figsize=(6.4, 3.8))
-    cases = (("plain Hebbian, step 200", "ttt-v1.1", 200, SERIES[0], "o"),
-             ("carry design, step 200", CARRY_DESIGN, 200, SERIES[1], "D"))
+    cases = (("plain Hebbian, step 600", "ttt-v1.1", 600, SERIES[0], "o"),
+             ("carry design, step 200", CARRY_DESIGN, 200, MUTED, "D"),
+             ("carry design, step 600", CARRY_DESIGN_LONG, 600, SERIES[1], "v"))
     for label, run, step, colour, marker in cases:
         points = sorted((i, e.interval) for i, e in paper_analysis.position_estimates(
             _rows(run, step, "regime_slices"), rng=NumpyRng(0), n_boot=N_BOOT) if e.measure == "between_slices")
@@ -396,6 +407,40 @@ def carry_design_by_position(path: Path) -> str:
     ax.legend(frameon=False, fontsize=8)
     _chrome(ax)
     _title(fig, "Carry from earlier slices of the same document, by slice")
+    fig.tight_layout()
+    return _save(fig, str(path))
+
+
+TRAINING_EVAL = re.compile(r"gap_between ([-\d.e+]+)")
+CURVE_LOG = OUT / "inputs" / "carry_design_training" / "4_carry_600.log"
+
+
+def carry_design_curve(estimates, path: Path) -> str:
+    """Full evaluations with 95% intervals, and the in-training evaluations of
+    the 600-step run (30 documents, no interval) as hollow markers."""
+    plt = _pyplot()
+    fig, (within_ax, across_ax) = plt.subplots(1, 2, figsize=(10, 3.6))
+    steps = [int(label.rsplit(" ", 1)[1]) for label, _, _ in CARRY_DESIGN_CASES if label.startswith("carry")]
+    labels = [label for label, _, _ in CARRY_DESIGN_CASES if label.startswith("carry")]
+    for ax, measure, title in ((within_ax, "between_slices", "Carried from earlier slices of the same document"),
+                               (across_ax, "cross_doc", "Carried into a different document")):
+        intervals = [estimates[(label, measure)].interval for label in labels]
+        ax.fill_between(steps, [i.low for i in intervals], [i.high for i in intervals],
+                        color=SERIES[1], alpha=0.18, linewidth=0)
+        ax.plot(steps, [i.point for i in intervals], color=SERIES[1], marker="o", markersize=6,
+                linewidth=2, label="carry design, full evaluation")
+        ax.axhline(0, color=MUTED, linewidth=1)
+        ax.set_title(title, loc="left", fontsize=9)
+        ax.set_xlabel("training step")
+        ax.set_ylabel("Δppl  (+ = carry helps)")
+        _chrome(ax)
+    lines = CURVE_LOG.read_text().splitlines()
+    steps_seen = [int(m.group(1)) for line in lines if (m := re.match(r"\s*checkpoint saved: \S+/step_(\d+)", line))]
+    gaps = [float(m.group(1)) for line in lines if (m := TRAINING_EVAL.search(line))]
+    within_ax.plot(steps_seen[: len(gaps)], gaps, linestyle="none", marker="o", markersize=5,
+                   markerfacecolor=SURFACE, markeredgecolor=SERIES[1], label="in-training evaluation")
+    within_ax.legend(frameon=False, fontsize=8)
+    _title(fig, "Carry gains across training (carry design)")
     fig.tight_layout()
     return _save(fig, str(path))
 
@@ -431,6 +476,7 @@ def main() -> None:
     made += [
         carry_design_figure(design, figures / "F13_carry_design.pdf"),
         carry_design_by_position(figures / "F14_carry_design_by_slice.pdf"),
+        carry_design_curve(design, figures / "F15_carry_design_curve.pdf"),
     ]
     (OUT / "tables" / "T11_carry_design.csv").write_text("\n".join(carry_design_table(design)) + "\n")
     write_tables(estimates, correlates)

@@ -7,5 +7,18 @@
     "new_ttt_modules": 14809102,
     "total": 68024334
   },
-  "ratio_ttt_to_control": 6.74
+  "ratio_ttt_to_control": 6.74,
+  "carried_state": {
+    "values": 44040192,
+    "bytes_fp32": 176160768,
+    "kv_cache_per_token": {
+      "layers": 28,
+      "kv_heads": 8,
+      "head_dim": 128,
+      "values": 57344,
+      "bytes_bf16": 114688
+    },
+    "equivalent_kv_tokens_by_bytes": 1536,
+    "equivalent_kv_tokens_by_values": 768
+  }
 }
