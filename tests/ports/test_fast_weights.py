@@ -54,6 +54,22 @@ class FastWeightsConformance:
 
         assert fast_weights.snapshot().is_empty
 
+    def test_detaching_the_carry_keeps_its_value(self, fast_weights):
+        fast_weights.set_mode(evolve=True, stream=False, session=True)
+        self.run_item(fast_weights)
+        fast_weights.advance_carry()
+        before = fast_weights.snapshot()
+
+        fast_weights.detach_carry()
+
+        after = fast_weights.snapshot()
+        assert all(torch.equal(before.get(i), after.get(i)) for i in before.layer_indices)
+
+    def test_detaching_an_empty_carry_is_safe(self, fast_weights):
+        fast_weights.detach_carry()
+
+        assert fast_weights.snapshot().is_empty
+
     def test_reset_carry_clears_it(self, fast_weights):
         fast_weights.set_mode(evolve=True, stream=False, session=True)
         self.run_item(fast_weights)

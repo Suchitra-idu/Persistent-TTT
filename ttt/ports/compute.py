@@ -21,7 +21,7 @@ GROUPS = (LORA, WDOWN, NEW)
 class Compute(Protocol):
     def loss(self, token_ids: Sequence[int]) -> float: ...
 
-    def backward(self, *, scale: float) -> None: ...
+    def backward(self, *, scale: float, retain_graph: bool = False) -> None: ...
 
     def zero_grad(self) -> None: ...
 
@@ -31,7 +31,9 @@ class Compute(Protocol):
         """Norms are measured before clipping. `learning_rates` is keyed by
         GROUPS and applied first, so the schedule stays in Ring 0."""
 
-    def eval_loss(self, token_ids: Sequence[int], *, lora: bool = True) -> float:
-        """No graph, gradients untouched. `lora=False` is the `fresh` regime."""
+    def eval_loss(
+        self, token_ids: Sequence[int], *, lora: bool = True, score_from: int = 0
+    ) -> float:
+        """No graph. `lora=False` is `fresh`; tokens before `score_from` are context, unscored."""
 
     def parameter_counts(self) -> Mapping[str, int]: ...

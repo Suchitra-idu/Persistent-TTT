@@ -30,6 +30,9 @@ class FastWeights(Protocol):
     def advance_carry(self) -> None:
         """Promote the staged item delta. Once per item, after backward."""
 
+    def detach_carry(self) -> None:
+        """Cut the carry from the graph. Required after an optimizer step."""
+
     def snapshot(self, *, to_cpu: bool = False) -> Carry: ...
 
     def install(self, carry: Carry, *, family: str = CARRY) -> None:

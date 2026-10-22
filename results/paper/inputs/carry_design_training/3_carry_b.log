@@ -1,0 +1,27 @@
+4000 documents, 30,888,706 tokens, seed=42
+trainable lora 9.2M, new 14.8M, wdown 44.0M
+step 10/1050 loss 2.5349 |g| lora 0.661 wdown 1.435 new 0.169
+step 20/1050 loss 2.3355 |g| lora 1.129 wdown 1.599 new 1.004
+step 30/1050 loss 2.3194 |g| lora 0.490 wdown 0.904 new 0.275
+step 40/1050 loss 2.3513 |g| lora 0.401 wdown 0.679 new 0.132
+step 50/1050 loss 2.2866 |g| lora 0.370 wdown 0.752 new 0.080
+  checkpoint saved: hebbian-carry-b/step_50
+  carry gain by slice (carried minus reset, + = carry helps): s2 +0.199 s3 +0.157 s4 +0.153 s5 +0.155 s6 +0.163 s7 +0.110 s8 +0.191 | trend -0.027
+  [eval] carry_off_ppl 15.11 carry_ppl 14.97 fresh_ppl 17 gap_between 0.1418 gap_lora 1.7 gap_total 2.034 gap_within 0.1927 lora_only_ppl 15.3 state_ratio_final 5.762e+04
+step 60/1050 loss 2.0306 |g| lora 0.354 wdown 0.702 new 0.020
+step 70/1050 loss 2.2753 |g| lora 0.287 wdown 0.570 new 0.045
+step 80/1050 loss 2.2755 |g| lora 0.484 wdown 0.953 new 0.054
+step 90/1050 loss 2.3772 |g| lora 0.337 wdown 0.618 new 0.053
+step 100/1050 loss 2.4496 |g| lora 0.311 wdown 0.610 new 0.016
+  checkpoint saved: hebbian-carry-b/step_100
+  carry gain by slice (carried minus reset, + = carry helps): s2 +0.174 s3 +0.178 s4 +0.151 s5 +0.175 s6 +0.156 s7 +0.158 s8 +0.208 | trend +0.007
+  [eval] carry_off_ppl 14.81 carry_ppl 14.66 fresh_ppl 17 gap_between 0.1512 gap_lora 2.128 gap_total 2.348 gap_within 0.06891 lora_only_ppl 14.88 state_ratio_final 7.093e+04
+step 110/1050 loss 2.2129 |g| lora 0.383 wdown 0.728 new 0.032
+step 120/1050 loss 2.0790 |g| lora 0.294 wdown 0.573 new 0.019
+step 130/1050 loss 2.2316 |g| lora 0.346 wdown 0.674 new 0.021
+step 140/1050 loss 2.2946 |g| lora 0.349 wdown 0.658 new 0.059
+step 150/1050 loss 2.2237 |g| lora 0.387 wdown 0.754 new 0.044
+  checkpoint saved: hebbian-carry-b/step_150
+  carry gain by slice (carried minus reset, + = carry helps): s2 +0.214 s3 +0.176 s4 +0.099 s5 +0.148 s6 +0.129 s7 +0.122 s8 +0.167 | trend -0.051
+  [eval] carry_off_ppl 14.63 carry_ppl 14.5 fresh_ppl 17 gap_between 0.1311 gap_lora 2.322 gap_total 2.504 gap_within 0.05175 lora_only_ppl 14.68 state_ratio_final 4.529e+04
+step 160/1050 loss 2.5399 |g| lora 0.415 wdown 0.855 new 0.073

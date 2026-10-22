@@ -49,7 +49,13 @@ def build_image(environ=None, *, extra_packages=()) -> modal.Image:
     return (
         modal.Image.debian_slim(python_version=PYTHON_VERSION)
         .pip_install(*REQUIREMENTS, *extra_packages)
-        .env({"HF_HOME": HF_CACHE_MOUNT, **forwarded_env(environ)})
+        .env({
+            "HF_HOME": HF_CACHE_MOUNT,
+            # carry_backprop holds two items' graphs; fragmentation, not the
+            # total, is what ran out first.
+            "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
+            **forwarded_env(environ),
+        })
         .add_local_python_source("ttt")
     )
 

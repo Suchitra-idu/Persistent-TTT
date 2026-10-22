@@ -79,6 +79,13 @@ class TTTConfig:
     # 1 starves the target projection of gradient entirely.
     truncate_every: int = 5
 
+    # Reads the carried state through its own clip and its own gate instead of
+    # folding it into the current item's sum, so the current item cannot drown it.
+    carry_gate: bool = False
+    # Keeps the carry in the autograd graph across a session's items, so a later
+    # item's loss trains what an earlier item wrote. Cut at every optimizer step.
+    carry_backprop: bool = False
+
     def __post_init__(self) -> None:
         if self.chunk_size < 1:
             raise ValueError(f"chunk_size must be >= 1, got {self.chunk_size}")
@@ -103,6 +110,14 @@ class TTTConfig:
                 "update_rule must be 'hebbian', 'delta', or 'delta_chunk', got "
                 f"{self.update_rule!r}"
             )
+        if self.carry_gate and self.update_rule != "hebbian":
+            raise ValueError(
+                "carry_gate is implemented for update_rule='hebbian' only, got "
+                f"{self.update_rule!r}; the delta rules read the carry inside "
+                "their residual, which a separate path would bypass"
+            )
+        if self.carry_gate and not self.output_gate:
+            raise ValueError("carry_gate needs output_gate=True; it is a second gate beside it")
         if self.layer_indices is not None:
             indices = tuple(self.layer_indices)
             if len(set(indices)) != len(indices):

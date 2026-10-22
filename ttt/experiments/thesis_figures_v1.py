@@ -323,6 +323,92 @@ def write_tables(estimates, correlates) -> None:
     (tables / "T10_repeat_curve.csv").write_text("\n".join(repeat_bounds()) + "\n")
 
 
+CARRY_DESIGN = "hebbian-carry-b"
+CARRY_DESIGN_CASES = (
+    ("plain Hebbian, step 200", "ttt-v1.1", 200),
+    ("carry design, step 100", CARRY_DESIGN, 100),
+    ("carry design, step 200", CARRY_DESIGN, 200),
+)
+CARRY_DESIGN_MEASURES = (
+    ("between_slices", "Carried from earlier slices\nof the same document"),
+    ("cross_slice", "Carried across slices,\nboundary suite"),
+    ("cross_doc", "Carried into a\ndifferent document"),
+    ("within", "Fast weights within\na slice"),
+)
+
+
+def carry_design_estimates() -> dict[tuple[str, str], object]:
+    """Pooled estimates for each case; the pre-fix TTT bundle is rebased onto the true base."""
+    base = _rows(CONTROL, 200, "regimes")
+    out = {}
+    for label, run, step in CARRY_DESIGN_CASES:
+        rows = paper_analysis.rebased(_rows(run, step, "regimes"), base)
+        estimates = (
+            evidence.regime_estimates(rows, rng=NumpyRng(0), n_boot=N_BOOT)
+            + evidence.boundary_estimates(_rows(run, step, "boundary"), rng=NumpyRng(0), n_boot=N_BOOT)
+        )
+        if step == 200:
+            estimates += paper_analysis.matched_estimates(base, rows, rng=NumpyRng(0), n_boot=N_BOOT)
+        for e in estimates:
+            if e.source == ALL_SOURCES:
+                out[(label, e.measure)] = e
+    return out
+
+
+def carry_design_figure(estimates, path: Path) -> str:
+    plt = _pyplot()
+    fig, axes = plt.subplots(1, len(CARRY_DESIGN_MEASURES), figsize=(12, 3.4), squeeze=False)
+    colours = (SERIES[0], SERIES[1], SERIES[1])
+    for ax, (measure, title) in zip(axes[0], CARRY_DESIGN_MEASURES):
+        for y, (label, _, _) in enumerate(CARRY_DESIGN_CASES):
+            e = estimates[(label, measure)]
+            i = e.interval
+            filled = i.excludes_zero
+            ax.hlines(y, i.low, i.high, color=colours[y], linewidth=2)
+            ax.plot(i.point, y, "osD"[y], markersize=7, markeredgewidth=2, markeredgecolor=colours[y],
+                    markerfacecolor=colours[y] if filled else SURFACE)
+        ax.axvline(0, color=MUTED, linewidth=1)
+        ax.set_yticks(range(len(CARRY_DESIGN_CASES)),
+                      [c[0] for c in CARRY_DESIGN_CASES] if ax is axes[0][0] else [])
+        ax.invert_yaxis()
+        ax.set_title(title, loc="left", fontsize=9)
+        ax.set_xlabel("Δppl  (+ = lower perplexity)")
+        _chrome(ax, grid_axis="x")
+    _title(fig, "The carry design against plain Hebbian (95% CI; filled = interval excludes zero)")
+    fig.tight_layout()
+    return _save(fig, str(path))
+
+
+def carry_design_by_position(path: Path) -> str:
+    plt = _pyplot()
+    fig, ax = plt.subplots(figsize=(6.4, 3.8))
+    cases = (("plain Hebbian, step 200", "ttt-v1.1", 200, SERIES[0], "o"),
+             ("carry design, step 200", CARRY_DESIGN, 200, SERIES[1], "D"))
+    for label, run, step, colour, marker in cases:
+        points = sorted((i, e.interval) for i, e in paper_analysis.position_estimates(
+            _rows(run, step, "regime_slices"), rng=NumpyRng(0), n_boot=N_BOOT) if e.measure == "between_slices")
+        xs = [i + 1 for i, _ in points]
+        ax.fill_between(xs, [g.low for _, g in points], [g.high for _, g in points], color=colour, alpha=0.18, linewidth=0)
+        ax.plot(xs, [g.point for _, g in points], color=colour, marker=marker, markersize=6, linewidth=2, label=label)
+    ax.axhline(0, color=MUTED, linewidth=1)
+    ax.set_xlabel("slice of the document")
+    ax.set_ylabel("Δppl, carried minus reset")
+    ax.legend(frameon=False, fontsize=8)
+    _chrome(ax)
+    _title(fig, "Carry from earlier slices of the same document, by slice")
+    fig.tight_layout()
+    return _save(fig, str(path))
+
+
+def carry_design_table(estimates) -> list[str]:
+    lines = ["case,measure,n_docs,delta_ppl,ci_low,ci_high,excludes_zero,win_rate"]
+    for (label, measure), e in sorted(estimates.items()):
+        i = e.interval
+        lines.append(f"{label},{measure},{e.n_docs},{i.point:.6g},{i.low:.6g},{i.high:.6g},"
+                     f"{int(i.excludes_zero)},{e.win_rate:.4f}")
+    return lines
+
+
 def main() -> None:
     figures = OUT / "figures"
     figures.mkdir(parents=True, exist_ok=True)
@@ -341,6 +427,12 @@ def main() -> None:
         noclip_training(figures / "F11_noclip_training.pdf"),
         gates(figures / "F12_gates.pdf"),
     ]
+    design = carry_design_estimates()
+    made += [
+        carry_design_figure(design, figures / "F13_carry_design.pdf"),
+        carry_design_by_position(figures / "F14_carry_design_by_slice.pdf"),
+    ]
+    (OUT / "tables" / "T11_carry_design.csv").write_text("\n".join(carry_design_table(design)) + "\n")
     write_tables(estimates, correlates)
     for path in made:
         print(path)

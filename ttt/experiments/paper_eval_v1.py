@@ -28,10 +28,18 @@ from ttt import cli
 from ttt.adapters import modal_runtime
 from ttt.adapters.local_storage import LocalStorage
 from ttt.adapters.numpy_rng import NumpyRng
-from ttt.app import boundary_eval, data_pipeline, eval_loop, evidence, repeat_eval, swap_eval
+from ttt.app import (
+    boundary_eval,
+    context_eval,
+    data_pipeline,
+    eval_loop,
+    evidence,
+    repeat_eval,
+    swap_eval,
+)
 from ttt.core import report
 from ttt.core.metrics import ALL_SOURCES
-from ttt.core.stats import Estimate
+from ttt.core.stats import Estimate, Interval
 from ttt.core.types import EvalRow, SliceRow
 from ttt.experiments import _runtime
 from ttt.experiments._runtime import Engine
@@ -43,8 +51,11 @@ REGIMES = "regimes"
 BOUNDARY = "boundary"
 REPEAT = "repeat"
 SWAP = "swap"
+CONTEXT = "context"
 SUITES = (REGIMES, BOUNDARY, REPEAT, SWAP)
-TTT_SUITES = (BOUNDARY, REPEAT, SWAP)
+# Opt-in: the full-context comparison costs a second, longer forward per slice.
+KNOWN_SUITES = SUITES + (CONTEXT,)
+TTT_SUITES = (BOUNDARY, REPEAT, SWAP, CONTEXT)
 
 RESULTS_DIR = "results"
 EVIDENCE_DIR = "evidence"
@@ -54,6 +65,7 @@ RAW_FILES = {
     "boundary": boundary_eval.ArmRow,
     "repeat": repeat_eval.RepeatItem,
     "swap": swap_eval.SwapRow,
+    "context": context_eval.ContextRow,
 }
 DEFAULT_N_BOOT = 1000
 BOOT_SEED = 0
@@ -70,9 +82,9 @@ class Plan:
     n_targets: int = 5
 
     def __post_init__(self) -> None:
-        unknown = set(self.suites) - set(SUITES)
+        unknown = set(self.suites) - set(KNOWN_SUITES)
         if unknown:
-            raise ValueError(f"unknown suites {sorted(unknown)}; expected some of {list(SUITES)}")
+            raise ValueError(f"unknown suites {sorted(unknown)}; expected some of {list(KNOWN_SUITES)}")
         object.__setattr__(self, "suites", tuple(self.suites))
 
 
@@ -83,6 +95,8 @@ class Analysis:
     repeat_curve: tuple[evidence.RepeatPoint, ...] = ()
     repeat_trend: tuple[Estimate, ...] = ()
     swap: tuple[Estimate, ...] = ()
+    context: tuple[Estimate, ...] = ()
+    carry_share: Interval | None = None
     fresh: Mapping[str, float] = field(default_factory=dict)
     correlates: tuple[evidence.Correlate, ...] = ()
 
@@ -139,6 +153,11 @@ def run(
         rows["repeat"] = evidence.records(
             repeat_eval.measure(docs=eval_docs, n_repeats=plan.n_repeats, **ports)
         )
+    if CONTEXT in suites:
+        announce("context ...")
+        rows["context"] = evidence.records(
+            context_eval.measure(docs=eval_docs, n_slices=plan.n_slices, **ports)
+        )
     if SWAP in suites:
         announce("swap ...")
         rows["swap"] = evidence.records(
@@ -176,6 +195,10 @@ def analyse(rows: Mapping[str, list], *, n_boot: int = DEFAULT_N_BOOT, seed: int
         repeat_curve=evidence.repeat_curve(typed.get("repeat", ()), **kw),
         repeat_trend=evidence.repeat_trend(typed.get("repeat", ()), **kw),
         swap=evidence.swap_estimates(typed.get("swap", ()), **kw),
+        context=context_eval.estimates(typed.get("context", ()), **kw),
+        carry_share=(
+            context_eval.carry_share(typed["context"], **kw) if typed.get("context") else None
+        ),
         fresh=fresh,
         correlates=evidence.domain_correlates(fresh, regimes + boundary),
     )
@@ -211,6 +234,7 @@ def render_bundle(
         "boundary_gaps": analysis.boundary,
         "repeat_trend": analysis.repeat_trend,
         "swap": analysis.swap,
+        "context_gaps": analysis.context,
     }
     for name, estimates in tables.items():
         if estimates:
@@ -290,11 +314,21 @@ def summary(analysis: Analysis, figures) -> str:
     """The pooled headline per measure; per-source detail lives in tables/."""
     pooled = [
         e
-        for e in analysis.regimes + analysis.boundary + analysis.repeat_trend + analysis.swap
+        for e in analysis.regimes + analysis.boundary + analysis.repeat_trend + analysis.swap + analysis.context
         if e.source == ALL_SOURCES
     ]
     lines = ["# Evidence bundle", "", "## Pooled estimates (95% paired bootstrap over documents)", ""]
     lines += ["```", report.render(report.estimate_table(pooled)), "```", ""]
+    if analysis.carry_share is not None:
+        share = analysis.carry_share
+        lines += [
+            "## Carry against full context",
+            "",
+            f"The carried state recovers {100 * share.point:.1f}% "
+            f"[{100 * share.low:.1f}%, {100 * share.high:.1f}%] of the gain from placing the "
+            "previous slice in attention.",
+            "",
+        ]
     if analysis.correlates:
         lines += ["## Domain correlates (Spearman vs fresh ppl)", ""]
         lines += [f"- {c.measure}: ρ = {c.rho:+.2f} over {c.n_sources} sources" for c in analysis.correlates]

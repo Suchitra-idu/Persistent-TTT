@@ -1,0 +1,40 @@
+step 10/1050 loss 17.5456 |g| lora 14.806 wdown 26.193 new 73.097
+step 20/1050 loss 13.3779 |g| lora 1.128 wdown 2.183 new 2.492
+step 30/1050 loss 10.3462 |g| lora 0.312 wdown 0.839 new 0.159
+step 40/1050 loss 9.7037 |g| lora 0.420 wdown 1.176 new 0.188
+step 50/1050 loss 9.0255 |g| lora 0.824 wdown 2.386 new 0.510
+source                  n_docs   n_tok     cold-c    cold-co    lora   fresh   Δlora     Δwithin   Δbetween
+RedPajamaArXiv               5  63,802   2748.837   3063.233   5.979   6.071  +0.092   -3057.254   +314.397
+RedPajamaBook                5  81,920   7084.834   7462.866  29.636  30.587  +0.952   -7433.230   +378.032
+RedPajamaC4                  5  15,656   2343.188   2584.550  40.468  41.754  +1.286   -2544.081   +241.362
+RedPajamaGithub              5  32,713   7302.553   8440.035   3.783   3.818  +0.035   -8436.252  +1137.483
+RedPajamaStackExchange       5  13,718   2383.703   2558.584  14.776  15.062  +0.286   -2543.808   +174.881
+RedPajamaWikipedia           5  35,035  11398.256  12359.146  23.798  24.502  +0.704  -12335.348   +960.890
+  [eval] carry_off_ppl 4703 carry_ppl 4291 fresh_ppl 17 gap_between 411.5 gap_lora 0.3857 gap_total -4274 gap_within -4686 lora_only_ppl 16.62 state_ratio_final 1.158e+06
+step 100/1050 loss 7.2150 |g| lora 0.685 wdown 2.828 new 0.094
+source                  n_docs   n_tok    cold-c   cold-co    lora   fresh   Δlora    Δwithin  Δbetween
+RedPajamaArXiv               5  63,802   643.522   710.660   5.884   6.071  +0.187   -704.776   +67.138
+RedPajamaBook                5  81,920  1676.140  1750.721  28.818  30.587  +1.770  -1721.903   +74.581
+RedPajamaC4                  5  15,656   828.207   856.060  39.270  41.754  +2.484   -816.790   +27.852
+RedPajamaGithub              5  32,713   903.360  1037.875   3.741   3.818  +0.077  -1034.134  +134.516
+RedPajamaStackExchange       5  13,718   675.742   718.520  14.437  15.062  +0.624   -704.083   +42.778
+RedPajamaWikipedia           5  35,035  1597.419  1721.046  23.107  24.502  +1.394  -1697.938  +123.626
+  [eval] carry_off_ppl 1024 carry_ppl 957.1 fresh_ppl 17 gap_between 67.11 gap_lora 0.7784 gap_total -940.1 gap_within -1008 lora_only_ppl 16.23 state_ratio_final 2.838e+05
+step 110/1050 loss 7.0470 |g| lora 1.200 wdown 3.691 new 0.339
+step 120/1050 loss 6.8562 |g| lora 4.091 wdown 7.355 new 1.027
+step 130/1050 loss 5.4206 |g| lora 8.846 wdown 10.487 new 2.253
+step 140/1050 loss 3.3522 |g| lora 1.794 wdown 2.645 new 0.453
+step 150/1050 loss 2.4315 |g| lora 0.495 wdown 0.965 new 0.244
+source                  n_docs   n_tok  cold-c  cold-co    lora   fresh   Δlora  Δwithin  Δbetween
+RedPajamaArXiv               5  63,802   5.678    5.698   5.683   6.071  +0.388   -0.016    +0.020
+RedPajamaBook                5  81,920  27.153   27.389  27.044  30.587  +3.544   -0.345    +0.235
+RedPajamaC4                  5  15,656  38.145   38.260  37.419  41.754  +4.335   -0.841    +0.115
+RedPajamaGithub              5  32,713   3.732    3.744   3.673   3.818  +0.145   -0.071    +0.012
+RedPajamaStackExchange       5  13,718  14.425   14.421  13.986  15.062  +1.076   -0.435    -0.004
+RedPajamaWikipedia           5  35,035  22.198   22.259  21.795  24.502  +2.707   -0.464    +0.061
+  [eval] carry_off_ppl 15.87 carry_ppl 15.8 fresh_ppl 17 gap_between 0.06284 gap_lora 1.463 gap_total 1.199 gap_within -0.3276 lora_only_ppl 15.54 state_ratio_final 5.872e+04
+step 160/1050 loss 2.6118 |g| lora 1.612 wdown 2.413 new 1.156
+step 170/1050 loss 2.4035 |g| lora 0.510 wdown 0.781 new 0.574
+step 180/1050 loss 2.2864 |g| lora 0.327 wdown 0.660 new 0.082
+step 190/1050 loss 2.4221 |g| lora 0.367 wdown 0.731 new 0.126
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 4.24 GiB. GPU 0 has a total capacity of 79.17 GiB of which 2.61 GiB is free.

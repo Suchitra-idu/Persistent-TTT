@@ -72,7 +72,7 @@ def evaluate(
 
     return EvalReport(
         rows=rows,
-        metrics=_aggregate(rows),
+        metrics={**_aggregate(rows), **carry_by_position(slices)},
         summaries=metrics.summarise_by_source(rows),
         slices=slices,
     )
@@ -182,6 +182,33 @@ def _aggregate(rows: Sequence[EvalRow]) -> dict[str, float]:
     }
     measured.update(_seeded(by_regime))
     return measured
+
+
+CARRY_GAIN_SLICE = "eval/carry_gain_slice_{}"
+CARRY_GAIN_TREND = "eval/carry_gain_trend"
+
+
+def carry_by_position(slices: Sequence[SliceRow]) -> dict[str, float]:
+    """Carried against reset at each slice index after the first, pooled over
+    documents, plus the last third of slices minus the first third. A carry
+    that accumulates something useful about the document rises with position."""
+    def ppl_at(regime: str, index: int) -> list[float]:
+        return [r.ppl for r in slices if r.regime == regime and r.slice_index == index]
+
+    later = sorted({r.slice_index for r in slices if r.regime == COLD_CARRY and r.slice_index > 0})
+    gains = {
+        index: metrics.geometric_mean_ppl(ppl_at(COLD_CARRY_OFF, index))
+        - metrics.geometric_mean_ppl(ppl_at(COLD_CARRY, index))
+        for index in later
+    }
+    out = {CARRY_GAIN_SLICE.format(index): gain for index, gain in gains.items()}
+    third = len(later) // 3
+    if third:
+        early, late = later[:third], later[-third:]
+        out[CARRY_GAIN_TREND] = (
+            sum(gains[i] for i in late) / third - sum(gains[i] for i in early) / third
+        )
+    return out
 
 
 def _seeded(by_regime: Mapping[str, list[EvalRow]]) -> dict[str, float]:

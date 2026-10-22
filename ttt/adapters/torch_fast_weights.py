@@ -58,6 +58,10 @@ class TorchFastWeights:
         for module in self._modules.values():
             module.advance_carry()
 
+    def detach_carry(self) -> None:
+        for module in self._modules.values():
+            module.detach_carry()
+
     def snapshot(self, *, to_cpu: bool = False) -> Carry:
         deltas = {}
         for index, module in self._modules.items():
@@ -143,7 +147,9 @@ def _by_layer_index(model: torch.nn.Module) -> dict[int, InPlaceTTTMLP]:
 
 
 def _state_of(module: InPlaceTTTMLP, family: str) -> torch.Tensor | None:
-    return module.carried if family == CARRY else module.stream.delta
+    """Detached: under carry_backprop the carry is in the graph, and a metric must not extend it."""
+    state = module.carried if family == CARRY else module.stream.delta
+    return None if state is None else state.detach()
 
 
 def _check_family(family: str) -> None:

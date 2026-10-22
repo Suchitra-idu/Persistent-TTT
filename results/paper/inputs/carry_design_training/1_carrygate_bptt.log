@@ -1,0 +1,21 @@
+step 10/1050 loss 16.5217 |g| lora 2.400 wdown 3.038 new 3.906
+step 20/1050 loss 7.8924 |g| lora 1.348 wdown 2.409 new 0.288
+step 30/1050 loss 7.0952 |g| lora 3.638 wdown 4.298 new 0.400
+step 40/1050 loss 6.4908 |g| lora 15.353 wdown 19.136 new 1.495
+step 50/1050 loss 5.3397 |g| lora 2.465 wdown 3.635 new 0.358
+step 60/1050 loss 5.1498 |g| lora 2.137 wdown 5.047 new 0.285
+step 70/1050 loss 4.9392 |g| lora 2.522 wdown 2.802 new 0.307
+step 80/1050 loss 3.1691 |g| lora 2.661 wdown 3.231 new 0.247
+step 90/1050 loss 3.1157 |g| lora 1.441 wdown 1.644 new 0.104
+step 100/1050 loss 2.9773 |g| lora 0.849 wdown 1.257 new 0.043
+source                  n_docs   n_tok  cold-c  cold-co    lora   fresh   Δlora  Δwithin  Δbetween
+RedPajamaArXiv               5  63,802   8.704    5.845   5.844   6.071  +0.227   -0.001    -2.859
+RedPajamaBook                5  81,920  43.934   28.778  28.757  30.587  +1.830   -0.021   -15.156
+RedPajamaC4                  5  15,656  60.537   39.579  39.554  41.754  +2.200   -0.026   -20.958
+RedPajamaGithub              5  32,713   8.171    3.750   3.748   3.818  +0.070   -0.002    -4.421
+RedPajamaStackExchange       5  13,718  28.041   14.621  14.526  15.062  +0.535   -0.095   -13.420
+RedPajamaWikipedia           5  35,035  67.320   23.266  23.259  24.502  +1.242   -0.007   -44.054
+  [eval] carry_off_ppl 16.29 carry_ppl 31.52 fresh_ppl 17 gap_between -15.23 gap_lora 0.7333 gap_total -14.51 gap_within -0.01925 lora_only_ppl 16.27 state_ratio_final 1.642e+05
+step 110/1050 loss 2.6855 |g| lora 1.232 wdown 1.386 new 0.101
+step 120/1050 loss 2.6866 |g| lora 1.244 wdown 1.582 new 0.233
+step 130/1050 loss 2.3943 |g| lora 0.648 wdown 0.950 new 0.028

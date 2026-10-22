@@ -41,6 +41,10 @@ class TrainConfig:
     lora_alpha: int = 32
     lora_dropout: float = 0.05
 
+    # Items whose carry stays in the autograd graph under carry_backprop; the
+    # carry is detached after every carry_window-th item of a session.
+    carry_window: int = 2
+
     # 0 = never freeze. From this optimizer step on, LoRA's rate is forced to
     # 0 — its weights stop moving, so whatever residual loss remains stays
     # available for `new`/`wdown` to keep correcting instead of LoRA capturing
@@ -103,6 +107,8 @@ class TrainConfig:
             raise ValueError(f"eval_every must be >= 0, got {self.eval_every}")
         if self.eval_n_slices < 1:
             raise ValueError(f"eval_n_slices must be >= 1, got {self.eval_n_slices}")
+        if self.carry_window < 1:
+            raise ValueError(f"carry_window must be >= 1, got {self.carry_window}")
         if self.freeze_lora_after < 0:
             raise ValueError(
                 f"freeze_lora_after must be >= 0, got {self.freeze_lora_after}"

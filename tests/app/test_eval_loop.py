@@ -13,6 +13,7 @@ from ttt.core.types import (
     COLD_CARRY_OFF,
     FRESH,
     LORA_ONLY,
+    SliceRow,
 )
 
 SLICES = 4
@@ -78,6 +79,8 @@ class TestZeroSeedPass:
             "eval/gap_between",
             "eval/gap_total",
             "eval/state_ratio_final",
+            *(f"eval/carry_gain_slice_{index}" for index in range(1, SLICES)),
+            "eval/carry_gain_trend",
         }
 
     def test_the_gaps_decompose_additively(self):
@@ -294,3 +297,33 @@ def test_a_diverged_loss_becomes_an_infinite_perplexity():
     report, _ = measure(n_docs=1, losses=(1e6,))
 
     assert math.isinf(report.metrics["eval/carry_ppl"])
+
+
+def _slice(regime, index, ppl, doc=0):
+    return SliceRow(doc_idx=doc, source="alpha", regime=regime, slice_index=index, n_tokens=10, ppl=ppl)
+
+
+def test_the_carry_gain_is_reset_minus_carried_at_each_slice():
+    slices = [_slice(COLD_CARRY_OFF, i, 10.0) for i in range(4)] + [
+        _slice(COLD_CARRY, i, 10.0 - i) for i in range(4)
+    ]
+
+    gains = eval_loop.carry_by_position(slices)
+
+    assert [gains[f"eval/carry_gain_slice_{i}"] for i in (1, 2, 3)] == pytest.approx([1.0, 2.0, 3.0])
+
+
+def test_the_first_slice_has_no_carry_gain():
+    slices = [_slice(COLD_CARRY_OFF, i, 10.0) for i in range(4)] + [
+        _slice(COLD_CARRY, i, 9.0) for i in range(4)
+    ]
+
+    assert "eval/carry_gain_slice_0" not in eval_loop.carry_by_position(slices)
+
+
+def test_a_carry_that_helps_more_later_has_a_positive_trend():
+    slices = [_slice(COLD_CARRY_OFF, i, 10.0) for i in range(7)] + [
+        _slice(COLD_CARRY, i, 10.0 - 0.5 * i) for i in range(7)
+    ]
+
+    assert eval_loop.carry_by_position(slices)["eval/carry_gain_trend"] == pytest.approx(2.0)

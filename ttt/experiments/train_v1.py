@@ -96,6 +96,17 @@ def _evaluator(resolved, engine, holdout_docs, announce):
             session_training=resolved.train.session_training,
         )
         announce(report.render(report.per_source_table(measured.summaries)))
+        by_slice = sorted(
+            (int(key.rsplit("_", 1)[1]), value)
+            for key, value in measured.metrics.items()
+            if key.startswith("eval/carry_gain_slice_")
+        )
+        if by_slice:
+            announce(
+                "  carry gain by slice (carried minus reset, + = carry helps): "
+                + " ".join(f"s{index + 1} {value:+.3f}" for index, value in by_slice)
+                + f" | trend {measured.metrics.get('eval/carry_gain_trend', float('nan')):+.3f}"
+            )
         return measured.metrics
 
     return evaluate

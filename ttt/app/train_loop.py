@@ -91,9 +91,11 @@ def train(
             fast_weights.reset_carry()
             _seed(fast_weights, carried, docs, session, per_source)
 
-            for item in session.items:
+            last_item = session.items[-1]
+            for position, item in enumerate(session.items):
                 if step == total_steps:
                     break
+                window_ends = (position + 1) % cfg.carry_window == 0
                 doc = docs[item.doc_idx]
                 token_ids = doc.token_ids[item.start : item.end]
                 if micro == 0:
@@ -105,13 +107,19 @@ def train(
                 total_tokens += len(token_ids)
 
                 if math.isfinite(loss):
-                    compute.backward(scale=1.0 / cfg.grad_accum_steps)
+                    compute.backward(
+                        scale=1.0 / cfg.grad_accum_steps,
+                        retain_graph=item is not last_item and not window_ends,
+                    )
                     accumulated += 1
                     step_loss += loss / cfg.grad_accum_steps
                 else:
                     nonfinite += 1
 
                 fast_weights.advance_carry()
+                if window_ends:
+                    # Bounds how many items' graphs a carry_backprop session holds.
+                    fast_weights.detach_carry()
                 if per_source:
                     carried[doc.source] = fast_weights.snapshot()
                     n_updates[doc.source] = n_updates.get(doc.source, 0) + 1
@@ -141,6 +149,7 @@ def train(
                     max_grad_norm=cfg.max_grad_norm, learning_rates=rates
                 )
                 compute.zero_grad()
+                fast_weights.detach_carry()
                 if not math.isfinite(stats.total_norm):
                     # The optimizer never stepped (see TorchCompute.clip_and_step):
                     # a finite loss can still backward into a non-finite gradient,

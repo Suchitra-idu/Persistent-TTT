@@ -62,14 +62,14 @@ class TorchCompute:
         self._pending = self.model(input_ids=ids, labels=ids).loss
         return float(self._pending.detach())
 
-    def backward(self, *, scale: float) -> None:
+    def backward(self, *, scale: float, retain_graph: bool = False) -> None:
         if self._pending is None:
             raise RuntimeError(
                 "backward without a preceding loss; the graph it would consume "
                 "does not exist"
             )
         pending, self._pending = self._pending, None
-        (pending * scale).backward()
+        (pending * scale).backward(retain_graph=retain_graph)
 
     def zero_grad(self) -> None:
         self._optimizer.zero_grad(set_to_none=True)
@@ -94,14 +94,16 @@ class TorchCompute:
         return stats
 
     @torch.no_grad()
-    def eval_loss(self, token_ids: Sequence[int], *, lora: bool = True) -> float:
+    def eval_loss(
+        self, token_ids: Sequence[int], *, lora: bool = True, score_from: int = 0
+    ) -> float:
         """Always in eval mode, so LoRA dropout never perturbs a measurement."""
         ids = self._ids(token_ids)
         was_training = self.model.training
         self.model.eval()
         try:
             with weights_for(self.model, lora=lora):
-                return float(self.model(input_ids=ids, labels=ids).loss)
+                return float(self.model(input_ids=ids, labels=context_labels(ids, score_from)).loss)
         finally:
             self.model.train(was_training)
 
@@ -110,6 +112,15 @@ class TorchCompute:
             name: sum(p.numel() for p in params)
             for name, params in self._groups.items()
         }
+
+
+def context_labels(ids: torch.Tensor, score_from: int) -> torch.Tensor:
+    """-100 is the label Hugging Face's loss ignores."""
+    if not score_from:
+        return ids
+    labels = ids.clone()
+    labels[:, :score_from] = -100
+    return labels
 
 
 def weights_for(model: torch.nn.Module, *, lora: bool) -> contextlib.AbstractContextManager:

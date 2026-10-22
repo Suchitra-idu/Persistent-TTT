@@ -36,7 +36,9 @@ class FakeCompute:
         self.forwards: list[tuple[int, ...]] = []
         self.eval_forwards: list[tuple[int, ...]] = []
         self.eval_lora_flags: list[bool] = []
+        self.eval_score_from: list[int] = []
         self.backwards: list[float] = []
+        self.retained: list[bool] = []
         self.steps: list[dict[str, float]] = []
         self.clipped_at: list[float] = []
         self.zero_grads = 0
@@ -50,7 +52,7 @@ class FakeCompute:
         self._pending = self._losses[(len(self.forwards) - 1) % len(self._losses)]
         return self._pending
 
-    def backward(self, *, scale: float) -> None:
+    def backward(self, *, scale: float, retain_graph: bool = False) -> None:
         if self._pending is None:
             raise RuntimeError(
                 "backward without a preceding loss; the graph it would consume "
@@ -58,6 +60,7 @@ class FakeCompute:
             )
         self._pending = None
         self.backwards.append(scale)
+        self.retained.append(retain_graph)
 
     def zero_grad(self) -> None:
         self.zero_grads += 1
@@ -70,10 +73,13 @@ class FakeCompute:
             self.steps.append(dict(learning_rates))
         return GradStats(total_norm=self._total_norm, **self._grad_norms)
 
-    def eval_loss(self, token_ids: Sequence[int], *, lora: bool = True) -> float:
+    def eval_loss(
+        self, token_ids: Sequence[int], *, lora: bool = True, score_from: int = 0
+    ) -> float:
         ids = tuple(token_ids)
         self.eval_forwards.append(ids)
         self.eval_lora_flags.append(lora)
+        self.eval_score_from.append(score_from)
         if self._fast_weights is not None:
             self._fast_weights.stage(len(ids))
         return self._losses[(len(self.eval_forwards) - 1) % len(self._losses)]

@@ -38,6 +38,11 @@ class ComputeConformance:
 
         compute.backward(scale=0.5)
 
+    def test_a_loss_can_be_backwarded_with_its_graph_retained(self, compute):
+        compute.loss(IDS)
+
+        compute.backward(scale=1.0, retain_graph=True)
+
     def test_a_second_backward_on_the_same_loss_raises(self, compute):
         compute.loss(IDS)
         compute.backward(scale=1.0)

@@ -94,6 +94,10 @@ class FakeFastWeights:
             )
         self._staged = None
 
+    def detach_carry(self) -> None:
+        self._carried = {i: t.detach() for i, t in self._carried.items()}
+        self.events.append("detach_carry")
+
     def snapshot(self, *, to_cpu: bool = False) -> Carry:
         return Carry(deltas={i: t.clone() for i, t in self._carried.items()})
 

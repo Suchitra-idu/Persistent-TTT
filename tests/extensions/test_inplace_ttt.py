@@ -7,7 +7,14 @@ from __future__ import annotations
 import pytest
 import torch
 
-from ttt.extensions.mechanism import InPlaceTTTMLP, iter_ttt_modules, pretrained_mlps
+from torch.utils.checkpoint import checkpoint
+
+from ttt.extensions.mechanism import (
+    InPlaceTTTMLP,
+    checkpoint_context_fn,
+    iter_ttt_modules,
+    pretrained_mlps,
+)
 from tests.extensions import _builders
 
 CHUNK = 4
@@ -388,3 +395,125 @@ def test_the_module_is_a_drop_in_for_the_mlp_it_replaced():
     module = InPlaceTTTMLP(original, 6, scanning().cfg)
 
     assert module.down_proj is original.down_proj
+
+
+def test_a_carry_gated_module_is_identity_to_the_base_mlp_at_init():
+    module = scanning(carry_gate=True)
+    h = _builders.hidden_states(LONG)
+
+    assert torch.allclose(module(h), base_mlp_out(module, h), atol=1e-6)
+
+
+def _carry_gated(bias: float, scale: float = 1.0):
+    module = scanning(w_target_scale=SCALE, carry_gate=True)
+    module.session_mode = True
+    with torch.no_grad():
+        module.output_gate_carry.bias.fill_(bias)
+        module.output_gate_carry_scale.fill_(scale)
+    return module
+
+
+def test_a_fresh_carry_path_is_a_noop_even_with_an_open_gate_and_a_carry():
+    with_carry, without_carry = _carry_gated(10.0, scale=0.0), _carry_gated(10.0, scale=0.0)
+    with torch.no_grad():
+        with_carry.carried = torch.ones(1, 6, 8) * 5.0
+    h = _builders.hidden_states(LONG)
+
+    assert torch.equal(with_carry(h), without_carry(h))
+
+
+def test_the_carry_scale_still_receives_a_gradient_at_zero():
+    module = _carry_gated(10.0, scale=0.0)
+    with torch.no_grad():
+        module.carried = torch.ones(1, 6, 8) * 5.0
+
+    module(_builders.hidden_states(LONG)).pow(2).mean().backward()
+
+    assert module.output_gate_carry_scale.grad.abs().item() > 0.0
+
+
+def test_a_shut_carry_gate_hides_the_carry_entirely():
+    with_carry, without_carry = _carry_gated(-1e4), _carry_gated(-1e4)
+    with torch.no_grad():
+        with_carry.carried = torch.ones(1, 6, 8) * 5.0
+    h = _builders.hidden_states(LONG)
+
+    assert torch.equal(with_carry(h), without_carry(h))
+
+
+def test_an_open_carry_gate_lets_the_carry_reach_the_output():
+    with_carry, without_carry = _carry_gated(10.0), _carry_gated(10.0)
+    with torch.no_grad():
+        with_carry.carried = torch.ones(1, 6, 8) * 5.0
+    h = _builders.hidden_states(LONG)
+
+    assert not torch.allclose(with_carry(h), without_carry(h))
+
+
+def _session_module(**overrides):
+    module = scanning(w_target_scale=SCALE, conv_scale=CONV, **overrides)
+    module.train()
+    module.session_mode = True
+    return module
+
+
+def test_carry_backprop_keeps_the_staged_carry_in_the_graph():
+    module = _session_module(carry_backprop=True)
+    module(_builders.hidden_states(LONG))
+
+    assert module._next_carried.requires_grad
+
+
+def test_without_carry_backprop_the_staged_carry_is_detached():
+    module = _session_module()
+    module(_builders.hidden_states(LONG))
+
+    assert not module._next_carried.requires_grad
+
+
+def test_detach_carry_cuts_the_carry_from_the_graph():
+    module = _session_module(carry_backprop=True)
+    module(_builders.hidden_states(LONG))
+    module.advance_carry()
+
+    module.detach_carry()
+
+    assert not module.carried.requires_grad
+
+
+def _session_grads(*, use_checkpoint: bool, carry_backprop: bool = True, carry_gate: bool = False):
+    layers = torch.nn.ModuleList(
+        [_session_module(seed=s, carry_backprop=carry_backprop, carry_gate=carry_gate) for s in (0, 1)]
+    )
+    if carry_gate:
+        with torch.no_grad():
+            for layer in layers:
+                layer.output_gate_carry_scale.fill_(1.0)
+    context_fn = checkpoint_context_fn(layers)
+    items = tuple(_builders.hidden_states(LONG, seed=seed) for seed in (3, 4, 5))
+    for index, h in enumerate(items):
+        for layer in layers:
+            h = (
+                checkpoint(layer, h, use_reentrant=False, context_fn=context_fn)
+                if use_checkpoint
+                else layer(h)
+            )
+        h.pow(2).mean().backward(retain_graph=index < len(items) - 1)
+        for layer in layers:
+            layer.advance_carry()
+    return [layer.w_target.grad.clone() for layer in layers]
+
+
+@pytest.mark.parametrize("carry_gate", [False, True])
+def test_checkpointing_does_not_change_the_gradient_through_the_carry(carry_gate):
+    plain = _session_grads(use_checkpoint=False, carry_gate=carry_gate)
+    checkpointed = _session_grads(use_checkpoint=True, carry_gate=carry_gate)
+
+    assert all(torch.allclose(a, b, rtol=1e-5, atol=0.0) for a, b in zip(plain, checkpointed))
+
+
+def test_carry_backprop_lets_a_later_item_train_an_earlier_write():
+    detached = _session_grads(use_checkpoint=False, carry_backprop=False)
+    through = _session_grads(use_checkpoint=False, carry_backprop=True)
+
+    assert not all(torch.equal(a, b) for a, b in zip(detached, through))

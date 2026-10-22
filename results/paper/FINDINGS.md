@@ -159,6 +159,34 @@ that direction carries nothing, not even when it was built from the same documen
 Each time the TTT term becomes unusable, the optimizer responds the same
 way: hebbian with the clip, delta_chunk without it, both end with a closed gate.
 
+## 4b. A redesigned carry works on related text
+
+Hebbian only, run `hebbian-carry-b`, bundles `results/hebbian-carry-b/step_{100,200}`,
+table `tables/T11_carry_design.csv`, figures `F13`, `F14`, training logs in
+`inputs/carry_design_training/`. Changes against `ttt-v1.1`: separate carry path
+with its own gate and a zero-initialised scale (`carry_gate`), training through
+the carry in windows of 2 slices (`carry_backprop`, `carry_window=2`), main gate
+bias −6.
+
+| measure | Hebbian @200 | carry design @100 | carry design @200 |
+|---|---|---|---|
+| between slices, same document | +0.014 * | +0.135 * | +0.099 * |
+| cross-slice, boundary suite | +0.014 * | +0.151 * | +0.119 * |
+| cross-document | +0.008 | +0.011 * | +0.002 |
+| within a slice | +0.016 * | +0.047 * | +0.018 * |
+| vs matched LoRA | +0.073 * | | +0.215 * |
+
+Carry from earlier slices of the same document helps 7–10× more than the
+original design, from the second slice on and flat after that (no accumulation).
+Carry into a different document is at most a trace. Main gate median 0.0007, so
+the benefit flows through the carry path. Bundled changes, one seed, 200 steps.
+
+Two failed attempts first (`inputs/carry_design_training/README.md`): without
+the zero-initialised scale the carry doubled perplexity (τ = 20 is 4–5× the
+largest singular value of W0, `inputs/w0_spectral.json`); with the scale but the
+gate at −2, the in-document Hebbian fast weights wrecked the model until about
+step 140, and training through every slice ran out of memory near step 195.
+
 ## 5. Sanity checks that hold
 
 - The LoRA-only checkpoint gives exactly 0.000 for `within` and `between_slices` at all three

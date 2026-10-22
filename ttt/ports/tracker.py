@@ -34,6 +34,8 @@ BUDGET = frozenset(
         "eval/gap_between",
         "eval/gap_total",
         "eval/state_ratio_final",
+        *(f"eval/carry_gain_slice_{index}" for index in range(1, 16)),
+        "eval/carry_gain_trend",
         "eval_seed/carry_ppl",
         "eval_seed/carry_off_ppl",
         "eval_seed/gap_between",

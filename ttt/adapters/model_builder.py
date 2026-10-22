@@ -14,7 +14,7 @@ import torch
 from ttt.core import naming
 from ttt.core.config.train import TrainConfig
 from ttt.core.config.ttt import TTTConfig, derive_layer_indices
-from ttt.extensions.mechanism import InPlaceTTTMLP
+from ttt.extensions.mechanism import InPlaceTTTMLP, checkpoint_context_fn
 
 
 def patch_model_with_ttt(model: torch.nn.Module, cfg: TTTConfig) -> TTTConfig:
@@ -45,7 +45,10 @@ def prepare_for_training(model: torch.nn.Module) -> None:
     reentrant path safe, and it costs one embedding hook.
     """
     model.gradient_checkpointing_enable(
-        gradient_checkpointing_kwargs={"use_reentrant": False}
+        gradient_checkpointing_kwargs={
+            "use_reentrant": False,
+            "context_fn": checkpoint_context_fn(model),
+        }
     )
     model.enable_input_require_grads()
     model.config.use_cache = False

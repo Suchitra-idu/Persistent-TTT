@@ -10,7 +10,7 @@ from ttt.adapters.model_builder import (
 )
 from ttt.core import naming
 from ttt.core.config.ttt import TTTConfig, derive_layer_indices
-from ttt.extensions.mechanism import InPlaceTTTMLP
+from ttt.extensions.mechanism import InPlaceTTTMLP, RecomputeAsForward
 
 # target_conv, w_target, output_gate weight+bias, down_proj; v_source_norm stays frozen.
 THAWED_PER_LAYER = 5
@@ -146,6 +146,9 @@ class _SpyModel:
     def train(self):
         self.calls.append("train")
 
+    def modules(self):
+        return iter(())
+
 
 class TestPrepareForTraining:
     def test_it_turns_on_gradient_checkpointing(self):
@@ -160,7 +163,15 @@ class TestPrepareForTraining:
 
         prepare_for_training(model)
 
-        assert model.checkpoint_kwargs == {"use_reentrant": False}
+        assert model.checkpoint_kwargs["use_reentrant"] is False
+
+    def test_it_restores_each_layers_carry_on_recompute(self):
+        model = _SpyModel()
+
+        prepare_for_training(model)
+
+        _, recompute = model.checkpoint_kwargs["context_fn"]()
+        assert isinstance(recompute, RecomputeAsForward)
 
     def test_it_enables_input_grads(self):
         """Belt and braces under `use_reentrant=False`; what makes the reentrant

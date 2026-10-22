@@ -50,6 +50,8 @@ def test_the_cut_fields_are_gone():
         ({"carried_decay": 1.5}, r"carried_decay must be in \[0, 1\]"),
         ({"update_rule": "gradient"}, "update_rule must be"),
         ({"truncate_every": 0}, "truncate_every must be >= 1"),
+        ({"carry_gate": True, "update_rule": "delta_chunk"}, "carry_gate is implemented"),
+        ({"carry_gate": True, "output_gate": False}, "carry_gate needs output_gate"),
         ({"layer_indices": (1, 1, 3)}, "duplicates"),
         ({"layer_indices": (-1,)}, "non-negative"),
     ],
@@ -123,6 +125,7 @@ def test_paper_vocabulary_is_gone_from_the_eval_knobs():
         ({"warmup_ratio": 2.0}, r"warmup_ratio must be in \[0, 1\]"),
         ({"max_grad_norm": 0.0}, "max_grad_norm must be > 0"),
         ({"eval_n_slices": 0}, "eval_n_slices must be >= 1"),
+        ({"carry_window": 0}, "carry_window must be >= 1"),
         ({"strategy": ""}, "must name a registered session strategy"),
     ],
 )

@@ -1,0 +1,16 @@
+{
+  "model": "Qwen/Qwen3-0.6B",
+  "tensor": "model.layers.<i>.mlp.down_proj.weight (pretrained, bf16)",
+  "measure": "largest singular value",
+  "clip_tau": 20.0,
+  "spectral_norm": {
+    "1": 3.7814499721553796,
+    "13": 4.797846671850745,
+    "27": 3.8336737525496702
+  },
+  "tau_over_spectral": {
+    "1": 5.2889764897776095,
+    "13": 4.168536714051577,
+    "27": 5.216928014987857
+  }
+}
