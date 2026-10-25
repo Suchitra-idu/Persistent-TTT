@@ -1,0 +1,30 @@
+step 10/1050 loss 2.5348 |g| lora 0.667 wdown 1.507 new 0.445
+step 20/1050 loss 2.3363 |g| lora 0.928 wdown 1.632 new 0.821
+step 30/1050 loss 2.3141 |g| lora 0.522 wdown 0.917 new 0.302
+step 40/1050 loss 2.3514 |g| lora 0.349 wdown 0.671 new 0.049
+step 50/1050 loss 2.2854 |g| lora 0.324 wdown 0.719 new 0.164
+  checkpoint saved: ablate-a-c/step_50
+  carry gain by slice (carried minus reset, + = carry helps): s2 +0.086 s3 +0.165 s4 +0.123 s5 +0.114 s6 +0.059 s7 +0.063 s8 +0.055 | trend -0.066
+  [eval] carry_gain_slice_1 0.08615 carry_gain_slice_2 0.1647 carry_gain_slice_3 0.1228 carry_gain_slice_4 0.1142 carry_gain_slice_5 0.05905 carry_gain_slice_6 0.06337 carry_gain_slice_7 0.05486 carry_gain_trend -0.06629 carry_off_ppl 15.05 carry_ppl 14.96 fresh_ppl 17 gap_between 0.08273 gap_lora 1.732 gap_total 2.039 gap_within 0.2243 lora_only_ppl 15.27 state_ratio_final 7.166e+04
+step 60/1050 loss 2.0310 |g| lora 0.345 wdown 0.697 new 0.051
+step 70/1050 loss 2.2767 |g| lora 0.293 wdown 0.600 new 0.254
+step 80/1050 loss 2.2763 |g| lora 0.448 wdown 0.942 new 0.088
+step 90/1050 loss 2.3778 |g| lora 0.328 wdown 0.623 new 0.100
+step 100/1050 loss 2.4506 |g| lora 0.305 wdown 0.616 new 0.121
+  checkpoint saved: ablate-a-c/step_100
+  carry gain by slice (carried minus reset, + = carry helps): s2 +0.081 s3 +0.113 s4 +0.072 s5 +0.063 s6 +0.082 s7 +0.039 s8 +0.050 | trend -0.052
+  [eval] carry_gain_slice_1 0.08071 carry_gain_slice_2 0.1126 carry_gain_slice_3 0.07232 carry_gain_slice_4 0.0634 carry_gain_slice_5 0.08181 carry_gain_slice_6 0.03879 carry_gain_slice_7 0.04989 carry_gain_trend -0.05233 carry_off_ppl 14.73 carry_ppl 14.67 fresh_ppl 17 gap_between 0.06229 gap_lora 2.15 gap_total 2.333 gap_within 0.1206 lora_only_ppl 14.85 state_ratio_final 7.032e+04
+step 110/1050 loss 2.2130 |g| lora 0.368 wdown 0.731 new 0.033
+step 120/1050 loss 2.0798 |g| lora 0.281 wdown 0.583 new 0.037
+step 130/1050 loss 2.2341 |g| lora 0.336 wdown 0.680 new 0.021
+step 140/1050 loss 2.2956 |g| lora 0.331 wdown 0.651 new 0.016
+step 150/1050 loss 2.2248 |g| lora 0.369 wdown 0.753 new 0.028
+  checkpoint saved: ablate-a-c/step_150
+  carry gain by slice (carried minus reset, + = carry helps): s2 +0.044 s3 +0.049 s4 +0.038 s5 +0.050 s6 +0.036 s7 +0.034 s8 +0.043 | trend -0.008
+  [eval] carry_gain_slice_1 0.04433 carry_gain_slice_2 0.04885 carry_gain_slice_3 0.03817 carry_gain_slice_4 0.04956 carry_gain_slice_5 0.03568 carry_gain_slice_6 0.03436 carry_gain_slice_7 0.04286 carry_gain_trend -0.007982 carry_off_ppl 14.57 carry_ppl 14.54 fresh_ppl 17 gap_between 0.03686 gap_lora 2.355 gap_total 2.466 gap_within 0.07399 lora_only_ppl 14.65 state_ratio_final 4.726e+04
+step 160/1050 loss 2.5408 |g| lora 0.399 wdown 0.853 new 0.053
+step 170/1050 loss 2.3608 |g| lora 0.360 wdown 0.621 new 0.034
+step 180/1050 loss 2.2520 |g| lora 0.312 wdown 0.601 new 0.009
+step 190/1050 loss 2.3906 |g| lora 0.343 wdown 0.658 new 0.023
+step 200/1050 loss 2.5193 |g| lora 0.398 wdown 0.898 new 0.047
+  checkpoint saved: ablate-a-c/step_200

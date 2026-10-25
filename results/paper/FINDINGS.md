@@ -202,6 +202,42 @@ largest singular value of W0, `inputs/w0_spectral.json`); with the scale but the
 gate at −2, the in-document Hebbian fast weights wrecked the model until about
 step 140, and training through every slice ran out of memory near step 195.
 
+## 4c. Relatedness gradient (Wikipedia, step 600)
+
+Bundles `results/hebbian-carry-600/step_600/20261025-085137` and
+`results/ttt-v1.1/step_600/20261025-092645` (identical 200 cases, checked title for
+title), table `tables/T12_relatedness.csv`, figure `F16`. Second 1024-token block of
+each target article, scored after the carry is primed with 1024 tokens of:
+
+| prime | plain Hebbian | carry design |
+|---|---|---|
+| same article | −0.002 | +0.103 * |
+| article the target mentions by title (≥2 times) | +0.004 | +0.085 * |
+| unrelated article | +0.001 | +0.051 * |
+| other SlimPajama source | −0.013 * | −0.067 * |
+| related vs random | +0.003 | +0.034 * [+0.024, +0.044] |
+
+Monotone and significant at every step for the carry design; flat for plain Hebbian.
+Dropping the 18 targets whose related prime is a date page leaves every estimate within
+0.003. Selection code unchanged so later runs reproduce the same cases.
+
+## 4d. Ablation of the carry design (step 200)
+
+Runs `ablate-c-only`, `ablate-a-c`, `ablate-b-c` (bundles under `results/ablate-*/step_200/`),
+logs in `inputs/ablation_training/`, table `tables/T13_ablation.csv`, figure `F17`.
+A = separate carry path, B = training through the carry, C = main gate starts at −6.
+
+| variant | between slices | cross-doc (100) | vs matched LoRA |
+|---|---|---|---|
+| C only | +0.008 * | +0.003 * | +0.130 * |
+| A+C | +0.023 * | +0.011 * | +0.172 * |
+| B+C | +0.035 * | +0.014 * | +0.163 * |
+| A+B+C | +0.099 * | +0.010 * | +0.215 * |
+
+C alone does not explain the gain. A and B each help a little; together they give more
+than twice the sum of their separate increments over C (0.091 vs 0.015 + 0.027).
+A+B without C = failed attempt 2 (unusable early blow-up).
+
 ## 5. Sanity checks that hold
 
 - The LoRA-only checkpoint gives exactly 0.000 for `within` and `between_slices` at all three

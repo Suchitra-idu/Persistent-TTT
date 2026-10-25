@@ -19,7 +19,15 @@ from typing import Any, Callable, Mapping, Sequence
 
 from ttt.adapters.local_storage import LocalStorage
 from ttt.adapters.numpy_rng import NumpyRng
-from ttt.app import boundary_eval, evidence, paper_analysis, repeat_eval, swap_eval
+from ttt.app import (
+    boundary_eval,
+    context_eval,
+    evidence,
+    paper_analysis,
+    relatedness_eval,
+    repeat_eval,
+    swap_eval,
+)
 from ttt.app.paper_analysis import VS_MATCHED, Saturation, StatePoint
 from ttt.core import report
 from ttt.core.metrics import ALL_SOURCES
@@ -41,6 +49,8 @@ ROW_TYPES = {
     "boundary": boundary_eval.ArmRow,
     "repeat": repeat_eval.RepeatItem,
     "swap": swap_eval.SwapRow,
+    "context": context_eval.ContextRow,
+    "relatedness": relatedness_eval.RelatedRow,
 }
 
 

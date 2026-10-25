@@ -32,6 +32,7 @@ from ttt.app import (
     boundary_eval,
     context_eval,
     data_pipeline,
+    relatedness_eval,
     eval_loop,
     evidence,
     repeat_eval,
@@ -52,12 +53,14 @@ BOUNDARY = "boundary"
 REPEAT = "repeat"
 SWAP = "swap"
 CONTEXT = "context"
+RELATEDNESS = "relatedness"
 SUITES = (REGIMES, BOUNDARY, REPEAT, SWAP)
-# Opt-in: the full-context comparison costs a second, longer forward per slice.
-KNOWN_SUITES = SUITES + (CONTEXT,)
-TTT_SUITES = (BOUNDARY, REPEAT, SWAP, CONTEXT)
+# Opt-in: context costs a second, longer forward per slice; relatedness downloads Wikipedia.
+KNOWN_SUITES = SUITES + (CONTEXT, RELATEDNESS)
+TTT_SUITES = (BOUNDARY, REPEAT, SWAP, CONTEXT, RELATEDNESS)
 
 RESULTS_DIR = "results"
+WIKIPEDIA = "RedPajamaWikipedia"
 EVIDENCE_DIR = "evidence"
 RAW_FILES = {
     "regimes": EvalRow,
@@ -66,6 +69,7 @@ RAW_FILES = {
     "repeat": repeat_eval.RepeatItem,
     "swap": swap_eval.SwapRow,
     "context": context_eval.ContextRow,
+    "relatedness": relatedness_eval.RelatedRow,
 }
 DEFAULT_N_BOOT = 1000
 BOOT_SEED = 0
@@ -80,6 +84,8 @@ class Plan:
     n_repeats: int = 10
     n_primes: int = 2
     n_targets: int = 5
+    n_related: int = 200
+    n_wiki_shards: int = 2
 
     def __post_init__(self) -> None:
         unknown = set(self.suites) - set(KNOWN_SUITES)
@@ -96,6 +102,7 @@ class Analysis:
     repeat_trend: tuple[Estimate, ...] = ()
     swap: tuple[Estimate, ...] = ()
     context: tuple[Estimate, ...] = ()
+    relatedness: tuple[Estimate, ...] = ()
     carry_share: Interval | None = None
     fresh: Mapping[str, float] = field(default_factory=dict)
     correlates: tuple[evidence.Correlate, ...] = ()
@@ -158,6 +165,21 @@ def run(
         rows["context"] = evidence.records(
             context_eval.measure(docs=eval_docs, n_slices=plan.n_slices, **ports)
         )
+    if RELATEDNESS in suites:
+        announce("relatedness ...")
+        from ttt.experiments import _wiki_relatedness
+
+        cases, _ = _wiki_relatedness.build_cases(
+            n_targets=plan.n_related,
+            n_shards=plan.n_wiki_shards,
+            tokenizer=engine.tokenizer,
+            other_docs=[d for s, docs in sorted(by_source.items()) if s != WIKIPEDIA for d in docs],
+            rng=engine.rng(BOOT_SEED),
+            announce=announce,
+        )
+        rows["relatedness"] = evidence.records(
+            relatedness_eval.measure(cases=cases, **ports)
+        )
     if SWAP in suites:
         announce("swap ...")
         rows["swap"] = evidence.records(
@@ -196,6 +218,7 @@ def analyse(rows: Mapping[str, list], *, n_boot: int = DEFAULT_N_BOOT, seed: int
         repeat_trend=evidence.repeat_trend(typed.get("repeat", ()), **kw),
         swap=evidence.swap_estimates(typed.get("swap", ()), **kw),
         context=context_eval.estimates(typed.get("context", ()), **kw),
+        relatedness=relatedness_eval.estimates(typed.get("relatedness", ()), **kw),
         carry_share=(
             context_eval.carry_share(typed["context"], **kw) if typed.get("context") else None
         ),
@@ -235,6 +258,7 @@ def render_bundle(
         "repeat_trend": analysis.repeat_trend,
         "swap": analysis.swap,
         "context_gaps": analysis.context,
+        "relatedness": analysis.relatedness,
     }
     for name, estimates in tables.items():
         if estimates:
@@ -314,7 +338,7 @@ def summary(analysis: Analysis, figures) -> str:
     """The pooled headline per measure; per-source detail lives in tables/."""
     pooled = [
         e
-        for e in analysis.regimes + analysis.boundary + analysis.repeat_trend + analysis.swap + analysis.context
+        for e in analysis.regimes + analysis.boundary + analysis.repeat_trend + analysis.swap + analysis.context + analysis.relatedness
         if e.source == ALL_SOURCES
     ]
     lines = ["# Evidence bundle", "", "## Pooled estimates (95% paired bootstrap over documents)", ""]
@@ -394,6 +418,8 @@ def main(
     n_repeats: int = Plan.n_repeats,
     n_primes: int = Plan.n_primes,
     n_targets: int = Plan.n_targets,
+    n_related: int = Plan.n_related,
+    n_wiki_shards: int = Plan.n_wiki_shards,
     n_boot: int = DEFAULT_N_BOOT,
     out_dir: str = RESULTS_DIR,
     flags: str = "",
@@ -405,7 +431,7 @@ def main(
     plan = Plan(
         suites=tuple(s.strip() for s in suites.split(",") if s.strip()),
         n_docs=n_docs, n_slices=n_slices, n_chain=n_chain, n_repeats=n_repeats,
-        n_primes=n_primes, n_targets=n_targets,
+        n_primes=n_primes, n_targets=n_targets, n_related=n_related, n_wiki_shards=n_wiki_shards,
     )
     run_part, step = bundle_parts(checkpoint, resolved.train.run_name)
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")

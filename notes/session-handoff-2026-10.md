@@ -94,10 +94,10 @@ related text (same document, survives 600 steps) and interference for unrelated 
 ## Next experiments (agreed as needed, not yet run)
 
 Budget estimate about 8 GPU-hours, about $32-40 total.
-1. Ablation, 200 steps each: "C only" (gate -6, no carry_gate, no carry_backprop) first, it is
+1. DONE 2026-10-25, see FINDINGS.md 4d (A and B synergistic, C alone ~nothing). Original plan: Ablation, 200 steps each: "C only" (gate -6, no carry_gate, no carry_backprop) first, it is
    the key control; then A+C and B+C. A+B is covered by failed attempt 2.
 2. Second seed of the carry design to 600 (`seed=43`), evals at 400 and 600.
-3. Relatedness test (eval only, on `hebbian-carry-600/step_600`, and `ttt-v1.1/step_600`):
+3. DONE 2026-10-25, see FINDINGS.md 4c (Wikipedia, not code; code carry too weak). Original plan: Relatedness test (eval only, on `hebbian-carry-600/step_600`, and `ttt-v1.1/step_600`):
    data `codeparrot/github-code-clean` loaded as plain parquet shard
    (`data/train-00000-of-00880.parquet`, has repo_name, path, code, language; not gated;
    the dataset's loading script is unusable with datasets>=4). For each Python target file,

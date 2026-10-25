@@ -16,7 +16,7 @@ from collections import defaultdict
 from pathlib import Path
 
 from ttt.adapters.numpy_rng import NumpyRng
-from ttt.app import evidence, paper_analysis
+from ttt.app import evidence, paper_analysis, relatedness_eval
 from ttt.core.metrics import ALL_SOURCES, geometric_mean_ppl
 from ttt.core.stats import ranks
 from ttt.core.types import COLD_CARRY, FRESH, LORA_ONLY
@@ -445,6 +445,104 @@ def carry_design_curve(estimates, path: Path) -> str:
     return _save(fig, str(path))
 
 
+RELATEDNESS_CASES = (("plain Hebbian", "ttt-v1.1"), ("carry design", CARRY_DESIGN_LONG))
+RELATEDNESS_LEVELS = (
+    ("gain_self", "same\ndocument"),
+    ("gain_related", "related\narticle"),
+    ("gain_random", "random\narticle"),
+    ("gain_other_source", "other\nsource"),
+)
+
+
+def relatedness_estimates() -> dict[tuple[str, str], object]:
+    out = {}
+    for label, run in RELATEDNESS_CASES:
+        for e in relatedness_eval.estimates(_rows(run, 600, "relatedness"), rng=NumpyRng(0), n_boot=N_BOOT):
+            if e.source == ALL_SOURCES:
+                out[(label, e.measure)] = e
+    return out
+
+
+def relatedness_figure(estimates, path: Path) -> str:
+    plt = _pyplot()
+    fig, ax = plt.subplots(figsize=(6.8, 3.8))
+    xs = range(len(RELATEDNESS_LEVELS))
+    for (label, _), colour, marker in zip(RELATEDNESS_CASES, (SERIES[0], SERIES[1]), ("o", "s")):
+        intervals = [estimates[(label, m)].interval for m, _ in RELATEDNESS_LEVELS]
+        ax.fill_between(xs, [i.low for i in intervals], [i.high for i in intervals],
+                        color=colour, alpha=0.18, linewidth=0)
+        ax.plot(xs, [i.point for i in intervals], color=colour, marker=marker, markersize=7,
+                linewidth=2, label=label)
+    ax.axhline(0, color=MUTED, linewidth=1)
+    ax.set_xticks(list(xs), [name for _, name in RELATEDNESS_LEVELS])
+    ax.set_xlabel("text the carry was built from, by relatedness to the target")
+    ax.set_ylabel("Δppl vs reset  (+ = carry helps)")
+    ax.legend(frameon=False, fontsize=8)
+    _chrome(ax)
+    _title(fig, "The carry's effect falls with relatedness (200 Wikipedia targets, step 600)")
+    fig.tight_layout()
+    return _save(fig, str(path))
+
+
+def relatedness_table(estimates) -> list[str]:
+    lines = ["model,measure,n_docs,delta_ppl,ci_low,ci_high,excludes_zero,win_rate"]
+    for (label, measure), e in sorted(estimates.items()):
+        i = e.interval
+        lines.append(f"{label},{measure},{e.n_docs},{i.point:.6g},{i.low:.6g},{i.high:.6g},"
+                     f"{int(i.excludes_zero)},{e.win_rate:.4f}")
+    return lines
+
+
+ABLATION_CASES = (
+    ("closed gate only (C)", "ablate-c-only"),
+    ("carry path, no training through it (A+C)", "ablate-a-c"),
+    ("training through it, no carry path (B+C)", "ablate-b-c"),
+    ("full design (A+B+C)", CARRY_DESIGN),
+)
+ABLATION_MEASURES = (
+    ("between_slices", "Carried from earlier slices\nof the same document"),
+    ("cross_doc", "Carried into a\ndifferent document"),
+    ("vs_matched_lora", "Lead over\nmatched LoRA"),
+)
+
+
+def ablation_estimates() -> dict[tuple[str, str], object]:
+    base = _rows(CONTROL, 200, "regimes")
+    out = {}
+    for label, run in ABLATION_CASES:
+        rows = paper_analysis.rebased(_rows(run, 200, "regimes"), base)
+        estimates = (
+            evidence.regime_estimates(rows, rng=NumpyRng(0), n_boot=N_BOOT)
+            + evidence.boundary_estimates(_rows(run, 200, "boundary"), rng=NumpyRng(0), n_boot=N_BOOT)
+            + paper_analysis.matched_estimates(base, rows, rng=NumpyRng(0), n_boot=N_BOOT)
+        )
+        for e in estimates:
+            if e.source == ALL_SOURCES:
+                out[(label, e.measure)] = e
+    return out
+
+
+def ablation_figure(estimates, path: Path) -> str:
+    plt = _pyplot()
+    fig, axes = plt.subplots(1, len(ABLATION_MEASURES), figsize=(12, 3.4), squeeze=False)
+    colours = (MUTED, SERIES[0], SERIES[0], SERIES[1])
+    for ax, (measure, title) in zip(axes[0], ABLATION_MEASURES):
+        for y, (label, _) in enumerate(ABLATION_CASES):
+            i = estimates[(label, measure)].interval
+            ax.hlines(y, i.low, i.high, color=colours[y], linewidth=2)
+            ax.plot(i.point, y, "o", markersize=7, color=colours[y])
+        ax.axvline(0, color=MUTED, linewidth=1)
+        ax.set_yticks(range(len(ABLATION_CASES)),
+                      [label for label, _ in ABLATION_CASES] if ax is axes[0][0] else [])
+        ax.invert_yaxis()
+        ax.set_title(title, loc="left", fontsize=9)
+        ax.set_xlabel("Δppl  (+ = lower perplexity)")
+        _chrome(ax, grid_axis="x")
+    _title(fig, "Ablation of the carry design at step 200 (95% CI)")
+    fig.tight_layout()
+    return _save(fig, str(path))
+
+
 def carry_design_table(estimates) -> list[str]:
     lines = ["case,measure,n_docs,delta_ppl,ci_low,ci_high,excludes_zero,win_rate"]
     for (label, measure), e in sorted(estimates.items()):
@@ -478,6 +576,12 @@ def main() -> None:
         carry_design_by_position(figures / "F14_carry_design_by_slice.pdf"),
         carry_design_curve(design, figures / "F15_carry_design_curve.pdf"),
     ]
+    ablation = ablation_estimates()
+    made.append(ablation_figure(ablation, figures / "F17_ablation.pdf"))
+    (OUT / "tables" / "T13_ablation.csv").write_text("\n".join(carry_design_table(ablation)) + "\n")
+    related = relatedness_estimates()
+    made.append(relatedness_figure(related, figures / "F16_relatedness.pdf"))
+    (OUT / "tables" / "T12_relatedness.csv").write_text("\n".join(relatedness_table(related)) + "\n")
     (OUT / "tables" / "T11_carry_design.csv").write_text("\n".join(carry_design_table(design)) + "\n")
     write_tables(estimates, correlates)
     for path in made:

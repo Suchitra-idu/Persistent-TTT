@@ -59,7 +59,7 @@ Test-time training (TTT) lets a language model update part of its weights while 
 
 A naive carry does not help. Carried across documents it contributes nothing measurable, for both rules and at every checkpoint, and even re-reading the same document ten times gives no improvement. We trace this to the read-time norm clip that keeps the fast weights stable. It is active on every measurement by a factor of at least 255, so only the direction of the carried state reaches the output, and removing the clip makes training collapse or switches the fast weights off.
 
-Guided by this diagnosis, we redesign the carry for the Hebbian rule. The carried state gets its own clipped path with its own gate and a zero-initialised scale, a later slice's loss trains what an earlier slice wrote, and the main gate starts nearly closed. With this design the carry helps when the next text is related to what was carried and harms when it is not. Carrying state from earlier slices of the same document lowers perplexity by 0.06 to 0.14 through 600 training steps, on 92 to 99 percent of documents, against 0.002 to 0.014 for the original design, and the model leads the matched LoRA baseline by 0.234 perplexity, more than either original rule. Carried into a different document the state helps slightly early in training (0.010 on 100 documents) and harms after full training (0.020 worse). Placing the previous text directly in attention is far stronger, and the carry recovers about four percent of its gain. A carried fast weight is therefore a small but reliable memory of related text, and interference for unrelated text.
+Guided by this diagnosis, we redesign the carry for the Hebbian rule. The carried state gets its own clipped path with its own gate and a zero-initialised scale, a later slice's loss trains what an earlier slice wrote, and the main gate starts nearly closed. An ablation shows that the first two changes are both needed and work together, while the closed gate only removes an early instability. With this design the carry helps when the next text is related to what was carried and harms when it is not. Carrying state from earlier slices of the same document lowers perplexity by 0.06 to 0.14 through 600 training steps, on 92 to 99 percent of documents, against 0.002 to 0.014 for the original design, and the model leads the matched LoRA baseline by 0.234 perplexity, more than either original rule. On 200 Wikipedia articles, the carry's gain falls steadily with the relatedness of the text it was built from, 0.103 from the article itself, 0.085 from an article it mentions, 0.051 from an unrelated article, and a harm of 0.067 from another source, while the original design shows no such gradient. Placing the previous text directly in attention is far stronger, and the carry recovers about four percent of its gain. A carried fast weight is therefore a small but reliable memory of related text, and interference for unrelated text.
 
 The attribution also shows where the rest of the gain comes from. Most of a TTT model's lead over the matched baseline is the extra trainable capacity of the down-projection, while fast-weight updates within a document add a consistent 0.014 to 0.276 perplexity, several times more with the delta rule. For Q2, the within-document gain differs across domains but is not predicted by how hard a domain is for the base model.
 
@@ -97,7 +97,7 @@ The primary objective is to develop and empirically analyse a session-persistent
 \section{Contributions}
 
 \begin{itemize}
-  \item A redesigned carry that helps on related text and harms on unrelated text. A separate, zero-initialised carry path trained through the carry makes the carry between slices of the same document reliably useful through full training, and gives the strongest model in the study, while carried into an unrelated document it becomes harmful as training proceeds (Chapter~\ref{ch-design}).
+  \item A redesigned carry that helps on related text and harms on unrelated text. A separate, zero-initialised carry path trained through the carry makes the carry between slices of the same document reliably useful through full training and gives the strongest model in the study, and its benefit falls steadily with the relatedness of the earlier text, from the same document to a related article to an unrelated one, turning to harm for another source (Chapter~\ref{ch-design}).
   \item A diagnosis of why a naive carry fails. The read-time norm clip that stabilises the fast weights is saturated on every measurement, and training without it either collapses or switches the fast weights off (Chapter~\ref{ch-why}).
   \item An answer to Q1 for the naive carry. It contributes nothing measurable across documents, at three training checkpoints and for both update rules, against a reimplementation of In-Place TTT that resets at document boundaries (Chapter~\ref{ch-q1}).
   \item An answer to Q2. The within-document gain varies across six domains, but the variation is not explained by domain difficulty (Chapter~\ref{ch-q2}).
@@ -680,13 +680,94 @@ With all four changes the training loss stays between 2.0 and 2.6 from step 10. 
 
 \paragraph{Overall, the design outperforms both original rules.} The main gate stays nearly closed (median 0.0007 at step 200), so the benefit flows through the carry path. The model leads the matched LoRA baseline by 0.234 perplexity at step 600 on every document, against 0.106 for the original Hebbian model and 0.203 for the delta rule at the same step.
 
+\section{Which design change matters}
+
+The design combines three changes, the separate carry path (A), training through the carry (B) and the nearly closed main gate at the start (C). Three further runs, each trained to step 200 with the same data and seed, remove ingredients in turn. The fourth combination, A and B without C, is the second failed attempt above, whose early instability made it unusable. Table~\ref{tab-ablation} and Figure~\ref{fig-ablation} compare them with the full design at step 200.
+
+\begin{table}[H]
+  \centering
+  \caption{Ablation of the carry design at step 200, gains in perplexity with 95 percent intervals. Every interval excludes zero.}
+  \label{tab-ablation}
+  \small
+  \begin{tabular}{lrrr}
+    \toprule
+    Variant & Between slices & Into a different document & Lead over matched LoRA \\
+    \midrule
+    Closed gate only (C) & $+0.008$ & $+0.003$ & $+0.130$ \\
+    Carry path, no training through it (A and C) & $+0.023$ & $+0.011$ & $+0.172$ \\
+    Training through it, no carry path (B and C) & $+0.035$ & $+0.014$ & $+0.163$ \\
+    Full design (A, B and C) & $+0.099$ & $+0.010$ & $+0.215$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{figures/F17_ablation.pdf}
+  \caption{Ablation of the carry design at step 200, with 95 percent bootstrap intervals.}
+  \label{fig-ablation}
+\end{figure}
+
+\paragraph{The closed gate does not explain the gain.} With the closed gate alone, the carry between slices gives 0.008, close to the original design's 0.014. Starting the gate nearly closed only removes the early instability.
+
+\paragraph{The two carry changes work together.} The separate carry path alone raises the carry gain to 0.023, and training through the carry alone to 0.035. Together they give 0.099, more than twice the sum of their separate increments over the closed gate alone (0.015 and 0.027 against 0.091). The separate path lets a carried state reach the output without being drowned by the current slice, and training through the carry teaches the model what to write for a later slice to read, and each is of limited use without the other. The lead over the matched baseline follows the same order, from 0.130 with the closed gate alone to 0.215 with the full design.
+
+\paragraph{Cross-document carry is small in every variant.} At step 200 every variant carries a small benefit into a different document, between 0.003 and 0.014, with overlapping intervals. The relatedness effects of the full design therefore come with training through the carry over the full 600 steps rather than from any one change at step 200.
+
+\section{A relatedness gradient}
+
+The comparison so far has two points, the same document and a different document of the same source. To test documents that are distinct but related, a further suite uses English Wikipedia, a source on which the carry works well (Table~\ref{tab-sources}). Two shards of the November 2023 English dump give 55{,}761 articles, of which 18{,}747 are long enough to serve as targets. For each of 200 target articles, chosen in a seeded order, the second block of 1024 tokens is scored after the carry is reset and after it is primed by a block of 1024 tokens from one of four texts, ordered by relatedness.
+\begin{description}
+  \item[Same document.] The target article's own first 1024 tokens.
+  \item[Related article.] The article the target mentions most often by title, at least twice, matching whole multi-word titles only.
+  \item[Random article.] An article that neither mentions the target nor is mentioned by it.
+  \item[Other source.] A held-out document from one of the other five SlimPajama sources.
+\end{description}
+Every prime has the same length and every arm scores exactly the same target tokens, so only the relatedness of the prime varies. The same 200 cases, identical title for title, were measured on the carry design and on the original Hebbian model, both at step 600.
+
+\begin{table}[H]
+  \centering
+  \caption{Gain from the carry by relatedness of the priming text, against a reset carry, on the same 200 Wikipedia targets at step 600. Shares of targets improved in brackets. A star marks a 95 percent interval that excludes zero.}
+  \label{tab-related}
+  \small
+  \begin{tabular}{lrr}
+    \toprule
+    Carry built from & Original Hebbian & Carry design \\
+    \midrule
+    Same document & $-0.002$ (0.50) & $+0.103$\sig\ (0.89) \\
+    Related article & $+0.004$ (0.59) & $+0.085$\sig\ (0.85) \\
+    Random article & $+0.001$ (0.48) & $+0.051$\sig\ (0.70) \\
+    Other source & $-0.013$\sig\ (0.39) & $-0.067$\sig\ (0.28) \\
+    \midrule
+    Same document against related & $-0.005$\sig & $+0.018$\sig \\
+    Related against random & $+0.003$ & $+0.034$\sig \\
+    Random against other source & $+0.013$\sig & $+0.117$\sig \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\linewidth]{figures/F16_relatedness.pdf}
+  \caption{Gain from the carry by relatedness of the priming text, on the same 200 Wikipedia targets at step 600, with 95 percent bootstrap bands.}
+  \label{fig-related}
+\end{figure}
+
+\paragraph{The carry's effect falls steadily with relatedness.} For the carry design every step down the scale is significant (Table~\ref{tab-related}, Figure~\ref{fig-related}). A carry built from the same article lowers perplexity by 0.103, one built from an article the target mentions by 0.085, one built from an unrelated article by 0.051, and one built from a different source raises it by 0.067. The key contrast, a related article against an unrelated one, is $+0.034$ $[+0.024, +0.044]$, in favour of the related article on 70 percent of targets. A distinct but related document therefore helps clearly more than an unrelated one.
+
+\paragraph{The gradient belongs to the redesign.} On the same cases the original Hebbian carry has no significant gain at any level, and only a small harm from other-source text. The graded pattern, its help and its harm, appear only with the redesigned carry.
+
+\paragraph{Robustness.} Title matching also links articles to date pages, such as an article mentioning ``August 1''. Removing the 18 targets whose related prime is a date page leaves every estimate within 0.003 of the full result, including the related against random contrast ($+0.034$ $[+0.023, +0.045]$, 182 targets).
+
+\paragraph{A random article still helps.} Unlike the cross-document result of the boundary suite, where a carried state from another document of the same source harmed perplexity at step 600, an unrelated Wikipedia article helps here. The setups differ in what is carried. Here the prime is the opening block of one Wikipedia article, a summary written in the same encyclopedic style as the target. The boundary suite instead carries the decayed state of several whole earlier documents of the same source, each read in eight slices, and pools six sources of which most are less uniform in style than Wikipedia. A plausible reading, not tested here, is that a single short block mainly transfers shared style, which helps, while a long accumulation of unrelated content mainly adds interference. The two results agree on the ordering, with the most related text helping most and text from another source harming.
+
 \section{Carry helps on related text and harms on unrelated text}
 
-The same mechanism, in the same model, helps on the continuation of the same document throughout training and, after full training, harms when the next document is unrelated. Within this study, related text means the continuation of the same document, and unrelated text means a different document from the same source. The result supports a two-sided claim. A trained, gated fast-weight carry is a reliable memory of related text, worth about one percent in perplexity, and it is interference for unrelated text. This agrees with the swap result of Chapter~\ref{ch-q1}, where for the original Hebbian model a state primed on a different source made perplexity worse. It also implies that a deployed carry needs a way to decide when to apply it, such as resetting on a change of topic. Whether the carry also helps across documents that are distinct but related, such as files of one code repository or chapters of one book, is not tested here and is the natural next experiment.
+The same mechanism, in the same model, helps on the continuation of the same document throughout training and, after full training, harms when the next document is unrelated. The relatedness suite turns this into a graded result. The carry's benefit falls with relatedness, from the same document to a related article to an unrelated article of the same source, and it becomes harm for text from another source. A trained, gated fast-weight carry is therefore a reliable memory of related text, worth up to about one percent in perplexity, and interference for unrelated text. This agrees with the swap result of Chapter~\ref{ch-q1}, where for the original Hebbian model a state primed on a different source made perplexity worse. It also implies that a deployed carry needs a way to decide when to apply it, such as resetting on a change of topic.
 
 \section{What this chapter does not establish}
 
-The three design changes were introduced together, so their individual contributions are unknown. The results come from one seed, and the delta rule was not redesigned. The relatedness claim rests on two points of a scale, the same document and a different document of the same source, with nothing in between. The context comparison gives the carry one previous slice of text, while the carry itself holds a decayed summary of all earlier slices.
+The ablation is measured at step 200 only, while the relatedness and cross-document results come from step 600. The results come from one seed, and the delta rule was not redesigned. Relatedness is measured on Wikipedia only, and through title mentions, which is a coarse proxy. The context comparison gives the carry one previous slice of text, while the carry itself holds a decayed summary of all earlier slices.
 
 % ======================================================================
 \chapter{Discussion}
@@ -722,17 +803,17 @@ For practitioners, the results suggest that the gains of TTT on the MLP down-pro
 
 \paragraph{No-clip probes.} The runs without the clip are short, 100 to 200 steps, and single-seed. They show that removing the clip does not rescue persistence early in training, not what a long unclipped run would converge to.
 
-\paragraph{Carry design.} The redesigned carry of Chapter~\ref{ch-design} bundles three changes, rests on one seed, and exists for the Hebbian rule only. Its relatedness claim compares the same document with a different document of the same source, and nothing in between.
+\paragraph{Carry design.} The redesigned carry of Chapter~\ref{ch-design} rests on one seed, its ablation stops at step 200, and it exists for the Hebbian rule only. Its relatedness gradient is measured on Wikipedia only, with relatedness defined by title mentions.
 
 \paragraph{Perplexity only.} All evidence is perplexity-based. The RULER probes planned in the proposal were dropped once the carried effect measured zero, and no behavioural test of retained information was attempted, consistent with the proposal's scope.
 
-\paragraph{Future work.} For the carry design, the most direct extensions are an ablation of its three changes, a second seed, an evaluation on documents that are distinct but related, which would turn the two points of the relatedness scale into a graded curve, a mechanism that decides when to apply the carry, and the same design for the delta rule. More broadly, the extensions are a parameter-matched control, a dynamic-evaluation baseline \citep{krause2018dynamic} on the LoRA-only model, a carried state with a designed bound such as a normalised or gated memory, training through document boundaries so that the carry receives a learning signal, and replication at larger scale with several seeds.
+\paragraph{Future work.} For the carry design, the most direct extensions are a second seed, the relatedness gradient on other domains and with finer measures of relatedness, a mechanism that decides when to apply the carry, and the same design for the delta rule. More broadly, the extensions are a parameter-matched control, a dynamic-evaluation baseline \citep{krause2018dynamic} on the LoRA-only model, a carried state with a designed bound such as a normalised or gated memory, training through document boundaries so that the carry receives a learning signal, and replication at larger scale with several seeds.
 
 % ======================================================================
 \chapter{Conclusion}
 \label{ch-conclusion}
 
-This thesis set out to measure how much a session-persistent carry contributes to language model improvement and which domains benefit most. Test-time training on the MLP down-projection does improve a small language model over a matched LoRA baseline, but an attribution of that improvement shows where it comes from. Most of it is extra trainable capacity, a consistent part is genuine within-document adaptation that the delta rule makes several times larger than the Hebbian rule, and none of it comes from carrying fast weights across documents, in any domain. The reason is structural. The norm clip that keeps the fast weights stable is saturated on every measurement, so the carried state reaches the output only as a direction, and removing the clip makes the model either collapse or switch the fast weights off. A redesigned carry, read through its own zero-initialised path and trained through the boundary between slices, changes the picture for related text. It lowers perplexity on the continuation of the same document throughout 600 training steps, by 0.06 to 0.14, and lifts the model's lead over the matched baseline above both original rules. Carried into an unrelated document it turns harmful as training proceeds, and next to attention on the preceding text it recovers about four percent of the gain. A carried fast weight is therefore a small but reliable memory of related text and interference for unrelated text. The open question is how far relatedness can stretch, from the next part of a document to other documents of the same project, book or user, and how a model should decide when to apply its carry.
+This thesis set out to measure how much a session-persistent carry contributes to language model improvement and which domains benefit most. Test-time training on the MLP down-projection does improve a small language model over a matched LoRA baseline, but an attribution of that improvement shows where it comes from. Most of it is extra trainable capacity, a consistent part is genuine within-document adaptation that the delta rule makes several times larger than the Hebbian rule, and none of it comes from carrying fast weights across documents, in any domain. The reason is structural. The norm clip that keeps the fast weights stable is saturated on every measurement, so the carried state reaches the output only as a direction, and removing the clip makes the model either collapse or switch the fast weights off. A redesigned carry, read through its own zero-initialised path and trained through the boundary between slices, changes the picture for related text. It lowers perplexity on the continuation of the same document throughout 600 training steps, by 0.06 to 0.14, and lifts the model's lead over the matched baseline above both original rules. Its benefit falls steadily with how related the earlier text is, from the same document to a distinct but related article to an unrelated one, and text from another source turns it into harm, a gradient absent from the original design. Next to attention on the preceding text it recovers about four percent of the gain. A carried fast weight is therefore a small but reliable memory of related text and interference for unrelated text. The open questions are whether the gradient holds beyond Wikipedia, and how a model should decide when to apply its carry.
 
 \bibliographystyle{plainnat}
 \bibliography{references}

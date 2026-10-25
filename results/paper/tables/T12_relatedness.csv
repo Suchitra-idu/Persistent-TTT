@@ -1,0 +1,15 @@
+model,measure,n_docs,delta_ppl,ci_low,ci_high,excludes_zero,win_rate
+carry design,gain_other_source,200,-0.0665018,-0.0838388,-0.0516618,1,0.2800
+carry design,gain_random,200,0.0508374,0.0368023,0.0647086,1,0.6950
+carry design,gain_related,200,0.0851601,0.0703661,0.0989009,1,0.8500
+carry design,gain_self,200,0.103166,0.0895018,0.118016,1,0.8900
+carry design,random_vs_other_source,200,0.117339,0.0971244,0.136506,1,0.8100
+carry design,related_vs_random,200,0.0343227,0.0241485,0.0442495,1,0.6950
+carry design,self_vs_related,200,0.0180063,0.0106075,0.0257593,1,0.6150
+plain Hebbian,gain_other_source,200,-0.0125331,-0.0177393,-0.00736485,1,0.3850
+plain Hebbian,gain_random,200,0.000510422,-0.00424569,0.00506048,0,0.4750
+plain Hebbian,gain_related,200,0.00379093,-0.000549067,0.00814745,0,0.5850
+plain Hebbian,gain_self,200,-0.00163566,-0.00590707,0.00307551,0,0.4950
+plain Hebbian,random_vs_other_source,200,0.0130436,0.00898988,0.0178352,1,0.6650
+plain Hebbian,related_vs_random,200,0.0032805,-0.00079589,0.00734806,0,0.5850
+plain Hebbian,self_vs_related,200,-0.00542659,-0.00944212,-0.00186577,1,0.4300
