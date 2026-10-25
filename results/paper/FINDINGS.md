@@ -238,6 +238,25 @@ C alone does not explain the gain. A and B each help a little; together they giv
 than twice the sum of their separate increments over C (0.091 vs 0.015 + 0.027).
 A+B without C = failed attempt 2 (unusable early blow-up).
 
+## 4e. Second seed (`hebbian-carry-600-s43`, seed 43, step 600)
+
+Bundles `results/hebbian-carry-600-s43/step_{400,600}/20261025-132503`, log
+`inputs/carry_design_training/5_carry_600_seed43.log`, table `tables/T14_seeds.csv`.
+Trained and evaluated in Modal workspace `vihanganoob123`. Relatedness cases identical to
+seed 42, title for title.
+
+| measure @600 | seed 42 | seed 43 |
+|---|---|---|
+| between slices | +0.097 * | +0.092 * |
+| cross-doc (100) | −0.020 * | −0.031 * (all 6 sources significant) |
+| vs matched LoRA | +0.234 * | +0.214 * |
+| carry share of context | 4.0% | 3.8% |
+| relatedness self / related / random / other | +0.103 / +0.085 / +0.051 / −0.067 | +0.116 / +0.083 / +0.034 / −0.046 |
+| related vs random | +0.034 * | +0.049 * |
+
+Everything replicates in sign and significance. At step 400: between slices +0.062 in both,
+vs LoRA +0.188 / +0.180.
+
 ## 5. Sanity checks that hold
 
 - The LoRA-only checkpoint gives exactly 0.000 for `within` and `between_slices` at all three

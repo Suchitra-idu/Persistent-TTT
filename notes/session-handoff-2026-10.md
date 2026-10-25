@@ -96,7 +96,7 @@ related text (same document, survives 600 steps) and interference for unrelated 
 Budget estimate about 8 GPU-hours, about $32-40 total.
 1. DONE 2026-10-25, see FINDINGS.md 4d (A and B synergistic, C alone ~nothing). Original plan: Ablation, 200 steps each: "C only" (gate -6, no carry_gate, no carry_backprop) first, it is
    the key control; then A+C and B+C. A+B is covered by failed attempt 2.
-2. Second seed of the carry design to 600 (`seed=43`), evals at 400 and 600.
+2. DONE 2026-10-25, see FINDINGS.md 4e (replicates). Original plan: Second seed of the carry design to 600 (`seed=43`), evals at 400 and 600.
 3. DONE 2026-10-25, see FINDINGS.md 4c (Wikipedia, not code; code carry too weak). Original plan: Relatedness test (eval only, on `hebbian-carry-600/step_600`, and `ttt-v1.1/step_600`):
    data `codeparrot/github-code-clean` loaded as plain parquet shard
    (`data/train-00000-of-00880.parquet`, has repo_name, path, code, language; not gated;
@@ -111,3 +111,9 @@ Budget estimate about 8 GPU-hours, about $32-40 total.
 - Delete junk checkpoints on `aiteera-llc`: `smoke-*`, and `delta-carry-bptt` if unused.
 - Commit the code above.
 - Supervisor email drafted (in chat); framing paragraph updated to the "when it helps" framing.
+
+## Status 2026-10-25
+
+All planned experiments are done: relatedness (4c), ablation (4d), second seed (4e).
+Thesis zip v8 includes all three. Modal workspace in use switched to `vihanganoob123`
+for the seed-43 run; its checkpoints live on that workspace's volume.

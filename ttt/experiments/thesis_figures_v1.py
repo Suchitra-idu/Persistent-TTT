@@ -16,7 +16,7 @@ from collections import defaultdict
 from pathlib import Path
 
 from ttt.adapters.numpy_rng import NumpyRng
-from ttt.app import evidence, paper_analysis, relatedness_eval
+from ttt.app import context_eval, evidence, paper_analysis, relatedness_eval
 from ttt.core.metrics import ALL_SOURCES, geometric_mean_ppl
 from ttt.core.stats import ranks
 from ttt.core.types import COLD_CARRY, FRESH, LORA_ONLY
@@ -543,6 +543,31 @@ def ablation_figure(estimates, path: Path) -> str:
     return _save(fig, str(path))
 
 
+SEEDS = (("seed 42", CARRY_DESIGN_LONG), ("seed 43", "hebbian-carry-600-s43"))
+SEED_MEASURES = ("between_slices", "cross_doc", "within", "vs_matched_lora", "carry_gain", "context_gain",
+                 "gain_self", "gain_related", "gain_random", "gain_other_source", "related_vs_random")
+
+
+def seed_estimates() -> dict[tuple[str, str], object]:
+    out = {}
+    for step in (400, 600):
+        base = _rows(CONTROL, step, "regimes")
+        for label, run in SEEDS:
+            rows = paper_analysis.rebased(_rows(run, step, "regimes"), base)
+            estimates = (
+                evidence.regime_estimates(rows, rng=NumpyRng(0), n_boot=N_BOOT)
+                + evidence.boundary_estimates(_rows(run, step, "boundary"), rng=NumpyRng(0), n_boot=N_BOOT)
+                + paper_analysis.matched_estimates(base, rows, rng=NumpyRng(0), n_boot=N_BOOT)
+            )
+            if step == 600:
+                estimates += context_eval.estimates(_rows(run, step, "context"), rng=NumpyRng(0), n_boot=N_BOOT)
+                estimates += relatedness_eval.estimates(_rows(run, step, "relatedness"), rng=NumpyRng(0), n_boot=N_BOOT)
+            for e in estimates:
+                if e.source == ALL_SOURCES and e.measure in SEED_MEASURES:
+                    out[(f"{label}, step {step}", e.measure)] = e
+    return out
+
+
 def carry_design_table(estimates) -> list[str]:
     lines = ["case,measure,n_docs,delta_ppl,ci_low,ci_high,excludes_zero,win_rate"]
     for (label, measure), e in sorted(estimates.items()):
@@ -579,6 +604,7 @@ def main() -> None:
     ablation = ablation_estimates()
     made.append(ablation_figure(ablation, figures / "F17_ablation.pdf"))
     (OUT / "tables" / "T13_ablation.csv").write_text("\n".join(carry_design_table(ablation)) + "\n")
+    (OUT / "tables" / "T14_seeds.csv").write_text("\n".join(carry_design_table(seed_estimates())) + "\n")
     related = relatedness_estimates()
     made.append(relatedness_figure(related, figures / "F16_relatedness.pdf"))
     (OUT / "tables" / "T12_relatedness.csv").write_text("\n".join(relatedness_table(related)) + "\n")
