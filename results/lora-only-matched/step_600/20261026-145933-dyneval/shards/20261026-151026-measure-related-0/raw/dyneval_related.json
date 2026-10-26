@@ -1,0 +1,1127 @@
+[
+  {
+    "arm": "reset",
+    "doc_idx": 0,
+    "n_tokens": 1024,
+    "ppl": 24.035898940771187,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Once Upon a Time (TV series)"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 0,
+    "n_tokens": 1024,
+    "ppl": 23.521981829422536,
+    "prime_title": "Once Upon a Time (TV series)",
+    "source": "Wikipedia",
+    "target_title": "Once Upon a Time (TV series)"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 0,
+    "n_tokens": 1024,
+    "ppl": 24.045837863943174,
+    "prime_title": "April 3",
+    "source": "Wikipedia",
+    "target_title": "Once Upon a Time (TV series)"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 0,
+    "n_tokens": 1024,
+    "ppl": 24.064046949048503,
+    "prime_title": "Balraj Madhok",
+    "source": "Wikipedia",
+    "target_title": "Once Upon a Time (TV series)"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 0,
+    "n_tokens": 1024,
+    "ppl": 23.957432054715156,
+    "prime_title": "RedPajamaArXiv#53",
+    "source": "Wikipedia",
+    "target_title": "Once Upon a Time (TV series)"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 1,
+    "n_tokens": 1024,
+    "ppl": 20.398700952355355,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "The Beach Boys"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 1,
+    "n_tokens": 1024,
+    "ppl": 20.220095008248876,
+    "prime_title": "The Beach Boys",
+    "source": "Wikipedia",
+    "target_title": "The Beach Boys"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 1,
+    "n_tokens": 1024,
+    "ppl": 20.22445834488859,
+    "prime_title": "Mike Love",
+    "source": "Wikipedia",
+    "target_title": "The Beach Boys"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 1,
+    "n_tokens": 1024,
+    "ppl": 20.40717480577047,
+    "prime_title": "Humphrey",
+    "source": "Wikipedia",
+    "target_title": "The Beach Boys"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 1,
+    "n_tokens": 1024,
+    "ppl": 20.436349414418768,
+    "prime_title": "RedPajamaArXiv#475",
+    "source": "Wikipedia",
+    "target_title": "The Beach Boys"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 2,
+    "n_tokens": 1024,
+    "ppl": 28.3201163765511,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Critical Art Ensemble"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 2,
+    "n_tokens": 1024,
+    "ppl": 27.71133342267536,
+    "prime_title": "Critical Art Ensemble",
+    "source": "Wikipedia",
+    "target_title": "Critical Art Ensemble"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 2,
+    "n_tokens": 1024,
+    "ppl": 28.247799967868986,
+    "prime_title": "Andy Warhol",
+    "source": "Wikipedia",
+    "target_title": "Critical Art Ensemble"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 2,
+    "n_tokens": 1024,
+    "ppl": 28.327065080010176,
+    "prime_title": "Louis de Crevant, Duke of Humi\u00e8res",
+    "source": "Wikipedia",
+    "target_title": "Critical Art Ensemble"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 2,
+    "n_tokens": 1024,
+    "ppl": 28.361976182083115,
+    "prime_title": "RedPajamaArXiv#260",
+    "source": "Wikipedia",
+    "target_title": "Critical Art Ensemble"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 3,
+    "n_tokens": 1024,
+    "ppl": 24.53898367470555,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "T. S. Stribling"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 3,
+    "n_tokens": 1024,
+    "ppl": 24.412069403837876,
+    "prime_title": "T. S. Stribling",
+    "source": "Wikipedia",
+    "target_title": "T. S. Stribling"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 3,
+    "n_tokens": 1024,
+    "ppl": 24.64137655685906,
+    "prime_title": "World War I",
+    "source": "Wikipedia",
+    "target_title": "T. S. Stribling"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 3,
+    "n_tokens": 1024,
+    "ppl": 24.533057783573717,
+    "prime_title": "1998 Comfrey\u2013St. Peter tornado outbreak",
+    "source": "Wikipedia",
+    "target_title": "T. S. Stribling"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 3,
+    "n_tokens": 1024,
+    "ppl": 24.54199104147874,
+    "prime_title": "RedPajamaArXiv#239",
+    "source": "Wikipedia",
+    "target_title": "T. S. Stribling"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 4,
+    "n_tokens": 1024,
+    "ppl": 17.267282634658606,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "British Rail"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 4,
+    "n_tokens": 1024,
+    "ppl": 17.05148321714653,
+    "prime_title": "British Rail",
+    "source": "Wikipedia",
+    "target_title": "British Rail"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 4,
+    "n_tokens": 1024,
+    "ppl": 17.27101701319418,
+    "prime_title": "Channel Tunnel",
+    "source": "Wikipedia",
+    "target_title": "British Rail"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 4,
+    "n_tokens": 1024,
+    "ppl": 17.26657043585514,
+    "prime_title": "List of Theraphosidae species",
+    "source": "Wikipedia",
+    "target_title": "British Rail"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 4,
+    "n_tokens": 1024,
+    "ppl": 17.18953872872409,
+    "prime_title": "RedPajamaArXiv#33",
+    "source": "Wikipedia",
+    "target_title": "British Rail"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 5,
+    "n_tokens": 1024,
+    "ppl": 18.15324780822894,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "The Apple (1980 film)"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 5,
+    "n_tokens": 1024,
+    "ppl": 17.921008644717148,
+    "prime_title": "The Apple (1980 film)",
+    "source": "Wikipedia",
+    "target_title": "The Apple (1980 film)"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 5,
+    "n_tokens": 1024,
+    "ppl": 18.121943919939522,
+    "prime_title": "Vladek Sheybal",
+    "source": "Wikipedia",
+    "target_title": "The Apple (1980 film)"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 5,
+    "n_tokens": 1024,
+    "ppl": 18.190802324356977,
+    "prime_title": "Coverville",
+    "source": "Wikipedia",
+    "target_title": "The Apple (1980 film)"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 5,
+    "n_tokens": 1024,
+    "ppl": 18.245096003594334,
+    "prime_title": "RedPajamaArXiv#41",
+    "source": "Wikipedia",
+    "target_title": "The Apple (1980 film)"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 6,
+    "n_tokens": 1024,
+    "ppl": 18.867189747900415,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Hinduism and Sikhism"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 6,
+    "n_tokens": 1024,
+    "ppl": 18.66225328662116,
+    "prime_title": "Hinduism and Sikhism",
+    "source": "Wikipedia",
+    "target_title": "Hinduism and Sikhism"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 6,
+    "n_tokens": 1024,
+    "ppl": 18.830878562808646,
+    "prime_title": "Sikh scriptures",
+    "source": "Wikipedia",
+    "target_title": "Hinduism and Sikhism"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 6,
+    "n_tokens": 1024,
+    "ppl": 18.923542830967246,
+    "prime_title": "The Show of Shows",
+    "source": "Wikipedia",
+    "target_title": "Hinduism and Sikhism"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 6,
+    "n_tokens": 1024,
+    "ppl": 18.94312933159529,
+    "prime_title": "RedPajamaArXiv#477",
+    "source": "Wikipedia",
+    "target_title": "Hinduism and Sikhism"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 7,
+    "n_tokens": 1024,
+    "ppl": 21.66034314373322,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "SS City of New York (1888)"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 7,
+    "n_tokens": 1024,
+    "ppl": 21.291798525601525,
+    "prime_title": "SS City of New York (1888)",
+    "source": "Wikipedia",
+    "target_title": "SS City of New York (1888)"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 7,
+    "n_tokens": 1024,
+    "ppl": 21.532150200486093,
+    "prime_title": "World War I",
+    "source": "Wikipedia",
+    "target_title": "SS City of New York (1888)"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 7,
+    "n_tokens": 1024,
+    "ppl": 21.754463698692923,
+    "prime_title": "Chuck Poochigian",
+    "source": "Wikipedia",
+    "target_title": "SS City of New York (1888)"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 7,
+    "n_tokens": 1024,
+    "ppl": 21.628781740353837,
+    "prime_title": "RedPajamaArXiv#281",
+    "source": "Wikipedia",
+    "target_title": "SS City of New York (1888)"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 8,
+    "n_tokens": 1024,
+    "ppl": 35.27496595071983,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "MASH: A Novel About Three Army Doctors"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 8,
+    "n_tokens": 1024,
+    "ppl": 34.67528493715155,
+    "prime_title": "MASH: A Novel About Three Army Doctors",
+    "source": "Wikipedia",
+    "target_title": "MASH: A Novel About Three Army Doctors"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 8,
+    "n_tokens": 1024,
+    "ppl": 35.42879508501195,
+    "prime_title": "Benjamin Franklin",
+    "source": "Wikipedia",
+    "target_title": "MASH: A Novel About Three Army Doctors"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 8,
+    "n_tokens": 1024,
+    "ppl": 35.326069711161296,
+    "prime_title": "Maryland State Fair",
+    "source": "Wikipedia",
+    "target_title": "MASH: A Novel About Three Army Doctors"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 8,
+    "n_tokens": 1024,
+    "ppl": 35.28829864823751,
+    "prime_title": "RedPajamaArXiv#126",
+    "source": "Wikipedia",
+    "target_title": "MASH: A Novel About Three Army Doctors"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 9,
+    "n_tokens": 1024,
+    "ppl": 14.942590026809563,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Protein (nutrient)"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 9,
+    "n_tokens": 1024,
+    "ppl": 14.841439281803671,
+    "prime_title": "Protein (nutrient)",
+    "source": "Wikipedia",
+    "target_title": "Protein (nutrient)"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 9,
+    "n_tokens": 1024,
+    "ppl": 14.85597537346947,
+    "prime_title": "Kjeldahl method",
+    "source": "Wikipedia",
+    "target_title": "Protein (nutrient)"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 9,
+    "n_tokens": 1024,
+    "ppl": 14.94255440094121,
+    "prime_title": "Concordia College and University",
+    "source": "Wikipedia",
+    "target_title": "Protein (nutrient)"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 9,
+    "n_tokens": 1024,
+    "ppl": 14.994254769260706,
+    "prime_title": "RedPajamaArXiv#480",
+    "source": "Wikipedia",
+    "target_title": "Protein (nutrient)"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 10,
+    "n_tokens": 1024,
+    "ppl": 12.066062236996318,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "List of people from Little Rock, Arkansas"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 10,
+    "n_tokens": 1024,
+    "ppl": 11.930598783267603,
+    "prime_title": "List of people from Little Rock, Arkansas",
+    "source": "Wikipedia",
+    "target_title": "List of people from Little Rock, Arkansas"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 10,
+    "n_tokens": 1024,
+    "ppl": 12.062550207874546,
+    "prime_title": "Bill Clinton",
+    "source": "Wikipedia",
+    "target_title": "List of people from Little Rock, Arkansas"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 10,
+    "n_tokens": 1024,
+    "ppl": 12.072951198382453,
+    "prime_title": "Cenozoic",
+    "source": "Wikipedia",
+    "target_title": "List of people from Little Rock, Arkansas"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 10,
+    "n_tokens": 1024,
+    "ppl": 12.053419692210568,
+    "prime_title": "RedPajamaArXiv#25",
+    "source": "Wikipedia",
+    "target_title": "List of people from Little Rock, Arkansas"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 11,
+    "n_tokens": 1024,
+    "ppl": 32.5327525485435,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Atlantic Canadian English"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 11,
+    "n_tokens": 1024,
+    "ppl": 31.65211266743804,
+    "prime_title": "Atlantic Canadian English",
+    "source": "Wikipedia",
+    "target_title": "Atlantic Canadian English"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 11,
+    "n_tokens": 1024,
+    "ppl": 32.562015133276596,
+    "prime_title": "Cape Breton Island",
+    "source": "Wikipedia",
+    "target_title": "Atlantic Canadian English"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 11,
+    "n_tokens": 1024,
+    "ppl": 32.675246503198885,
+    "prime_title": "University Hospital Hairmyres",
+    "source": "Wikipedia",
+    "target_title": "Atlantic Canadian English"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 11,
+    "n_tokens": 1024,
+    "ppl": 32.61541664976255,
+    "prime_title": "RedPajamaArXiv#4",
+    "source": "Wikipedia",
+    "target_title": "Atlantic Canadian English"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 12,
+    "n_tokens": 1024,
+    "ppl": 25.10587429277322,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Wade in the Water"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 12,
+    "n_tokens": 1024,
+    "ppl": 24.70394194629649,
+    "prime_title": "Wade in the Water",
+    "source": "Wikipedia",
+    "target_title": "Wade in the Water"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 12,
+    "n_tokens": 1024,
+    "ppl": 25.00809116289104,
+    "prime_title": "African Americans",
+    "source": "Wikipedia",
+    "target_title": "Wade in the Water"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 12,
+    "n_tokens": 1024,
+    "ppl": 25.090782877657674,
+    "prime_title": "Mazagon Dock Shipbuilders",
+    "source": "Wikipedia",
+    "target_title": "Wade in the Water"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 12,
+    "n_tokens": 1024,
+    "ppl": 25.086254829924187,
+    "prime_title": "RedPajamaArXiv#273",
+    "source": "Wikipedia",
+    "target_title": "Wade in the Water"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 13,
+    "n_tokens": 1024,
+    "ppl": 21.828046646842655,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Nayanthara"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 13,
+    "n_tokens": 1024,
+    "ppl": 21.5291061525374,
+    "prime_title": "Nayanthara",
+    "source": "Wikipedia",
+    "target_title": "Nayanthara"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 13,
+    "n_tokens": 1024,
+    "ppl": 21.88588468632992,
+    "prime_title": "Hindi cinema",
+    "source": "Wikipedia",
+    "target_title": "Nayanthara"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 13,
+    "n_tokens": 1024,
+    "ppl": 21.87577975086169,
+    "prime_title": "Thermoplastic-sheathed cable",
+    "source": "Wikipedia",
+    "target_title": "Nayanthara"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 13,
+    "n_tokens": 1024,
+    "ppl": 21.724018532714837,
+    "prime_title": "RedPajamaArXiv#358",
+    "source": "Wikipedia",
+    "target_title": "Nayanthara"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 14,
+    "n_tokens": 1024,
+    "ppl": 8.589093021133827,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Monty Hall problem"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 14,
+    "n_tokens": 1024,
+    "ppl": 8.531390290025278,
+    "prime_title": "Monty Hall problem",
+    "source": "Wikipedia",
+    "target_title": "Monty Hall problem"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 14,
+    "n_tokens": 1024,
+    "ppl": 8.536326303163657,
+    "prime_title": "Three Prisoners problem",
+    "source": "Wikipedia",
+    "target_title": "Monty Hall problem"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 14,
+    "n_tokens": 1024,
+    "ppl": 8.592267696694964,
+    "prime_title": "Hutt Valley High School",
+    "source": "Wikipedia",
+    "target_title": "Monty Hall problem"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 14,
+    "n_tokens": 1024,
+    "ppl": 8.571340589532547,
+    "prime_title": "RedPajamaArXiv#262",
+    "source": "Wikipedia",
+    "target_title": "Monty Hall problem"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 15,
+    "n_tokens": 1024,
+    "ppl": 21.5167547130304,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Nazi racial theories"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 15,
+    "n_tokens": 1024,
+    "ppl": 21.323910390296398,
+    "prime_title": "Nazi racial theories",
+    "source": "Wikipedia",
+    "target_title": "Nazi racial theories"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 15,
+    "n_tokens": 1024,
+    "ppl": 21.607567160081082,
+    "prime_title": "British Isles",
+    "source": "Wikipedia",
+    "target_title": "Nazi racial theories"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 15,
+    "n_tokens": 1024,
+    "ppl": 21.542229942760112,
+    "prime_title": "Chuck Todd",
+    "source": "Wikipedia",
+    "target_title": "Nazi racial theories"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 15,
+    "n_tokens": 1024,
+    "ppl": 21.632407206671797,
+    "prime_title": "RedPajamaArXiv#114",
+    "source": "Wikipedia",
+    "target_title": "Nazi racial theories"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 16,
+    "n_tokens": 1024,
+    "ppl": 24.551910942698427,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Tainui (canoe)"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 16,
+    "n_tokens": 1024,
+    "ppl": 23.931057619299356,
+    "prime_title": "Tainui (canoe)",
+    "source": "Wikipedia",
+    "target_title": "Tainui (canoe)"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 16,
+    "n_tokens": 1024,
+    "ppl": 24.6711688596779,
+    "prime_title": "New Zealand",
+    "source": "Wikipedia",
+    "target_title": "Tainui (canoe)"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 16,
+    "n_tokens": 1024,
+    "ppl": 24.74468045166892,
+    "prime_title": "Personalized learning",
+    "source": "Wikipedia",
+    "target_title": "Tainui (canoe)"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 16,
+    "n_tokens": 1024,
+    "ppl": 24.69066383944445,
+    "prime_title": "RedPajamaArXiv#457",
+    "source": "Wikipedia",
+    "target_title": "Tainui (canoe)"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 17,
+    "n_tokens": 1024,
+    "ppl": 35.18293557000311,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "1988 in poetry"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 17,
+    "n_tokens": 1024,
+    "ppl": 34.34571712012906,
+    "prime_title": "1988 in poetry",
+    "source": "Wikipedia",
+    "target_title": "1988 in poetry"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 17,
+    "n_tokens": 1024,
+    "ppl": 35.380005726405535,
+    "prime_title": "New Zealand",
+    "source": "Wikipedia",
+    "target_title": "1988 in poetry"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 17,
+    "n_tokens": 1024,
+    "ppl": 35.3801153848345,
+    "prime_title": "79th Street station (IRT Broadway\u2013Seventh Avenue Line)",
+    "source": "Wikipedia",
+    "target_title": "1988 in poetry"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 17,
+    "n_tokens": 1024,
+    "ppl": 35.458329244337996,
+    "prime_title": "RedPajamaArXiv#103",
+    "source": "Wikipedia",
+    "target_title": "1988 in poetry"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 18,
+    "n_tokens": 1024,
+    "ppl": 18.135822704470257,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Rugby union in New Zealand"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 18,
+    "n_tokens": 1024,
+    "ppl": 17.842622686912406,
+    "prime_title": "Rugby union in New Zealand",
+    "source": "Wikipedia",
+    "target_title": "Rugby union in New Zealand"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 18,
+    "n_tokens": 1024,
+    "ppl": 18.078422930069323,
+    "prime_title": "New Zealand",
+    "source": "Wikipedia",
+    "target_title": "Rugby union in New Zealand"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 18,
+    "n_tokens": 1024,
+    "ppl": 18.26023147323235,
+    "prime_title": "Al Ghurair Group",
+    "source": "Wikipedia",
+    "target_title": "Rugby union in New Zealand"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 18,
+    "n_tokens": 1024,
+    "ppl": 18.16764002024111,
+    "prime_title": "RedPajamaArXiv#60",
+    "source": "Wikipedia",
+    "target_title": "Rugby union in New Zealand"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 19,
+    "n_tokens": 1024,
+    "ppl": 12.722234025177814,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Piet Mondrian"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 19,
+    "n_tokens": 1024,
+    "ppl": 12.556972137272764,
+    "prime_title": "Piet Mondrian",
+    "source": "Wikipedia",
+    "target_title": "Piet Mondrian"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 19,
+    "n_tokens": 1024,
+    "ppl": 12.643801211871084,
+    "prime_title": "Harry Holtzman",
+    "source": "Wikipedia",
+    "target_title": "Piet Mondrian"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 19,
+    "n_tokens": 1024,
+    "ppl": 12.772429399313742,
+    "prime_title": "Puente Piedra District",
+    "source": "Wikipedia",
+    "target_title": "Piet Mondrian"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 19,
+    "n_tokens": 1024,
+    "ppl": 12.694044252080115,
+    "prime_title": "RedPajamaArXiv#292",
+    "source": "Wikipedia",
+    "target_title": "Piet Mondrian"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 20,
+    "n_tokens": 1024,
+    "ppl": 14.129541478698906,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Gerald Ford"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 20,
+    "n_tokens": 1024,
+    "ppl": 14.046728699636752,
+    "prime_title": "Gerald Ford",
+    "source": "Wikipedia",
+    "target_title": "Gerald Ford"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 20,
+    "n_tokens": 1024,
+    "ppl": 14.1383366398876,
+    "prime_title": "Bill Clinton",
+    "source": "Wikipedia",
+    "target_title": "Gerald Ford"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 20,
+    "n_tokens": 1024,
+    "ppl": 14.10595975028629,
+    "prime_title": "Malachi O'Doherty",
+    "source": "Wikipedia",
+    "target_title": "Gerald Ford"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 20,
+    "n_tokens": 1024,
+    "ppl": 14.178898753144662,
+    "prime_title": "RedPajamaBook#13",
+    "source": "Wikipedia",
+    "target_title": "Gerald Ford"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 21,
+    "n_tokens": 1024,
+    "ppl": 22.136679044620422,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Colony of Vancouver Island"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 21,
+    "n_tokens": 1024,
+    "ppl": 21.978475145434516,
+    "prime_title": "Colony of Vancouver Island",
+    "source": "Wikipedia",
+    "target_title": "Colony of Vancouver Island"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 21,
+    "n_tokens": 1024,
+    "ppl": 22.002440593092025,
+    "prime_title": "British Columbia",
+    "source": "Wikipedia",
+    "target_title": "Colony of Vancouver Island"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 21,
+    "n_tokens": 1024,
+    "ppl": 21.99711675980583,
+    "prime_title": "Chamois Niortais F.C.",
+    "source": "Wikipedia",
+    "target_title": "Colony of Vancouver Island"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 21,
+    "n_tokens": 1024,
+    "ppl": 22.223563286860603,
+    "prime_title": "RedPajamaBook#464",
+    "source": "Wikipedia",
+    "target_title": "Colony of Vancouver Island"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 22,
+    "n_tokens": 1024,
+    "ppl": 17.79324674214111,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Kim Jong Un"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 22,
+    "n_tokens": 1024,
+    "ppl": 17.462740787494653,
+    "prime_title": "Kim Jong Un",
+    "source": "Wikipedia",
+    "target_title": "Kim Jong Un"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 22,
+    "n_tokens": 1024,
+    "ppl": 17.73183622980745,
+    "prime_title": "Donald Trump",
+    "source": "Wikipedia",
+    "target_title": "Kim Jong Un"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 22,
+    "n_tokens": 1024,
+    "ppl": 17.8540313409096,
+    "prime_title": "Spark Arena",
+    "source": "Wikipedia",
+    "target_title": "Kim Jong Un"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 22,
+    "n_tokens": 1024,
+    "ppl": 17.826503010523503,
+    "prime_title": "RedPajamaBook#263",
+    "source": "Wikipedia",
+    "target_title": "Kim Jong Un"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 23,
+    "n_tokens": 1024,
+    "ppl": 26.096830730697704,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Liverpool College"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 23,
+    "n_tokens": 1024,
+    "ppl": 25.985843487637812,
+    "prime_title": "Liverpool College",
+    "source": "Wikipedia",
+    "target_title": "Liverpool College"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 23,
+    "n_tokens": 1024,
+    "ppl": 26.142209629241126,
+    "prime_title": "World War I",
+    "source": "Wikipedia",
+    "target_title": "Liverpool College"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 23,
+    "n_tokens": 1024,
+    "ppl": 26.176331464203287,
+    "prime_title": "Charlton Hill",
+    "source": "Wikipedia",
+    "target_title": "Liverpool College"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 23,
+    "n_tokens": 1024,
+    "ppl": 26.101951913852123,
+    "prime_title": "RedPajamaBook#94",
+    "source": "Wikipedia",
+    "target_title": "Liverpool College"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 24,
+    "n_tokens": 1024,
+    "ppl": 16.055466372294436,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Islam in Spain"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 24,
+    "n_tokens": 1024,
+    "ppl": 16.045084579308604,
+    "prime_title": "Islam in Spain",
+    "source": "Wikipedia",
+    "target_title": "Islam in Spain"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 24,
+    "n_tokens": 1024,
+    "ppl": 16.01729003582827,
+    "prime_title": "Canary Islands",
+    "source": "Wikipedia",
+    "target_title": "Islam in Spain"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 24,
+    "n_tokens": 1024,
+    "ppl": 16.074295466599256,
+    "prime_title": "List of Gulf War military equipment",
+    "source": "Wikipedia",
+    "target_title": "Islam in Spain"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 24,
+    "n_tokens": 1024,
+    "ppl": 16.073904565462488,
+    "prime_title": "RedPajamaBook#125",
+    "source": "Wikipedia",
+    "target_title": "Islam in Spain"
+  }
+]

@@ -1,0 +1,1127 @@
+[
+  {
+    "arm": "reset",
+    "doc_idx": 100,
+    "n_tokens": 1024,
+    "ppl": 22.4671684427478,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Peter Obi"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 100,
+    "n_tokens": 1024,
+    "ppl": 22.277742909465875,
+    "prime_title": "Peter Obi",
+    "source": "Wikipedia",
+    "target_title": "Peter Obi"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 100,
+    "n_tokens": 1024,
+    "ppl": 22.282491832017516,
+    "prime_title": "Atiku Abubakar",
+    "source": "Wikipedia",
+    "target_title": "Peter Obi"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 100,
+    "n_tokens": 1024,
+    "ppl": 22.474470661847857,
+    "prime_title": "William Winn",
+    "source": "Wikipedia",
+    "target_title": "Peter Obi"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 100,
+    "n_tokens": 1024,
+    "ppl": 22.49775394723043,
+    "prime_title": "RedPajamaArXiv#262",
+    "source": "Wikipedia",
+    "target_title": "Peter Obi"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 101,
+    "n_tokens": 1024,
+    "ppl": 12.527180151314795,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Hinder"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 101,
+    "n_tokens": 1024,
+    "ppl": 12.453408397871392,
+    "prime_title": "Hinder",
+    "source": "Wikipedia",
+    "target_title": "Hinder"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 101,
+    "n_tokens": 1024,
+    "ppl": 12.501803898615325,
+    "prime_title": "New Zealand",
+    "source": "Wikipedia",
+    "target_title": "Hinder"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 101,
+    "n_tokens": 1024,
+    "ppl": 12.512446409740386,
+    "prime_title": "Isuzu Forward",
+    "source": "Wikipedia",
+    "target_title": "Hinder"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 101,
+    "n_tokens": 1024,
+    "ppl": 12.49769722057859,
+    "prime_title": "RedPajamaArXiv#114",
+    "source": "Wikipedia",
+    "target_title": "Hinder"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 102,
+    "n_tokens": 1024,
+    "ppl": 20.612147267372624,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Frank Turner"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 102,
+    "n_tokens": 1024,
+    "ppl": 20.40584171611805,
+    "prime_title": "Frank Turner",
+    "source": "Wikipedia",
+    "target_title": "Frank Turner"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 102,
+    "n_tokens": 1024,
+    "ppl": 20.616167572223187,
+    "prime_title": "BBC Radio 1",
+    "source": "Wikipedia",
+    "target_title": "Frank Turner"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 102,
+    "n_tokens": 1024,
+    "ppl": 20.737023373666926,
+    "prime_title": "Worb",
+    "source": "Wikipedia",
+    "target_title": "Frank Turner"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 102,
+    "n_tokens": 1024,
+    "ppl": 20.70273481280793,
+    "prime_title": "RedPajamaArXiv#457",
+    "source": "Wikipedia",
+    "target_title": "Frank Turner"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 103,
+    "n_tokens": 1024,
+    "ppl": 13.58604767318591,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Aaliyah"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 103,
+    "n_tokens": 1024,
+    "ppl": 13.415650282912186,
+    "prime_title": "Aaliyah",
+    "source": "Wikipedia",
+    "target_title": "Aaliyah"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 103,
+    "n_tokens": 1024,
+    "ppl": 13.574171605313346,
+    "prime_title": "August 25",
+    "source": "Wikipedia",
+    "target_title": "Aaliyah"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 103,
+    "n_tokens": 1024,
+    "ppl": 13.595888583239644,
+    "prime_title": "Biosys",
+    "source": "Wikipedia",
+    "target_title": "Aaliyah"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 103,
+    "n_tokens": 1024,
+    "ppl": 13.589990310390315,
+    "prime_title": "RedPajamaArXiv#103",
+    "source": "Wikipedia",
+    "target_title": "Aaliyah"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 104,
+    "n_tokens": 1024,
+    "ppl": 18.299852778198645,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Barnabas"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 104,
+    "n_tokens": 1024,
+    "ppl": 18.122764854076138,
+    "prime_title": "Barnabas",
+    "source": "Wikipedia",
+    "target_title": "Barnabas"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 104,
+    "n_tokens": 1024,
+    "ppl": 18.302588599290885,
+    "prime_title": "Acts of the Apostles",
+    "source": "Wikipedia",
+    "target_title": "Barnabas"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 104,
+    "n_tokens": 1024,
+    "ppl": 18.3209907434772,
+    "prime_title": "Michael Tonge",
+    "source": "Wikipedia",
+    "target_title": "Barnabas"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 104,
+    "n_tokens": 1024,
+    "ppl": 18.293492593408207,
+    "prime_title": "RedPajamaArXiv#60",
+    "source": "Wikipedia",
+    "target_title": "Barnabas"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 105,
+    "n_tokens": 1024,
+    "ppl": 4.958389024191463,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Thabo Sefolosha"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 105,
+    "n_tokens": 1024,
+    "ppl": 4.948238069065345,
+    "prime_title": "Thabo Sefolosha",
+    "source": "Wikipedia",
+    "target_title": "Thabo Sefolosha"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 105,
+    "n_tokens": 1024,
+    "ppl": 4.9472595616350405,
+    "prime_title": "April 9",
+    "source": "Wikipedia",
+    "target_title": "Thabo Sefolosha"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 105,
+    "n_tokens": 1024,
+    "ppl": 4.962467420931871,
+    "prime_title": "Rogue Traders (TV programme)",
+    "source": "Wikipedia",
+    "target_title": "Thabo Sefolosha"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 105,
+    "n_tokens": 1024,
+    "ppl": 4.97102952466565,
+    "prime_title": "RedPajamaArXiv#292",
+    "source": "Wikipedia",
+    "target_title": "Thabo Sefolosha"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 106,
+    "n_tokens": 1024,
+    "ppl": 25.97812503133392,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Dillon Quartermaine"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 106,
+    "n_tokens": 1024,
+    "ppl": 25.61683860303093,
+    "prime_title": "Dillon Quartermaine",
+    "source": "Wikipedia",
+    "target_title": "Dillon Quartermaine"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 106,
+    "n_tokens": 1024,
+    "ppl": 25.680919428693773,
+    "prime_title": "Tracy Quartermaine",
+    "source": "Wikipedia",
+    "target_title": "Dillon Quartermaine"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 106,
+    "n_tokens": 1024,
+    "ppl": 26.08285370994123,
+    "prime_title": "Counts of Dreux",
+    "source": "Wikipedia",
+    "target_title": "Dillon Quartermaine"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 106,
+    "n_tokens": 1024,
+    "ppl": 26.018756264492097,
+    "prime_title": "RedPajamaBook#13",
+    "source": "Wikipedia",
+    "target_title": "Dillon Quartermaine"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 107,
+    "n_tokens": 1024,
+    "ppl": 17.983678863734415,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Contract bridge"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 107,
+    "n_tokens": 1024,
+    "ppl": 17.72663704517328,
+    "prime_title": "Contract bridge",
+    "source": "Wikipedia",
+    "target_title": "Contract bridge"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 107,
+    "n_tokens": 1024,
+    "ppl": 17.93385271297867,
+    "prime_title": "Blackwood convention",
+    "source": "Wikipedia",
+    "target_title": "Contract bridge"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 107,
+    "n_tokens": 1024,
+    "ppl": 18.011943757919138,
+    "prime_title": "Yoshihiro Takahashi",
+    "source": "Wikipedia",
+    "target_title": "Contract bridge"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 107,
+    "n_tokens": 1024,
+    "ppl": 18.011123549625395,
+    "prime_title": "RedPajamaBook#464",
+    "source": "Wikipedia",
+    "target_title": "Contract bridge"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 108,
+    "n_tokens": 1024,
+    "ppl": 26.834358595687043,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Tryggve Gran"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 108,
+    "n_tokens": 1024,
+    "ppl": 26.879667705370025,
+    "prime_title": "Tryggve Gran",
+    "source": "Wikipedia",
+    "target_title": "Tryggve Gran"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 108,
+    "n_tokens": 1024,
+    "ppl": 26.875335832631066,
+    "prime_title": "World War I",
+    "source": "Wikipedia",
+    "target_title": "Tryggve Gran"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 108,
+    "n_tokens": 1024,
+    "ppl": 26.741693142785802,
+    "prime_title": "Jefferson nickel",
+    "source": "Wikipedia",
+    "target_title": "Tryggve Gran"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 108,
+    "n_tokens": 1024,
+    "ppl": 26.887230931589816,
+    "prime_title": "RedPajamaBook#263",
+    "source": "Wikipedia",
+    "target_title": "Tryggve Gran"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 109,
+    "n_tokens": 1024,
+    "ppl": 31.95446998171308,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Discernment of Spirits"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 109,
+    "n_tokens": 1024,
+    "ppl": 31.318451538744597,
+    "prime_title": "Discernment of Spirits",
+    "source": "Wikipedia",
+    "target_title": "Discernment of Spirits"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 109,
+    "n_tokens": 1024,
+    "ppl": 31.95698419859729,
+    "prime_title": "Eastern Orthodox theology",
+    "source": "Wikipedia",
+    "target_title": "Discernment of Spirits"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 109,
+    "n_tokens": 1024,
+    "ppl": 32.13220778224452,
+    "prime_title": "War of the Sicilian Vespers",
+    "source": "Wikipedia",
+    "target_title": "Discernment of Spirits"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 109,
+    "n_tokens": 1024,
+    "ppl": 32.15308289354377,
+    "prime_title": "RedPajamaBook#94",
+    "source": "Wikipedia",
+    "target_title": "Discernment of Spirits"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 110,
+    "n_tokens": 1024,
+    "ppl": 28.912155263192638,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Zeppelin-Staaken R.VI"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 110,
+    "n_tokens": 1024,
+    "ppl": 28.483010180468888,
+    "prime_title": "Zeppelin-Staaken R.VI",
+    "source": "Wikipedia",
+    "target_title": "Zeppelin-Staaken R.VI"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 110,
+    "n_tokens": 1024,
+    "ppl": 29.169013271498518,
+    "prime_title": "World War I",
+    "source": "Wikipedia",
+    "target_title": "Zeppelin-Staaken R.VI"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 110,
+    "n_tokens": 1024,
+    "ppl": 28.969073180865557,
+    "prime_title": "Robbie France",
+    "source": "Wikipedia",
+    "target_title": "Zeppelin-Staaken R.VI"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 110,
+    "n_tokens": 1024,
+    "ppl": 29.010107681381623,
+    "prime_title": "RedPajamaBook#125",
+    "source": "Wikipedia",
+    "target_title": "Zeppelin-Staaken R.VI"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 111,
+    "n_tokens": 1024,
+    "ppl": 22.455188944946233,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Bianca Jackson"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 111,
+    "n_tokens": 1024,
+    "ppl": 22.414574814070495,
+    "prime_title": "Bianca Jackson",
+    "source": "Wikipedia",
+    "target_title": "Bianca Jackson"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 111,
+    "n_tokens": 1024,
+    "ppl": 22.51825868083533,
+    "prime_title": "Craig Charles",
+    "source": "Wikipedia",
+    "target_title": "Bianca Jackson"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 111,
+    "n_tokens": 1024,
+    "ppl": 22.520980812373153,
+    "prime_title": "Brian Jensen (footballer, born 1975)",
+    "source": "Wikipedia",
+    "target_title": "Bianca Jackson"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 111,
+    "n_tokens": 1024,
+    "ppl": 22.66554733697356,
+    "prime_title": "RedPajamaBook#138",
+    "source": "Wikipedia",
+    "target_title": "Bianca Jackson"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 112,
+    "n_tokens": 1024,
+    "ppl": 24.026433845640184,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Miguel As\u00edn Palacios"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 112,
+    "n_tokens": 1024,
+    "ppl": 23.6548013800935,
+    "prime_title": "Miguel As\u00edn Palacios",
+    "source": "Wikipedia",
+    "target_title": "Miguel As\u00edn Palacios"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 112,
+    "n_tokens": 1024,
+    "ppl": 24.051474038310065,
+    "prime_title": "Blaise Pascal",
+    "source": "Wikipedia",
+    "target_title": "Miguel As\u00edn Palacios"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 112,
+    "n_tokens": 1024,
+    "ppl": 23.97712905603516,
+    "prime_title": "List of French singers",
+    "source": "Wikipedia",
+    "target_title": "Miguel As\u00edn Palacios"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 112,
+    "n_tokens": 1024,
+    "ppl": 24.125922993441336,
+    "prime_title": "RedPajamaC4#483",
+    "source": "Wikipedia",
+    "target_title": "Miguel As\u00edn Palacios"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 113,
+    "n_tokens": 1024,
+    "ppl": 22.12809373649638,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Karaj\u00e1 language"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 113,
+    "n_tokens": 1024,
+    "ppl": 21.850879049039907,
+    "prime_title": "Karaj\u00e1 language",
+    "source": "Wikipedia",
+    "target_title": "Karaj\u00e1 language"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 113,
+    "n_tokens": 1024,
+    "ppl": 22.002104865053564,
+    "prime_title": "Languages of Brazil",
+    "source": "Wikipedia",
+    "target_title": "Karaj\u00e1 language"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 113,
+    "n_tokens": 1024,
+    "ppl": 22.078625660056566,
+    "prime_title": "Afa Anoa'i Jr.",
+    "source": "Wikipedia",
+    "target_title": "Karaj\u00e1 language"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 113,
+    "n_tokens": 1024,
+    "ppl": 22.166893914787714,
+    "prime_title": "RedPajamaC4#403",
+    "source": "Wikipedia",
+    "target_title": "Karaj\u00e1 language"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 114,
+    "n_tokens": 1024,
+    "ppl": 20.12362931569257,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Blind Lemon Jefferson"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 114,
+    "n_tokens": 1024,
+    "ppl": 19.87405612332187,
+    "prime_title": "Blind Lemon Jefferson",
+    "source": "Wikipedia",
+    "target_title": "Blind Lemon Jefferson"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 114,
+    "n_tokens": 1024,
+    "ppl": 20.062937098007577,
+    "prime_title": "Bob Dylan",
+    "source": "Wikipedia",
+    "target_title": "Blind Lemon Jefferson"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 114,
+    "n_tokens": 1024,
+    "ppl": 20.13758629285728,
+    "prime_title": "Clan Erskine",
+    "source": "Wikipedia",
+    "target_title": "Blind Lemon Jefferson"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 114,
+    "n_tokens": 1024,
+    "ppl": 19.984009187006112,
+    "prime_title": "RedPajamaC4#339",
+    "source": "Wikipedia",
+    "target_title": "Blind Lemon Jefferson"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 115,
+    "n_tokens": 1024,
+    "ppl": 22.732204845799846,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Bermuda Triangle"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 115,
+    "n_tokens": 1024,
+    "ppl": 22.521254654470532,
+    "prime_title": "Bermuda Triangle",
+    "source": "Wikipedia",
+    "target_title": "Bermuda Triangle"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 115,
+    "n_tokens": 1024,
+    "ppl": 22.775327526768688,
+    "prime_title": "April 15",
+    "source": "Wikipedia",
+    "target_title": "Bermuda Triangle"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 115,
+    "n_tokens": 1024,
+    "ppl": 22.80526138805206,
+    "prime_title": "Victory Bomber",
+    "source": "Wikipedia",
+    "target_title": "Bermuda Triangle"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 115,
+    "n_tokens": 1024,
+    "ppl": 22.872667884578608,
+    "prime_title": "RedPajamaC4#24",
+    "source": "Wikipedia",
+    "target_title": "Bermuda Triangle"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 116,
+    "n_tokens": 1024,
+    "ppl": 32.050225836942914,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Black Bull of Norroway"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 116,
+    "n_tokens": 1024,
+    "ppl": 31.47917691044014,
+    "prime_title": "Black Bull of Norroway",
+    "source": "Wikipedia",
+    "target_title": "Black Bull of Norroway"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 116,
+    "n_tokens": 1024,
+    "ppl": 32.191320085112494,
+    "prime_title": "Joseph Jacobs",
+    "source": "Wikipedia",
+    "target_title": "Black Bull of Norroway"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 116,
+    "n_tokens": 1024,
+    "ppl": 32.22046760629683,
+    "prime_title": "Peter J. Ortiz",
+    "source": "Wikipedia",
+    "target_title": "Black Bull of Norroway"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 116,
+    "n_tokens": 1024,
+    "ppl": 32.034656509153166,
+    "prime_title": "RedPajamaC4#77",
+    "source": "Wikipedia",
+    "target_title": "Black Bull of Norroway"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 117,
+    "n_tokens": 1024,
+    "ppl": 10.46507165887153,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Philippines women's national football team"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 117,
+    "n_tokens": 1024,
+    "ppl": 10.248267035644337,
+    "prime_title": "Philippines women's national football team",
+    "source": "Wikipedia",
+    "target_title": "Philippines women's national football team"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 117,
+    "n_tokens": 1024,
+    "ppl": 10.451165914347593,
+    "prime_title": "New Zealand",
+    "source": "Wikipedia",
+    "target_title": "Philippines women's national football team"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 117,
+    "n_tokens": 1024,
+    "ppl": 10.454934122721822,
+    "prime_title": "Fox Reality Channel",
+    "source": "Wikipedia",
+    "target_title": "Philippines women's national football team"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 117,
+    "n_tokens": 1024,
+    "ppl": 10.444694346809476,
+    "prime_title": "RedPajamaC4#355",
+    "source": "Wikipedia",
+    "target_title": "Philippines women's national football team"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 118,
+    "n_tokens": 1024,
+    "ppl": 14.860577066779173,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "List of Doctor Who novelisations"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 118,
+    "n_tokens": 1024,
+    "ppl": 14.689078010686627,
+    "prime_title": "List of Doctor Who novelisations",
+    "source": "Wikipedia",
+    "target_title": "List of Doctor Who novelisations"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 118,
+    "n_tokens": 1024,
+    "ppl": 14.778936719112878,
+    "prime_title": "Eleventh Doctor",
+    "source": "Wikipedia",
+    "target_title": "List of Doctor Who novelisations"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 118,
+    "n_tokens": 1024,
+    "ppl": 14.811615175575591,
+    "prime_title": "Elegant trogon",
+    "source": "Wikipedia",
+    "target_title": "List of Doctor Who novelisations"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 118,
+    "n_tokens": 1024,
+    "ppl": 14.875713541141701,
+    "prime_title": "RedPajamaC4#423",
+    "source": "Wikipedia",
+    "target_title": "List of Doctor Who novelisations"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 119,
+    "n_tokens": 1024,
+    "ppl": 6.839525827205951,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Atlantic Ocean"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 119,
+    "n_tokens": 1024,
+    "ppl": 6.8399563376422865,
+    "prime_title": "Atlantic Ocean",
+    "source": "Wikipedia",
+    "target_title": "Atlantic Ocean"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 119,
+    "n_tokens": 1024,
+    "ppl": 6.818234763115024,
+    "prime_title": "Baltic Sea",
+    "source": "Wikipedia",
+    "target_title": "Atlantic Ocean"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 119,
+    "n_tokens": 1024,
+    "ppl": 6.844262932691308,
+    "prime_title": "Librarians in popular culture",
+    "source": "Wikipedia",
+    "target_title": "Atlantic Ocean"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 119,
+    "n_tokens": 1024,
+    "ppl": 6.884443541271802,
+    "prime_title": "RedPajamaC4#362",
+    "source": "Wikipedia",
+    "target_title": "Atlantic Ocean"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 120,
+    "n_tokens": 1024,
+    "ppl": 19.550945589878154,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Alexey Brodovitch"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 120,
+    "n_tokens": 1024,
+    "ppl": 19.370495882861956,
+    "prime_title": "Alexey Brodovitch",
+    "source": "Wikipedia",
+    "target_title": "Alexey Brodovitch"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 120,
+    "n_tokens": 1024,
+    "ppl": 19.50839691783933,
+    "prime_title": "Ballets Russes",
+    "source": "Wikipedia",
+    "target_title": "Alexey Brodovitch"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 120,
+    "n_tokens": 1024,
+    "ppl": 19.618656207646193,
+    "prime_title": "Scott Pruitt",
+    "source": "Wikipedia",
+    "target_title": "Alexey Brodovitch"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 120,
+    "n_tokens": 1024,
+    "ppl": 19.52714080644027,
+    "prime_title": "RedPajamaC4#415",
+    "source": "Wikipedia",
+    "target_title": "Alexey Brodovitch"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 121,
+    "n_tokens": 1024,
+    "ppl": 17.329819265858802,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Book of Revelation"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 121,
+    "n_tokens": 1024,
+    "ppl": 17.22266442187976,
+    "prime_title": "Book of Revelation",
+    "source": "Wikipedia",
+    "target_title": "Book of Revelation"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 121,
+    "n_tokens": 1024,
+    "ppl": 17.31207835113825,
+    "prime_title": "Mark 13",
+    "source": "Wikipedia",
+    "target_title": "Book of Revelation"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 121,
+    "n_tokens": 1024,
+    "ppl": 17.355906096958055,
+    "prime_title": "Beck, Bogert & Appice",
+    "source": "Wikipedia",
+    "target_title": "Book of Revelation"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 121,
+    "n_tokens": 1024,
+    "ppl": 17.341660775970798,
+    "prime_title": "RedPajamaC4#322",
+    "source": "Wikipedia",
+    "target_title": "Book of Revelation"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 122,
+    "n_tokens": 1024,
+    "ppl": 31.793326542175883,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Happy Hogan (character)"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 122,
+    "n_tokens": 1024,
+    "ppl": 31.703953919764928,
+    "prime_title": "Happy Hogan (character)",
+    "source": "Wikipedia",
+    "target_title": "Happy Hogan (character)"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 122,
+    "n_tokens": 1024,
+    "ppl": 31.688703906767994,
+    "prime_title": "Pepper Potts",
+    "source": "Wikipedia",
+    "target_title": "Happy Hogan (character)"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 122,
+    "n_tokens": 1024,
+    "ppl": 31.92591322699581,
+    "prime_title": "Comic strip",
+    "source": "Wikipedia",
+    "target_title": "Happy Hogan (character)"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 122,
+    "n_tokens": 1024,
+    "ppl": 31.90170188447705,
+    "prime_title": "RedPajamaC4#338",
+    "source": "Wikipedia",
+    "target_title": "Happy Hogan (character)"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 123,
+    "n_tokens": 1024,
+    "ppl": 16.892419277105454,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "David Sharp (entomologist)"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 123,
+    "n_tokens": 1024,
+    "ppl": 16.65265425148805,
+    "prime_title": "David Sharp (entomologist)",
+    "source": "Wikipedia",
+    "target_title": "David Sharp (entomologist)"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 123,
+    "n_tokens": 1024,
+    "ppl": 16.89859048290942,
+    "prime_title": "August 1922",
+    "source": "Wikipedia",
+    "target_title": "David Sharp (entomologist)"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 123,
+    "n_tokens": 1024,
+    "ppl": 16.938463501629478,
+    "prime_title": "African independence movements",
+    "source": "Wikipedia",
+    "target_title": "David Sharp (entomologist)"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 123,
+    "n_tokens": 1024,
+    "ppl": 16.916060924508308,
+    "prime_title": "RedPajamaC4#242",
+    "source": "Wikipedia",
+    "target_title": "David Sharp (entomologist)"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 124,
+    "n_tokens": 1024,
+    "ppl": 21.627662764660197,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "PSFS Building"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 124,
+    "n_tokens": 1024,
+    "ppl": 21.32730169889057,
+    "prime_title": "PSFS Building",
+    "source": "Wikipedia",
+    "target_title": "PSFS Building"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 124,
+    "n_tokens": 1024,
+    "ppl": 21.809730305963733,
+    "prime_title": "Art Deco",
+    "source": "Wikipedia",
+    "target_title": "PSFS Building"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 124,
+    "n_tokens": 1024,
+    "ppl": 21.720978432000074,
+    "prime_title": "Spinetinglers",
+    "source": "Wikipedia",
+    "target_title": "PSFS Building"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 124,
+    "n_tokens": 1024,
+    "ppl": 21.658122639417076,
+    "prime_title": "RedPajamaC4#245",
+    "source": "Wikipedia",
+    "target_title": "PSFS Building"
+  }
+]

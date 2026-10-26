@@ -1,0 +1,1127 @@
+[
+  {
+    "arm": "reset",
+    "doc_idx": 150,
+    "n_tokens": 1024,
+    "ppl": 35.47769401728171,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Terry Sullivan (Brookside)"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 150,
+    "n_tokens": 1024,
+    "ppl": 35.12204756870391,
+    "prime_title": "Terry Sullivan (Brookside)",
+    "source": "Wikipedia",
+    "target_title": "Terry Sullivan (Brookside)"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 150,
+    "n_tokens": 1024,
+    "ppl": 34.65411075589969,
+    "prime_title": "Barry Grant",
+    "source": "Wikipedia",
+    "target_title": "Terry Sullivan (Brookside)"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 150,
+    "n_tokens": 1024,
+    "ppl": 36.08316441781804,
+    "prime_title": "The Logic of Violence in Civil War",
+    "source": "Wikipedia",
+    "target_title": "Terry Sullivan (Brookside)"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 150,
+    "n_tokens": 1024,
+    "ppl": 35.474403797255924,
+    "prime_title": "RedPajamaGithub#99",
+    "source": "Wikipedia",
+    "target_title": "Terry Sullivan (Brookside)"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 151,
+    "n_tokens": 1024,
+    "ppl": 14.718925591679435,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Assured Income for the Severely Handicapped"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 151,
+    "n_tokens": 1024,
+    "ppl": 14.195730167480468,
+    "prime_title": "Assured Income for the Severely Handicapped",
+    "source": "Wikipedia",
+    "target_title": "Assured Income for the Severely Handicapped"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 151,
+    "n_tokens": 1024,
+    "ppl": 14.840402544880016,
+    "prime_title": "British Columbia",
+    "source": "Wikipedia",
+    "target_title": "Assured Income for the Severely Handicapped"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 151,
+    "n_tokens": 1024,
+    "ppl": 15.010371964754876,
+    "prime_title": "Wonder Pets!",
+    "source": "Wikipedia",
+    "target_title": "Assured Income for the Severely Handicapped"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 151,
+    "n_tokens": 1024,
+    "ppl": 14.857392217244657,
+    "prime_title": "RedPajamaGithub#374",
+    "source": "Wikipedia",
+    "target_title": "Assured Income for the Severely Handicapped"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 152,
+    "n_tokens": 1024,
+    "ppl": 25.143234917610478,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Minoan eruption"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 152,
+    "n_tokens": 1024,
+    "ppl": 25.348218568402,
+    "prime_title": "Minoan eruption",
+    "source": "Wikipedia",
+    "target_title": "Minoan eruption"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 152,
+    "n_tokens": 1024,
+    "ppl": 25.817637005369214,
+    "prime_title": "Bronze Age",
+    "source": "Wikipedia",
+    "target_title": "Minoan eruption"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 152,
+    "n_tokens": 1024,
+    "ppl": 25.74749928499464,
+    "prime_title": "Henri Curiel",
+    "source": "Wikipedia",
+    "target_title": "Minoan eruption"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 152,
+    "n_tokens": 1024,
+    "ppl": 25.12480823397386,
+    "prime_title": "RedPajamaStackExchange#368",
+    "source": "Wikipedia",
+    "target_title": "Minoan eruption"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 153,
+    "n_tokens": 1024,
+    "ppl": 8.92251316600932,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "1994 NASCAR Busch Series"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 153,
+    "n_tokens": 1024,
+    "ppl": 7.993254691547426,
+    "prime_title": "1994 NASCAR Busch Series",
+    "source": "Wikipedia",
+    "target_title": "1994 NASCAR Busch Series"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 153,
+    "n_tokens": 1024,
+    "ppl": 8.95189467814764,
+    "prime_title": "Rodney Combs",
+    "source": "Wikipedia",
+    "target_title": "1994 NASCAR Busch Series"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 153,
+    "n_tokens": 1024,
+    "ppl": 8.985699463168137,
+    "prime_title": "My Screw Up",
+    "source": "Wikipedia",
+    "target_title": "1994 NASCAR Busch Series"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 153,
+    "n_tokens": 1024,
+    "ppl": 8.916329142229172,
+    "prime_title": "RedPajamaStackExchange#283",
+    "source": "Wikipedia",
+    "target_title": "1994 NASCAR Busch Series"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 154,
+    "n_tokens": 1024,
+    "ppl": 28.210338930829966,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Black Fives"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 154,
+    "n_tokens": 1024,
+    "ppl": 28.498497593222574,
+    "prime_title": "Black Fives",
+    "source": "Wikipedia",
+    "target_title": "Black Fives"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 154,
+    "n_tokens": 1024,
+    "ppl": 28.89210302271787,
+    "prime_title": "African Americans",
+    "source": "Wikipedia",
+    "target_title": "Black Fives"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 154,
+    "n_tokens": 1024,
+    "ppl": 29.280252394810187,
+    "prime_title": "Methoxyflurane",
+    "source": "Wikipedia",
+    "target_title": "Black Fives"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 154,
+    "n_tokens": 1024,
+    "ppl": 28.58924738604383,
+    "prime_title": "RedPajamaStackExchange#127",
+    "source": "Wikipedia",
+    "target_title": "Black Fives"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 155,
+    "n_tokens": 1024,
+    "ppl": 15.522687387459515,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Elizabeth High School (New Jersey)"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 155,
+    "n_tokens": 1024,
+    "ppl": 15.500176365544839,
+    "prime_title": "Elizabeth High School (New Jersey)",
+    "source": "Wikipedia",
+    "target_title": "Elizabeth High School (New Jersey)"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 155,
+    "n_tokens": 1024,
+    "ppl": 15.997364383188545,
+    "prime_title": "Elizabeth Public Schools",
+    "source": "Wikipedia",
+    "target_title": "Elizabeth High School (New Jersey)"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 155,
+    "n_tokens": 1024,
+    "ppl": 15.9513377006243,
+    "prime_title": "Al-Rayyan SC",
+    "source": "Wikipedia",
+    "target_title": "Elizabeth High School (New Jersey)"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 155,
+    "n_tokens": 1024,
+    "ppl": 15.508478748696175,
+    "prime_title": "RedPajamaStackExchange#326",
+    "source": "Wikipedia",
+    "target_title": "Elizabeth High School (New Jersey)"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 156,
+    "n_tokens": 1024,
+    "ppl": 14.39634772962275,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Albin Kurti"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 156,
+    "n_tokens": 1024,
+    "ppl": 14.451542593263607,
+    "prime_title": "Albin Kurti",
+    "source": "Wikipedia",
+    "target_title": "Albin Kurti"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 156,
+    "n_tokens": 1024,
+    "ppl": 14.557038150014478,
+    "prime_title": "Kosovo Albanians",
+    "source": "Wikipedia",
+    "target_title": "Albin Kurti"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 156,
+    "n_tokens": 1024,
+    "ppl": 14.448969021805816,
+    "prime_title": "Cinnamoroll",
+    "source": "Wikipedia",
+    "target_title": "Albin Kurti"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 156,
+    "n_tokens": 1024,
+    "ppl": 14.35262083154711,
+    "prime_title": "RedPajamaStackExchange#425",
+    "source": "Wikipedia",
+    "target_title": "Albin Kurti"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 157,
+    "n_tokens": 1024,
+    "ppl": 17.493172889350813,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Murder of Peter Porco"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 157,
+    "n_tokens": 1024,
+    "ppl": 17.259762804071798,
+    "prime_title": "Murder of Peter Porco",
+    "source": "Wikipedia",
+    "target_title": "Murder of Peter Porco"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 157,
+    "n_tokens": 1024,
+    "ppl": 17.66543536657927,
+    "prime_title": "August 10",
+    "source": "Wikipedia",
+    "target_title": "Murder of Peter Porco"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 157,
+    "n_tokens": 1024,
+    "ppl": 17.66660627688683,
+    "prime_title": "Ezra Klein",
+    "source": "Wikipedia",
+    "target_title": "Murder of Peter Porco"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 157,
+    "n_tokens": 1024,
+    "ppl": 17.720425385117267,
+    "prime_title": "RedPajamaStackExchange#34",
+    "source": "Wikipedia",
+    "target_title": "Murder of Peter Porco"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 158,
+    "n_tokens": 1024,
+    "ppl": 31.684118246908795,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Eastern Chalukyas"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 158,
+    "n_tokens": 1024,
+    "ppl": 31.601365771342785,
+    "prime_title": "Eastern Chalukyas",
+    "source": "Wikipedia",
+    "target_title": "Eastern Chalukyas"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 158,
+    "n_tokens": 1024,
+    "ppl": 32.95715886414764,
+    "prime_title": "Andhra Pradesh",
+    "source": "Wikipedia",
+    "target_title": "Eastern Chalukyas"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 158,
+    "n_tokens": 1024,
+    "ppl": 32.85414990503511,
+    "prime_title": "Back to Basics (Christina Aguilera album)",
+    "source": "Wikipedia",
+    "target_title": "Eastern Chalukyas"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 158,
+    "n_tokens": 1024,
+    "ppl": 32.34077602842204,
+    "prime_title": "RedPajamaStackExchange#366",
+    "source": "Wikipedia",
+    "target_title": "Eastern Chalukyas"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 159,
+    "n_tokens": 1024,
+    "ppl": 17.486642796309464,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Owen Sound Transportation Company"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 159,
+    "n_tokens": 1024,
+    "ppl": 16.82075795286429,
+    "prime_title": "Owen Sound Transportation Company",
+    "source": "Wikipedia",
+    "target_title": "Owen Sound Transportation Company"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 159,
+    "n_tokens": 1024,
+    "ppl": 17.87448387741362,
+    "prime_title": "British Columbia",
+    "source": "Wikipedia",
+    "target_title": "Owen Sound Transportation Company"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 159,
+    "n_tokens": 1024,
+    "ppl": 17.622809032558283,
+    "prime_title": "The House of Sand",
+    "source": "Wikipedia",
+    "target_title": "Owen Sound Transportation Company"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 159,
+    "n_tokens": 1024,
+    "ppl": 17.6725125540832,
+    "prime_title": "RedPajamaStackExchange#455",
+    "source": "Wikipedia",
+    "target_title": "Owen Sound Transportation Company"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 160,
+    "n_tokens": 1024,
+    "ppl": 11.748665193220802,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Turn on red"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 160,
+    "n_tokens": 1024,
+    "ppl": 11.703447440799296,
+    "prime_title": "Turn on red",
+    "source": "Wikipedia",
+    "target_title": "Turn on red"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 160,
+    "n_tokens": 1024,
+    "ppl": 11.890885025939808,
+    "prime_title": "British Columbia",
+    "source": "Wikipedia",
+    "target_title": "Turn on red"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 160,
+    "n_tokens": 1024,
+    "ppl": 11.966570105763678,
+    "prime_title": "Enchanted (film)",
+    "source": "Wikipedia",
+    "target_title": "Turn on red"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 160,
+    "n_tokens": 1024,
+    "ppl": 11.783913786759735,
+    "prime_title": "RedPajamaStackExchange#396",
+    "source": "Wikipedia",
+    "target_title": "Turn on red"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 161,
+    "n_tokens": 1024,
+    "ppl": 31.209549897697357,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Roy D. Chapin Jr."
+  },
+  {
+    "arm": "self",
+    "doc_idx": 161,
+    "n_tokens": 1024,
+    "ppl": 31.296655776446997,
+    "prime_title": "Roy D. Chapin Jr.",
+    "source": "Wikipedia",
+    "target_title": "Roy D. Chapin Jr."
+  },
+  {
+    "arm": "related",
+    "doc_idx": 161,
+    "n_tokens": 1024,
+    "ppl": 31.62515313681026,
+    "prime_title": "Roy Abernethy",
+    "source": "Wikipedia",
+    "target_title": "Roy D. Chapin Jr."
+  },
+  {
+    "arm": "random",
+    "doc_idx": 161,
+    "n_tokens": 1024,
+    "ppl": 31.759438739555574,
+    "prime_title": "Duke of Denver",
+    "source": "Wikipedia",
+    "target_title": "Roy D. Chapin Jr."
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 161,
+    "n_tokens": 1024,
+    "ppl": 31.44629871008238,
+    "prime_title": "RedPajamaStackExchange#233",
+    "source": "Wikipedia",
+    "target_title": "Roy D. Chapin Jr."
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 162,
+    "n_tokens": 1024,
+    "ppl": 24.051026765644252,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Blues"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 162,
+    "n_tokens": 1024,
+    "ppl": 24.818198065686346,
+    "prime_title": "Blues",
+    "source": "Wikipedia",
+    "target_title": "Blues"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 162,
+    "n_tokens": 1024,
+    "ppl": 24.256698551114415,
+    "prime_title": "Tampa Red",
+    "source": "Wikipedia",
+    "target_title": "Blues"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 162,
+    "n_tokens": 1024,
+    "ppl": 24.056262670705255,
+    "prime_title": "Duck plague",
+    "source": "Wikipedia",
+    "target_title": "Blues"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 162,
+    "n_tokens": 1024,
+    "ppl": 24.176144732601422,
+    "prime_title": "RedPajamaStackExchange#91",
+    "source": "Wikipedia",
+    "target_title": "Blues"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 163,
+    "n_tokens": 1024,
+    "ppl": 12.748902682475375,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Racial segregation in the United States"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 163,
+    "n_tokens": 1024,
+    "ppl": 12.87157670788356,
+    "prime_title": "Racial segregation in the United States",
+    "source": "Wikipedia",
+    "target_title": "Racial segregation in the United States"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 163,
+    "n_tokens": 1024,
+    "ppl": 12.95493384474141,
+    "prime_title": "African Americans",
+    "source": "Wikipedia",
+    "target_title": "Racial segregation in the United States"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 163,
+    "n_tokens": 1024,
+    "ppl": 13.114025524532098,
+    "prime_title": "Pay driver",
+    "source": "Wikipedia",
+    "target_title": "Racial segregation in the United States"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 163,
+    "n_tokens": 1024,
+    "ppl": 12.839216819958212,
+    "prime_title": "RedPajamaStackExchange#277",
+    "source": "Wikipedia",
+    "target_title": "Racial segregation in the United States"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 164,
+    "n_tokens": 1024,
+    "ppl": 23.813759141537062,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Across the Universe (film)"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 164,
+    "n_tokens": 1024,
+    "ppl": 22.367031189047452,
+    "prime_title": "Across the Universe (film)",
+    "source": "Wikipedia",
+    "target_title": "Across the Universe (film)"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 164,
+    "n_tokens": 1024,
+    "ppl": 23.78135618962165,
+    "prime_title": "Jim Sturgess",
+    "source": "Wikipedia",
+    "target_title": "Across the Universe (film)"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 164,
+    "n_tokens": 1024,
+    "ppl": 23.75572497675777,
+    "prime_title": "Scottish Funding Council",
+    "source": "Wikipedia",
+    "target_title": "Across the Universe (film)"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 164,
+    "n_tokens": 1024,
+    "ppl": 23.899298471146228,
+    "prime_title": "RedPajamaStackExchange#419",
+    "source": "Wikipedia",
+    "target_title": "Across the Universe (film)"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 165,
+    "n_tokens": 1024,
+    "ppl": 22.93682269351364,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Kenneth Goldsmith"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 165,
+    "n_tokens": 1024,
+    "ppl": 22.913844365264456,
+    "prime_title": "Kenneth Goldsmith",
+    "source": "Wikipedia",
+    "target_title": "Kenneth Goldsmith"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 165,
+    "n_tokens": 1024,
+    "ppl": 23.63882937963186,
+    "prime_title": "Brown University",
+    "source": "Wikipedia",
+    "target_title": "Kenneth Goldsmith"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 165,
+    "n_tokens": 1024,
+    "ppl": 23.48268524369752,
+    "prime_title": "Ladd Army Airfield",
+    "source": "Wikipedia",
+    "target_title": "Kenneth Goldsmith"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 165,
+    "n_tokens": 1024,
+    "ppl": 23.232909845387695,
+    "prime_title": "RedPajamaStackExchange#379",
+    "source": "Wikipedia",
+    "target_title": "Kenneth Goldsmith"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 166,
+    "n_tokens": 1024,
+    "ppl": 18.986685753364736,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "State Transport Authority (South Australia)"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 166,
+    "n_tokens": 1024,
+    "ppl": 18.105006415068488,
+    "prime_title": "State Transport Authority (South Australia)",
+    "source": "Wikipedia",
+    "target_title": "State Transport Authority (South Australia)"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 166,
+    "n_tokens": 1024,
+    "ppl": 19.429098034866627,
+    "prime_title": "December 1975",
+    "source": "Wikipedia",
+    "target_title": "State Transport Authority (South Australia)"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 166,
+    "n_tokens": 1024,
+    "ppl": 19.234142856862647,
+    "prime_title": "Ekman layer",
+    "source": "Wikipedia",
+    "target_title": "State Transport Authority (South Australia)"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 166,
+    "n_tokens": 1024,
+    "ppl": 19.09589026681975,
+    "prime_title": "RedPajamaStackExchange#3",
+    "source": "Wikipedia",
+    "target_title": "State Transport Authority (South Australia)"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 167,
+    "n_tokens": 1024,
+    "ppl": 10.66059528718349,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Millicom"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 167,
+    "n_tokens": 1024,
+    "ppl": 10.615545352167732,
+    "prime_title": "Millicom",
+    "source": "Wikipedia",
+    "target_title": "Millicom"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 167,
+    "n_tokens": 1024,
+    "ppl": 10.828674028596707,
+    "prime_title": "Costa Rica",
+    "source": "Wikipedia",
+    "target_title": "Millicom"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 167,
+    "n_tokens": 1024,
+    "ppl": 10.960125633384845,
+    "prime_title": "Roman Catholic Diocese of Norwich",
+    "source": "Wikipedia",
+    "target_title": "Millicom"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 167,
+    "n_tokens": 1024,
+    "ppl": 10.800378858411358,
+    "prime_title": "RedPajamaStackExchange#222",
+    "source": "Wikipedia",
+    "target_title": "Millicom"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 168,
+    "n_tokens": 1024,
+    "ppl": 21.724816176441237,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Wonder Pets!"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 168,
+    "n_tokens": 1024,
+    "ppl": 21.272501876700996,
+    "prime_title": "Wonder Pets!",
+    "source": "Wikipedia",
+    "target_title": "Wonder Pets!"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 168,
+    "n_tokens": 1024,
+    "ppl": 21.921338384070054,
+    "prime_title": "Little Airplane Productions",
+    "source": "Wikipedia",
+    "target_title": "Wonder Pets!"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 168,
+    "n_tokens": 1024,
+    "ppl": 21.95206008431901,
+    "prime_title": "Austin, Texas",
+    "source": "Wikipedia",
+    "target_title": "Wonder Pets!"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 168,
+    "n_tokens": 1024,
+    "ppl": 21.929101042888874,
+    "prime_title": "RedPajamaStackExchange#385",
+    "source": "Wikipedia",
+    "target_title": "Wonder Pets!"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 169,
+    "n_tokens": 1024,
+    "ppl": 12.124532909603625,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "National Baseball Hall of Fame and Museum"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 169,
+    "n_tokens": 1024,
+    "ppl": 12.139440806694274,
+    "prime_title": "National Baseball Hall of Fame and Museum",
+    "source": "Wikipedia",
+    "target_title": "National Baseball Hall of Fame and Museum"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 169,
+    "n_tokens": 1024,
+    "ppl": 12.381724109675908,
+    "prime_title": "New York Yankees",
+    "source": "Wikipedia",
+    "target_title": "National Baseball Hall of Fame and Museum"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 169,
+    "n_tokens": 1024,
+    "ppl": 12.374127907648978,
+    "prime_title": "Shamrock Club of Wisconsin",
+    "source": "Wikipedia",
+    "target_title": "National Baseball Hall of Fame and Museum"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 169,
+    "n_tokens": 1024,
+    "ppl": 12.19442871953932,
+    "prime_title": "RedPajamaStackExchange#142",
+    "source": "Wikipedia",
+    "target_title": "National Baseball Hall of Fame and Museum"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 170,
+    "n_tokens": 1024,
+    "ppl": 20.551926887823278,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "WVTT-CD"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 170,
+    "n_tokens": 1024,
+    "ppl": 20.581740255242117,
+    "prime_title": "WVTT-CD",
+    "source": "Wikipedia",
+    "target_title": "WVTT-CD"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 170,
+    "n_tokens": 1024,
+    "ppl": 20.916135747842304,
+    "prime_title": "April 29",
+    "source": "Wikipedia",
+    "target_title": "WVTT-CD"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 170,
+    "n_tokens": 1024,
+    "ppl": 21.147784104847982,
+    "prime_title": "Akira Iriye",
+    "source": "Wikipedia",
+    "target_title": "WVTT-CD"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 170,
+    "n_tokens": 1024,
+    "ppl": 20.65505455360879,
+    "prime_title": "RedPajamaStackExchange#226",
+    "source": "Wikipedia",
+    "target_title": "WVTT-CD"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 171,
+    "n_tokens": 1024,
+    "ppl": 25.62788339806049,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "WSCV"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 171,
+    "n_tokens": 1024,
+    "ppl": 25.49665647995009,
+    "prime_title": "WSCV",
+    "source": "Wikipedia",
+    "target_title": "WSCV"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 171,
+    "n_tokens": 1024,
+    "ppl": 25.798642263105776,
+    "prime_title": "Financial News Network",
+    "source": "Wikipedia",
+    "target_title": "WSCV"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 171,
+    "n_tokens": 1024,
+    "ppl": 25.87410062884084,
+    "prime_title": "Worthing High School (Houston)",
+    "source": "Wikipedia",
+    "target_title": "WSCV"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 171,
+    "n_tokens": 1024,
+    "ppl": 26.048499728911953,
+    "prime_title": "RedPajamaStackExchange#30",
+    "source": "Wikipedia",
+    "target_title": "WSCV"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 172,
+    "n_tokens": 1024,
+    "ppl": 20.785953355254016,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Take Me Home (Cher song)"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 172,
+    "n_tokens": 1024,
+    "ppl": 20.79303138174314,
+    "prime_title": "Take Me Home (Cher song)",
+    "source": "Wikipedia",
+    "target_title": "Take Me Home (Cher song)"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 172,
+    "n_tokens": 1024,
+    "ppl": 21.125797188955183,
+    "prime_title": "New Zealand",
+    "source": "Wikipedia",
+    "target_title": "Take Me Home (Cher song)"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 172,
+    "n_tokens": 1024,
+    "ppl": 21.23201709020904,
+    "prime_title": "Split Airport",
+    "source": "Wikipedia",
+    "target_title": "Take Me Home (Cher song)"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 172,
+    "n_tokens": 1024,
+    "ppl": 21.027010771160132,
+    "prime_title": "RedPajamaArXiv#53",
+    "source": "Wikipedia",
+    "target_title": "Take Me Home (Cher song)"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 173,
+    "n_tokens": 1024,
+    "ppl": 21.394073145296392,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "North Sea Mine Barrage"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 173,
+    "n_tokens": 1024,
+    "ppl": 20.72597133094854,
+    "prime_title": "North Sea Mine Barrage",
+    "source": "Wikipedia",
+    "target_title": "North Sea Mine Barrage"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 173,
+    "n_tokens": 1024,
+    "ppl": 22.16940971723148,
+    "prime_title": "World War I",
+    "source": "Wikipedia",
+    "target_title": "North Sea Mine Barrage"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 173,
+    "n_tokens": 1024,
+    "ppl": 21.862676893002796,
+    "prime_title": "Richmond Olympic Oval",
+    "source": "Wikipedia",
+    "target_title": "North Sea Mine Barrage"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 173,
+    "n_tokens": 1024,
+    "ppl": 21.588221093889967,
+    "prime_title": "RedPajamaArXiv#475",
+    "source": "Wikipedia",
+    "target_title": "North Sea Mine Barrage"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 174,
+    "n_tokens": 1024,
+    "ppl": 10.504237483952064,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Grille (cryptography)"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 174,
+    "n_tokens": 1024,
+    "ppl": 10.482411757684105,
+    "prime_title": "Grille (cryptography)",
+    "source": "Wikipedia",
+    "target_title": "Grille (cryptography)"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 174,
+    "n_tokens": 1024,
+    "ppl": 10.71450810305302,
+    "prime_title": "World War I",
+    "source": "Wikipedia",
+    "target_title": "Grille (cryptography)"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 174,
+    "n_tokens": 1024,
+    "ppl": 10.588927945971992,
+    "prime_title": "Pop Muzik",
+    "source": "Wikipedia",
+    "target_title": "Grille (cryptography)"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 174,
+    "n_tokens": 1024,
+    "ppl": 10.697447170087969,
+    "prime_title": "RedPajamaArXiv#260",
+    "source": "Wikipedia",
+    "target_title": "Grille (cryptography)"
+  }
+]

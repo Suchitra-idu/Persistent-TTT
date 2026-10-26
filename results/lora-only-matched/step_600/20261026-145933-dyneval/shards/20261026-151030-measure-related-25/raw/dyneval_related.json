@@ -1,0 +1,1127 @@
+[
+  {
+    "arm": "reset",
+    "doc_idx": 25,
+    "n_tokens": 1024,
+    "ppl": 6.939011296236643,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "List of people from Rhode Island"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 25,
+    "n_tokens": 1024,
+    "ppl": 6.868678936314108,
+    "prime_title": "List of people from Rhode Island",
+    "source": "Wikipedia",
+    "target_title": "List of people from Rhode Island"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 25,
+    "n_tokens": 1024,
+    "ppl": 6.943371981434182,
+    "prime_title": "Brown University",
+    "source": "Wikipedia",
+    "target_title": "List of people from Rhode Island"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 25,
+    "n_tokens": 1024,
+    "ppl": 6.930670746454054,
+    "prime_title": "Nimetazepam",
+    "source": "Wikipedia",
+    "target_title": "List of people from Rhode Island"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 25,
+    "n_tokens": 1024,
+    "ppl": 6.94960332709881,
+    "prime_title": "RedPajamaBook#138",
+    "source": "Wikipedia",
+    "target_title": "List of people from Rhode Island"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 26,
+    "n_tokens": 1024,
+    "ppl": 24.735791364203592,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Index of Chad-related articles"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 26,
+    "n_tokens": 1024,
+    "ppl": 24.53955118458098,
+    "prime_title": "Index of Chad-related articles",
+    "source": "Wikipedia",
+    "target_title": "Index of Chad-related articles"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 26,
+    "n_tokens": 1024,
+    "ppl": 24.650466799341196,
+    "prime_title": "History of Chad",
+    "source": "Wikipedia",
+    "target_title": "Index of Chad-related articles"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 26,
+    "n_tokens": 1024,
+    "ppl": 24.744485765913527,
+    "prime_title": "Sweater design",
+    "source": "Wikipedia",
+    "target_title": "Index of Chad-related articles"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 26,
+    "n_tokens": 1024,
+    "ppl": 24.754528829278147,
+    "prime_title": "RedPajamaC4#483",
+    "source": "Wikipedia",
+    "target_title": "Index of Chad-related articles"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 27,
+    "n_tokens": 1024,
+    "ppl": 22.584337643187542,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Nicholas Cooke"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 27,
+    "n_tokens": 1024,
+    "ppl": 22.377699163878344,
+    "prime_title": "Nicholas Cooke",
+    "source": "Wikipedia",
+    "target_title": "Nicholas Cooke"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 27,
+    "n_tokens": 1024,
+    "ppl": 22.552973042333683,
+    "prime_title": "Brown University",
+    "source": "Wikipedia",
+    "target_title": "Nicholas Cooke"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 27,
+    "n_tokens": 1024,
+    "ppl": 22.62949428394815,
+    "prime_title": "Premier (company)",
+    "source": "Wikipedia",
+    "target_title": "Nicholas Cooke"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 27,
+    "n_tokens": 1024,
+    "ppl": 22.65435864829141,
+    "prime_title": "RedPajamaC4#403",
+    "source": "Wikipedia",
+    "target_title": "Nicholas Cooke"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 28,
+    "n_tokens": 1024,
+    "ppl": 20.04193472361999,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "November 1966"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 28,
+    "n_tokens": 1024,
+    "ppl": 19.983408861579804,
+    "prime_title": "November 1966",
+    "source": "Wikipedia",
+    "target_title": "November 1966"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 28,
+    "n_tokens": 1024,
+    "ppl": 20.083908809018848,
+    "prime_title": "New Zealand",
+    "source": "Wikipedia",
+    "target_title": "November 1966"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 28,
+    "n_tokens": 1024,
+    "ppl": 20.106230252413784,
+    "prime_title": "Religion in Mexico",
+    "source": "Wikipedia",
+    "target_title": "November 1966"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 28,
+    "n_tokens": 1024,
+    "ppl": 20.062989715223086,
+    "prime_title": "RedPajamaC4#339",
+    "source": "Wikipedia",
+    "target_title": "November 1966"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 29,
+    "n_tokens": 1024,
+    "ppl": 33.59057461148114,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Fuck"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 29,
+    "n_tokens": 1024,
+    "ppl": 33.339740932165654,
+    "prime_title": "Fuck",
+    "source": "Wikipedia",
+    "target_title": "Fuck"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 29,
+    "n_tokens": 1024,
+    "ppl": 33.66735274112586,
+    "prime_title": "Fucked Up",
+    "source": "Wikipedia",
+    "target_title": "Fuck"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 29,
+    "n_tokens": 1024,
+    "ppl": 33.6051053848363,
+    "prime_title": "Gregorio Honasan",
+    "source": "Wikipedia",
+    "target_title": "Fuck"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 29,
+    "n_tokens": 1024,
+    "ppl": 33.651431093024456,
+    "prime_title": "RedPajamaC4#24",
+    "source": "Wikipedia",
+    "target_title": "Fuck"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 30,
+    "n_tokens": 1024,
+    "ppl": 13.58437312747628,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Yeronga, Queensland"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 30,
+    "n_tokens": 1024,
+    "ppl": 13.4819208578941,
+    "prime_title": "Yeronga, Queensland",
+    "source": "Wikipedia",
+    "target_title": "Yeronga, Queensland"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 30,
+    "n_tokens": 1024,
+    "ppl": 13.647493906793155,
+    "prime_title": "Yeronga Memorial Park",
+    "source": "Wikipedia",
+    "target_title": "Yeronga, Queensland"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 30,
+    "n_tokens": 1024,
+    "ppl": 13.641394365050639,
+    "prime_title": "Altynai Asylmuratova",
+    "source": "Wikipedia",
+    "target_title": "Yeronga, Queensland"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 30,
+    "n_tokens": 1024,
+    "ppl": 13.593441461604154,
+    "prime_title": "RedPajamaC4#77",
+    "source": "Wikipedia",
+    "target_title": "Yeronga, Queensland"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 31,
+    "n_tokens": 1024,
+    "ppl": 18.60930914627891,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Apple II series"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 31,
+    "n_tokens": 1024,
+    "ppl": 18.465890330900947,
+    "prime_title": "Apple II series",
+    "source": "Wikipedia",
+    "target_title": "Apple II series"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 31,
+    "n_tokens": 1024,
+    "ppl": 18.10659498248107,
+    "prime_title": "Apple II",
+    "source": "Wikipedia",
+    "target_title": "Apple II series"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 31,
+    "n_tokens": 1024,
+    "ppl": 18.628752502697573,
+    "prime_title": "Sainte-Anne River (Les Chenaux)",
+    "source": "Wikipedia",
+    "target_title": "Apple II series"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 31,
+    "n_tokens": 1024,
+    "ppl": 18.657604213630023,
+    "prime_title": "RedPajamaC4#355",
+    "source": "Wikipedia",
+    "target_title": "Apple II series"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 32,
+    "n_tokens": 1024,
+    "ppl": 26.776342086772843,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Classical guitar making"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 32,
+    "n_tokens": 1024,
+    "ppl": 26.242093413503483,
+    "prime_title": "Classical guitar making",
+    "source": "Wikipedia",
+    "target_title": "Classical guitar making"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 32,
+    "n_tokens": 1024,
+    "ppl": 26.267701661572964,
+    "prime_title": "Classical guitar",
+    "source": "Wikipedia",
+    "target_title": "Classical guitar making"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 32,
+    "n_tokens": 1024,
+    "ppl": 26.863714996768305,
+    "prime_title": "Itaja\u00ed",
+    "source": "Wikipedia",
+    "target_title": "Classical guitar making"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 32,
+    "n_tokens": 1024,
+    "ppl": 26.906578112300572,
+    "prime_title": "RedPajamaC4#423",
+    "source": "Wikipedia",
+    "target_title": "Classical guitar making"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 33,
+    "n_tokens": 1024,
+    "ppl": 18.037780094853193,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Human rights in Syria"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 33,
+    "n_tokens": 1024,
+    "ppl": 17.602661257382632,
+    "prime_title": "Human rights in Syria",
+    "source": "Wikipedia",
+    "target_title": "Human rights in Syria"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 33,
+    "n_tokens": 1024,
+    "ppl": 17.927739413102987,
+    "prime_title": "Freedom in the World",
+    "source": "Wikipedia",
+    "target_title": "Human rights in Syria"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 33,
+    "n_tokens": 1024,
+    "ppl": 18.02682993972193,
+    "prime_title": "American Board of Medical Specialties",
+    "source": "Wikipedia",
+    "target_title": "Human rights in Syria"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 33,
+    "n_tokens": 1024,
+    "ppl": 18.196098603038564,
+    "prime_title": "RedPajamaC4#362",
+    "source": "Wikipedia",
+    "target_title": "Human rights in Syria"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 34,
+    "n_tokens": 1024,
+    "ppl": 16.826810706856353,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Bacillus thuringiensis"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 34,
+    "n_tokens": 1024,
+    "ppl": 16.75340246460573,
+    "prime_title": "Bacillus thuringiensis",
+    "source": "Wikipedia",
+    "target_title": "Bacillus thuringiensis"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 34,
+    "n_tokens": 1024,
+    "ppl": 16.72178531978867,
+    "prime_title": "Bt cotton",
+    "source": "Wikipedia",
+    "target_title": "Bacillus thuringiensis"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 34,
+    "n_tokens": 1024,
+    "ppl": 16.853663190808447,
+    "prime_title": "Estadio Gran Parque Central",
+    "source": "Wikipedia",
+    "target_title": "Bacillus thuringiensis"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 34,
+    "n_tokens": 1024,
+    "ppl": 16.93226966063801,
+    "prime_title": "RedPajamaC4#415",
+    "source": "Wikipedia",
+    "target_title": "Bacillus thuringiensis"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 35,
+    "n_tokens": 1024,
+    "ppl": 17.927525699068955,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Multi-National Force \u2013 Iraq"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 35,
+    "n_tokens": 1024,
+    "ppl": 17.80921745668563,
+    "prime_title": "Multi-National Force \u2013 Iraq",
+    "source": "Wikipedia",
+    "target_title": "Multi-National Force \u2013 Iraq"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 35,
+    "n_tokens": 1024,
+    "ppl": 17.928350649303134,
+    "prime_title": "Iraq War",
+    "source": "Wikipedia",
+    "target_title": "Multi-National Force \u2013 Iraq"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 35,
+    "n_tokens": 1024,
+    "ppl": 17.965260012148036,
+    "prime_title": "The Spirit of '76 (1990 film)",
+    "source": "Wikipedia",
+    "target_title": "Multi-National Force \u2013 Iraq"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 35,
+    "n_tokens": 1024,
+    "ppl": 17.92398269165233,
+    "prime_title": "RedPajamaC4#322",
+    "source": "Wikipedia",
+    "target_title": "Multi-National Force \u2013 Iraq"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 36,
+    "n_tokens": 1024,
+    "ppl": 14.37294779722717,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Kyle Whittingham"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 36,
+    "n_tokens": 1024,
+    "ppl": 14.219973897148696,
+    "prime_title": "Kyle Whittingham",
+    "source": "Wikipedia",
+    "target_title": "Kyle Whittingham"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 36,
+    "n_tokens": 1024,
+    "ppl": 14.323792673928242,
+    "prime_title": "Utah Utes",
+    "source": "Wikipedia",
+    "target_title": "Kyle Whittingham"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 36,
+    "n_tokens": 1024,
+    "ppl": 14.403626165253224,
+    "prime_title": "Scissors (aeronautics)",
+    "source": "Wikipedia",
+    "target_title": "Kyle Whittingham"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 36,
+    "n_tokens": 1024,
+    "ppl": 14.458655888873913,
+    "prime_title": "RedPajamaC4#338",
+    "source": "Wikipedia",
+    "target_title": "Kyle Whittingham"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 37,
+    "n_tokens": 1024,
+    "ppl": 19.725211567788502,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Doha Debates"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 37,
+    "n_tokens": 1024,
+    "ppl": 19.24011446533824,
+    "prime_title": "Doha Debates",
+    "source": "Wikipedia",
+    "target_title": "Doha Debates"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 37,
+    "n_tokens": 1024,
+    "ppl": 19.659748502574853,
+    "prime_title": "Maria Ressa",
+    "source": "Wikipedia",
+    "target_title": "Doha Debates"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 37,
+    "n_tokens": 1024,
+    "ppl": 19.787981501477855,
+    "prime_title": "Teuffenthal",
+    "source": "Wikipedia",
+    "target_title": "Doha Debates"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 37,
+    "n_tokens": 1024,
+    "ppl": 19.824044333084736,
+    "prime_title": "RedPajamaC4#242",
+    "source": "Wikipedia",
+    "target_title": "Doha Debates"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 38,
+    "n_tokens": 1024,
+    "ppl": 32.40688515228412,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Confessions Tour"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 38,
+    "n_tokens": 1024,
+    "ppl": 31.84258996696059,
+    "prime_title": "Confessions Tour",
+    "source": "Wikipedia",
+    "target_title": "Confessions Tour"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 38,
+    "n_tokens": 1024,
+    "ppl": 32.432887199643986,
+    "prime_title": "Czech Republic",
+    "source": "Wikipedia",
+    "target_title": "Confessions Tour"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 38,
+    "n_tokens": 1024,
+    "ppl": 32.45200782798488,
+    "prime_title": "List of minor planets: 130001\u2013131000",
+    "source": "Wikipedia",
+    "target_title": "Confessions Tour"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 38,
+    "n_tokens": 1024,
+    "ppl": 32.52039892931865,
+    "prime_title": "RedPajamaC4#245",
+    "source": "Wikipedia",
+    "target_title": "Confessions Tour"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 39,
+    "n_tokens": 1024,
+    "ppl": 21.772531176330492,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "History of Germany during World War I"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 39,
+    "n_tokens": 1024,
+    "ppl": 21.300902385451757,
+    "prime_title": "History of Germany during World War I",
+    "source": "Wikipedia",
+    "target_title": "History of Germany during World War I"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 39,
+    "n_tokens": 1024,
+    "ppl": 21.72448468458287,
+    "prime_title": "World War I",
+    "source": "Wikipedia",
+    "target_title": "History of Germany during World War I"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 39,
+    "n_tokens": 1024,
+    "ppl": 21.752212801096558,
+    "prime_title": "Gloucester Park, Perth",
+    "source": "Wikipedia",
+    "target_title": "History of Germany during World War I"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 39,
+    "n_tokens": 1024,
+    "ppl": 21.793123127516058,
+    "prime_title": "RedPajamaC4#293",
+    "source": "Wikipedia",
+    "target_title": "History of Germany during World War I"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 40,
+    "n_tokens": 1024,
+    "ppl": 30.68169549377434,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Katsuya Terada"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 40,
+    "n_tokens": 1024,
+    "ppl": 30.42031336541342,
+    "prime_title": "Katsuya Terada",
+    "source": "Wikipedia",
+    "target_title": "Katsuya Terada"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 40,
+    "n_tokens": 1024,
+    "ppl": 30.765670351522996,
+    "prime_title": "The Last Vampire",
+    "source": "Wikipedia",
+    "target_title": "Katsuya Terada"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 40,
+    "n_tokens": 1024,
+    "ppl": 30.777885729751386,
+    "prime_title": "Carlito (wrestler)",
+    "source": "Wikipedia",
+    "target_title": "Katsuya Terada"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 40,
+    "n_tokens": 1024,
+    "ppl": 30.812525986136684,
+    "prime_title": "RedPajamaC4#393",
+    "source": "Wikipedia",
+    "target_title": "Katsuya Terada"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 41,
+    "n_tokens": 1024,
+    "ppl": 24.1217531043389,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Christian Discourses"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 41,
+    "n_tokens": 1024,
+    "ppl": 23.779802683065324,
+    "prime_title": "Christian Discourses",
+    "source": "Wikipedia",
+    "target_title": "Christian Discourses"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 41,
+    "n_tokens": 1024,
+    "ppl": 24.192249063484507,
+    "prime_title": "April 26",
+    "source": "Wikipedia",
+    "target_title": "Christian Discourses"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 41,
+    "n_tokens": 1024,
+    "ppl": 24.12238573078557,
+    "prime_title": "Please Don't Touch!",
+    "source": "Wikipedia",
+    "target_title": "Christian Discourses"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 41,
+    "n_tokens": 1024,
+    "ppl": 24.27189590131352,
+    "prime_title": "RedPajamaC4#115",
+    "source": "Wikipedia",
+    "target_title": "Christian Discourses"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 42,
+    "n_tokens": 1024,
+    "ppl": 29.246449189600728,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Craig Charles"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 42,
+    "n_tokens": 1024,
+    "ppl": 28.66496648966898,
+    "prime_title": "Craig Charles",
+    "source": "Wikipedia",
+    "target_title": "Craig Charles"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 42,
+    "n_tokens": 1024,
+    "ppl": 29.010522677269076,
+    "prime_title": "Lloyd Mullaney",
+    "source": "Wikipedia",
+    "target_title": "Craig Charles"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 42,
+    "n_tokens": 1024,
+    "ppl": 29.215638253548335,
+    "prime_title": "Hanover Stadtbahn",
+    "source": "Wikipedia",
+    "target_title": "Craig Charles"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 42,
+    "n_tokens": 1024,
+    "ppl": 29.278898120632878,
+    "prime_title": "RedPajamaC4#341",
+    "source": "Wikipedia",
+    "target_title": "Craig Charles"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 43,
+    "n_tokens": 1024,
+    "ppl": 13.861448925769155,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Dan Hampton"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 43,
+    "n_tokens": 1024,
+    "ppl": 13.658968429630598,
+    "prime_title": "Dan Hampton",
+    "source": "Wikipedia",
+    "target_title": "Dan Hampton"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 43,
+    "n_tokens": 1024,
+    "ppl": 13.781669534501386,
+    "prime_title": "Walter Payton",
+    "source": "Wikipedia",
+    "target_title": "Dan Hampton"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 43,
+    "n_tokens": 1024,
+    "ppl": 13.896385241590504,
+    "prime_title": "List of translations of the Quran",
+    "source": "Wikipedia",
+    "target_title": "Dan Hampton"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 43,
+    "n_tokens": 1024,
+    "ppl": 13.904508161125069,
+    "prime_title": "RedPajamaC4#51",
+    "source": "Wikipedia",
+    "target_title": "Dan Hampton"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 44,
+    "n_tokens": 1024,
+    "ppl": 13.437901769403693,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "August 8"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 44,
+    "n_tokens": 1024,
+    "ppl": 13.264371117428562,
+    "prime_title": "August 8",
+    "source": "Wikipedia",
+    "target_title": "August 8"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 44,
+    "n_tokens": 1024,
+    "ppl": 13.402184793542629,
+    "prime_title": "Czech Republic",
+    "source": "Wikipedia",
+    "target_title": "August 8"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 44,
+    "n_tokens": 1024,
+    "ppl": 13.433609302223237,
+    "prime_title": "James J. Archer",
+    "source": "Wikipedia",
+    "target_title": "August 8"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 44,
+    "n_tokens": 1024,
+    "ppl": 13.428232840198207,
+    "prime_title": "RedPajamaC4#349",
+    "source": "Wikipedia",
+    "target_title": "August 8"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 45,
+    "n_tokens": 1024,
+    "ppl": 8.114054248305715,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Sports in Chicago"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 45,
+    "n_tokens": 1024,
+    "ppl": 7.950573741852149,
+    "prime_title": "Sports in Chicago",
+    "source": "Wikipedia",
+    "target_title": "Sports in Chicago"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 45,
+    "n_tokens": 1024,
+    "ppl": 8.062552595196907,
+    "prime_title": "Camping World",
+    "source": "Wikipedia",
+    "target_title": "Sports in Chicago"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 45,
+    "n_tokens": 1024,
+    "ppl": 8.11562524789346,
+    "prime_title": "Yoda (song)",
+    "source": "Wikipedia",
+    "target_title": "Sports in Chicago"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 45,
+    "n_tokens": 1024,
+    "ppl": 8.102766320676992,
+    "prime_title": "RedPajamaC4#198",
+    "source": "Wikipedia",
+    "target_title": "Sports in Chicago"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 46,
+    "n_tokens": 1024,
+    "ppl": 16.540235173655553,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Prostitution in the United States"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 46,
+    "n_tokens": 1024,
+    "ppl": 16.40701110325024,
+    "prime_title": "Prostitution in the United States",
+    "source": "Wikipedia",
+    "target_title": "Prostitution in the United States"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 46,
+    "n_tokens": 1024,
+    "ppl": 16.600039724879803,
+    "prime_title": "World War I",
+    "source": "Wikipedia",
+    "target_title": "Prostitution in the United States"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 46,
+    "n_tokens": 1024,
+    "ppl": 16.53291765796596,
+    "prime_title": "Dummy corporation",
+    "source": "Wikipedia",
+    "target_title": "Prostitution in the United States"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 46,
+    "n_tokens": 1024,
+    "ppl": 16.532677212675505,
+    "prime_title": "RedPajamaGithub#141",
+    "source": "Wikipedia",
+    "target_title": "Prostitution in the United States"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 47,
+    "n_tokens": 1024,
+    "ppl": 24.639449644672215,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Gary Lightbody"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 47,
+    "n_tokens": 1024,
+    "ppl": 24.49140638300202,
+    "prime_title": "Gary Lightbody",
+    "source": "Wikipedia",
+    "target_title": "Gary Lightbody"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 47,
+    "n_tokens": 1024,
+    "ppl": 24.481796935090394,
+    "prime_title": "Jacknife Lee",
+    "source": "Wikipedia",
+    "target_title": "Gary Lightbody"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 47,
+    "n_tokens": 1024,
+    "ppl": 24.624127833294718,
+    "prime_title": "Russian cruiser Rurik (1906)",
+    "source": "Wikipedia",
+    "target_title": "Gary Lightbody"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 47,
+    "n_tokens": 1024,
+    "ppl": 24.634110300431217,
+    "prime_title": "RedPajamaGithub#124",
+    "source": "Wikipedia",
+    "target_title": "Gary Lightbody"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 48,
+    "n_tokens": 1024,
+    "ppl": 18.657355109401756,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Maria Margaretha Kirch"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 48,
+    "n_tokens": 1024,
+    "ppl": 18.519631811265366,
+    "prime_title": "Maria Margaretha Kirch",
+    "source": "Wikipedia",
+    "target_title": "Maria Margaretha Kirch"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 48,
+    "n_tokens": 1024,
+    "ppl": 18.65283177729733,
+    "prime_title": "Gottfried Kirch",
+    "source": "Wikipedia",
+    "target_title": "Maria Margaretha Kirch"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 48,
+    "n_tokens": 1024,
+    "ppl": 18.719623222174352,
+    "prime_title": "Ocean City High School",
+    "source": "Wikipedia",
+    "target_title": "Maria Margaretha Kirch"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 48,
+    "n_tokens": 1024,
+    "ppl": 18.68793969720965,
+    "prime_title": "RedPajamaGithub#471",
+    "source": "Wikipedia",
+    "target_title": "Maria Margaretha Kirch"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 49,
+    "n_tokens": 1024,
+    "ppl": 5.500543243895927,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Holden Commodore (VY)"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 49,
+    "n_tokens": 1024,
+    "ppl": 5.3439008984420875,
+    "prime_title": "Holden Commodore (VY)",
+    "source": "Wikipedia",
+    "target_title": "Holden Commodore (VY)"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 49,
+    "n_tokens": 1024,
+    "ppl": 5.510711636755182,
+    "prime_title": "Holden Ute",
+    "source": "Wikipedia",
+    "target_title": "Holden Commodore (VY)"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 49,
+    "n_tokens": 1024,
+    "ppl": 5.480633144477561,
+    "prime_title": "Rebeuvelier",
+    "source": "Wikipedia",
+    "target_title": "Holden Commodore (VY)"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 49,
+    "n_tokens": 1024,
+    "ppl": 5.497297752558578,
+    "prime_title": "RedPajamaGithub#15",
+    "source": "Wikipedia",
+    "target_title": "Holden Commodore (VY)"
+  }
+]

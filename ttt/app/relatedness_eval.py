@@ -144,18 +144,18 @@ def measure(
     rows: list[RelatedRow] = []
     for case in cases:
         fast_weights.reset_carry()
-        rows.append(_row(RESET, case, "", compute.eval_loss(case.target)))
+        rows.append(make_row(RESET, case, "", compute.eval_loss(case.target)))
         for level in LEVELS:
             fast_weights.reset_carry()
             compute.eval_loss(case.primes[level])
             fast_weights.advance_carry()
             loss = compute.eval_loss(case.target)
-            rows.append(_row(level, case, case.prime_titles[level], loss))
+            rows.append(make_row(level, case, case.prime_titles[level], loss))
     fast_weights.reset_carry()
     return tuple(rows)
 
 
-def _row(arm: str, case: Case, prime_title: str, loss: float) -> RelatedRow:
+def make_row(arm: str, case: Case, prime_title: str, loss: float) -> RelatedRow:
     return RelatedRow(
         arm=arm, source=SOURCE, doc_idx=case.index, target_title=case.target_title,
         prime_title=prime_title, n_tokens=len(case.target), ppl=metrics.perplexity(loss),

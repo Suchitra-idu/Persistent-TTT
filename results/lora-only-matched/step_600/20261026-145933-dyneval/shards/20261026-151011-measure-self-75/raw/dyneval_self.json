@@ -1,0 +1,1127 @@
+[
+  {
+    "arm": "reset",
+    "doc_idx": 75,
+    "n_tokens": 1024,
+    "ppl": 20.16317359152505,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Butter sculpture"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 75,
+    "n_tokens": 1024,
+    "ppl": 19.974453766707867,
+    "prime_title": "Butter sculpture",
+    "source": "Wikipedia",
+    "target_title": "Butter sculpture"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 75,
+    "n_tokens": 1024,
+    "ppl": 20.87213373369282,
+    "prime_title": "British Empire",
+    "source": "Wikipedia",
+    "target_title": "Butter sculpture"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 75,
+    "n_tokens": 1024,
+    "ppl": 20.554176093084678,
+    "prime_title": "Landscape assessment",
+    "source": "Wikipedia",
+    "target_title": "Butter sculpture"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 75,
+    "n_tokens": 1024,
+    "ppl": 20.20399015682727,
+    "prime_title": "RedPajamaStackExchange#233",
+    "source": "Wikipedia",
+    "target_title": "Butter sculpture"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 76,
+    "n_tokens": 1024,
+    "ppl": 17.073096322306544,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Yeronga Memorial Park"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 76,
+    "n_tokens": 1024,
+    "ppl": 16.721621862431444,
+    "prime_title": "Yeronga Memorial Park",
+    "source": "Wikipedia",
+    "target_title": "Yeronga Memorial Park"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 76,
+    "n_tokens": 1024,
+    "ppl": 17.338998314641042,
+    "prime_title": "World War I",
+    "source": "Wikipedia",
+    "target_title": "Yeronga Memorial Park"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 76,
+    "n_tokens": 1024,
+    "ppl": 17.26759551740858,
+    "prime_title": "1408 (film)",
+    "source": "Wikipedia",
+    "target_title": "Yeronga Memorial Park"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 76,
+    "n_tokens": 1024,
+    "ppl": 17.170242450710017,
+    "prime_title": "RedPajamaStackExchange#91",
+    "source": "Wikipedia",
+    "target_title": "Yeronga Memorial Park"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 77,
+    "n_tokens": 1024,
+    "ppl": 21.57103170371076,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "MultiCam"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 77,
+    "n_tokens": 1024,
+    "ppl": 20.99858493535114,
+    "prime_title": "MultiCam",
+    "source": "Wikipedia",
+    "target_title": "MultiCam"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 77,
+    "n_tokens": 1024,
+    "ppl": 21.80852397530784,
+    "prime_title": "New Zealand",
+    "source": "Wikipedia",
+    "target_title": "MultiCam"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 77,
+    "n_tokens": 1024,
+    "ppl": 22.085543579919634,
+    "prime_title": "Whiteinch Railway",
+    "source": "Wikipedia",
+    "target_title": "MultiCam"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 77,
+    "n_tokens": 1024,
+    "ppl": 21.855531766715,
+    "prime_title": "RedPajamaStackExchange#277",
+    "source": "Wikipedia",
+    "target_title": "MultiCam"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 78,
+    "n_tokens": 1024,
+    "ppl": 29.597088665429162,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "2001 Oldham riots"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 78,
+    "n_tokens": 1024,
+    "ppl": 28.98992529958024,
+    "prime_title": "2001 Oldham riots",
+    "source": "Wikipedia",
+    "target_title": "2001 Oldham riots"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 78,
+    "n_tokens": 1024,
+    "ppl": 30.223575479787645,
+    "prime_title": "British National Party",
+    "source": "Wikipedia",
+    "target_title": "2001 Oldham riots"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 78,
+    "n_tokens": 1024,
+    "ppl": 30.170975277672223,
+    "prime_title": "Paul-Jan Bakker",
+    "source": "Wikipedia",
+    "target_title": "2001 Oldham riots"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 78,
+    "n_tokens": 1024,
+    "ppl": 29.86198240020254,
+    "prime_title": "RedPajamaStackExchange#419",
+    "source": "Wikipedia",
+    "target_title": "2001 Oldham riots"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 79,
+    "n_tokens": 1024,
+    "ppl": 17.522083002590218,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Cape Fold Belt"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 79,
+    "n_tokens": 1024,
+    "ppl": 17.06764266541205,
+    "prime_title": "Cape Fold Belt",
+    "source": "Wikipedia",
+    "target_title": "Cape Fold Belt"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 79,
+    "n_tokens": 1024,
+    "ppl": 17.07720399462281,
+    "prime_title": "Karoo Supergroup",
+    "source": "Wikipedia",
+    "target_title": "Cape Fold Belt"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 79,
+    "n_tokens": 1024,
+    "ppl": 17.485742285142898,
+    "prime_title": "List of compositions by Carl Czerny",
+    "source": "Wikipedia",
+    "target_title": "Cape Fold Belt"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 79,
+    "n_tokens": 1024,
+    "ppl": 17.68821464675048,
+    "prime_title": "RedPajamaStackExchange#379",
+    "source": "Wikipedia",
+    "target_title": "Cape Fold Belt"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 80,
+    "n_tokens": 1024,
+    "ppl": 16.83372851357697,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "CAESAR self-propelled howitzer"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 80,
+    "n_tokens": 1024,
+    "ppl": 16.902458705990018,
+    "prime_title": "CAESAR self-propelled howitzer",
+    "source": "Wikipedia",
+    "target_title": "CAESAR self-propelled howitzer"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 80,
+    "n_tokens": 1024,
+    "ppl": 16.96034580044167,
+    "prime_title": "K9 Thunder",
+    "source": "Wikipedia",
+    "target_title": "CAESAR self-propelled howitzer"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 80,
+    "n_tokens": 1024,
+    "ppl": 17.34691248015088,
+    "prime_title": "Hereditary title",
+    "source": "Wikipedia",
+    "target_title": "CAESAR self-propelled howitzer"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 80,
+    "n_tokens": 1024,
+    "ppl": 17.13184555912999,
+    "prime_title": "RedPajamaStackExchange#3",
+    "source": "Wikipedia",
+    "target_title": "CAESAR self-propelled howitzer"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 81,
+    "n_tokens": 1024,
+    "ppl": 32.43865623441999,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Ghost (Marvel Comics)"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 81,
+    "n_tokens": 1024,
+    "ppl": 32.54892868916019,
+    "prime_title": "Ghost (Marvel Comics)",
+    "source": "Wikipedia",
+    "target_title": "Ghost (Marvel Comics)"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 81,
+    "n_tokens": 1024,
+    "ppl": 32.63243524172693,
+    "prime_title": "Stark Industries",
+    "source": "Wikipedia",
+    "target_title": "Ghost (Marvel Comics)"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 81,
+    "n_tokens": 1024,
+    "ppl": 32.97572373982128,
+    "prime_title": "Corrine, Corrina",
+    "source": "Wikipedia",
+    "target_title": "Ghost (Marvel Comics)"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 81,
+    "n_tokens": 1024,
+    "ppl": 32.88226687617353,
+    "prime_title": "RedPajamaStackExchange#222",
+    "source": "Wikipedia",
+    "target_title": "Ghost (Marvel Comics)"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 82,
+    "n_tokens": 1024,
+    "ppl": 17.81156992281345,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "List of Friends and Joey characters"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 82,
+    "n_tokens": 1024,
+    "ppl": 17.191678177271665,
+    "prime_title": "List of Friends and Joey characters",
+    "source": "Wikipedia",
+    "target_title": "List of Friends and Joey characters"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 82,
+    "n_tokens": 1024,
+    "ppl": 17.94860588689469,
+    "prime_title": "Billy Crystal",
+    "source": "Wikipedia",
+    "target_title": "List of Friends and Joey characters"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 82,
+    "n_tokens": 1024,
+    "ppl": 18.421148052862936,
+    "prime_title": "Ozzie Simmons",
+    "source": "Wikipedia",
+    "target_title": "List of Friends and Joey characters"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 82,
+    "n_tokens": 1024,
+    "ppl": 18.026013351293418,
+    "prime_title": "RedPajamaStackExchange#385",
+    "source": "Wikipedia",
+    "target_title": "List of Friends and Joey characters"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 83,
+    "n_tokens": 1024,
+    "ppl": 17.383839161808947,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Ian Donald"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 83,
+    "n_tokens": 1024,
+    "ppl": 16.915544695174553,
+    "prime_title": "Ian Donald",
+    "source": "Wikipedia",
+    "target_title": "Ian Donald"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 83,
+    "n_tokens": 1024,
+    "ppl": 17.631382391700555,
+    "prime_title": "British Empire",
+    "source": "Wikipedia",
+    "target_title": "Ian Donald"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 83,
+    "n_tokens": 1024,
+    "ppl": 17.769260326935612,
+    "prime_title": "Anjangaon",
+    "source": "Wikipedia",
+    "target_title": "Ian Donald"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 83,
+    "n_tokens": 1024,
+    "ppl": 17.741752721783783,
+    "prime_title": "RedPajamaStackExchange#142",
+    "source": "Wikipedia",
+    "target_title": "Ian Donald"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 84,
+    "n_tokens": 1024,
+    "ppl": 9.266777212056272,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Vernon Davis"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 84,
+    "n_tokens": 1024,
+    "ppl": 9.229645980254919,
+    "prime_title": "Vernon Davis",
+    "source": "Wikipedia",
+    "target_title": "Vernon Davis"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 84,
+    "n_tokens": 1024,
+    "ppl": 9.230356775286358,
+    "prime_title": "Maryland Terrapins",
+    "source": "Wikipedia",
+    "target_title": "Vernon Davis"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 84,
+    "n_tokens": 1024,
+    "ppl": 9.21555362294658,
+    "prime_title": "Acupuncture",
+    "source": "Wikipedia",
+    "target_title": "Vernon Davis"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 84,
+    "n_tokens": 1024,
+    "ppl": 9.335637210555134,
+    "prime_title": "RedPajamaStackExchange#226",
+    "source": "Wikipedia",
+    "target_title": "Vernon Davis"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 85,
+    "n_tokens": 1024,
+    "ppl": 13.509634417031558,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "April 9"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 85,
+    "n_tokens": 1024,
+    "ppl": 13.478845085025055,
+    "prime_title": "April 9",
+    "source": "Wikipedia",
+    "target_title": "April 9"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 85,
+    "n_tokens": 1024,
+    "ppl": 13.767173615459612,
+    "prime_title": "New Zealand",
+    "source": "Wikipedia",
+    "target_title": "April 9"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 85,
+    "n_tokens": 1024,
+    "ppl": 13.552763968168227,
+    "prime_title": "Mirpur Khas District",
+    "source": "Wikipedia",
+    "target_title": "April 9"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 85,
+    "n_tokens": 1024,
+    "ppl": 13.623722729794023,
+    "prime_title": "RedPajamaStackExchange#30",
+    "source": "Wikipedia",
+    "target_title": "April 9"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 86,
+    "n_tokens": 1024,
+    "ppl": 17.165535335512025,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Interstate 85 in Georgia"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 86,
+    "n_tokens": 1024,
+    "ppl": 16.767816182377256,
+    "prime_title": "Interstate 85 in Georgia",
+    "source": "Wikipedia",
+    "target_title": "Interstate 85 in Georgia"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 86,
+    "n_tokens": 1024,
+    "ppl": 17.15151578332391,
+    "prime_title": "Lake Hartwell",
+    "source": "Wikipedia",
+    "target_title": "Interstate 85 in Georgia"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 86,
+    "n_tokens": 1024,
+    "ppl": 17.21994632988281,
+    "prime_title": "Tihomir Dovramadjiev",
+    "source": "Wikipedia",
+    "target_title": "Interstate 85 in Georgia"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 86,
+    "n_tokens": 1024,
+    "ppl": 17.45710855914922,
+    "prime_title": "RedPajamaArXiv#53",
+    "source": "Wikipedia",
+    "target_title": "Interstate 85 in Georgia"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 87,
+    "n_tokens": 1024,
+    "ppl": 18.00132688135144,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Aram Manukian"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 87,
+    "n_tokens": 1024,
+    "ppl": 17.64361504858957,
+    "prime_title": "Aram Manukian",
+    "source": "Wikipedia",
+    "target_title": "Aram Manukian"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 87,
+    "n_tokens": 1024,
+    "ppl": 18.30360536431213,
+    "prime_title": "World War I",
+    "source": "Wikipedia",
+    "target_title": "Aram Manukian"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 87,
+    "n_tokens": 1024,
+    "ppl": 18.358485211780327,
+    "prime_title": "Learning Curve (Star Trek: Voyager)",
+    "source": "Wikipedia",
+    "target_title": "Aram Manukian"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 87,
+    "n_tokens": 1024,
+    "ppl": 18.20398732011442,
+    "prime_title": "RedPajamaArXiv#475",
+    "source": "Wikipedia",
+    "target_title": "Aram Manukian"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 88,
+    "n_tokens": 1024,
+    "ppl": 19.4096106406414,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Battle of Cape Gloucester"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 88,
+    "n_tokens": 1024,
+    "ppl": 18.826784464175677,
+    "prime_title": "Battle of Cape Gloucester",
+    "source": "Wikipedia",
+    "target_title": "Battle of Cape Gloucester"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 88,
+    "n_tokens": 1024,
+    "ppl": 19.75140504539808,
+    "prime_title": "Huon Peninsula",
+    "source": "Wikipedia",
+    "target_title": "Battle of Cape Gloucester"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 88,
+    "n_tokens": 1024,
+    "ppl": 19.80946868690429,
+    "prime_title": "Joondalup Drive",
+    "source": "Wikipedia",
+    "target_title": "Battle of Cape Gloucester"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 88,
+    "n_tokens": 1024,
+    "ppl": 19.80481713192017,
+    "prime_title": "RedPajamaArXiv#260",
+    "source": "Wikipedia",
+    "target_title": "Battle of Cape Gloucester"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 89,
+    "n_tokens": 1024,
+    "ppl": 24.66434660769314,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Martian (The War of the Worlds)"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 89,
+    "n_tokens": 1024,
+    "ppl": 24.66518164409144,
+    "prime_title": "Martian (The War of the Worlds)",
+    "source": "Wikipedia",
+    "target_title": "Martian (The War of the Worlds)"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 89,
+    "n_tokens": 1024,
+    "ppl": 24.4495109169981,
+    "prime_title": "Scarlet Traces",
+    "source": "Wikipedia",
+    "target_title": "Martian (The War of the Worlds)"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 89,
+    "n_tokens": 1024,
+    "ppl": 25.513050399538677,
+    "prime_title": "Southern Railway 4501",
+    "source": "Wikipedia",
+    "target_title": "Martian (The War of the Worlds)"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 89,
+    "n_tokens": 1024,
+    "ppl": 24.992307727562533,
+    "prime_title": "RedPajamaArXiv#239",
+    "source": "Wikipedia",
+    "target_title": "Martian (The War of the Worlds)"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 90,
+    "n_tokens": 1024,
+    "ppl": 54.55189344547953,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "List of fantasy television programs"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 90,
+    "n_tokens": 1024,
+    "ppl": 54.86178426617941,
+    "prime_title": "List of fantasy television programs",
+    "source": "Wikipedia",
+    "target_title": "List of fantasy television programs"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 90,
+    "n_tokens": 1024,
+    "ppl": 53.45360733340823,
+    "prime_title": "Pedro Penduko",
+    "source": "Wikipedia",
+    "target_title": "List of fantasy television programs"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 90,
+    "n_tokens": 1024,
+    "ppl": 54.666402856815935,
+    "prime_title": "North Lantau New Town",
+    "source": "Wikipedia",
+    "target_title": "List of fantasy television programs"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 90,
+    "n_tokens": 1024,
+    "ppl": 54.62218509776963,
+    "prime_title": "RedPajamaArXiv#33",
+    "source": "Wikipedia",
+    "target_title": "List of fantasy television programs"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 91,
+    "n_tokens": 1024,
+    "ppl": 18.86580432588886,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Treehouse of Horror"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 91,
+    "n_tokens": 1024,
+    "ppl": 18.331656292384633,
+    "prime_title": "Treehouse of Horror",
+    "source": "Wikipedia",
+    "target_title": "Treehouse of Horror"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 91,
+    "n_tokens": 1024,
+    "ppl": 18.42348910772927,
+    "prime_title": "Kang and Kodos",
+    "source": "Wikipedia",
+    "target_title": "Treehouse of Horror"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 91,
+    "n_tokens": 1024,
+    "ppl": 19.17826394708673,
+    "prime_title": "The Video Dead",
+    "source": "Wikipedia",
+    "target_title": "Treehouse of Horror"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 91,
+    "n_tokens": 1024,
+    "ppl": 19.067010856780673,
+    "prime_title": "RedPajamaArXiv#41",
+    "source": "Wikipedia",
+    "target_title": "Treehouse of Horror"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 92,
+    "n_tokens": 1024,
+    "ppl": 19.59061155870326,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Women's Political Council"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 92,
+    "n_tokens": 1024,
+    "ppl": 19.831924841953978,
+    "prime_title": "Women's Political Council",
+    "source": "Wikipedia",
+    "target_title": "Women's Political Council"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 92,
+    "n_tokens": 1024,
+    "ppl": 19.70531911463166,
+    "prime_title": "African Americans",
+    "source": "Wikipedia",
+    "target_title": "Women's Political Council"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 92,
+    "n_tokens": 1024,
+    "ppl": 20.224125637448367,
+    "prime_title": "Kurt Kasznar",
+    "source": "Wikipedia",
+    "target_title": "Women's Political Council"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 92,
+    "n_tokens": 1024,
+    "ppl": 19.57529276856013,
+    "prime_title": "RedPajamaArXiv#477",
+    "source": "Wikipedia",
+    "target_title": "Women's Political Council"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 93,
+    "n_tokens": 1024,
+    "ppl": 9.719455798877133,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Johnny Dickshot"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 93,
+    "n_tokens": 1024,
+    "ppl": 9.508381399084275,
+    "prime_title": "Johnny Dickshot",
+    "source": "Wikipedia",
+    "target_title": "Johnny Dickshot"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 93,
+    "n_tokens": 1024,
+    "ppl": 9.831257068364183,
+    "prime_title": "International League",
+    "source": "Wikipedia",
+    "target_title": "Johnny Dickshot"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 93,
+    "n_tokens": 1024,
+    "ppl": 9.71604764995896,
+    "prime_title": "Pyrotechnic composition",
+    "source": "Wikipedia",
+    "target_title": "Johnny Dickshot"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 93,
+    "n_tokens": 1024,
+    "ppl": 9.757040715731923,
+    "prime_title": "RedPajamaArXiv#281",
+    "source": "Wikipedia",
+    "target_title": "Johnny Dickshot"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 94,
+    "n_tokens": 1024,
+    "ppl": 22.007524351427325,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Playing God (ethics)"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 94,
+    "n_tokens": 1024,
+    "ppl": 21.648241574564935,
+    "prime_title": "Playing God (ethics)",
+    "source": "Wikipedia",
+    "target_title": "Playing God (ethics)"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 94,
+    "n_tokens": 1024,
+    "ppl": 23.21608244310721,
+    "prime_title": "Artificial intelligence",
+    "source": "Wikipedia",
+    "target_title": "Playing God (ethics)"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 94,
+    "n_tokens": 1024,
+    "ppl": 22.60493206912206,
+    "prime_title": "Kiddie ride",
+    "source": "Wikipedia",
+    "target_title": "Playing God (ethics)"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 94,
+    "n_tokens": 1024,
+    "ppl": 22.295234993459278,
+    "prime_title": "RedPajamaArXiv#126",
+    "source": "Wikipedia",
+    "target_title": "Playing God (ethics)"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 95,
+    "n_tokens": 1024,
+    "ppl": 8.730319171337612,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "John Harbaugh"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 95,
+    "n_tokens": 1024,
+    "ppl": 8.713153531855703,
+    "prime_title": "John Harbaugh",
+    "source": "Wikipedia",
+    "target_title": "John Harbaugh"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 95,
+    "n_tokens": 1024,
+    "ppl": 8.967698147967468,
+    "prime_title": "Baltimore Ravens",
+    "source": "Wikipedia",
+    "target_title": "John Harbaugh"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 95,
+    "n_tokens": 1024,
+    "ppl": 8.838411705458194,
+    "prime_title": "Social psychology (sociology)",
+    "source": "Wikipedia",
+    "target_title": "John Harbaugh"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 95,
+    "n_tokens": 1024,
+    "ppl": 8.839448529115401,
+    "prime_title": "RedPajamaArXiv#480",
+    "source": "Wikipedia",
+    "target_title": "John Harbaugh"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 96,
+    "n_tokens": 1024,
+    "ppl": 13.703192197239524,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Hughie Ferguson"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 96,
+    "n_tokens": 1024,
+    "ppl": 13.27136835157575,
+    "prime_title": "Hughie Ferguson",
+    "source": "Wikipedia",
+    "target_title": "Hughie Ferguson"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 96,
+    "n_tokens": 1024,
+    "ppl": 13.395917022441129,
+    "prime_title": "Len Davies",
+    "source": "Wikipedia",
+    "target_title": "Hughie Ferguson"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 96,
+    "n_tokens": 1024,
+    "ppl": 14.178973124623376,
+    "prime_title": "2007 Isle of Man TT",
+    "source": "Wikipedia",
+    "target_title": "Hughie Ferguson"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 96,
+    "n_tokens": 1024,
+    "ppl": 13.82061855527624,
+    "prime_title": "RedPajamaArXiv#25",
+    "source": "Wikipedia",
+    "target_title": "Hughie Ferguson"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 97,
+    "n_tokens": 1024,
+    "ppl": 20.124277035475988,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "State banquet"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 97,
+    "n_tokens": 1024,
+    "ppl": 20.125850841515906,
+    "prime_title": "State banquet",
+    "source": "Wikipedia",
+    "target_title": "State banquet"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 97,
+    "n_tokens": 1024,
+    "ppl": 20.33182195189569,
+    "prime_title": "Buckingham Palace",
+    "source": "Wikipedia",
+    "target_title": "State banquet"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 97,
+    "n_tokens": 1024,
+    "ppl": 20.5746017077077,
+    "prime_title": "Altair",
+    "source": "Wikipedia",
+    "target_title": "State banquet"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 97,
+    "n_tokens": 1024,
+    "ppl": 20.19801795146383,
+    "prime_title": "RedPajamaArXiv#4",
+    "source": "Wikipedia",
+    "target_title": "State banquet"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 98,
+    "n_tokens": 1024,
+    "ppl": 35.99713493420871,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Imitation of Life (1934 film)"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 98,
+    "n_tokens": 1024,
+    "ppl": 36.62364027740043,
+    "prime_title": "Imitation of Life (1934 film)",
+    "source": "Wikipedia",
+    "target_title": "Imitation of Life (1934 film)"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 98,
+    "n_tokens": 1024,
+    "ppl": 36.90202226990197,
+    "prime_title": "Academy Awards",
+    "source": "Wikipedia",
+    "target_title": "Imitation of Life (1934 film)"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 98,
+    "n_tokens": 1024,
+    "ppl": 36.900042744261455,
+    "prime_title": "KVDT",
+    "source": "Wikipedia",
+    "target_title": "Imitation of Life (1934 film)"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 98,
+    "n_tokens": 1024,
+    "ppl": 36.32245246285805,
+    "prime_title": "RedPajamaArXiv#273",
+    "source": "Wikipedia",
+    "target_title": "Imitation of Life (1934 film)"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 99,
+    "n_tokens": 1024,
+    "ppl": 3.695027074325985,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "List of peers 1390\u20131399"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 99,
+    "n_tokens": 1024,
+    "ppl": 3.444900305575382,
+    "prime_title": "List of peers 1390\u20131399",
+    "source": "Wikipedia",
+    "target_title": "List of peers 1390\u20131399"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 99,
+    "n_tokens": 1024,
+    "ppl": 3.7132354886357417,
+    "prime_title": "Baron Latimer",
+    "source": "Wikipedia",
+    "target_title": "List of peers 1390\u20131399"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 99,
+    "n_tokens": 1024,
+    "ppl": 3.6868058360166898,
+    "prime_title": "Guinean forest\u2013savanna mosaic",
+    "source": "Wikipedia",
+    "target_title": "List of peers 1390\u20131399"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 99,
+    "n_tokens": 1024,
+    "ppl": 3.680701384930072,
+    "prime_title": "RedPajamaArXiv#358",
+    "source": "Wikipedia",
+    "target_title": "List of peers 1390\u20131399"
+  }
+]

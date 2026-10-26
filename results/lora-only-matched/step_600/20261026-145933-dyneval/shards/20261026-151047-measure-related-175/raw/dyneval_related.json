@@ -1,0 +1,1127 @@
+[
+  {
+    "arm": "reset",
+    "doc_idx": 175,
+    "n_tokens": 1024,
+    "ppl": 4.030438751125629,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Cox (surname)"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 175,
+    "n_tokens": 1024,
+    "ppl": 3.9684109698139403,
+    "prime_title": "Cox (surname)",
+    "source": "Wikipedia",
+    "target_title": "Cox (surname)"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 175,
+    "n_tokens": 1024,
+    "ppl": 4.043255330100539,
+    "prime_title": "New Zealand",
+    "source": "Wikipedia",
+    "target_title": "Cox (surname)"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 175,
+    "n_tokens": 1024,
+    "ppl": 4.036038622217156,
+    "prime_title": "Overlander (train)",
+    "source": "Wikipedia",
+    "target_title": "Cox (surname)"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 175,
+    "n_tokens": 1024,
+    "ppl": 4.033037947588041,
+    "prime_title": "RedPajamaArXiv#239",
+    "source": "Wikipedia",
+    "target_title": "Cox (surname)"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 176,
+    "n_tokens": 1024,
+    "ppl": 16.956504756982277,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Dudley Canal"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 176,
+    "n_tokens": 1024,
+    "ppl": 16.675252649863825,
+    "prime_title": "Dudley Canal",
+    "source": "Wikipedia",
+    "target_title": "Dudley Canal"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 176,
+    "n_tokens": 1024,
+    "ppl": 16.68117350324264,
+    "prime_title": "Stourbridge Canal",
+    "source": "Wikipedia",
+    "target_title": "Dudley Canal"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 176,
+    "n_tokens": 1024,
+    "ppl": 17.029381829185375,
+    "prime_title": "Neglect of probability",
+    "source": "Wikipedia",
+    "target_title": "Dudley Canal"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 176,
+    "n_tokens": 1024,
+    "ppl": 16.95893866459898,
+    "prime_title": "RedPajamaArXiv#33",
+    "source": "Wikipedia",
+    "target_title": "Dudley Canal"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 177,
+    "n_tokens": 1024,
+    "ppl": 17.160473557360906,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "List of people from Brighton and Hove"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 177,
+    "n_tokens": 1024,
+    "ppl": 16.800145202421945,
+    "prime_title": "List of people from Brighton and Hove",
+    "source": "Wikipedia",
+    "target_title": "List of people from Brighton and Hove"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 177,
+    "n_tokens": 1024,
+    "ppl": 17.173484971046786,
+    "prime_title": "British Army",
+    "source": "Wikipedia",
+    "target_title": "List of people from Brighton and Hove"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 177,
+    "n_tokens": 1024,
+    "ppl": 17.129876919015167,
+    "prime_title": "Constitution of Indonesia",
+    "source": "Wikipedia",
+    "target_title": "List of people from Brighton and Hove"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 177,
+    "n_tokens": 1024,
+    "ppl": 17.172035587040483,
+    "prime_title": "RedPajamaArXiv#41",
+    "source": "Wikipedia",
+    "target_title": "List of people from Brighton and Hove"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 178,
+    "n_tokens": 1024,
+    "ppl": 35.68801065721604,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Doug Benson"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 178,
+    "n_tokens": 1024,
+    "ppl": 35.23439323124041,
+    "prime_title": "Doug Benson",
+    "source": "Wikipedia",
+    "target_title": "Doug Benson"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 178,
+    "n_tokens": 1024,
+    "ppl": 35.67634715670538,
+    "prime_title": "Lego Batman",
+    "source": "Wikipedia",
+    "target_title": "Doug Benson"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 178,
+    "n_tokens": 1024,
+    "ppl": 35.77863239979375,
+    "prime_title": "Tarzan's Greatest Adventure",
+    "source": "Wikipedia",
+    "target_title": "Doug Benson"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 178,
+    "n_tokens": 1024,
+    "ppl": 35.66817391932749,
+    "prime_title": "RedPajamaArXiv#477",
+    "source": "Wikipedia",
+    "target_title": "Doug Benson"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 179,
+    "n_tokens": 1024,
+    "ppl": 23.070743551379845,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "No Good Advice"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 179,
+    "n_tokens": 1024,
+    "ppl": 22.891407536053993,
+    "prime_title": "No Good Advice",
+    "source": "Wikipedia",
+    "target_title": "No Good Advice"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 179,
+    "n_tokens": 1024,
+    "ppl": 22.752869013746782,
+    "prime_title": "Life Got Cold",
+    "source": "Wikipedia",
+    "target_title": "No Good Advice"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 179,
+    "n_tokens": 1024,
+    "ppl": 23.251057669898984,
+    "prime_title": "Pachaiyappa's College",
+    "source": "Wikipedia",
+    "target_title": "No Good Advice"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 179,
+    "n_tokens": 1024,
+    "ppl": 23.131604143117315,
+    "prime_title": "RedPajamaArXiv#281",
+    "source": "Wikipedia",
+    "target_title": "No Good Advice"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 180,
+    "n_tokens": 1024,
+    "ppl": 13.30549945407422,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Maryse Mizanin"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 180,
+    "n_tokens": 1024,
+    "ppl": 13.16624383694396,
+    "prime_title": "Maryse Mizanin",
+    "source": "Wikipedia",
+    "target_title": "Maryse Mizanin"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 180,
+    "n_tokens": 1024,
+    "ppl": 13.243167891718556,
+    "prime_title": "Kelly Kelly",
+    "source": "Wikipedia",
+    "target_title": "Maryse Mizanin"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 180,
+    "n_tokens": 1024,
+    "ppl": 13.284065790558097,
+    "prime_title": "Pedro P\u00e1ramo",
+    "source": "Wikipedia",
+    "target_title": "Maryse Mizanin"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 180,
+    "n_tokens": 1024,
+    "ppl": 13.357387810891456,
+    "prime_title": "RedPajamaArXiv#126",
+    "source": "Wikipedia",
+    "target_title": "Maryse Mizanin"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 181,
+    "n_tokens": 1024,
+    "ppl": 19.94249112623852,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Jack Davis (industrialist)"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 181,
+    "n_tokens": 1024,
+    "ppl": 19.847364017595698,
+    "prime_title": "Jack Davis (industrialist)",
+    "source": "Wikipedia",
+    "target_title": "Jack Davis (industrialist)"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 181,
+    "n_tokens": 1024,
+    "ppl": 19.92805169793239,
+    "prime_title": "Dick Cheney",
+    "source": "Wikipedia",
+    "target_title": "Jack Davis (industrialist)"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 181,
+    "n_tokens": 1024,
+    "ppl": 19.99470848527246,
+    "prime_title": "Toph Beifong",
+    "source": "Wikipedia",
+    "target_title": "Jack Davis (industrialist)"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 181,
+    "n_tokens": 1024,
+    "ppl": 19.924882887646753,
+    "prime_title": "RedPajamaArXiv#480",
+    "source": "Wikipedia",
+    "target_title": "Jack Davis (industrialist)"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 182,
+    "n_tokens": 1024,
+    "ppl": 12.840367848094074,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Joseph Smagorinsky"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 182,
+    "n_tokens": 1024,
+    "ppl": 12.718667462053993,
+    "prime_title": "Joseph Smagorinsky",
+    "source": "Wikipedia",
+    "target_title": "Joseph Smagorinsky"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 182,
+    "n_tokens": 1024,
+    "ppl": 12.932461467284973,
+    "prime_title": "Benjamin Franklin",
+    "source": "Wikipedia",
+    "target_title": "Joseph Smagorinsky"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 182,
+    "n_tokens": 1024,
+    "ppl": 12.822639387868609,
+    "prime_title": "Marine Wing Support Squadron 172",
+    "source": "Wikipedia",
+    "target_title": "Joseph Smagorinsky"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 182,
+    "n_tokens": 1024,
+    "ppl": 12.905885761128024,
+    "prime_title": "RedPajamaArXiv#25",
+    "source": "Wikipedia",
+    "target_title": "Joseph Smagorinsky"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 183,
+    "n_tokens": 1024,
+    "ppl": 12.473900317648726,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "North Dakota Fighting Hawks football"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 183,
+    "n_tokens": 1024,
+    "ppl": 12.182308072016093,
+    "prime_title": "North Dakota Fighting Hawks football",
+    "source": "Wikipedia",
+    "target_title": "North Dakota Fighting Hawks football"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 183,
+    "n_tokens": 1024,
+    "ppl": 12.360531908774437,
+    "prime_title": "North Dakota State Bison",
+    "source": "Wikipedia",
+    "target_title": "North Dakota Fighting Hawks football"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 183,
+    "n_tokens": 1024,
+    "ppl": 12.40773518811249,
+    "prime_title": "1934 FA Cup final",
+    "source": "Wikipedia",
+    "target_title": "North Dakota Fighting Hawks football"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 183,
+    "n_tokens": 1024,
+    "ppl": 12.476205388033096,
+    "prime_title": "RedPajamaArXiv#4",
+    "source": "Wikipedia",
+    "target_title": "North Dakota Fighting Hawks football"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 184,
+    "n_tokens": 1024,
+    "ppl": 12.936908406633046,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "List of Arizona hurricanes"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 184,
+    "n_tokens": 1024,
+    "ppl": 12.71981374829016,
+    "prime_title": "List of Arizona hurricanes",
+    "source": "Wikipedia",
+    "target_title": "List of Arizona hurricanes"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 184,
+    "n_tokens": 1024,
+    "ppl": 12.9451864973794,
+    "prime_title": "August 24",
+    "source": "Wikipedia",
+    "target_title": "List of Arizona hurricanes"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 184,
+    "n_tokens": 1024,
+    "ppl": 12.941211859296253,
+    "prime_title": "Younes Tsouli",
+    "source": "Wikipedia",
+    "target_title": "List of Arizona hurricanes"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 184,
+    "n_tokens": 1024,
+    "ppl": 12.930087514102308,
+    "prime_title": "RedPajamaArXiv#273",
+    "source": "Wikipedia",
+    "target_title": "List of Arizona hurricanes"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 185,
+    "n_tokens": 1024,
+    "ppl": 12.233024060952369,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Hispanic and Latino American Muslims"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 185,
+    "n_tokens": 1024,
+    "ppl": 12.145224932168814,
+    "prime_title": "Hispanic and Latino American Muslims",
+    "source": "Wikipedia",
+    "target_title": "Hispanic and Latino American Muslims"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 185,
+    "n_tokens": 1024,
+    "ppl": 12.269652705152767,
+    "prime_title": "African Americans",
+    "source": "Wikipedia",
+    "target_title": "Hispanic and Latino American Muslims"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 185,
+    "n_tokens": 1024,
+    "ppl": 12.23206746004614,
+    "prime_title": "Yeongdeungpo District",
+    "source": "Wikipedia",
+    "target_title": "Hispanic and Latino American Muslims"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 185,
+    "n_tokens": 1024,
+    "ppl": 12.266654625508474,
+    "prime_title": "RedPajamaArXiv#358",
+    "source": "Wikipedia",
+    "target_title": "Hispanic and Latino American Muslims"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 186,
+    "n_tokens": 1024,
+    "ppl": 14.492208556744899,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "2006 Michigan Wolverines football team"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 186,
+    "n_tokens": 1024,
+    "ppl": 14.055502472478253,
+    "prime_title": "2006 Michigan Wolverines football team",
+    "source": "Wikipedia",
+    "target_title": "2006 Michigan Wolverines football team"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 186,
+    "n_tokens": 1024,
+    "ppl": 14.58372425505331,
+    "prime_title": "Michigan Wolverines football",
+    "source": "Wikipedia",
+    "target_title": "2006 Michigan Wolverines football team"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 186,
+    "n_tokens": 1024,
+    "ppl": 14.512397587860294,
+    "prime_title": "Two Evil Eyes",
+    "source": "Wikipedia",
+    "target_title": "2006 Michigan Wolverines football team"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 186,
+    "n_tokens": 1024,
+    "ppl": 14.551545118659652,
+    "prime_title": "RedPajamaArXiv#262",
+    "source": "Wikipedia",
+    "target_title": "2006 Michigan Wolverines football team"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 187,
+    "n_tokens": 1024,
+    "ppl": 23.400121011253233,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Ghazanchetsots Cathedral"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 187,
+    "n_tokens": 1024,
+    "ppl": 23.037956425195915,
+    "prime_title": "Ghazanchetsots Cathedral",
+    "source": "Wikipedia",
+    "target_title": "Ghazanchetsots Cathedral"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 187,
+    "n_tokens": 1024,
+    "ppl": 23.227814379475415,
+    "prime_title": "Nagorno-Karabakh conflict",
+    "source": "Wikipedia",
+    "target_title": "Ghazanchetsots Cathedral"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 187,
+    "n_tokens": 1024,
+    "ppl": 23.47009152788643,
+    "prime_title": "Chris Denorfia",
+    "source": "Wikipedia",
+    "target_title": "Ghazanchetsots Cathedral"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 187,
+    "n_tokens": 1024,
+    "ppl": 23.351249658571717,
+    "prime_title": "RedPajamaArXiv#114",
+    "source": "Wikipedia",
+    "target_title": "Ghazanchetsots Cathedral"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 188,
+    "n_tokens": 1024,
+    "ppl": 21.81548209274807,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Jaani Dushman: Ek Anokhi Kahani"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 188,
+    "n_tokens": 1024,
+    "ppl": 21.470792955356153,
+    "prime_title": "Jaani Dushman: Ek Anokhi Kahani",
+    "source": "Wikipedia",
+    "target_title": "Jaani Dushman: Ek Anokhi Kahani"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 188,
+    "n_tokens": 1024,
+    "ppl": 22.006590404767113,
+    "prime_title": "Aditya Pancholi",
+    "source": "Wikipedia",
+    "target_title": "Jaani Dushman: Ek Anokhi Kahani"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 188,
+    "n_tokens": 1024,
+    "ppl": 21.82766674268247,
+    "prime_title": "Cathy Hughes",
+    "source": "Wikipedia",
+    "target_title": "Jaani Dushman: Ek Anokhi Kahani"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 188,
+    "n_tokens": 1024,
+    "ppl": 21.712642349470105,
+    "prime_title": "RedPajamaArXiv#457",
+    "source": "Wikipedia",
+    "target_title": "Jaani Dushman: Ek Anokhi Kahani"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 189,
+    "n_tokens": 1024,
+    "ppl": 13.974113109962584,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Anwar al-Awlaki"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 189,
+    "n_tokens": 1024,
+    "ppl": 13.90391145717484,
+    "prime_title": "Anwar al-Awlaki",
+    "source": "Wikipedia",
+    "target_title": "Anwar al-Awlaki"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 189,
+    "n_tokens": 1024,
+    "ppl": 14.05092227487103,
+    "prime_title": "September 11 attacks",
+    "source": "Wikipedia",
+    "target_title": "Anwar al-Awlaki"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 189,
+    "n_tokens": 1024,
+    "ppl": 14.01004818044494,
+    "prime_title": "Year zero",
+    "source": "Wikipedia",
+    "target_title": "Anwar al-Awlaki"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 189,
+    "n_tokens": 1024,
+    "ppl": 14.021282622334832,
+    "prime_title": "RedPajamaArXiv#103",
+    "source": "Wikipedia",
+    "target_title": "Anwar al-Awlaki"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 190,
+    "n_tokens": 1024,
+    "ppl": 10.914413625502576,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "1980\u201381 in English football"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 190,
+    "n_tokens": 1024,
+    "ppl": 10.502221631079253,
+    "prime_title": "1980\u201381 in English football",
+    "source": "Wikipedia",
+    "target_title": "1980\u201381 in English football"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 190,
+    "n_tokens": 1024,
+    "ppl": 10.95017164135549,
+    "prime_title": "AZ Alkmaar",
+    "source": "Wikipedia",
+    "target_title": "1980\u201381 in English football"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 190,
+    "n_tokens": 1024,
+    "ppl": 10.96730877838436,
+    "prime_title": "Anne McLaren",
+    "source": "Wikipedia",
+    "target_title": "1980\u201381 in English football"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 190,
+    "n_tokens": 1024,
+    "ppl": 10.876824682786555,
+    "prime_title": "RedPajamaArXiv#60",
+    "source": "Wikipedia",
+    "target_title": "1980\u201381 in English football"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 191,
+    "n_tokens": 1024,
+    "ppl": 19.75041615874953,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Ethnic minorities in the U.S. Armed Forces during World War II"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 191,
+    "n_tokens": 1024,
+    "ppl": 19.59884317689648,
+    "prime_title": "Ethnic minorities in the U.S. Armed Forces during World War II",
+    "source": "Wikipedia",
+    "target_title": "Ethnic minorities in the U.S. Armed Forces during World War II"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 191,
+    "n_tokens": 1024,
+    "ppl": 19.726627178514086,
+    "prime_title": "African Americans",
+    "source": "Wikipedia",
+    "target_title": "Ethnic minorities in the U.S. Armed Forces during World War II"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 191,
+    "n_tokens": 1024,
+    "ppl": 19.754178901192308,
+    "prime_title": "Ferret-legging",
+    "source": "Wikipedia",
+    "target_title": "Ethnic minorities in the U.S. Armed Forces during World War II"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 191,
+    "n_tokens": 1024,
+    "ppl": 19.746296330608455,
+    "prime_title": "RedPajamaArXiv#292",
+    "source": "Wikipedia",
+    "target_title": "Ethnic minorities in the U.S. Armed Forces during World War II"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 192,
+    "n_tokens": 1024,
+    "ppl": 11.319088465377282,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "C++11"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 192,
+    "n_tokens": 1024,
+    "ppl": 11.317272398774946,
+    "prime_title": "C++11",
+    "source": "Wikipedia",
+    "target_title": "C++11"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 192,
+    "n_tokens": 1024,
+    "ppl": 11.297430707262949,
+    "prime_title": "Bjarne Stroustrup",
+    "source": "Wikipedia",
+    "target_title": "C++11"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 192,
+    "n_tokens": 1024,
+    "ppl": 11.292984585192842,
+    "prime_title": "Counter-Guerrilla",
+    "source": "Wikipedia",
+    "target_title": "C++11"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 192,
+    "n_tokens": 1024,
+    "ppl": 11.30881115934009,
+    "prime_title": "RedPajamaBook#13",
+    "source": "Wikipedia",
+    "target_title": "C++11"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 193,
+    "n_tokens": 1024,
+    "ppl": 18.788884549562844,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Pennsylvania Route 115"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 193,
+    "n_tokens": 1024,
+    "ppl": 18.471931701695343,
+    "prime_title": "Pennsylvania Route 115",
+    "source": "Wikipedia",
+    "target_title": "Pennsylvania Route 115"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 193,
+    "n_tokens": 1024,
+    "ppl": 18.858937193742,
+    "prime_title": "American Revolutionary War",
+    "source": "Wikipedia",
+    "target_title": "Pennsylvania Route 115"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 193,
+    "n_tokens": 1024,
+    "ppl": 18.844801564464916,
+    "prime_title": "Battle Fever J",
+    "source": "Wikipedia",
+    "target_title": "Pennsylvania Route 115"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 193,
+    "n_tokens": 1024,
+    "ppl": 18.8465404166483,
+    "prime_title": "RedPajamaBook#464",
+    "source": "Wikipedia",
+    "target_title": "Pennsylvania Route 115"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 194,
+    "n_tokens": 1024,
+    "ppl": 17.98466933657951,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Chris Lytle"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 194,
+    "n_tokens": 1024,
+    "ppl": 17.635838822885383,
+    "prime_title": "Chris Lytle",
+    "source": "Wikipedia",
+    "target_title": "Chris Lytle"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 194,
+    "n_tokens": 1024,
+    "ppl": 17.811735541341946,
+    "prime_title": "The Ultimate Fighter 4",
+    "source": "Wikipedia",
+    "target_title": "Chris Lytle"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 194,
+    "n_tokens": 1024,
+    "ppl": 17.99832712762662,
+    "prime_title": "Jason Dunham",
+    "source": "Wikipedia",
+    "target_title": "Chris Lytle"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 194,
+    "n_tokens": 1024,
+    "ppl": 17.94210255806596,
+    "prime_title": "RedPajamaBook#263",
+    "source": "Wikipedia",
+    "target_title": "Chris Lytle"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 195,
+    "n_tokens": 1024,
+    "ppl": 9.035154275271113,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Official Secrets Act 1911"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 195,
+    "n_tokens": 1024,
+    "ppl": 8.967871332973598,
+    "prime_title": "Official Secrets Act 1911",
+    "source": "Wikipedia",
+    "target_title": "Official Secrets Act 1911"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 195,
+    "n_tokens": 1024,
+    "ppl": 8.9684122903953,
+    "prime_title": "Official Secrets Act 1989",
+    "source": "Wikipedia",
+    "target_title": "Official Secrets Act 1911"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 195,
+    "n_tokens": 1024,
+    "ppl": 9.082507642244561,
+    "prime_title": "Vinti\u00f6t",
+    "source": "Wikipedia",
+    "target_title": "Official Secrets Act 1911"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 195,
+    "n_tokens": 1024,
+    "ppl": 9.067375185097827,
+    "prime_title": "RedPajamaBook#94",
+    "source": "Wikipedia",
+    "target_title": "Official Secrets Act 1911"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 196,
+    "n_tokens": 1024,
+    "ppl": 18.831152432310077,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Elif Shafak"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 196,
+    "n_tokens": 1024,
+    "ppl": 18.647753787188424,
+    "prime_title": "Elif Shafak",
+    "source": "Wikipedia",
+    "target_title": "Elif Shafak"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 196,
+    "n_tokens": 1024,
+    "ppl": 18.770330175206784,
+    "prime_title": "Booker Prize",
+    "source": "Wikipedia",
+    "target_title": "Elif Shafak"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 196,
+    "n_tokens": 1024,
+    "ppl": 18.844509524925012,
+    "prime_title": "Environment, health and safety",
+    "source": "Wikipedia",
+    "target_title": "Elif Shafak"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 196,
+    "n_tokens": 1024,
+    "ppl": 18.92900731779411,
+    "prime_title": "RedPajamaBook#125",
+    "source": "Wikipedia",
+    "target_title": "Elif Shafak"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 197,
+    "n_tokens": 1024,
+    "ppl": 12.334566851067743,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Uniform Certified Public Accountant Examination"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 197,
+    "n_tokens": 1024,
+    "ppl": 12.215606988366032,
+    "prime_title": "Uniform Certified Public Accountant Examination",
+    "source": "Wikipedia",
+    "target_title": "Uniform Certified Public Accountant Examination"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 197,
+    "n_tokens": 1024,
+    "ppl": 12.258535703864176,
+    "prime_title": "April 1",
+    "source": "Wikipedia",
+    "target_title": "Uniform Certified Public Accountant Examination"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 197,
+    "n_tokens": 1024,
+    "ppl": 12.29999640882901,
+    "prime_title": "Kevin Levrone",
+    "source": "Wikipedia",
+    "target_title": "Uniform Certified Public Accountant Examination"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 197,
+    "n_tokens": 1024,
+    "ppl": 12.332476126657308,
+    "prime_title": "RedPajamaBook#138",
+    "source": "Wikipedia",
+    "target_title": "Uniform Certified Public Accountant Examination"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 198,
+    "n_tokens": 1024,
+    "ppl": 19.56252770991964,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Hawkesbury River railway bridge"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 198,
+    "n_tokens": 1024,
+    "ppl": 19.25164555488697,
+    "prime_title": "Hawkesbury River railway bridge",
+    "source": "Wikipedia",
+    "target_title": "Hawkesbury River railway bridge"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 198,
+    "n_tokens": 1024,
+    "ppl": 19.471575884764736,
+    "prime_title": "John Whitton",
+    "source": "Wikipedia",
+    "target_title": "Hawkesbury River railway bridge"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 198,
+    "n_tokens": 1024,
+    "ppl": 19.60328277158154,
+    "prime_title": "Germany\u2013Russia relations",
+    "source": "Wikipedia",
+    "target_title": "Hawkesbury River railway bridge"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 198,
+    "n_tokens": 1024,
+    "ppl": 19.53294258708736,
+    "prime_title": "RedPajamaC4#483",
+    "source": "Wikipedia",
+    "target_title": "Hawkesbury River railway bridge"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 199,
+    "n_tokens": 1024,
+    "ppl": 7.6076353428288215,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "HC CSKA Moscow"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 199,
+    "n_tokens": 1024,
+    "ppl": 7.617151050878124,
+    "prime_title": "HC CSKA Moscow",
+    "source": "Wikipedia",
+    "target_title": "HC CSKA Moscow"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 199,
+    "n_tokens": 1024,
+    "ppl": 7.60485347990306,
+    "prime_title": "Avangard Omsk",
+    "source": "Wikipedia",
+    "target_title": "HC CSKA Moscow"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 199,
+    "n_tokens": 1024,
+    "ppl": 7.581751183000773,
+    "prime_title": "Nerve (category theory)",
+    "source": "Wikipedia",
+    "target_title": "HC CSKA Moscow"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 199,
+    "n_tokens": 1024,
+    "ppl": 7.621874297528475,
+    "prime_title": "RedPajamaC4#403",
+    "source": "Wikipedia",
+    "target_title": "HC CSKA Moscow"
+  }
+]

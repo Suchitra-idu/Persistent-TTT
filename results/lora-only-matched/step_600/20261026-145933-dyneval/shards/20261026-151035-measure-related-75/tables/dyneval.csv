@@ -1,0 +1,15 @@
+measure,source,n_docs,delta_ppl,ci_low,ci_high,excludes_zero,reference_ppl,relative,win_rate
+dyneval_related_gain_self,Wikipedia,25,0.233359,0.189181,0.278168,1,17.7362,0.0131572,1.0000
+dyneval_related_gain_self,ALL,25,0.233359,0.18333,0.280507,1,17.7362,0.0131572,1.0000
+dyneval_related_gain_related,Wikipedia,25,0.0566695,0.011131,0.105774,1,17.7362,0.00319514,0.6400
+dyneval_related_gain_related,ALL,25,0.0566695,0.0104967,0.112326,1,17.7362,0.00319514,0.6400
+dyneval_related_gain_random,Wikipedia,25,-0.027148,-0.0553411,-0.00119354,1,17.7362,-0.00153066,0.3600
+dyneval_related_gain_random,ALL,25,-0.027148,-0.0572523,-0.00161763,1,17.7362,-0.00153066,0.3600
+dyneval_related_gain_other_source,Wikipedia,25,-0.0132712,-0.0280583,0.000917467,0,17.7362,-0.000748256,0.3200
+dyneval_related_gain_other_source,ALL,25,-0.0132712,-0.0295192,0.00123417,0,17.7362,-0.000748256,0.3200
+dyneval_related_self_vs_related,Wikipedia,25,0.176689,0.12618,0.232141,1,17.6795,0.00999402,0.9200
+dyneval_related_self_vs_related,ALL,25,0.176689,0.126184,0.233361,1,17.6795,0.00999402,0.9200
+dyneval_related_related_vs_random,Wikipedia,25,0.0838175,0.0339263,0.147118,1,17.7633,0.00471858,0.7200
+dyneval_related_related_vs_random,ALL,25,0.0838175,0.0342035,0.147082,1,17.7633,0.00471858,0.7200
+dyneval_related_random_vs_other_source,Wikipedia,25,-0.0138768,-0.0443282,0.0116491,0,17.7494,-0.000781818,0.4000
+dyneval_related_random_vs_other_source,ALL,25,-0.0138768,-0.0416348,0.0118461,0,17.7494,-0.000781818,0.4000

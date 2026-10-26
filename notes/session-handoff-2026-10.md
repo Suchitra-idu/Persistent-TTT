@@ -117,3 +117,14 @@ Budget estimate about 8 GPU-hours, about $32-40 total.
 All planned experiments are done: relatedness (4c), ablation (4d), second seed (4e).
 Thesis zip v8 includes all three. Modal workspace in use switched to `vihanganoob123`
 for the seed-43 run; its checkpoints live on that workspace's volume.
+
+## Status 2026-10-26
+
+- Dynamic-evaluation baseline done (FINDINGS 4f): carry transfers more to related and random
+  articles, dyneval fits the same document more. Run sharded (`--dyneval-grid`, `--dyneval-fixed`,
+  `--case-slice`, `--tag`, `merge_bundles_v1`) after a preemption lost a single-container run.
+- Repeat suite on the carry design: no accumulation.
+- Thesis reframed: subtitle "A Carried Fast Weight Transfers to Related Documents and Hurts
+  Unrelated Ones"; abstract, contributions, conclusion lead with cross-document transfer.
+- `lora-only-matched/step_600` and `hebbian-carry-600/step_600` copied to the vihanganoob123
+  volume (sha256 verified).

@@ -51,6 +51,8 @@ ROW_TYPES = {
     "swap": swap_eval.SwapRow,
     "context": context_eval.ContextRow,
     "relatedness": relatedness_eval.RelatedRow,
+    "dyneval_self": relatedness_eval.RelatedRow,
+    "dyneval_related": relatedness_eval.RelatedRow,
 }
 
 
@@ -84,12 +86,14 @@ class Paper:
     clip_threshold: float = float("nan")
 
 
-def newest_bundle(results: Path, run: str, step: int) -> Bundle:
+def newest_bundle(results: Path, run: str, step: int, needs: str = "regimes") -> Bundle:
+    """The newest bundle at that step holding `needs`; a step can carry bundles
+    of different suites, and a newer one need not have the regimes."""
     folder = results / run / f"step_{step}"
-    stamps = sorted(folder.glob("*/manifest.json"))
+    stamps = sorted(folder.glob(f"*/raw/{needs}.json"))
     if not stamps:
-        raise FileNotFoundError(f"no paper_eval bundle under {folder}")
-    return Bundle(run=run, step=step, path=stamps[-1].parent)
+        raise FileNotFoundError(f"no paper_eval bundle with {needs} under {folder}")
+    return Bundle(run=run, step=step, path=stamps[-1].parent.parent)
 
 
 def analyse(

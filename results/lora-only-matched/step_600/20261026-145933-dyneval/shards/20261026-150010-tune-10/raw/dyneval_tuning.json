@@ -1,0 +1,1202 @@
+[
+  {
+    "arm": "reset",
+    "doc_idx": 200,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 17.37334398284366,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "self",
+    "doc_idx": 200,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 21.03686407609023,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "related",
+    "doc_idx": 200,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 21.466421743681188,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 201,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 13.313911822007451,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "self",
+    "doc_idx": 201,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 17.5348878152372,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "related",
+    "doc_idx": 201,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 16.7028906716339,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 202,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 18.500020057144457,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "self",
+    "doc_idx": 202,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 26.29294623541565,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "related",
+    "doc_idx": 202,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 20.601382806530186,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 203,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 18.251952844241487,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "self",
+    "doc_idx": 203,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 22.60493745855849,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "related",
+    "doc_idx": 203,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 24.577610119338654,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 204,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 26.074553150710052,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "self",
+    "doc_idx": 204,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 38.73738050810099,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "related",
+    "doc_idx": 204,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 35.272266377493104,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 205,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 15.190159424169677,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "self",
+    "doc_idx": 205,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 22.08893488919028,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "related",
+    "doc_idx": 205,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 18.570080390486247,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 206,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 21.229293851114413,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "self",
+    "doc_idx": 206,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 28.114738363915595,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "related",
+    "doc_idx": 206,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 27.303091070274302,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 207,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 22.358399188257597,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "self",
+    "doc_idx": 207,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 29.951532104683686,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "related",
+    "doc_idx": 207,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 30.624581320041198,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 208,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 12.985523292127402,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "self",
+    "doc_idx": 208,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 18.259073458087467,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "related",
+    "doc_idx": 208,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 14.401648264027514,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 209,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 24.61194883327476,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "self",
+    "doc_idx": 209,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 35.273098934118174,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "related",
+    "doc_idx": 209,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 32.56213158432554,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 210,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 18.727819278460846,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "self",
+    "doc_idx": 210,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 21.173806865562806,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "related",
+    "doc_idx": 210,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 26.262441513510307,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 211,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 26.049449944525694,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "self",
+    "doc_idx": 211,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 29.000827157856136,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "related",
+    "doc_idx": 211,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 34.9409397575649,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 212,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 28.44781444609915,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "self",
+    "doc_idx": 212,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 32.258738786799114,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "related",
+    "doc_idx": 212,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 37.512593542796616,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 213,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 9.246673881476443,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "self",
+    "doc_idx": 213,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 11.050425342468488,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "related",
+    "doc_idx": 213,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 12.988433848874164,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 214,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 16.71485772408045,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "self",
+    "doc_idx": 214,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 21.09701648884169,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "related",
+    "doc_idx": 214,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 20.98890468762803,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 215,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 14.286845081847005,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "self",
+    "doc_idx": 215,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 19.03409948735094,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "related",
+    "doc_idx": 215,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 16.377558725482125,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 216,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 28.84981846724613,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "self",
+    "doc_idx": 216,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 42.117868405285,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "related",
+    "doc_idx": 216,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 37.49421874257195,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 217,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 14.038228158988465,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "self",
+    "doc_idx": 217,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 19.311011514051597,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "related",
+    "doc_idx": 217,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 18.973273121206706,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 218,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 15.523268439174437,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "self",
+    "doc_idx": 218,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 21.023065729252256,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "related",
+    "doc_idx": 218,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 20.50130902561292,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 219,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 15.30014215718769,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "self",
+    "doc_idx": 219,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 20.218234247192743,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "related",
+    "doc_idx": 219,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 17.982744181815534,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 220,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 14.192521999577068,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "self",
+    "doc_idx": 220,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 18.12224636503171,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "related",
+    "doc_idx": 220,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 18.771681732889697,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 221,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 17.21187669987541,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "self",
+    "doc_idx": 221,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 23.265375352435914,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "related",
+    "doc_idx": 221,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 21.76053813521642,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 222,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 22.519310984584987,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "self",
+    "doc_idx": 222,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 31.353154504996024,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "related",
+    "doc_idx": 222,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 29.021238543013254,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 223,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 11.43175954293214,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "self",
+    "doc_idx": 223,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 14.344160889308807,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "related",
+    "doc_idx": 223,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 16.618758592542488,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 224,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 11.828559691722448,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "self",
+    "doc_idx": 224,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 12.926829433492394,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "related",
+    "doc_idx": 224,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 13.35781456073094,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 225,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 16.652821005013873,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "self",
+    "doc_idx": 225,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 20.287283646664907,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "related",
+    "doc_idx": 225,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 21.073469490841507,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 226,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 16.851565807128793,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "self",
+    "doc_idx": 226,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 20.577020195921136,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "related",
+    "doc_idx": 226,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 23.336244847183007,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 227,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 14.221004587515388,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "self",
+    "doc_idx": 227,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 19.728569693445642,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "related",
+    "doc_idx": 227,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 20.561954654047025,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 228,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 26.35691478890118,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "self",
+    "doc_idx": 228,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 37.91666626290931,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "related",
+    "doc_idx": 228,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 31.69781675879255,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 229,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 15.905708896284098,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "self",
+    "doc_idx": 229,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 25.051224498488093,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "related",
+    "doc_idx": 229,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 20.149693692533784,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 230,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 41.64371819865573,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "self",
+    "doc_idx": 230,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 52.93246154148583,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "related",
+    "doc_idx": 230,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 45.60112835242454,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 231,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 29.385343366343367,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "self",
+    "doc_idx": 231,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 37.88098395440272,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "related",
+    "doc_idx": 231,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 43.23035504296348,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 232,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 26.61302929438264,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "self",
+    "doc_idx": 232,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 38.34955103635857,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "related",
+    "doc_idx": 232,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 34.142114268774314,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 233,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 3.3581416932327923,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "self",
+    "doc_idx": 233,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 3.2267110584930823,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "related",
+    "doc_idx": 233,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 3.3985993793740543,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 234,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 10.552638597645295,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "self",
+    "doc_idx": 234,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 14.83011694478764,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "related",
+    "doc_idx": 234,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 14.081003938235634,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 235,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 23.387839225517745,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "self",
+    "doc_idx": 235,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 27.87329063135999,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "related",
+    "doc_idx": 235,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 32.011973064116034,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 236,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 18.899776469516762,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "self",
+    "doc_idx": 236,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 21.73045231200155,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "related",
+    "doc_idx": 236,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 25.74575595827303,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 237,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 25.598040417989473,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "self",
+    "doc_idx": 237,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 26.88162240315491,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "related",
+    "doc_idx": 237,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 30.06630740563139,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 238,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 20.217077383647712,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "self",
+    "doc_idx": 238,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 24.06993415516979,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "related",
+    "doc_idx": 238,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 28.537341427378,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 239,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 25.17871207248449,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "self",
+    "doc_idx": 239,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 31.887033364011504,
+    "source": "Wikipedia",
+    "steps": 10
+  },
+  {
+    "arm": "related",
+    "doc_idx": 239,
+    "lr": 0.0001,
+    "n_tokens": 1024,
+    "optimizer": "adam",
+    "ppl": 33.50715649524685,
+    "source": "Wikipedia",
+    "steps": 10
+  }
+]

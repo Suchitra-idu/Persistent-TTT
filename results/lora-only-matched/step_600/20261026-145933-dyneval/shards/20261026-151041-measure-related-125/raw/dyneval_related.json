@@ -1,0 +1,1127 @@
+[
+  {
+    "arm": "reset",
+    "doc_idx": 125,
+    "n_tokens": 1024,
+    "ppl": 23.218689642970354,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Books and publishing in Pakistan"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 125,
+    "n_tokens": 1024,
+    "ppl": 23.187494427678658,
+    "prime_title": "Books and publishing in Pakistan",
+    "source": "Wikipedia",
+    "target_title": "Books and publishing in Pakistan"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 125,
+    "n_tokens": 1024,
+    "ppl": 23.302769274620267,
+    "prime_title": "Almost all",
+    "source": "Wikipedia",
+    "target_title": "Books and publishing in Pakistan"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 125,
+    "n_tokens": 1024,
+    "ppl": 23.147056829017703,
+    "prime_title": "Penn State Greater Allegheny",
+    "source": "Wikipedia",
+    "target_title": "Books and publishing in Pakistan"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 125,
+    "n_tokens": 1024,
+    "ppl": 23.35483532125472,
+    "prime_title": "RedPajamaC4#293",
+    "source": "Wikipedia",
+    "target_title": "Books and publishing in Pakistan"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 126,
+    "n_tokens": 1024,
+    "ppl": 14.98066198062394,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Latvian Legion"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 126,
+    "n_tokens": 1024,
+    "ppl": 14.759974453286006,
+    "prime_title": "Latvian Legion",
+    "source": "Wikipedia",
+    "target_title": "Latvian Legion"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 126,
+    "n_tokens": 1024,
+    "ppl": 14.838290373272732,
+    "prime_title": "Courland Pocket",
+    "source": "Wikipedia",
+    "target_title": "Latvian Legion"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 126,
+    "n_tokens": 1024,
+    "ppl": 15.004582661454142,
+    "prime_title": "Amlikon-Bissegg",
+    "source": "Wikipedia",
+    "target_title": "Latvian Legion"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 126,
+    "n_tokens": 1024,
+    "ppl": 14.975209036042765,
+    "prime_title": "RedPajamaC4#393",
+    "source": "Wikipedia",
+    "target_title": "Latvian Legion"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 127,
+    "n_tokens": 1024,
+    "ppl": 8.605060201278594,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "List of carillons"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 127,
+    "n_tokens": 1024,
+    "ppl": 8.448541847559222,
+    "prime_title": "List of carillons",
+    "source": "Wikipedia",
+    "target_title": "List of carillons"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 127,
+    "n_tokens": 1024,
+    "ppl": 8.561432977291256,
+    "prime_title": "Czech Republic",
+    "source": "Wikipedia",
+    "target_title": "List of carillons"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 127,
+    "n_tokens": 1024,
+    "ppl": 8.63622912319858,
+    "prime_title": "Bussnang",
+    "source": "Wikipedia",
+    "target_title": "List of carillons"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 127,
+    "n_tokens": 1024,
+    "ppl": 8.597489003820762,
+    "prime_title": "RedPajamaC4#115",
+    "source": "Wikipedia",
+    "target_title": "List of carillons"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 128,
+    "n_tokens": 1024,
+    "ppl": 23.606439321861384,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Nancy Thompson (A Nightmare on Elm Street)"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 128,
+    "n_tokens": 1024,
+    "ppl": 23.660616670993377,
+    "prime_title": "Nancy Thompson (A Nightmare on Elm Street)",
+    "source": "Wikipedia",
+    "target_title": "Nancy Thompson (A Nightmare on Elm Street)"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 128,
+    "n_tokens": 1024,
+    "ppl": 23.43730682370741,
+    "prime_title": "Kristen Parker",
+    "source": "Wikipedia",
+    "target_title": "Nancy Thompson (A Nightmare on Elm Street)"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 128,
+    "n_tokens": 1024,
+    "ppl": 23.70492405663817,
+    "prime_title": "\u00c7aykara",
+    "source": "Wikipedia",
+    "target_title": "Nancy Thompson (A Nightmare on Elm Street)"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 128,
+    "n_tokens": 1024,
+    "ppl": 23.648829644974942,
+    "prime_title": "RedPajamaC4#341",
+    "source": "Wikipedia",
+    "target_title": "Nancy Thompson (A Nightmare on Elm Street)"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 129,
+    "n_tokens": 1024,
+    "ppl": 22.195615337231654,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Philadelphia campaign"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 129,
+    "n_tokens": 1024,
+    "ppl": 21.705359957841658,
+    "prime_title": "Philadelphia campaign",
+    "source": "Wikipedia",
+    "target_title": "Philadelphia campaign"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 129,
+    "n_tokens": 1024,
+    "ppl": 22.09141024173862,
+    "prime_title": "American Revolution",
+    "source": "Wikipedia",
+    "target_title": "Philadelphia campaign"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 129,
+    "n_tokens": 1024,
+    "ppl": 22.19487449100599,
+    "prime_title": "KFDM",
+    "source": "Wikipedia",
+    "target_title": "Philadelphia campaign"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 129,
+    "n_tokens": 1024,
+    "ppl": 22.293135431016424,
+    "prime_title": "RedPajamaC4#51",
+    "source": "Wikipedia",
+    "target_title": "Philadelphia campaign"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 130,
+    "n_tokens": 1024,
+    "ppl": 5.109448513956666,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "List of Statutory Instruments of the Welsh Assembly, 2000"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 130,
+    "n_tokens": 1024,
+    "ppl": 4.886608472316694,
+    "prime_title": "List of Statutory Instruments of the Welsh Assembly, 2000",
+    "source": "Wikipedia",
+    "target_title": "List of Statutory Instruments of the Welsh Assembly, 2000"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 130,
+    "n_tokens": 1024,
+    "ppl": 5.1036033419559494,
+    "prime_title": "Best Value",
+    "source": "Wikipedia",
+    "target_title": "List of Statutory Instruments of the Welsh Assembly, 2000"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 130,
+    "n_tokens": 1024,
+    "ppl": 5.107113173374026,
+    "prime_title": "Mad Tea Party",
+    "source": "Wikipedia",
+    "target_title": "List of Statutory Instruments of the Welsh Assembly, 2000"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 130,
+    "n_tokens": 1024,
+    "ppl": 5.108502069972038,
+    "prime_title": "RedPajamaC4#349",
+    "source": "Wikipedia",
+    "target_title": "List of Statutory Instruments of the Welsh Assembly, 2000"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 131,
+    "n_tokens": 1024,
+    "ppl": 26.439369895074183,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Nubia (character)"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 131,
+    "n_tokens": 1024,
+    "ppl": 26.06823779119654,
+    "prime_title": "Nubia (character)",
+    "source": "Wikipedia",
+    "target_title": "Nubia (character)"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 131,
+    "n_tokens": 1024,
+    "ppl": 26.513895470490734,
+    "prime_title": "January 1973",
+    "source": "Wikipedia",
+    "target_title": "Nubia (character)"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 131,
+    "n_tokens": 1024,
+    "ppl": 26.470092747252387,
+    "prime_title": "Minna no Uta",
+    "source": "Wikipedia",
+    "target_title": "Nubia (character)"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 131,
+    "n_tokens": 1024,
+    "ppl": 26.580099887673462,
+    "prime_title": "RedPajamaC4#198",
+    "source": "Wikipedia",
+    "target_title": "Nubia (character)"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 132,
+    "n_tokens": 1024,
+    "ppl": 14.217834774991804,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "April 6"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 132,
+    "n_tokens": 1024,
+    "ppl": 14.124519572253481,
+    "prime_title": "April 6",
+    "source": "Wikipedia",
+    "target_title": "April 6"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 132,
+    "n_tokens": 1024,
+    "ppl": 14.171858893019692,
+    "prime_title": "New Zealand",
+    "source": "Wikipedia",
+    "target_title": "April 6"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 132,
+    "n_tokens": 1024,
+    "ppl": 14.197798263383932,
+    "prime_title": "Come and See",
+    "source": "Wikipedia",
+    "target_title": "April 6"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 132,
+    "n_tokens": 1024,
+    "ppl": 14.250339339894834,
+    "prime_title": "RedPajamaGithub#141",
+    "source": "Wikipedia",
+    "target_title": "April 6"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 133,
+    "n_tokens": 1024,
+    "ppl": 19.681457756993588,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Jump (For My Love)"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 133,
+    "n_tokens": 1024,
+    "ppl": 19.635244784765817,
+    "prime_title": "Jump (For My Love)",
+    "source": "Wikipedia",
+    "target_title": "Jump (For My Love)"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 133,
+    "n_tokens": 1024,
+    "ppl": 19.707804573769046,
+    "prime_title": "Anita Pointer",
+    "source": "Wikipedia",
+    "target_title": "Jump (For My Love)"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 133,
+    "n_tokens": 1024,
+    "ppl": 19.75974662585698,
+    "prime_title": "God in Abrahamic religions",
+    "source": "Wikipedia",
+    "target_title": "Jump (For My Love)"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 133,
+    "n_tokens": 1024,
+    "ppl": 19.725244487814372,
+    "prime_title": "RedPajamaGithub#124",
+    "source": "Wikipedia",
+    "target_title": "Jump (For My Love)"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 134,
+    "n_tokens": 1024,
+    "ppl": 19.202353035750836,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Georgia Frontiere"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 134,
+    "n_tokens": 1024,
+    "ppl": 19.035283963854976,
+    "prime_title": "Georgia Frontiere",
+    "source": "Wikipedia",
+    "target_title": "Georgia Frontiere"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 134,
+    "n_tokens": 1024,
+    "ppl": 19.37545655723049,
+    "prime_title": "Stan Kroenke",
+    "source": "Wikipedia",
+    "target_title": "Georgia Frontiere"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 134,
+    "n_tokens": 1024,
+    "ppl": 19.22892953505266,
+    "prime_title": "Homoiconicity",
+    "source": "Wikipedia",
+    "target_title": "Georgia Frontiere"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 134,
+    "n_tokens": 1024,
+    "ppl": 19.248093261376624,
+    "prime_title": "RedPajamaGithub#471",
+    "source": "Wikipedia",
+    "target_title": "Georgia Frontiere"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 135,
+    "n_tokens": 1024,
+    "ppl": 21.121168892857206,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Aniconism in Christianity"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 135,
+    "n_tokens": 1024,
+    "ppl": 20.97767338852195,
+    "prime_title": "Aniconism in Christianity",
+    "source": "Wikipedia",
+    "target_title": "Aniconism in Christianity"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 135,
+    "n_tokens": 1024,
+    "ppl": 20.999150672136476,
+    "prime_title": "Bernard of Clairvaux",
+    "source": "Wikipedia",
+    "target_title": "Aniconism in Christianity"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 135,
+    "n_tokens": 1024,
+    "ppl": 21.10460297297146,
+    "prime_title": "Apical ectodermal ridge",
+    "source": "Wikipedia",
+    "target_title": "Aniconism in Christianity"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 135,
+    "n_tokens": 1024,
+    "ppl": 21.119084224605164,
+    "prime_title": "RedPajamaGithub#15",
+    "source": "Wikipedia",
+    "target_title": "Aniconism in Christianity"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 136,
+    "n_tokens": 1024,
+    "ppl": 29.059859529629826,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Special Action Force"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 136,
+    "n_tokens": 1024,
+    "ppl": 28.720124132414323,
+    "prime_title": "Special Action Force",
+    "source": "Wikipedia",
+    "target_title": "Special Action Force"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 136,
+    "n_tokens": 1024,
+    "ppl": 29.021314654340088,
+    "prime_title": "Abu Sayyaf",
+    "source": "Wikipedia",
+    "target_title": "Special Action Force"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 136,
+    "n_tokens": 1024,
+    "ppl": 29.041297320612436,
+    "prime_title": "Christmas (surname)",
+    "source": "Wikipedia",
+    "target_title": "Special Action Force"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 136,
+    "n_tokens": 1024,
+    "ppl": 28.998192915484488,
+    "prime_title": "RedPajamaGithub#214",
+    "source": "Wikipedia",
+    "target_title": "Special Action Force"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 137,
+    "n_tokens": 1024,
+    "ppl": 24.266213859243233,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Marvel: Ultimate Alliance"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 137,
+    "n_tokens": 1024,
+    "ppl": 23.80112406220999,
+    "prime_title": "Marvel: Ultimate Alliance",
+    "source": "Wikipedia",
+    "target_title": "Marvel: Ultimate Alliance"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 137,
+    "n_tokens": 1024,
+    "ppl": 24.249684486061668,
+    "prime_title": "Game Boy",
+    "source": "Wikipedia",
+    "target_title": "Marvel: Ultimate Alliance"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 137,
+    "n_tokens": 1024,
+    "ppl": 24.23558732302698,
+    "prime_title": "1897 in baseball",
+    "source": "Wikipedia",
+    "target_title": "Marvel: Ultimate Alliance"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 137,
+    "n_tokens": 1024,
+    "ppl": 24.304492065876975,
+    "prime_title": "RedPajamaGithub#205",
+    "source": "Wikipedia",
+    "target_title": "Marvel: Ultimate Alliance"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 138,
+    "n_tokens": 1024,
+    "ppl": 17.35580678595089,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Genetically modified maize"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 138,
+    "n_tokens": 1024,
+    "ppl": 17.137540368512354,
+    "prime_title": "Genetically modified maize",
+    "source": "Wikipedia",
+    "target_title": "Genetically modified maize"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 138,
+    "n_tokens": 1024,
+    "ppl": 17.15279167366491,
+    "prime_title": "Bt cotton",
+    "source": "Wikipedia",
+    "target_title": "Genetically modified maize"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 138,
+    "n_tokens": 1024,
+    "ppl": 17.309049015708297,
+    "prime_title": "Away from Her",
+    "source": "Wikipedia",
+    "target_title": "Genetically modified maize"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 138,
+    "n_tokens": 1024,
+    "ppl": 17.330604316308115,
+    "prime_title": "RedPajamaGithub#426",
+    "source": "Wikipedia",
+    "target_title": "Genetically modified maize"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 139,
+    "n_tokens": 1024,
+    "ppl": 29.376664199687244,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "OT VIII"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 139,
+    "n_tokens": 1024,
+    "ppl": 28.70424937479412,
+    "prime_title": "OT VIII",
+    "source": "Wikipedia",
+    "target_title": "OT VIII"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 139,
+    "n_tokens": 1024,
+    "ppl": 29.422161987235082,
+    "prime_title": "Book of Revelation",
+    "source": "Wikipedia",
+    "target_title": "OT VIII"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 139,
+    "n_tokens": 1024,
+    "ppl": 29.443522758474007,
+    "prime_title": "Rhodesian Special Air Service",
+    "source": "Wikipedia",
+    "target_title": "OT VIII"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 139,
+    "n_tokens": 1024,
+    "ppl": 29.46344490299239,
+    "prime_title": "RedPajamaGithub#478",
+    "source": "Wikipedia",
+    "target_title": "OT VIII"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 140,
+    "n_tokens": 1024,
+    "ppl": 15.356623491996222,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "History of the People's Republic of China"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 140,
+    "n_tokens": 1024,
+    "ppl": 15.329871701651408,
+    "prime_title": "History of the People's Republic of China",
+    "source": "Wikipedia",
+    "target_title": "History of the People's Republic of China"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 140,
+    "n_tokens": 1024,
+    "ppl": 15.367241282270218,
+    "prime_title": "History of China",
+    "source": "Wikipedia",
+    "target_title": "History of the People's Republic of China"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 140,
+    "n_tokens": 1024,
+    "ppl": 15.38484876522303,
+    "prime_title": "Simon Holt",
+    "source": "Wikipedia",
+    "target_title": "History of the People's Republic of China"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 140,
+    "n_tokens": 1024,
+    "ppl": 15.379303697671874,
+    "prime_title": "RedPajamaGithub#106",
+    "source": "Wikipedia",
+    "target_title": "History of the People's Republic of China"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 141,
+    "n_tokens": 1024,
+    "ppl": 27.703551591158472,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Ann Harada"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 141,
+    "n_tokens": 1024,
+    "ppl": 27.416520851329935,
+    "prime_title": "Ann Harada",
+    "source": "Wikipedia",
+    "target_title": "Ann Harada"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 141,
+    "n_tokens": 1024,
+    "ppl": 27.504867878665724,
+    "prime_title": "Brown University",
+    "source": "Wikipedia",
+    "target_title": "Ann Harada"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 141,
+    "n_tokens": 1024,
+    "ppl": 27.70753471743956,
+    "prime_title": "Howard Hickman",
+    "source": "Wikipedia",
+    "target_title": "Ann Harada"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 141,
+    "n_tokens": 1024,
+    "ppl": 27.750738517435146,
+    "prime_title": "RedPajamaGithub#58",
+    "source": "Wikipedia",
+    "target_title": "Ann Harada"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 142,
+    "n_tokens": 1024,
+    "ppl": 16.353889848304764,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "David Gilliland"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 142,
+    "n_tokens": 1024,
+    "ppl": 16.105352627701798,
+    "prime_title": "David Gilliland",
+    "source": "Wikipedia",
+    "target_title": "David Gilliland"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 142,
+    "n_tokens": 1024,
+    "ppl": 16.34591039691386,
+    "prime_title": "ARCA Menards Series West",
+    "source": "Wikipedia",
+    "target_title": "David Gilliland"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 142,
+    "n_tokens": 1024,
+    "ppl": 16.348081264038463,
+    "prime_title": "Kazuhiro Nakata",
+    "source": "Wikipedia",
+    "target_title": "David Gilliland"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 142,
+    "n_tokens": 1024,
+    "ppl": 16.309368580225005,
+    "prime_title": "RedPajamaGithub#307",
+    "source": "Wikipedia",
+    "target_title": "David Gilliland"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 143,
+    "n_tokens": 1024,
+    "ppl": 29.080187664103438,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Pamela Z"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 143,
+    "n_tokens": 1024,
+    "ppl": 27.731670302740792,
+    "prime_title": "Pamela Z",
+    "source": "Wikipedia",
+    "target_title": "Pamela Z"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 143,
+    "n_tokens": 1024,
+    "ppl": 28.791068622937917,
+    "prime_title": "Vijay Iyer",
+    "source": "Wikipedia",
+    "target_title": "Pamela Z"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 143,
+    "n_tokens": 1024,
+    "ppl": 28.957879477560965,
+    "prime_title": "Ballbot",
+    "source": "Wikipedia",
+    "target_title": "Pamela Z"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 143,
+    "n_tokens": 1024,
+    "ppl": 29.15731130581523,
+    "prime_title": "RedPajamaGithub#300",
+    "source": "Wikipedia",
+    "target_title": "Pamela Z"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 144,
+    "n_tokens": 1024,
+    "ppl": 19.75264357803479,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Lucas Horton"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 144,
+    "n_tokens": 1024,
+    "ppl": 19.6975076994203,
+    "prime_title": "Lucas Horton",
+    "source": "Wikipedia",
+    "target_title": "Lucas Horton"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 144,
+    "n_tokens": 1024,
+    "ppl": 19.587244226012157,
+    "prime_title": "Victor Kiriakis",
+    "source": "Wikipedia",
+    "target_title": "Lucas Horton"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 144,
+    "n_tokens": 1024,
+    "ppl": 19.803986106156557,
+    "prime_title": "Montorio al Vomano",
+    "source": "Wikipedia",
+    "target_title": "Lucas Horton"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 144,
+    "n_tokens": 1024,
+    "ppl": 19.775421927852157,
+    "prime_title": "RedPajamaGithub#325",
+    "source": "Wikipedia",
+    "target_title": "Lucas Horton"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 145,
+    "n_tokens": 1024,
+    "ppl": 12.013660855128247,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "County Fermanagh"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 145,
+    "n_tokens": 1024,
+    "ppl": 11.923981522460137,
+    "prime_title": "County Fermanagh",
+    "source": "Wikipedia",
+    "target_title": "County Fermanagh"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 145,
+    "n_tokens": 1024,
+    "ppl": 11.96233692456573,
+    "prime_title": "Marble Arch Caves",
+    "source": "Wikipedia",
+    "target_title": "County Fermanagh"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 145,
+    "n_tokens": 1024,
+    "ppl": 12.007581527486582,
+    "prime_title": "Cecily of York",
+    "source": "Wikipedia",
+    "target_title": "County Fermanagh"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 145,
+    "n_tokens": 1024,
+    "ppl": 12.010785462215926,
+    "prime_title": "RedPajamaGithub#80",
+    "source": "Wikipedia",
+    "target_title": "County Fermanagh"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 146,
+    "n_tokens": 1024,
+    "ppl": 18.799315997620422,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Central Bank of Armenia"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 146,
+    "n_tokens": 1024,
+    "ppl": 18.573157724703197,
+    "prime_title": "Central Bank of Armenia",
+    "source": "Wikipedia",
+    "target_title": "Central Bank of Armenia"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 146,
+    "n_tokens": 1024,
+    "ppl": 18.76182028310688,
+    "prime_title": "Central bank",
+    "source": "Wikipedia",
+    "target_title": "Central Bank of Armenia"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 146,
+    "n_tokens": 1024,
+    "ppl": 18.75330530685615,
+    "prime_title": "Guillaume Latendresse",
+    "source": "Wikipedia",
+    "target_title": "Central Bank of Armenia"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 146,
+    "n_tokens": 1024,
+    "ppl": 18.80384795316897,
+    "prime_title": "RedPajamaGithub#61",
+    "source": "Wikipedia",
+    "target_title": "Central Bank of Armenia"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 147,
+    "n_tokens": 1024,
+    "ppl": 15.99006973306261,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Isaac Leeser"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 147,
+    "n_tokens": 1024,
+    "ppl": 15.927916435988449,
+    "prime_title": "Isaac Leeser",
+    "source": "Wikipedia",
+    "target_title": "Isaac Leeser"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 147,
+    "n_tokens": 1024,
+    "ppl": 16.023324907288647,
+    "prime_title": "Mikveh Israel",
+    "source": "Wikipedia",
+    "target_title": "Isaac Leeser"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 147,
+    "n_tokens": 1024,
+    "ppl": 16.031559679346728,
+    "prime_title": "East Cross Route",
+    "source": "Wikipedia",
+    "target_title": "Isaac Leeser"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 147,
+    "n_tokens": 1024,
+    "ppl": 15.963006059421213,
+    "prime_title": "RedPajamaGithub#189",
+    "source": "Wikipedia",
+    "target_title": "Isaac Leeser"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 148,
+    "n_tokens": 1024,
+    "ppl": 19.64261470240975,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "76 mm gun M1"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 148,
+    "n_tokens": 1024,
+    "ppl": 19.380912918053156,
+    "prime_title": "76 mm gun M1",
+    "source": "Wikipedia",
+    "target_title": "76 mm gun M1"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 148,
+    "n_tokens": 1024,
+    "ppl": 19.610846417449963,
+    "prime_title": "August 17",
+    "source": "Wikipedia",
+    "target_title": "76 mm gun M1"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 148,
+    "n_tokens": 1024,
+    "ppl": 19.706667519535024,
+    "prime_title": "Scalea",
+    "source": "Wikipedia",
+    "target_title": "76 mm gun M1"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 148,
+    "n_tokens": 1024,
+    "ppl": 19.62887442322631,
+    "prime_title": "RedPajamaGithub#407",
+    "source": "Wikipedia",
+    "target_title": "76 mm gun M1"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 149,
+    "n_tokens": 1024,
+    "ppl": 15.510534700226195,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "History of Cork"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 149,
+    "n_tokens": 1024,
+    "ppl": 15.503720784027252,
+    "prime_title": "History of Cork",
+    "source": "Wikipedia",
+    "target_title": "History of Cork"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 149,
+    "n_tokens": 1024,
+    "ppl": 15.60536276418463,
+    "prime_title": "Black and Tans",
+    "source": "Wikipedia",
+    "target_title": "History of Cork"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 149,
+    "n_tokens": 1024,
+    "ppl": 15.540984294888323,
+    "prime_title": "Energy conservation in the United Kingdom",
+    "source": "Wikipedia",
+    "target_title": "History of Cork"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 149,
+    "n_tokens": 1024,
+    "ppl": 15.509307012933693,
+    "prime_title": "RedPajamaGithub#184",
+    "source": "Wikipedia",
+    "target_title": "History of Cork"
+  }
+]

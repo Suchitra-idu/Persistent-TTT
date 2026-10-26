@@ -18,6 +18,7 @@ from pathlib import Path
 from ttt.adapters.numpy_rng import NumpyRng
 from ttt.app import context_eval, evidence, paper_analysis, relatedness_eval
 from ttt.core.metrics import ALL_SOURCES, geometric_mean_ppl
+from ttt.core import stats
 from ttt.core.stats import ranks
 from ttt.core.types import COLD_CARRY, FRESH, LORA_ONLY
 from ttt.experiments import paper_eval_v1
@@ -445,7 +446,14 @@ def carry_design_curve(estimates, path: Path) -> str:
     return _save(fig, str(path))
 
 
-RELATEDNESS_CASES = (("plain Hebbian", "ttt-v1.1"), ("carry design", CARRY_DESIGN_LONG))
+# (label, run, raw rows, colour, marker, line style); the two carry seeds share a colour.
+RELATEDNESS_CASES = (
+    ("plain Hebbian carry", "ttt-v1.1", "relatedness", MUTED, "o", "-"),
+    ("carry design, seed 42", CARRY_DESIGN_LONG, "relatedness", SERIES[1], "s", "-"),
+    ("carry design, seed 43", "hebbian-carry-600-s43", "relatedness", SERIES[1], "D", "--"),
+    ("dynamic evaluation, tuned for related", CONTROL, "dyneval_related", SERIES[0], "^", "-"),
+    ("dynamic evaluation, tuned for same document", CONTROL, "dyneval_self", CONTROL_COLOUR, "v", "--"),
+)
 RELATEDNESS_LEVELS = (
     ("gain_self", "same\ndocument"),
     ("gain_related", "related\narticle"),
@@ -456,8 +464,8 @@ RELATEDNESS_LEVELS = (
 
 def relatedness_estimates() -> dict[tuple[str, str], object]:
     out = {}
-    for label, run in RELATEDNESS_CASES:
-        for e in relatedness_eval.estimates(_rows(run, 600, "relatedness"), rng=NumpyRng(0), n_boot=N_BOOT):
+    for label, run, raw, *_ in RELATEDNESS_CASES:
+        for e in relatedness_eval.estimates(_rows(run, 600, raw), rng=NumpyRng(0), n_boot=N_BOOT):
             if e.source == ALL_SOURCES:
                 out[(label, e.measure)] = e
     return out
@@ -465,30 +473,79 @@ def relatedness_estimates() -> dict[tuple[str, str], object]:
 
 def relatedness_figure(estimates, path: Path) -> str:
     plt = _pyplot()
-    fig, ax = plt.subplots(figsize=(6.8, 3.8))
+    fig, ax = plt.subplots(figsize=(7.6, 4.4))
     xs = range(len(RELATEDNESS_LEVELS))
-    for (label, _), colour, marker in zip(RELATEDNESS_CASES, (SERIES[0], SERIES[1]), ("o", "s")):
+    for label, _, _, colour, marker, style in RELATEDNESS_CASES:
         intervals = [estimates[(label, m)].interval for m, _ in RELATEDNESS_LEVELS]
         ax.fill_between(xs, [i.low for i in intervals], [i.high for i in intervals],
-                        color=colour, alpha=0.18, linewidth=0)
+                        color=colour, alpha=0.12, linewidth=0)
         ax.plot(xs, [i.point for i in intervals], color=colour, marker=marker, markersize=7,
-                linewidth=2, label=label)
+                linewidth=2, linestyle=style, label=label)
     ax.axhline(0, color=MUTED, linewidth=1)
     ax.set_xticks(list(xs), [name for _, name in RELATEDNESS_LEVELS])
-    ax.set_xlabel("text the carry was built from, by relatedness to the target")
-    ax.set_ylabel("Δppl vs reset  (+ = carry helps)")
-    ax.legend(frameon=False, fontsize=8)
+    ax.set_xlabel("text the model adapted on, by relatedness to the target")
+    ax.set_ylabel("Δppl vs no adaptation  (+ = helps)")
+    ax.legend(frameon=False, fontsize=7, loc="lower left")
     _chrome(ax)
-    _title(fig, "The carry's effect falls with relatedness (200 Wikipedia targets, step 600)")
+    _title(fig, "Adaptation by relatedness of the earlier text (200 Wikipedia targets, step 600)")
     fig.tight_layout()
     return _save(fig, str(path))
+
+
+def carry_vs_dyneval() -> list[str]:
+    """Per arm, the carry's log-perplexity gain minus dynamic evaluation's, paired
+    by case, in percent; dynamic evaluation tuned for the related arm."""
+    dyn = _rows(CONTROL, 600, "dyneval_related")
+    lines = ["carry,arm,n_docs,difference_percent,ci_low,ci_high,carry_better_share"]
+    for label, run in (("seed 42", CARRY_DESIGN_LONG), ("seed 43", "hebbian-carry-600-s43")):
+        carry = _rows(run, 600, "relatedness")
+        for arm in relatedness_eval.LEVELS:
+            diffs = _gain_differences(carry, dyn, arm)
+            rs = evidence.resamples(len(diffs), N_BOOT, NumpyRng(0))
+            interval = stats.bootstrap(lambda idx: 100 * statistics.fmean(diffs[i] for i in idx), len(diffs), rs)
+            better = sum(d > 0 for d in diffs) / len(diffs)
+            lines.append(f"{label},{arm},{len(diffs)},{interval.point:.4f},{interval.low:.4f},"
+                         f"{interval.high:.4f},{better:.4f}")
+    return lines
+
+
+def _gain_differences(carry, dyn, arm: str) -> list[float]:
+    def by_case(rows):
+        return {(r.doc_idx, r.arm): r.ppl for r in rows}
+
+    c, d = by_case(carry), by_case(dyn)
+    docs = sorted(k for k, a in c if a == arm)
+    return [
+        (math.log(c[(k, "reset")]) - math.log(c[(k, arm)]))
+        - (math.log(d[(k, "reset")]) - math.log(d[(k, arm)]))
+        for k in docs
+    ]
+
+
+def repeat_summary() -> list[str]:
+    lines = ["model,measure,n_docs,delta_ppl,ci_low,ci_high,excludes_zero,win_rate"]
+    for label, run in (("plain Hebbian", "ttt-v1.1"), ("carry design seed 42", CARRY_DESIGN_LONG),
+                       ("carry design seed 43", "hebbian-carry-600-s43")):
+        rows = _rows(run, 600, "repeat")
+        estimates = evidence.repeat_trend(rows, rng=NumpyRng(0), n_boot=N_BOOT)
+        first = [p for p in evidence.repeat_curve(rows, rng=NumpyRng(0), n_boot=N_BOOT)
+                 if p.source == ALL_SOURCES and p.repeat == 1]
+        for e in estimates:
+            if e.source == ALL_SOURCES:
+                i = e.interval
+                lines.append(f"{label},{e.measure},{e.n_docs},{i.point:.6g},{i.low:.6g},{i.high:.6g},"
+                             f"{int(i.excludes_zero)},{e.win_rate:.4f}")
+        for p in first:
+            lines.append(f"{label},repeat_1_vs_0,{p.n_docs},{p.gap.point:.6g},{p.gap.low:.6g},{p.gap.high:.6g},"
+                         f"{int(p.gap.low > 0 or p.gap.high < 0)},")
+    return lines
 
 
 def relatedness_table(estimates) -> list[str]:
     lines = ["model,measure,n_docs,delta_ppl,ci_low,ci_high,excludes_zero,win_rate"]
     for (label, measure), e in sorted(estimates.items()):
         i = e.interval
-        lines.append(f"{label},{measure},{e.n_docs},{i.point:.6g},{i.low:.6g},{i.high:.6g},"
+        lines.append(f"\"{label}\",{measure},{e.n_docs},{i.point:.6g},{i.low:.6g},{i.high:.6g},"
                      f"{int(i.excludes_zero)},{e.win_rate:.4f}")
     return lines
 
@@ -572,7 +629,7 @@ def carry_design_table(estimates) -> list[str]:
     lines = ["case,measure,n_docs,delta_ppl,ci_low,ci_high,excludes_zero,win_rate"]
     for (label, measure), e in sorted(estimates.items()):
         i = e.interval
-        lines.append(f"{label},{measure},{e.n_docs},{i.point:.6g},{i.low:.6g},{i.high:.6g},"
+        lines.append(f"\"{label}\",{measure},{e.n_docs},{i.point:.6g},{i.low:.6g},{i.high:.6g},"
                      f"{int(i.excludes_zero)},{e.win_rate:.4f}")
     return lines
 
@@ -607,6 +664,8 @@ def main() -> None:
     (OUT / "tables" / "T14_seeds.csv").write_text("\n".join(carry_design_table(seed_estimates())) + "\n")
     related = relatedness_estimates()
     made.append(relatedness_figure(related, figures / "F16_relatedness.pdf"))
+    (OUT / "tables" / "T15_carry_vs_dyneval.csv").write_text("\n".join(carry_vs_dyneval()) + "\n")
+    (OUT / "tables" / "T16_repeat.csv").write_text("\n".join(repeat_summary()) + "\n")
     (OUT / "tables" / "T12_relatedness.csv").write_text("\n".join(relatedness_table(related)) + "\n")
     (OUT / "tables" / "T11_carry_design.csv").write_text("\n".join(carry_design_table(design)) + "\n")
     write_tables(estimates, correlates)

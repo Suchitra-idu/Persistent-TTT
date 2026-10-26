@@ -257,6 +257,28 @@ seed 42, title for title.
 Everything replicates in sign and significance. At step 400: between slices +0.062 in both,
 vs LoRA +0.188 / +0.180.
 
+## 4f. Dynamic evaluation baseline and non-accumulation (step 600)
+
+Dynamic evaluation: LoRA-only model, Adam on its 10.1M LoRA params over the prime, restore
+per case; bundle `results/lora-only-matched/step_600/20261026-145933-dyneval` (merged from
+28 shards under `shards/`). Tuned on 40 disjoint Wikipedia cases per objective: same-document
+adam 3e-5 x10, related adam 3e-5 x3 (ridges lr*steps ~3e-4 and ~1e-4; beyond them diverges).
+First, coarser search (SGD and Adam, saved in `20261026-131111`) showed SGD far below Adam.
+Same 200 cases as the carry, title for title. Tables `T12`, `T15`; figure `F16`.
+
+| adapted on | carry s42 | carry s43 | dyneval tuned related | dyneval tuned same-doc |
+|---|---|---|---|---|
+| same document | +0.103 | +0.116 | +0.224 | +0.271 |
+| related article | +0.085 | +0.083 | +0.029 | −0.236 |
+| random article | +0.051 | +0.034 | −0.019 | −0.284 |
+| other source | −0.067 | −0.046 | −0.022 | −0.217 |
+
+Paired carry minus dyneval(tuned related), log-ppl %: related +0.32 / +0.31, random +0.39 / +0.29
+(carry better), same document −0.67 / −0.60, other source −0.25 / −0.14 (dyneval better).
+
+Repeat suite (`T16`, bundles `.../step_600/20261026-1307*`): second reading vs first +0.006 * /
++0.008 *, tenth vs second +0.000 / −0.001, state grows 3.4x. No accumulation.
+
 ## 5. Sanity checks that hold
 
 - The LoRA-only checkpoint gives exactly 0.000 for `within` and `between_slices` at all three

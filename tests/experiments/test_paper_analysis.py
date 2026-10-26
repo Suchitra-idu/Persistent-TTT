@@ -53,6 +53,14 @@ def test_newest_bundle_picks_the_latest_stamp(tmp_path, rows):
     assert paper_analysis_v1.newest_bundle(tmp_path, "run", 1).path.name == "20260202-000000"
 
 
+def test_newest_bundle_skips_a_newer_bundle_without_the_needed_rows(tmp_path, rows):
+    write_bundle(tmp_path, rows, "run", 1, stamp="20260101-000000")
+    write_bundle(tmp_path, rows, "run", 1, stamp="20260202-000000")
+    (tmp_path / "run" / "step_1" / "20260202-000000" / "raw" / "regimes.json").unlink()
+
+    assert paper_analysis_v1.newest_bundle(tmp_path, "run", 1).path.name == "20260101-000000"
+
+
 def test_a_missing_bundle_names_the_folder(tmp_path):
     with pytest.raises(FileNotFoundError, match="step_7"):
         paper_analysis_v1.newest_bundle(tmp_path, "run", 7)

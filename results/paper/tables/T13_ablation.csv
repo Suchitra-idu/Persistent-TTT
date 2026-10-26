@@ -1,29 +1,29 @@
 case,measure,n_docs,delta_ppl,ci_low,ci_high,excludes_zero,win_rate
-carry path, no training through it (A+C),between_slices,106,0.0229517,0.0131293,0.0340972,1,0.8491
-carry path, no training through it (A+C),cross_doc,100,0.010642,0.00641633,0.0159145,1,0.6800
-carry path, no training through it (A+C),cross_slice,106,0.0229517,0.0135391,0.0336508,1,0.8491
-carry path, no training through it (A+C),lora,106,1.73619,1.4043,2.15521,1,1.0000
-carry path, no training through it (A+C),total,106,1.78226,1.44749,2.2131,1,1.0000
-carry path, no training through it (A+C),vs_matched_lora,106,0.172269,0.140638,0.210982,1,0.9906
-carry path, no training through it (A+C),within,106,0.0231181,0.0117586,0.0369422,1,0.7358
-closed gate only (C),between_slices,106,0.00814757,0.00137428,0.0145645,1,0.7547
-closed gate only (C),cross_doc,100,0.00326794,0.000532193,0.00608691,1,0.6200
-closed gate only (C),cross_slice,106,0.00814757,0.00195669,0.0142748,1,0.7547
-closed gate only (C),lora,106,1.70732,1.38009,2.12394,1,1.0000
-closed gate only (C),total,106,1.74002,1.40873,2.1583,1,1.0000
-closed gate only (C),vs_matched_lora,106,0.130031,0.103626,0.161287,1,0.9717
-closed gate only (C),within,106,0.0245505,0.0154074,0.0349768,1,0.8302
-full design (A+B+C),between_slices,106,0.0990331,0.0738429,0.132752,1,0.9245
-full design (A+B+C),cross_doc,100,0.0104952,0.00396864,0.0177261,1,0.6400
-full design (A+B+C),cross_slice,106,0.0990331,0.0748932,0.129443,1,0.9245
-full design (A+B+C),lora,106,1.70767,1.37974,2.12143,1,1.0000
-full design (A+B+C),total,106,1.82484,1.48013,2.26484,1,1.0000
-full design (A+B+C),vs_matched_lora,106,0.214848,0.173586,0.263561,1,0.9811
-full design (A+B+C),within,106,0.0181356,0.0109137,0.0270835,1,0.7358
-training through it, no carry path (B+C),between_slices,106,0.0346083,0.0223628,0.0517233,1,0.8208
-training through it, no carry path (B+C),cross_doc,100,0.0137733,0.00725505,0.0209346,1,0.7200
-training through it, no carry path (B+C),cross_slice,106,0.0346083,0.0225625,0.0493992,1,0.8208
-training through it, no carry path (B+C),lora,106,1.67997,1.35872,2.08575,1,1.0000
-training through it, no carry path (B+C),total,106,1.77262,1.43326,2.20306,1,1.0000
-training through it, no carry path (B+C),vs_matched_lora,106,0.162632,0.128616,0.202605,1,0.9528
-training through it, no carry path (B+C),within,106,0.0580412,0.0427989,0.0771004,1,0.9057
+"carry path, no training through it (A+C)",between_slices,106,0.0229517,0.0131293,0.0340972,1,0.8491
+"carry path, no training through it (A+C)",cross_doc,100,0.010642,0.00641633,0.0159145,1,0.6800
+"carry path, no training through it (A+C)",cross_slice,106,0.0229517,0.0135391,0.0336508,1,0.8491
+"carry path, no training through it (A+C)",lora,106,1.73619,1.4043,2.15521,1,1.0000
+"carry path, no training through it (A+C)",total,106,1.78226,1.44749,2.2131,1,1.0000
+"carry path, no training through it (A+C)",vs_matched_lora,106,0.172269,0.140638,0.210982,1,0.9906
+"carry path, no training through it (A+C)",within,106,0.0231181,0.0117586,0.0369422,1,0.7358
+"closed gate only (C)",between_slices,106,0.00814757,0.00137428,0.0145645,1,0.7547
+"closed gate only (C)",cross_doc,100,0.00326794,0.000532193,0.00608691,1,0.6200
+"closed gate only (C)",cross_slice,106,0.00814757,0.00195669,0.0142748,1,0.7547
+"closed gate only (C)",lora,106,1.70732,1.38009,2.12394,1,1.0000
+"closed gate only (C)",total,106,1.74002,1.40873,2.1583,1,1.0000
+"closed gate only (C)",vs_matched_lora,106,0.130031,0.103626,0.161287,1,0.9717
+"closed gate only (C)",within,106,0.0245505,0.0154074,0.0349768,1,0.8302
+"full design (A+B+C)",between_slices,106,0.0990331,0.0738429,0.132752,1,0.9245
+"full design (A+B+C)",cross_doc,100,0.0104952,0.00396864,0.0177261,1,0.6400
+"full design (A+B+C)",cross_slice,106,0.0990331,0.0748932,0.129443,1,0.9245
+"full design (A+B+C)",lora,106,1.70767,1.37974,2.12143,1,1.0000
+"full design (A+B+C)",total,106,1.82484,1.48013,2.26484,1,1.0000
+"full design (A+B+C)",vs_matched_lora,106,0.214848,0.173586,0.263561,1,0.9811
+"full design (A+B+C)",within,106,0.0181356,0.0109137,0.0270835,1,0.7358
+"training through it, no carry path (B+C)",between_slices,106,0.0346083,0.0223628,0.0517233,1,0.8208
+"training through it, no carry path (B+C)",cross_doc,100,0.0137733,0.00725505,0.0209346,1,0.7200
+"training through it, no carry path (B+C)",cross_slice,106,0.0346083,0.0225625,0.0493992,1,0.8208
+"training through it, no carry path (B+C)",lora,106,1.67997,1.35872,2.08575,1,1.0000
+"training through it, no carry path (B+C)",total,106,1.77262,1.43326,2.20306,1,1.0000
+"training through it, no carry path (B+C)",vs_matched_lora,106,0.162632,0.128616,0.202605,1,0.9528
+"training through it, no carry path (B+C)",within,106,0.0580412,0.0427989,0.0771004,1,0.9057

@@ -1,0 +1,7 @@
+model,measure,n_docs,delta_ppl,ci_low,ci_high,excludes_zero,win_rate
+plain Hebbian,repeat_9_vs_1,106,0.000199256,-0.00087883,0.00115136,0,0.5000
+plain Hebbian,repeat_1_vs_0,106,0.000713856,-0.000655687,0.0020831,0,
+carry design seed 42,repeat_9_vs_1,106,0.000169935,-0.000794504,0.000988952,0,0.5377
+carry design seed 42,repeat_1_vs_0,106,0.00564577,0.00305643,0.00905122,1,
+carry design seed 43,repeat_9_vs_1,106,-0.00085783,-0.00188671,8.98145e-05,0,0.4245
+carry design seed 43,repeat_1_vs_0,106,0.00820032,0.00545735,0.011634,1,

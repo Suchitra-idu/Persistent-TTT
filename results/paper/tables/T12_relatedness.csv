@@ -1,15 +1,36 @@
 model,measure,n_docs,delta_ppl,ci_low,ci_high,excludes_zero,win_rate
-carry design,gain_other_source,200,-0.0665018,-0.0838388,-0.0516618,1,0.2800
-carry design,gain_random,200,0.0508374,0.0368023,0.0647086,1,0.6950
-carry design,gain_related,200,0.0851601,0.0703661,0.0989009,1,0.8500
-carry design,gain_self,200,0.103166,0.0895018,0.118016,1,0.8900
-carry design,random_vs_other_source,200,0.117339,0.0971244,0.136506,1,0.8100
-carry design,related_vs_random,200,0.0343227,0.0241485,0.0442495,1,0.6950
-carry design,self_vs_related,200,0.0180063,0.0106075,0.0257593,1,0.6150
-plain Hebbian,gain_other_source,200,-0.0125331,-0.0177393,-0.00736485,1,0.3850
-plain Hebbian,gain_random,200,0.000510422,-0.00424569,0.00506048,0,0.4750
-plain Hebbian,gain_related,200,0.00379093,-0.000549067,0.00814745,0,0.5850
-plain Hebbian,gain_self,200,-0.00163566,-0.00590707,0.00307551,0,0.4950
-plain Hebbian,random_vs_other_source,200,0.0130436,0.00898988,0.0178352,1,0.6650
-plain Hebbian,related_vs_random,200,0.0032805,-0.00079589,0.00734806,0,0.5850
-plain Hebbian,self_vs_related,200,-0.00542659,-0.00944212,-0.00186577,1,0.4300
+"carry design, seed 42",gain_other_source,200,-0.0665018,-0.0838388,-0.0516618,1,0.2800
+"carry design, seed 42",gain_random,200,0.0508374,0.0368023,0.0647086,1,0.6950
+"carry design, seed 42",gain_related,200,0.0851601,0.0703661,0.0989009,1,0.8500
+"carry design, seed 42",gain_self,200,0.103166,0.0895018,0.118016,1,0.8900
+"carry design, seed 42",random_vs_other_source,200,0.117339,0.0971244,0.136506,1,0.8100
+"carry design, seed 42",related_vs_random,200,0.0343227,0.0241485,0.0442495,1,0.6950
+"carry design, seed 42",self_vs_related,200,0.0180063,0.0106075,0.0257593,1,0.6150
+"carry design, seed 43",gain_other_source,200,-0.0461032,-0.0579689,-0.0348292,1,0.2950
+"carry design, seed 43",gain_random,200,0.0340015,0.0232039,0.0449775,1,0.6750
+"carry design, seed 43",gain_related,200,0.0827805,0.0694538,0.093742,1,0.8450
+"carry design, seed 43",gain_self,200,0.116061,0.102759,0.130693,1,0.9300
+"carry design, seed 43",random_vs_other_source,200,0.0801046,0.0659956,0.0944746,1,0.8000
+"carry design, seed 43",related_vs_random,200,0.048779,0.0380406,0.0599537,1,0.7450
+"carry design, seed 43",self_vs_related,200,0.0332807,0.0246899,0.0422931,1,0.6800
+"dynamic evaluation, tuned for related",gain_other_source,200,-0.021888,-0.0287262,-0.0153308,1,0.3450
+"dynamic evaluation, tuned for related",gain_random,200,-0.01876,-0.0266305,-0.0120535,1,0.3650
+"dynamic evaluation, tuned for related",gain_related,200,0.0285189,0.014013,0.0423479,1,0.5600
+"dynamic evaluation, tuned for related",gain_self,200,0.224199,0.20131,0.249592,1,0.9750
+"dynamic evaluation, tuned for related",random_vs_other_source,200,0.003128,-0.00618576,0.0123733,0,0.5100
+"dynamic evaluation, tuned for related",related_vs_random,200,0.0472789,0.0315849,0.0653354,1,0.6800
+"dynamic evaluation, tuned for related",self_vs_related,200,0.19568,0.169337,0.222499,1,0.9050
+"dynamic evaluation, tuned for same document",gain_other_source,200,-0.216814,-0.246956,-0.190459,1,0.0850
+"dynamic evaluation, tuned for same document",gain_random,200,-0.2839,-0.319669,-0.251027,1,0.0650
+"dynamic evaluation, tuned for same document",gain_related,200,-0.235589,-0.280355,-0.192138,1,0.1450
+"dynamic evaluation, tuned for same document",gain_self,200,0.271296,0.216551,0.328696,1,0.7600
+"dynamic evaluation, tuned for same document",random_vs_other_source,200,-0.0670865,-0.0977718,-0.0379141,1,0.3850
+"dynamic evaluation, tuned for same document",related_vs_random,200,0.0483114,0.00533066,0.0956134,1,0.5350
+"dynamic evaluation, tuned for same document",self_vs_related,200,0.506885,0.435348,0.582714,1,0.9000
+"plain Hebbian carry",gain_other_source,200,-0.0125331,-0.0177393,-0.00736485,1,0.3850
+"plain Hebbian carry",gain_random,200,0.000510422,-0.00424569,0.00506048,0,0.4750
+"plain Hebbian carry",gain_related,200,0.00379093,-0.000549067,0.00814745,0,0.5850
+"plain Hebbian carry",gain_self,200,-0.00163566,-0.00590707,0.00307551,0,0.4950
+"plain Hebbian carry",random_vs_other_source,200,0.0130436,0.00898988,0.0178352,1,0.6650
+"plain Hebbian carry",related_vs_random,200,0.0032805,-0.00079589,0.00734806,0,0.5850
+"plain Hebbian carry",self_vs_related,200,-0.00542659,-0.00944212,-0.00186577,1,0.4300

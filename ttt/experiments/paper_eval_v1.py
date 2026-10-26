@@ -32,6 +32,7 @@ from ttt.app import (
     boundary_eval,
     context_eval,
     data_pipeline,
+    dynamic_eval,
     relatedness_eval,
     eval_loop,
     evidence,
@@ -54,9 +55,11 @@ REPEAT = "repeat"
 SWAP = "swap"
 CONTEXT = "context"
 RELATEDNESS = "relatedness"
+DYNEVAL = "dyneval"
 SUITES = (REGIMES, BOUNDARY, REPEAT, SWAP)
-# Opt-in: context costs a second, longer forward per slice; relatedness downloads Wikipedia.
-KNOWN_SUITES = SUITES + (CONTEXT, RELATEDNESS)
+# Opt-in: context costs a second, longer forward per slice; relatedness and dyneval download
+# Wikipedia, and dyneval takes gradient steps, so it runs on models without TTT layers too.
+KNOWN_SUITES = SUITES + (CONTEXT, RELATEDNESS, DYNEVAL)
 TTT_SUITES = (BOUNDARY, REPEAT, SWAP, CONTEXT, RELATEDNESS)
 
 RESULTS_DIR = "results"
@@ -70,6 +73,9 @@ RAW_FILES = {
     "swap": swap_eval.SwapRow,
     "context": context_eval.ContextRow,
     "relatedness": relatedness_eval.RelatedRow,
+    "dyneval_self": relatedness_eval.RelatedRow,
+    "dyneval_related": relatedness_eval.RelatedRow,
+    "dyneval_tuning": dynamic_eval.TuneRow,
 }
 DEFAULT_N_BOOT = 1000
 BOOT_SEED = 0
@@ -85,7 +91,13 @@ class Plan:
     n_primes: int = 2
     n_targets: int = 5
     n_related: int = 200
+    n_tune: int = 40
     n_wiki_shards: int = 2
+    # Sharding dyneval so a preemption costs one shard: a settings subset to tune,
+    # fixed per-objective settings to measure instead of tuning, a slice of cases.
+    dyneval_grid: str = ""
+    dyneval_fixed: str = ""
+    case_slice: str = ""
 
     def __post_init__(self) -> None:
         unknown = set(self.suites) - set(KNOWN_SUITES)
@@ -103,6 +115,8 @@ class Analysis:
     swap: tuple[Estimate, ...] = ()
     context: tuple[Estimate, ...] = ()
     relatedness: tuple[Estimate, ...] = ()
+    dyneval: tuple[Estimate, ...] = ()
+    dyneval_settings: Mapping[str, str] = field(default_factory=dict)
     carry_share: Interval | None = None
     fresh: Mapping[str, float] = field(default_factory=dict)
     correlates: tuple[evidence.Correlate, ...] = ()
@@ -165,21 +179,48 @@ def run(
         rows["context"] = evidence.records(
             context_eval.measure(docs=eval_docs, n_slices=plan.n_slices, **ports)
         )
-    if RELATEDNESS in suites:
-        announce("relatedness ...")
+    if RELATEDNESS in suites or DYNEVAL in suites:
+        announce("wikipedia cases ...")
         from ttt.experiments import _wiki_relatedness
 
+        n_tune = plan.n_tune if DYNEVAL in suites else 0
         cases, _ = _wiki_relatedness.build_cases(
-            n_targets=plan.n_related,
+            n_targets=plan.n_related + n_tune,
             n_shards=plan.n_wiki_shards,
             tokenizer=engine.tokenizer,
             other_docs=[d for s, docs in sorted(by_source.items()) if s != WIKIPEDIA for d in docs],
             rng=engine.rng(BOOT_SEED),
             announce=announce,
         )
-        rows["relatedness"] = evidence.records(
-            relatedness_eval.measure(cases=cases, **ports)
-        )
+        # Selection is sequential, so the first n_related are the relatedness suite's cases.
+        reported, tuning = cases[: plan.n_related], cases[plan.n_related :]
+        if RELATEDNESS in suites:
+            announce("relatedness ...")
+            rows["relatedness"] = evidence.records(
+                relatedness_eval.measure(cases=reported, **ports)
+            )
+        if DYNEVAL in suites:
+            from ttt.experiments._dynamic_adapter import LoraAdapter
+
+            adapter = LoraAdapter(engine.model)
+            fixed = dynamic_eval.parse_objectives(plan.dyneval_fixed)
+            if not fixed:
+                settings = dynamic_eval.parse_settings(plan.dyneval_grid) or dynamic_eval.grid()
+                announce(f"dyneval: tuning {len(settings)} settings on {len(tuning)} cases, "
+                         f"{adapter.n_parameters:,d} LoRA parameters")
+                tune_rows = dynamic_eval.tune(
+                    cases=tuning, compute=engine.compute, adapter=adapter, settings=settings
+                )
+                rows["dyneval_tuning"] = evidence.records(tune_rows)
+                if not plan.dyneval_grid:
+                    fixed = {o: dynamic_eval.best(tune_rows, o) for o in dynamic_eval.OBJECTIVES}
+            start, _, stop = plan.case_slice.partition(":")
+            measured = reported[int(start or 0) : int(stop) if stop else None]
+            for objective, setting in fixed.items():
+                announce(f"dyneval: {objective} with {setting.label} on {len(measured)} cases")
+                rows[f"dyneval_{objective}"] = evidence.records(
+                    dynamic_eval.measure(cases=measured, compute=engine.compute, adapter=adapter, setting=setting)
+                )
     if SWAP in suites:
         announce("swap ...")
         rows["swap"] = evidence.records(
@@ -206,7 +247,9 @@ def _with_docs(resolved: cli.Resolved, n_docs: int) -> cli.Resolved:
 
 def analyse(rows: Mapping[str, list], *, n_boot: int = DEFAULT_N_BOOT, seed: int = BOOT_SEED) -> Analysis:
     rng = NumpyRng(seed)
-    typed = {name: evidence.rows_from(RAW_FILES[name], items) for name, items in rows.items()}
+    typed = {
+        name: evidence.rows_from(RAW_FILES[name], items) for name, items in rows.items() if name in RAW_FILES
+    }
     kw = dict(rng=rng, n_boot=n_boot)
     regimes = evidence.regime_estimates(typed.get("regimes", ()), **kw)
     boundary = evidence.boundary_estimates(typed.get("boundary", ()), **kw)
@@ -219,6 +262,16 @@ def analyse(rows: Mapping[str, list], *, n_boot: int = DEFAULT_N_BOOT, seed: int
         swap=evidence.swap_estimates(typed.get("swap", ()), **kw),
         context=context_eval.estimates(typed.get("context", ()), **kw),
         relatedness=relatedness_eval.estimates(typed.get("relatedness", ()), **kw),
+        dyneval=tuple(
+            dataclasses.replace(e, measure=f"dyneval_{objective}_{e.measure}")
+            for objective in dynamic_eval.OBJECTIVES
+            for e in relatedness_eval.estimates(typed.get(f"dyneval_{objective}", ()), **kw)
+        ),
+        dyneval_settings={
+            objective: dynamic_eval.best(typed["dyneval_tuning"], objective).label
+            for objective in dynamic_eval.OBJECTIVES
+            if typed.get("dyneval_tuning")
+        },
         carry_share=(
             context_eval.carry_share(typed["context"], **kw) if typed.get("context") else None
         ),
@@ -259,6 +312,7 @@ def render_bundle(
         "swap": analysis.swap,
         "context_gaps": analysis.context,
         "relatedness": analysis.relatedness,
+        "dyneval": analysis.dyneval,
     }
     for name, estimates in tables.items():
         if estimates:
@@ -338,7 +392,7 @@ def summary(analysis: Analysis, figures) -> str:
     """The pooled headline per measure; per-source detail lives in tables/."""
     pooled = [
         e
-        for e in analysis.regimes + analysis.boundary + analysis.repeat_trend + analysis.swap + analysis.context + analysis.relatedness
+        for e in analysis.regimes + analysis.boundary + analysis.repeat_trend + analysis.swap + analysis.context + analysis.relatedness + analysis.dyneval
         if e.source == ALL_SOURCES
     ]
     lines = ["# Evidence bundle", "", "## Pooled estimates (95% paired bootstrap over documents)", ""]
@@ -353,6 +407,10 @@ def summary(analysis: Analysis, figures) -> str:
             "previous slice in attention.",
             "",
         ]
+    if analysis.dyneval_settings:
+        lines += ["## Dynamic evaluation", "", "Settings chosen on the tuning cases:", ""]
+        lines += [f"- tuned for {o}: {label}" for o, label in analysis.dyneval_settings.items()]
+        lines.append("")
     if analysis.correlates:
         lines += ["## Domain correlates (Spearman vs fresh ppl)", ""]
         lines += [f"- {c.measure}: ρ = {c.rho:+.2f} over {c.n_sources} sources" for c in analysis.correlates]
@@ -419,6 +477,11 @@ def main(
     n_primes: int = Plan.n_primes,
     n_targets: int = Plan.n_targets,
     n_related: int = Plan.n_related,
+    n_tune: int = Plan.n_tune,
+    dyneval_grid: str = "",
+    dyneval_fixed: str = "",
+    case_slice: str = "",
+    tag: str = "",
     n_wiki_shards: int = Plan.n_wiki_shards,
     n_boot: int = DEFAULT_N_BOOT,
     out_dir: str = RESULTS_DIR,
@@ -431,11 +494,12 @@ def main(
     plan = Plan(
         suites=tuple(s.strip() for s in suites.split(",") if s.strip()),
         n_docs=n_docs, n_slices=n_slices, n_chain=n_chain, n_repeats=n_repeats,
-        n_primes=n_primes, n_targets=n_targets, n_related=n_related, n_wiki_shards=n_wiki_shards,
+        n_primes=n_primes, n_targets=n_targets, n_related=n_related, n_tune=n_tune, n_wiki_shards=n_wiki_shards,
+        dyneval_grid=dyneval_grid, dyneval_fixed=dyneval_fixed, case_slice=case_slice,
     )
     run_part, step = bundle_parts(checkpoint, resolved.train.run_name)
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-    bundle = f"{run_part}/{step}/{stamp}"
+    bundle = f"{run_part}/{step}/{stamp}{'-' + tag if tag else ''}"
 
     payload = paper_eval.remote(
         checkpoint=checkpoint, bundle=bundle, plan=dataclasses.asdict(plan), **parsed

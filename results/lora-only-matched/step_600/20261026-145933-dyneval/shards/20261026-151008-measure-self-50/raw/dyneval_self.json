@@ -1,0 +1,1127 @@
+[
+  {
+    "arm": "reset",
+    "doc_idx": 50,
+    "n_tokens": 1024,
+    "ppl": 10.706757885205482,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Antigua and Barbuda"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 50,
+    "n_tokens": 1024,
+    "ppl": 10.606784312975597,
+    "prime_title": "Antigua and Barbuda",
+    "source": "Wikipedia",
+    "target_title": "Antigua and Barbuda"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 50,
+    "n_tokens": 1024,
+    "ppl": 10.864262522538171,
+    "prime_title": "West Indies",
+    "source": "Wikipedia",
+    "target_title": "Antigua and Barbuda"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 50,
+    "n_tokens": 1024,
+    "ppl": 10.7187315862278,
+    "prime_title": "Lou Merloni",
+    "source": "Wikipedia",
+    "target_title": "Antigua and Barbuda"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 50,
+    "n_tokens": 1024,
+    "ppl": 10.64966656832271,
+    "prime_title": "RedPajamaGithub#214",
+    "source": "Wikipedia",
+    "target_title": "Antigua and Barbuda"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 51,
+    "n_tokens": 1024,
+    "ppl": 15.922042769423959,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "List of sports venues named after individuals"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 51,
+    "n_tokens": 1024,
+    "ppl": 15.50865253261482,
+    "prime_title": "List of sports venues named after individuals",
+    "source": "Wikipedia",
+    "target_title": "List of sports venues named after individuals"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 51,
+    "n_tokens": 1024,
+    "ppl": 16.303684647522914,
+    "prime_title": "British Columbia",
+    "source": "Wikipedia",
+    "target_title": "List of sports venues named after individuals"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 51,
+    "n_tokens": 1024,
+    "ppl": 15.893267709868391,
+    "prime_title": "Mark Davis (snooker player)",
+    "source": "Wikipedia",
+    "target_title": "List of sports venues named after individuals"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 51,
+    "n_tokens": 1024,
+    "ppl": 15.942615785442044,
+    "prime_title": "RedPajamaGithub#205",
+    "source": "Wikipedia",
+    "target_title": "List of sports venues named after individuals"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 52,
+    "n_tokens": 1024,
+    "ppl": 17.57047188010912,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Common thresher"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 52,
+    "n_tokens": 1024,
+    "ppl": 17.39143792931525,
+    "prime_title": "Common thresher",
+    "source": "Wikipedia",
+    "target_title": "Common thresher"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 52,
+    "n_tokens": 1024,
+    "ppl": 17.67606485389917,
+    "prime_title": "New Zealand",
+    "source": "Wikipedia",
+    "target_title": "Common thresher"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 52,
+    "n_tokens": 1024,
+    "ppl": 17.757160705524615,
+    "prime_title": "Oftringen",
+    "source": "Wikipedia",
+    "target_title": "Common thresher"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 52,
+    "n_tokens": 1024,
+    "ppl": 17.589777597197987,
+    "prime_title": "RedPajamaGithub#426",
+    "source": "Wikipedia",
+    "target_title": "Common thresher"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 53,
+    "n_tokens": 1024,
+    "ppl": 20.3169553085772,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Boeing B-17 Flying Fortress"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 53,
+    "n_tokens": 1024,
+    "ppl": 19.51862285609989,
+    "prime_title": "Boeing B-17 Flying Fortress",
+    "source": "Wikipedia",
+    "target_title": "Boeing B-17 Flying Fortress"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 53,
+    "n_tokens": 1024,
+    "ppl": 20.4296606966504,
+    "prime_title": "June 1944",
+    "source": "Wikipedia",
+    "target_title": "Boeing B-17 Flying Fortress"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 53,
+    "n_tokens": 1024,
+    "ppl": 20.35893745322865,
+    "prime_title": "The Tenant",
+    "source": "Wikipedia",
+    "target_title": "Boeing B-17 Flying Fortress"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 53,
+    "n_tokens": 1024,
+    "ppl": 20.278008659767448,
+    "prime_title": "RedPajamaGithub#478",
+    "source": "Wikipedia",
+    "target_title": "Boeing B-17 Flying Fortress"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 54,
+    "n_tokens": 1024,
+    "ppl": 19.258499570006567,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Building regulations in the United Kingdom"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 54,
+    "n_tokens": 1024,
+    "ppl": 19.232042685658918,
+    "prime_title": "Building regulations in the United Kingdom",
+    "source": "Wikipedia",
+    "target_title": "Building regulations in the United Kingdom"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 54,
+    "n_tokens": 1024,
+    "ppl": 19.605727314495983,
+    "prime_title": "Home inspection",
+    "source": "Wikipedia",
+    "target_title": "Building regulations in the United Kingdom"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 54,
+    "n_tokens": 1024,
+    "ppl": 19.40958287499052,
+    "prime_title": "Psychometrer Eiji",
+    "source": "Wikipedia",
+    "target_title": "Building regulations in the United Kingdom"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 54,
+    "n_tokens": 1024,
+    "ppl": 19.46676696736274,
+    "prime_title": "RedPajamaGithub#106",
+    "source": "Wikipedia",
+    "target_title": "Building regulations in the United Kingdom"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 55,
+    "n_tokens": 1024,
+    "ppl": 22.098026587649997,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Forget What You Know"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 55,
+    "n_tokens": 1024,
+    "ppl": 21.350180419496095,
+    "prime_title": "Forget What You Know",
+    "source": "Wikipedia",
+    "target_title": "Forget What You Know"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 55,
+    "n_tokens": 1024,
+    "ppl": 22.12470696505648,
+    "prime_title": "Gabe Saporta",
+    "source": "Wikipedia",
+    "target_title": "Forget What You Know"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 55,
+    "n_tokens": 1024,
+    "ppl": 22.395937172723254,
+    "prime_title": "Colorado Shakespeare Festival",
+    "source": "Wikipedia",
+    "target_title": "Forget What You Know"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 55,
+    "n_tokens": 1024,
+    "ppl": 22.43191762162679,
+    "prime_title": "RedPajamaGithub#58",
+    "source": "Wikipedia",
+    "target_title": "Forget What You Know"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 56,
+    "n_tokens": 1024,
+    "ppl": 16.144781960379245,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "HMS Safari"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 56,
+    "n_tokens": 1024,
+    "ppl": 15.426335041704949,
+    "prime_title": "HMS Safari",
+    "source": "Wikipedia",
+    "target_title": "HMS Safari"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 56,
+    "n_tokens": 1024,
+    "ppl": 16.468077138977286,
+    "prime_title": "June 1940",
+    "source": "Wikipedia",
+    "target_title": "HMS Safari"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 56,
+    "n_tokens": 1024,
+    "ppl": 16.551576620911682,
+    "prime_title": "Urban forest",
+    "source": "Wikipedia",
+    "target_title": "HMS Safari"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 56,
+    "n_tokens": 1024,
+    "ppl": 16.154488750708616,
+    "prime_title": "RedPajamaGithub#307",
+    "source": "Wikipedia",
+    "target_title": "HMS Safari"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 57,
+    "n_tokens": 1024,
+    "ppl": 24.765473444012773,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Super Columbine Massacre RPG!"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 57,
+    "n_tokens": 1024,
+    "ppl": 24.006724959096967,
+    "prime_title": "Super Columbine Massacre RPG!",
+    "source": "Wikipedia",
+    "target_title": "Super Columbine Massacre RPG!"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 57,
+    "n_tokens": 1024,
+    "ppl": 25.021742806538445,
+    "prime_title": "April 20",
+    "source": "Wikipedia",
+    "target_title": "Super Columbine Massacre RPG!"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 57,
+    "n_tokens": 1024,
+    "ppl": 25.55334414020593,
+    "prime_title": "Mar\u00eda Ignacia Rodr\u00edguez de Velasco y Osorio Barba",
+    "source": "Wikipedia",
+    "target_title": "Super Columbine Massacre RPG!"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 57,
+    "n_tokens": 1024,
+    "ppl": 24.79869698820492,
+    "prime_title": "RedPajamaGithub#300",
+    "source": "Wikipedia",
+    "target_title": "Super Columbine Massacre RPG!"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 58,
+    "n_tokens": 1024,
+    "ppl": 9.818425267839388,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Arthritis"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 58,
+    "n_tokens": 1024,
+    "ppl": 9.880601184436665,
+    "prime_title": "Arthritis",
+    "source": "Wikipedia",
+    "target_title": "Arthritis"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 58,
+    "n_tokens": 1024,
+    "ppl": 9.910460188778524,
+    "prime_title": "Assistive technology",
+    "source": "Wikipedia",
+    "target_title": "Arthritis"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 58,
+    "n_tokens": 1024,
+    "ppl": 9.842950973925984,
+    "prime_title": "Dayboro, Queensland",
+    "source": "Wikipedia",
+    "target_title": "Arthritis"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 58,
+    "n_tokens": 1024,
+    "ppl": 9.814079187991702,
+    "prime_title": "RedPajamaGithub#325",
+    "source": "Wikipedia",
+    "target_title": "Arthritis"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 59,
+    "n_tokens": 1024,
+    "ppl": 15.324105312858615,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Dave Gallaher"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 59,
+    "n_tokens": 1024,
+    "ppl": 15.011560157296394,
+    "prime_title": "Dave Gallaher",
+    "source": "Wikipedia",
+    "target_title": "Dave Gallaher"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 59,
+    "n_tokens": 1024,
+    "ppl": 15.297636297603901,
+    "prime_title": "New Zealand",
+    "source": "Wikipedia",
+    "target_title": "Dave Gallaher"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 59,
+    "n_tokens": 1024,
+    "ppl": 15.759737818510379,
+    "prime_title": "Agrarian reforms in Cuba",
+    "source": "Wikipedia",
+    "target_title": "Dave Gallaher"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 59,
+    "n_tokens": 1024,
+    "ppl": 15.446889934246544,
+    "prime_title": "RedPajamaGithub#80",
+    "source": "Wikipedia",
+    "target_title": "Dave Gallaher"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 60,
+    "n_tokens": 1024,
+    "ppl": 33.59099907086762,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Darwin (character)"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 60,
+    "n_tokens": 1024,
+    "ppl": 34.11367641893673,
+    "prime_title": "Darwin (character)",
+    "source": "Wikipedia",
+    "target_title": "Darwin (character)"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 60,
+    "n_tokens": 1024,
+    "ppl": 34.25490235869433,
+    "prime_title": "Children of the Vault",
+    "source": "Wikipedia",
+    "target_title": "Darwin (character)"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 60,
+    "n_tokens": 1024,
+    "ppl": 34.15166395822674,
+    "prime_title": "WWE SmackDown vs. Raw 2007",
+    "source": "Wikipedia",
+    "target_title": "Darwin (character)"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 60,
+    "n_tokens": 1024,
+    "ppl": 33.71779957061896,
+    "prime_title": "RedPajamaGithub#61",
+    "source": "Wikipedia",
+    "target_title": "Darwin (character)"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 61,
+    "n_tokens": 1024,
+    "ppl": 19.857540383280288,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Waldseem\u00fcller map"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 61,
+    "n_tokens": 1024,
+    "ppl": 19.805100444128172,
+    "prime_title": "Waldseem\u00fcller map",
+    "source": "Wikipedia",
+    "target_title": "Waldseem\u00fcller map"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 61,
+    "n_tokens": 1024,
+    "ppl": 20.36384538708993,
+    "prime_title": "Amerigo Vespucci",
+    "source": "Wikipedia",
+    "target_title": "Waldseem\u00fcller map"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 61,
+    "n_tokens": 1024,
+    "ppl": 20.119733840927136,
+    "prime_title": "2nd Battalion, 6th Marines",
+    "source": "Wikipedia",
+    "target_title": "Waldseem\u00fcller map"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 61,
+    "n_tokens": 1024,
+    "ppl": 19.92415132988785,
+    "prime_title": "RedPajamaGithub#189",
+    "source": "Wikipedia",
+    "target_title": "Waldseem\u00fcller map"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 62,
+    "n_tokens": 1024,
+    "ppl": 31.95437855937191,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Valentino (1977 film)"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 62,
+    "n_tokens": 1024,
+    "ppl": 31.12749513322573,
+    "prime_title": "Valentino (1977 film)",
+    "source": "Wikipedia",
+    "target_title": "Valentino (1977 film)"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 62,
+    "n_tokens": 1024,
+    "ppl": 32.68802523410197,
+    "prime_title": "June Mathis",
+    "source": "Wikipedia",
+    "target_title": "Valentino (1977 film)"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 62,
+    "n_tokens": 1024,
+    "ppl": 32.95782676682928,
+    "prime_title": "From Hell (film)",
+    "source": "Wikipedia",
+    "target_title": "Valentino (1977 film)"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 62,
+    "n_tokens": 1024,
+    "ppl": 32.157337745290626,
+    "prime_title": "RedPajamaGithub#407",
+    "source": "Wikipedia",
+    "target_title": "Valentino (1977 film)"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 63,
+    "n_tokens": 1024,
+    "ppl": 16.12082298932088,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Israel\u2013New Zealand relations"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 63,
+    "n_tokens": 1024,
+    "ppl": 15.850306520335725,
+    "prime_title": "Israel\u2013New Zealand relations",
+    "source": "Wikipedia",
+    "target_title": "Israel\u2013New Zealand relations"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 63,
+    "n_tokens": 1024,
+    "ppl": 16.202287489128214,
+    "prime_title": "New Zealand",
+    "source": "Wikipedia",
+    "target_title": "Israel\u2013New Zealand relations"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 63,
+    "n_tokens": 1024,
+    "ppl": 16.277141826727618,
+    "prime_title": "Larry Gagosian",
+    "source": "Wikipedia",
+    "target_title": "Israel\u2013New Zealand relations"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 63,
+    "n_tokens": 1024,
+    "ppl": 16.36779594605472,
+    "prime_title": "RedPajamaGithub#184",
+    "source": "Wikipedia",
+    "target_title": "Israel\u2013New Zealand relations"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 64,
+    "n_tokens": 1024,
+    "ppl": 15.95692542603165,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Bacardi"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 64,
+    "n_tokens": 1024,
+    "ppl": 16.04623990567387,
+    "prime_title": "Bacardi",
+    "source": "Wikipedia",
+    "target_title": "Bacardi"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 64,
+    "n_tokens": 1024,
+    "ppl": 16.345586935109655,
+    "prime_title": "Bombay Sapphire",
+    "source": "Wikipedia",
+    "target_title": "Bacardi"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 64,
+    "n_tokens": 1024,
+    "ppl": 15.894089998455625,
+    "prime_title": "CD Travadores",
+    "source": "Wikipedia",
+    "target_title": "Bacardi"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 64,
+    "n_tokens": 1024,
+    "ppl": 16.06712662526865,
+    "prime_title": "RedPajamaGithub#99",
+    "source": "Wikipedia",
+    "target_title": "Bacardi"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 65,
+    "n_tokens": 1024,
+    "ppl": 22.160774730297874,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Aeronautical Division, U.S. Signal Corps"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 65,
+    "n_tokens": 1024,
+    "ppl": 22.42160868870209,
+    "prime_title": "Aeronautical Division, U.S. Signal Corps",
+    "source": "Wikipedia",
+    "target_title": "Aeronautical Division, U.S. Signal Corps"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 65,
+    "n_tokens": 1024,
+    "ppl": 22.838354414054187,
+    "prime_title": "August 1",
+    "source": "Wikipedia",
+    "target_title": "Aeronautical Division, U.S. Signal Corps"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 65,
+    "n_tokens": 1024,
+    "ppl": 22.317725995069672,
+    "prime_title": "Herbert H. Clark",
+    "source": "Wikipedia",
+    "target_title": "Aeronautical Division, U.S. Signal Corps"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 65,
+    "n_tokens": 1024,
+    "ppl": 22.280579392476774,
+    "prime_title": "RedPajamaGithub#374",
+    "source": "Wikipedia",
+    "target_title": "Aeronautical Division, U.S. Signal Corps"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 66,
+    "n_tokens": 1024,
+    "ppl": 12.775861783326631,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Antarctic Treaty System"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 66,
+    "n_tokens": 1024,
+    "ppl": 12.613276942092169,
+    "prime_title": "Antarctic Treaty System",
+    "source": "Wikipedia",
+    "target_title": "Antarctic Treaty System"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 66,
+    "n_tokens": 1024,
+    "ppl": 12.943800790086726,
+    "prime_title": "New Zealand",
+    "source": "Wikipedia",
+    "target_title": "Antarctic Treaty System"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 66,
+    "n_tokens": 1024,
+    "ppl": 12.980022883136629,
+    "prime_title": "I Stand Alone (Godsmack song)",
+    "source": "Wikipedia",
+    "target_title": "Antarctic Treaty System"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 66,
+    "n_tokens": 1024,
+    "ppl": 12.803857764471324,
+    "prime_title": "RedPajamaStackExchange#368",
+    "source": "Wikipedia",
+    "target_title": "Antarctic Treaty System"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 67,
+    "n_tokens": 1024,
+    "ppl": 16.99337419654582,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Kaveri River water dispute"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 67,
+    "n_tokens": 1024,
+    "ppl": 16.961902681590058,
+    "prime_title": "Kaveri River water dispute",
+    "source": "Wikipedia",
+    "target_title": "Kaveri River water dispute"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 67,
+    "n_tokens": 1024,
+    "ppl": 17.430645201390337,
+    "prime_title": "April 2",
+    "source": "Wikipedia",
+    "target_title": "Kaveri River water dispute"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 67,
+    "n_tokens": 1024,
+    "ppl": 17.15592455060406,
+    "prime_title": "IRAK4",
+    "source": "Wikipedia",
+    "target_title": "Kaveri River water dispute"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 67,
+    "n_tokens": 1024,
+    "ppl": 17.168019712881666,
+    "prime_title": "RedPajamaStackExchange#283",
+    "source": "Wikipedia",
+    "target_title": "Kaveri River water dispute"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 68,
+    "n_tokens": 1024,
+    "ppl": 20.473203372402995,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "John L. DeWitt"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 68,
+    "n_tokens": 1024,
+    "ppl": 20.576554136527086,
+    "prime_title": "John L. DeWitt",
+    "source": "Wikipedia",
+    "target_title": "John L. DeWitt"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 68,
+    "n_tokens": 1024,
+    "ppl": 20.57950765982426,
+    "prime_title": "World War I",
+    "source": "Wikipedia",
+    "target_title": "John L. DeWitt"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 68,
+    "n_tokens": 1024,
+    "ppl": 20.898280672183365,
+    "prime_title": "Sweyn Asleifsson",
+    "source": "Wikipedia",
+    "target_title": "John L. DeWitt"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 68,
+    "n_tokens": 1024,
+    "ppl": 20.693141614230342,
+    "prime_title": "RedPajamaStackExchange#127",
+    "source": "Wikipedia",
+    "target_title": "John L. DeWitt"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 69,
+    "n_tokens": 1024,
+    "ppl": 14.593341414855708,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Greg Schiano"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 69,
+    "n_tokens": 1024,
+    "ppl": 14.89613850099461,
+    "prime_title": "Greg Schiano",
+    "source": "Wikipedia",
+    "target_title": "Greg Schiano"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 69,
+    "n_tokens": 1024,
+    "ppl": 14.808666779923874,
+    "prime_title": "Baltimore Ravens",
+    "source": "Wikipedia",
+    "target_title": "Greg Schiano"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 69,
+    "n_tokens": 1024,
+    "ppl": 14.629445713888675,
+    "prime_title": "Kungsholmens gymnasium",
+    "source": "Wikipedia",
+    "target_title": "Greg Schiano"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 69,
+    "n_tokens": 1024,
+    "ppl": 14.755555185518421,
+    "prime_title": "RedPajamaStackExchange#326",
+    "source": "Wikipedia",
+    "target_title": "Greg Schiano"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 70,
+    "n_tokens": 1024,
+    "ppl": 13.163607276162828,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Overton Park"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 70,
+    "n_tokens": 1024,
+    "ppl": 13.174574442995256,
+    "prime_title": "Overton Park",
+    "source": "Wikipedia",
+    "target_title": "Overton Park"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 70,
+    "n_tokens": 1024,
+    "ppl": 13.704061272230325,
+    "prime_title": "World War I",
+    "source": "Wikipedia",
+    "target_title": "Overton Park"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 70,
+    "n_tokens": 1024,
+    "ppl": 13.314822872667392,
+    "prime_title": "Type 62",
+    "source": "Wikipedia",
+    "target_title": "Overton Park"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 70,
+    "n_tokens": 1024,
+    "ppl": 13.28680250565156,
+    "prime_title": "RedPajamaStackExchange#425",
+    "source": "Wikipedia",
+    "target_title": "Overton Park"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 71,
+    "n_tokens": 1024,
+    "ppl": 16.316602713183805,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "New Zealand DX class locomotive"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 71,
+    "n_tokens": 1024,
+    "ppl": 15.914497889314566,
+    "prime_title": "New Zealand DX class locomotive",
+    "source": "Wikipedia",
+    "target_title": "New Zealand DX class locomotive"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 71,
+    "n_tokens": 1024,
+    "ppl": 16.60789377394649,
+    "prime_title": "New Zealand",
+    "source": "Wikipedia",
+    "target_title": "New Zealand DX class locomotive"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 71,
+    "n_tokens": 1024,
+    "ppl": 16.698148450120303,
+    "prime_title": "Lake Mistassini",
+    "source": "Wikipedia",
+    "target_title": "New Zealand DX class locomotive"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 71,
+    "n_tokens": 1024,
+    "ppl": 16.326755353341678,
+    "prime_title": "RedPajamaStackExchange#34",
+    "source": "Wikipedia",
+    "target_title": "New Zealand DX class locomotive"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 72,
+    "n_tokens": 1024,
+    "ppl": 32.699670696220004,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Graham Clarke (musician)"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 72,
+    "n_tokens": 1024,
+    "ppl": 32.312459533925235,
+    "prime_title": "Graham Clarke (musician)",
+    "source": "Wikipedia",
+    "target_title": "Graham Clarke (musician)"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 72,
+    "n_tokens": 1024,
+    "ppl": 33.50427268831246,
+    "prime_title": "September 11 attacks",
+    "source": "Wikipedia",
+    "target_title": "Graham Clarke (musician)"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 72,
+    "n_tokens": 1024,
+    "ppl": 33.20676088052308,
+    "prime_title": "Bamberg Cathedral",
+    "source": "Wikipedia",
+    "target_title": "Graham Clarke (musician)"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 72,
+    "n_tokens": 1024,
+    "ppl": 33.25773071850336,
+    "prime_title": "RedPajamaStackExchange#366",
+    "source": "Wikipedia",
+    "target_title": "Graham Clarke (musician)"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 73,
+    "n_tokens": 1024,
+    "ppl": 15.841821141471017,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "Saskatchewan Highway 16"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 73,
+    "n_tokens": 1024,
+    "ppl": 15.501192669618366,
+    "prime_title": "Saskatchewan Highway 16",
+    "source": "Wikipedia",
+    "target_title": "Saskatchewan Highway 16"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 73,
+    "n_tokens": 1024,
+    "ppl": 16.193304813365508,
+    "prime_title": "North Saskatchewan River",
+    "source": "Wikipedia",
+    "target_title": "Saskatchewan Highway 16"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 73,
+    "n_tokens": 1024,
+    "ppl": 16.10025032157884,
+    "prime_title": "Uthman ibn Abi al-As",
+    "source": "Wikipedia",
+    "target_title": "Saskatchewan Highway 16"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 73,
+    "n_tokens": 1024,
+    "ppl": 15.806832083640375,
+    "prime_title": "RedPajamaStackExchange#455",
+    "source": "Wikipedia",
+    "target_title": "Saskatchewan Highway 16"
+  },
+  {
+    "arm": "reset",
+    "doc_idx": 74,
+    "n_tokens": 1024,
+    "ppl": 32.94489543431846,
+    "prime_title": "",
+    "source": "Wikipedia",
+    "target_title": "The Fable of the Bees"
+  },
+  {
+    "arm": "self",
+    "doc_idx": 74,
+    "n_tokens": 1024,
+    "ppl": 32.407410551981876,
+    "prime_title": "The Fable of the Bees",
+    "source": "Wikipedia",
+    "target_title": "The Fable of the Bees"
+  },
+  {
+    "arm": "related",
+    "doc_idx": 74,
+    "n_tokens": 1024,
+    "ppl": 33.41541194657439,
+    "prime_title": "Adam Smith",
+    "source": "Wikipedia",
+    "target_title": "The Fable of the Bees"
+  },
+  {
+    "arm": "random",
+    "doc_idx": 74,
+    "n_tokens": 1024,
+    "ppl": 33.14872382989742,
+    "prime_title": "NWA United States Heavyweight Championship",
+    "source": "Wikipedia",
+    "target_title": "The Fable of the Bees"
+  },
+  {
+    "arm": "other_source",
+    "doc_idx": 74,
+    "n_tokens": 1024,
+    "ppl": 33.49356243744148,
+    "prime_title": "RedPajamaStackExchange#396",
+    "source": "Wikipedia",
+    "target_title": "The Fable of the Bees"
+  }
+]

@@ -1,0 +1,9 @@
+carry,arm,n_docs,difference_percent,ci_low,ci_high,carry_better_share
+seed 42,self,200,-0.6724,-0.8074,-0.5479,0.2000
+seed 42,related,200,0.3185,0.2141,0.4258,0.7150
+seed 42,random,200,0.3881,0.2991,0.4714,0.7300
+seed 42,other_source,200,-0.2494,-0.3499,-0.1671,0.4050
+seed 43,self,200,-0.6001,-0.7376,-0.4710,0.2800
+seed 43,related,200,0.3050,0.2170,0.3883,0.6950
+seed 43,random,200,0.2939,0.2262,0.3645,0.6750
+seed 43,other_source,200,-0.1358,-0.2105,-0.0718,0.4200
