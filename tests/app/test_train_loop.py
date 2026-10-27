@@ -67,6 +67,13 @@ class TestAccumulation:
 
         assert len(wiring.compute.steps) == result.steps == 2
 
+    def test_max_steps_stops_the_run_and_saves_that_step(self):
+        saved = Recorder()
+        result, _ = run(n_docs=8, cfg=_builders.config(max_steps=2, save_every=100), checkpoint=saved)
+
+        assert result.steps == 2
+        assert saved.calls[-1]["step"] == 2
+
     def test_a_partial_final_window_does_not_step(self):
         _, wiring = run(n_docs=3)
 

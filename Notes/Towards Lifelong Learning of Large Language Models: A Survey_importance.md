@@ -1,0 +1,18 @@
+# Towards Lifelong Learning of Large Language Models: A Survey
+
+**Citation:** Zheng, Qiu, Shi, Ma (2024), arXiv:2406.06391v1, South China University of Technology. (Manuscript submitted to ACM.)
+
+## Important parts for my research
+- Taxonomy splits lifelong learning into Internal Knowledge (continual pretraining: vertical-domain, language-domain, temporal-domain; continual finetuning: task-specific and task-agnostic incl. instruction-tuning, knowledge editing, alignment) and External Knowledge (retrieval-augmented, tool-based) — 12 scenarios total, all defined as updating (or supplementing) parameters through discrete training-time task sequences {D^(1),...,D^(T)}, not inference-time updates.
+- Standard evaluation metrics, directly reusable: average accuracy (AA_t = mean performance over t learned tasks), average incremental accuracy (AIA), forgetting measure (FGT_t = mean of [max prior performance − current performance] per old task), backward transfer (BWT, performance change of old tasks after learning new ones), forward transfer (FWD, gain on a new task vs. a randomly-initialized model trained only on that task). These formalize exactly the stability/plasticity split needed to report carry-attributable gain vs. forgetting in a dynamic-evaluation setup.
+- Four common technique families across all 12 scenarios: replay-based (experience/generative), regularization-based (weight regularization e.g. EWC; feature regularization), architecture-based (prompt tuning, prefix tuning, LoRA, adapters, MoE, model expansion), distillation-based (from new/old/pseudo-old data).
+- **Verified negative finding:** the terms "test-time," "fast weight," "carry," and "session" do not appear anywhere in the paper (confirmed via full-text search). The survey's "lifelong learning" is exclusively about training-time parameter updates (full/partial fine-tuning, continual pretraining) or non-parametric external augmentation (RAG, tools) — it does not recognize inference-time / test-time parameter adaptation as a lifelong-learning axis at all.
+- Section 6.1 names catastrophic forgetting, the plasticity-stability dilemma, computation cost, and unavailability of weights/data as the four core open challenges; Section 6.3 lists multimodal, efficient (pruning/merging/expansion), and "general" (RL/agent-driven) lifelong learning as future directions — none anticipate test-time fast-weight persistence.
+
+## What to cite (This is NOT a rule and you do not have to cite it with this prasing, Just a suggesion and only use it like that If it matches the paper)
+- "A comprehensive 2024 survey covering 12 lifelong-learning scenarios for LLMs defines the field entirely around training-time parameter updates or external retrieval/tools; it contains no treatment of test-time/inference-time parameter adaptation" (Related Work — establishes that session-persistent TTT occupies a genuinely distinct axis not covered by mainstream "lifelong learning" taxonomy).
+- "Standard lifelong-learning metrics — forgetting measure (FGT), backward transfer (BWT), forward transfer (FWD) — formalize stability vs. plasticity tradeoffs" (Methodology — candidate framing/vocabulary for reporting carry-attributable gain alongside forgetting/instability, even though computed here at inference time rather than after training-time tasks).
+
+## Verification
+- Full-text keyword search (pdftotext) for "test-time," "test time," "fast weight," "carry," "session" returned zero matches — confirmed absence directly, not inferred from skimming.
+- Taxonomy (Fig. 2), metrics (Eq. 1-5, Section 2.2), technique families (Section 2.3, Fig. 3-4), and challenges/future directions (Section 6.1-6.3) all read directly from the PDF text.

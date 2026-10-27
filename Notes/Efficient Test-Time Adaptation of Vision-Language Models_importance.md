@@ -1,0 +1,20 @@
+# Efficient Test-Time Adaptation of Vision-Language Models
+
+**Citation:** Adilek Karmanov, Dayan Guan, Shijian Lu, Abdulmotaleb El Saddik, Eric Xing — CVPR 2024, arXiv:2403.18293v1.
+
+## Important parts for my research
+- Proposes TDA (Training-free dynamic Adapter): a non-parametric, backprop-free test-time adaptation method for CLIP using two key-value caches (positive and negative) built online from a stream of test samples, instead of gradient-based prompt tuning (TPT/DiffTPT). Positive cache stores {test features as keys, pseudo-labels as values}; negative cache stores samples whose prediction entropy falls in a moderate uncertainty band [τ_l, τ_h], with negative pseudo-labels marking classes the model is confident the sample does *not* belong to (Eq. 4: L̂_n = −1[p_l < P(Q_n)]).
+- Cache update is a bounded, priority-queue-like mechanism: each class has a fixed shot capacity k; new entries are only added/replace existing ones if they have lower prediction entropy than the current "most uncertain" cached entry for that class — an explicit anti-noise-accumulation design (Sec 3.2), directly analogous to needing bounded/decaying carry to avoid degenerate accumulation.
+- Final prediction combines three additive terms: CLIP zero-shot logits + positive-cache adaptation function + negative-cache adaptation function (Eq. 7), each cache contribution computed via the Tip-Adapter-style adaptation function A(z)=α·exp(−β(1−z)).
+- Results: TDA improves OOD average accuracy over CLIP-ResNet-50 baseline by +3.54pp (43.09→46.63) and cross-domain average by +4.4pp (56.63→61.03), while cutting test-time adaptation latency on ImageNet from 12h50min (TPT) / 34h45min (DiffTPT) to 16 minutes — near-parity accuracy gains at orders-of-magnitude lower compute than gradient-based TTT (TPT/DiffTPT), since no backpropagation occurs at test time.
+- Ablation: shot capacity is a sensitive hyperparameter — larger negative-cache capacity (>2–3 shots) *degrades* accuracy because it accumulates higher-entropy, noisier pseudo-labels over time (Fig. 4) — a direct empirical instance of an adaptation cache getting worse, not better, with more accumulated "memory," from noise rather than distribution shift.
+- Both positive and negative caches independently outperform the CLIP baseline, and combining them outperforms either alone (Sec 4.3 ablation) — supports a "multiple complementary signals beat a single one" methodological point, though this is a classification (not perplexity) task.
+
+## What to cite (This is NOT a rule and you do not have to cite it with this prasing, Just a suggesion and only use it like that If it matches the paper)
+- (Related Work) TDA as a non-gradient, cache-based alternative to gradient-descent TTT (TPT/DiffTPT) for test-time adaptation — useful contrast point for positioning our gradient-based fast-weight carry against non-parametric adaptation mechanisms in the broader TTA literature.
+- (Discussion — explains flat/non-compounding carry) The shot-capacity ablation showing accuracy degrades once cache capacity exceeds 2–3 due to noise accumulation (Fig. 4, "the performance decline with larger caches is mainly due to noise accumulation rather than class imbalance") — a directly citable adjacent-domain result that more accumulated test-time adaptation state is not monotonically better, supporting our framing of a flat/plateauing carry as a legitimate, literature-consistent finding rather than a bug.
+- (Methodology) Entropy-thresholded, capacity-bounded update rule (only replace cache entries when new entropy is lower) as a reusable pattern for describing principled ways to bound accumulation in an online adaptation setting.
+
+## Verification
+- Numbers (43.09→46.63 OOD average, 56.63→61.03 cross-domain average, 12h50m/34h45m/16min testing times, shot capacity 3/2 optimal) checked directly against Tables 1–3, Table 2, and Figure 4 in the PDF.
+- This is a vision-language classification (CLIP) paper with no perplexity/LM/fast-weight-persistence content; relevance here is strictly as an analogous-domain precedent for bounded-cache/noise-accumulation dynamics, not as an LM-adjacent method.

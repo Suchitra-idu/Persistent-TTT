@@ -1,0 +1,19 @@
+# Optimization as a Model for Few-Shot Learning
+
+**Citation:** Sachin Ravi, Hugo Larochelle — ICLR 2017 (Princeton University & Twitter; Google DeepMind collaboration per slide credits). Note: the source PDF is a conference-talk slide deck presented by Sachin Ravi, not the typeset paper; all content below is as shown on the slides, which match the published Ravi & Larochelle ICLR 2017 paper of this title.
+
+## Important parts for my research
+- Casts learning-to-learn as learning a training algorithm: a meta-learner LSTM produces the parameter trajectory of a learner model M. Gradient descent θ_t = θ_{t-1} − α_t∇_{θ_{t-1}}L_t is reparametrized as an LSTM cell update: c_t = f_t⊙c_{t-1} + i_t⊙c̃_t, where cell state c_t = learner parameters θ_t, candidate c̃_t = the negative gradient, and i_t, f_t are learned sigmoid gates (each a function of ∇L_t, L_t, θ_{t-1}, and the previous gate value).
+- The **forget gate f_t is a learned, per-step, per-parameter decay on the carried state** — a direct generalization of a fixed weight-decay/learning-rate schedule into something the network adapts online. The **input gate i_t** learns an adaptive step size on the new gradient. Standard SGD is the special case i_t=α (constant), f_t=1.
+- Meta-learner also learns c_0, i.e., learns M's initialization jointly with the update rule.
+- Training: meta-learner LSTM parameters are shared across all of M's parameter dimensions (treated as one large "batch"); trained end-to-end via backprop through the unrolled adaptation trajectory to minimize test-set loss after T inner steps (Algorithm 1), while gradients are not backpropagated through the LSTM's own gradient/loss inputs.
+- MiniImageNet 5-way results: 1-shot 43.44±0.77%, 5-shot 60.60±0.71% — beats Matching Networks FCE (43.56/55.31) on 5-shot, competitive on 1-shot; outperforms plain fine-tuning and nearest-neighbor baselines substantially.
+- Learned input-gate values (Fig., slide 15) differ qualitatively between 1-shot and 5-shot regimes — with more data per class, gates saturate near 1 across nearly all steps/layers (aggressive, uniform updates), while 1-shot gates show more per-layer, per-step variation (more conservative, selective updates).
+
+## What to cite (This is NOT a rule and you do not have to cite it with this prasing, Just a suggesion and only use it like that If it matches the paper)
+- (Discussion — explains flat/non-compounding carry) The explicit contrast between a *learned, adaptive* forget/decay gate here and a *fixed, hand-set* decay coefficient in our carry mechanism: this paper's core finding is that naive fixed-rate parameter carrying (plain SGD) is a special, unstable case, and that good sequential parameter accumulation requires per-step learned gating — a fixed carried_decay (as in our Hebbian carry) lacks this adaptivity, which may explain why carry neither compounds nor blows up but instead sits flat (over-conservative decay) rather than accumulating like a tuned forget gate would.
+- (Related Work) An early framing of "the update rule as something to be learned" applicable when contrasting our fixed Hebbian outer-product update rule (no error correction, no learned gating) against learned alternatives.
+- (Methodology) The gate-visualization diagnostic (differing gate behavior 1-shot vs 5-shot) as a template for interpreting when/why a persistence mechanism engages differently across data regimes — analogous to how carry behavior might differ by domain (Q2).
+
+## Verification
+- All equations, the algorithm box, and the MiniImageNet table were read directly off the slide images. Because the source is a slide deck (not the typeset paper), exact wording/phrasing is my paraphrase of slide bullets, not the paper's original prose — numbers and equations themselves were read directly and match slide content exactly, not inferred.
