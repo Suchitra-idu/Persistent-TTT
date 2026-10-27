@@ -128,3 +128,13 @@ for the seed-43 run; its checkpoints live on that workspace's volume.
   Unrelated Ones"; abstract, contributions, conclusion lead with cross-document transfer.
 - `lora-only-matched/step_600` and `hebbian-carry-600/step_600` copied to the vihanganoob123
   volume (sha256 verified).
+
+## Status 2026-10-27
+
+- Thesis rebuilt with a full literature review from `Notes/ALL_NOTES.md` (70 bib entries); old version in git 992d756.
+- Audit applied. Subtitle now "Transfer and Interference of a Carried Fast Weight Across Documents".
+  Claim is "transfers by relatedness; harms after other-source text or a long same-source chain".
+  Ch. 6 is "Why the Naive Carry Fails"; the redesign keeps a saturated clip (carry state ratio
+  median ~8k s42 / ~15k s43). Boundary-vs-relatedness conflict on Wikipedia stated as open.
+- Reviewer gaps still open: equal-memory KV-cache baseline, dyneval on the carry model,
+  word-overlap control, behavioural probe after eviction, more seeds.

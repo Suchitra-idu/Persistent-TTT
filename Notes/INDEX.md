@@ -1,4 +1,4 @@
-# Notes index — 69 papers
+# Notes index — 80 papers
 
 One `_importance.md` file per paper in this folder, each with **Citation /
 Important parts for my research / What to cite / Verification**. Built by
@@ -122,3 +122,19 @@ claim against the source and adds detail the proposal doesn't currently have.
 
 *One paper from `../literature_review.md` has no note here: SlimPajama-6B
 (Yoon 2023) is a Hugging Face dataset card, not a paper — nothing to read.*
+
+## Added 2026-10-27 — closest recent work, memory and claim calibration
+
+PDFs are in `../New Papers/`. Notes were written from the PDFs; each note's Verification section says which parts were read.
+
+- **[Beyond Perplexity: A Behavioral Evaluation Framework for Deployment-Memory Claims in LLM Test-Time Training](Beyond%20Perplexity%3A%20A%20Behavioral%20Evaluation%20Framework%20for%20Deployment-Memory%20Claims%20in%20LLM%20Test-Time%20Training_importance.md)** — Song et al. 2026 — claim levels S/B/D; perplexity-only TTT work is S-level; names "evidence migration"
+- **[Test-Time Training with Next-Token Prediction](Test-Time%20Training%20with%20Next-Token%20Prediction_importance.md)** — Ouyang et al. 2026, Findings of EMNLP — In-Place TTT successor; restores weights after every sample; includes Qwen3-0.6B
+- **[Can a Language Model Continually Learn Facts in its Weights?](Can%20a%20Language%20Model%20Continually%20Learn%20Facts%20in%20its%20Weights%3F_importance.md)** — O'Neill et al. 2026 — sequential fact writes retain 1–46%; later writes govern retention
+- **[Delayed Supervision for Test-Time Language Models](Delayed%20Supervision%20for%20Test-Time%20Language%20Models_importance.md)** — Kim & Kothari 2026 — delayed QA loss trains test-time memory to retain facts within one stream
+- **[Adapting Language Models to Compress Contexts](Adapting%20Language%20Models%20to%20Compress%20Contexts_importance.md)** — Chevalier et al. 2023 (AutoCompressors) — summary vectors; stop-gradient after 2 steps; fused across documents
+- **[Generative Adapter: Contextualizing Language Models in Parameters with a Single Forward Pass](Generative%20Adapter%3A%20Contextualizing%20Language%20Models%20in%20Parameters%20with%20a%20Single%20Forward%20Pass_importance.md)** — Chen et al. 2024 — forward-pass outer-product adapter; SVD normalisation keeps only directions
+- **[Cartridges: Lightweight and general-purpose long context representations via self-study](Cartridges%3A%20Lightweight%20and%20general-purpose%20long%20context%20representations%20via%20self-study_importance.md)** — Eyuboglu et al. 2025 — offline-trained KV cache per corpus; 38.6× less memory than ICL
+- **[MemoryLLM: Towards Self-Updatable Large Language Models](MemoryLLM%3A%20Towards%20Self-Updatable%20Large%20Language%20Models_importance.md)** — Wang et al. 2024, ICML — fixed memory pool updated by forward passes with exponential forgetting
+- **[Larimar: Large Language Models with Episodic Memory Control](Larimar%3A%20Large%20Language%20Models%20with%20Episodic%20Memory%20Control_importance.md)** — Das et al. 2024 — episodic memory written by least squares; one-shot edits and forgetting
+- **[Leave No Context Behind: Efficient Infinite Context Transformers with Infini-attention](Leave%20No%20Context%20Behind%3A%20Efficient%20Infinite%20Context%20Transformers%20with%20Infini-attention_importance.md)** — Munkhdalai et al. 2024 — compressive associative memory across segments; Hebbian or delta; gated
+- **[Test-Time Training Done Right](Test-Time%20Training%20Done%20Right_importance.md)** — Zhang et al. 2025 (LaCT) — large-chunk TTT; L2-normalised fast weights against magnitude explosion
