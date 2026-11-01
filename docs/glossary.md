@@ -74,5 +74,5 @@
 | Term | Means |
 |---|---|
 | **resolved config** | The frozen object produced once, in Ring 5, from defaults + CLI + env |
-| **D1–D14** | Rebuild decisions in [PLAN.md](../PLAN.md) §1. Cited in code by number |
+| **D1–D14** | Rebuild decisions in [REBUILD_PLAN.md](../REBUILD_PLAN.md) §1. Cited in code by number |
 | **RQ / SO / A1–A4** | Research questions, sub-objectives and ablations from the proposal |

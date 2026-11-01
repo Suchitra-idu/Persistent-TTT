@@ -20,7 +20,7 @@ Read as files, or run `make docs` from the repo root and open
 
 Elsewhere: [MIGRATION.md](../MIGRATION.md) for what moved and what was dropped,
 [ARCHITECTURE.md](../ARCHITECTURE.md) for the rings,
-[PLAN.md](../PLAN.md) for the rebuild decisions D1–D14,
+[REBUILD_PLAN.md](../REBUILD_PLAN.md) for the rebuild decisions D1–D14,
 [tests/RULES.md](../tests/RULES.md) for the test doctrine.
 
 ## Status

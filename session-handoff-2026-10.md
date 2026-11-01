@@ -10,14 +10,15 @@ resume without the chat history. Source of truth for numbers is `results/`.
 - Writing rules for the thesis and anything for others: no em dashes, no en dashes, no colons in prose.
 - Figures as PDF, not PNG.
 - `results/` is the source of truth. Every number in the thesis must trace to a file there.
-- Thesis cites only works in `proposal.md` and `litReview.tex`; main focus is our own method.
+- Thesis cites only works with a note in `Notes/` (`proposal.md` and `litReview.tex` are deleted); main focus is our own method.
 - In-training eval (`eval_every`) is wanted; keep it on (50 steps).
 - Goal: publish within about 6 months (conference or journal, top tier welcome), free or
   minimal cost, for master's or PhD applications. Also wants research opportunities.
 
 ## Infrastructure facts
 
-- Launch with `~/venv-ardupilot/bin/modal` (the project `env/` has no torch).
+- Launch with `~/venv-ardupilot/bin/modal` (the project `env/` has no torch). As of 2026-11-01 neither
+  `~/venv-ardupilot` nor `env/` exists on this machine; recreate before running tests or Modal.
 - Modal workspace `aiteera-llc`, volume `ttt-checkpoints`. The `suchitra-idu` workspace has a
   different volume; both contain a `ttt-v1.1` folder holding different runs.
 - Hebbian `ttt-v1.1` checkpoints after step 650 are from an older run; excluded.
@@ -62,6 +63,10 @@ reason (saturated read-time clip); a trained, gated carry is a small but reliabl
 related text (same document, survives 600 steps) and interference for unrelated text
 (cross-document harm after full training); attention on the preceding text is far stronger
 (carry recovers ~4%). Thesis subtitle updated to match.
+
+Superseded 2026-11-01 by `plan/PLAN.md` §1: claim level is perplexity-based adaptation only,
+no "memory" wording; the clip is an observation, not the established cause of the naive carry's
+failure; 600 steps is not full training (schedule is 1050).
 
 ## Code added this session (uncommitted unless the user committed it)
 
@@ -138,3 +143,26 @@ for the seed-43 run; its checkpoints live on that workspace's volume.
   median ~8k s42 / ~15k s43). Boundary-vs-relatedness conflict on Wikipedia stated as open.
 - Reviewer gaps still open: equal-memory KV-cache baseline, dyneval on the carry model,
   word-overlap control, behavioural probe after eviction, more seeds.
+
+## Status 2026-11-01
+
+- `plan/PLAN.md` and `plan/TMLR Paper writing guide.md` revised: scope fixed (§1 of the plan),
+  Tier 1 cut to the controls reviewers will demand, training to 1050 added, preregistered
+  analysis with decision rules, acceptance estimates removed, submission moved to mid January 2027.
+- Root `PLAN.md` (rebuild decisions D1 to D14, still cited in code and docs) restored as
+  `REBUILD_PLAN.md`; references updated.
+- Cuts approved by the user (2026-11-01): no training past step 600 (stated limitation), no third
+  seed or second-seed ablation, no dynamic-evaluation rerun and no comparison claim against it
+  (thesis appendix only), Q2 and the delta rule out of the TMLR paper, metric stays Δppl, no DOI
+  archive. Tier 1 is now evaluation-only, about $17. Submission target early January 2027.
+- Thesis condensed to about 17k words (literature review 2.8k), four contributions; the thesis is
+  a working draft Claude may edit, the final TMLR paper is written by the author.
+- Second round of cuts (2026-11-01): no shared-token split (relatedness = title-linked, overlap
+  included); no cluster bootstrap (fresh cases use each related prime once; dev reused "New
+  Zealand" 16 times); fresh SlimPajama runs the regimes suite only; chain length moves to
+  Wikipedia. Tier 1 about $14. Thesis about 16k words; Ch. 7 "not established" merged into
+  Limitations; dyneval appendix shortened; F13 and F9 figures dropped.
+- Added 2026-11-01: Tier 1.5 mixed-session probe `mixed-carry-600` (seed 42, from scratch to 600,
+  new `mixed` strategy = `minilasting` with next document same-source at p=0.5). Code facts checked:
+  same step count as `hybrid`; state carried across every boundary; gradient crosses a boundary only
+  inside a 2-item `carry_window` (about half). Tier 1 now about $30. Decision rule in PLAN §4.

@@ -31,6 +31,6 @@ def test_a_file_is_not_mostly_documentation(path):
     assert documentation <= allowed, (
         f"{_scan.package_relative(path)} is {documentation} documentation lines "
         f"to {code} code lines, over its allowance of {allowed}. Cut the prose: "
-        "rationale belongs in PLAN.md, a test's name is its documentation, and "
+        "rationale belongs in REBUILD_PLAN.md, a test's name is its documentation, and "
         "a field needing a paragraph needs a better name."
     )

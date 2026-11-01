@@ -6,7 +6,7 @@ Both pass the same conformance suite — that is the whole point, and it is
 mechanically checked (`tests/architecture/test_suite_completeness.py`).
 
 Read [ARCHITECTURE.md](../ARCHITECTURE.md) for where the rings sit and
-[PLAN.md](../PLAN.md) for D6 and D14, which are why the split falls this way.
+[REBUILD_PLAN.md](../REBUILD_PLAN.md) for D6 and D14, which are why the split falls this way.
 
 ## The ports
 

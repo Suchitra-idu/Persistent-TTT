@@ -9,7 +9,7 @@ repo_url: https://github.com/Suchitra-idu/Our-TTT
 repo_name: Suchitra-idu/Our-TTT
 edit_uri: edit/main/docs/
 
-# Links that leave docs/ (source files, ARCHITECTURE.md, PLAN.md) are rewritten
+# Links that leave docs/ (source files, ARCHITECTURE.md, REBUILD_PLAN.md) are rewritten
 # to repo URLs at build time, so they stay relative and clickable in an editor.
 hooks:
   - hooks/repo_links.py

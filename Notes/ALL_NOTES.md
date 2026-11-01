@@ -2141,3 +2141,43 @@ This paper is an architecture-efficiency paper (attention head grouping for KV-c
 
 ## Verification
 - Read the abstract, introduction, preliminaries and method (§1–3.3, PDF pages 1–6) and the language-modelling setup (§4.2) via pdftotext. The quoted sentences, Eq. 8–10, the 70%/5% utilisation and ≥40% state ratio figures were read directly. The language-model result tables (§5.2) and appendices were not read in detail.
+
+# Analysing The Impact of Sequence Composition on Language Model Pre-Training
+
+**Citation:** Yu Zhao, Yuanbin Qu, Konrad Staniszewski, Szymon Tworkowski, Wei Liu, Piotr Miłoś, Yuxiang Wu, Pasquale Minervini. Proceedings of the 62nd Annual Meeting of the ACL (Volume 1: Long Papers), ACL 2024, pages 7897–7912. arXiv:2402.13991.
+
+## Important parts for my research
+- **Setting:** 1.3B models, 2K and 8K context, pre-trained on 150B tokens of SlimPajama (the same seven sub-corpora our holdout draws from) (§3.1).
+- **Three ways to pack documents into a training chunk (§2.1):**
+  - MixChunk, documents sampled at random from the whole corpus (the usual baseline);
+  - UniChunk, every chunk from a single source;
+  - Bm25Chunk, documents retrieved with BM25 so that packed documents are related.
+- **Unrelated earlier documents distract under causal masking.** Concatenating two random documents separated by [eos], "causal masking models can be distracted by unrelated documents in context", with distraction proportions of 45 to 52 percent up to the 256th token of the second document (§5.1).
+- **Masking earlier documents out helps.** Intra-document causal masking gives the lowest average perplexity (8.410 at 2K, 8.079 at 8K, Table 1) at a 4.0 percent efficiency cost.
+- **Related earlier documents help.** "Increasing the relatedness of documents in a sequence can improve the language modelling ability of models" (§3.2). Against MixChunk, Bm25Chunk lowers average perplexity by 0.62 (2K) and 0.78 (8K), and UniChunk (same source) by 0.34 and 0.21 (Table 1).
+- The state here is the attention context during pre-training, not a fast weight, and the effect is on training, not on a test-time carry.
+
+## What to cite (This is NOT a rule and you do not have to cite it with this prasing, Just a suggesion and only use it like that If it matches the paper)
+- (Related Work, positioning) The attention-side counterpart of our relatedness gradient: in pre-training, related earlier documents help, same-source ones help less, and unrelated ones distract — Zhao et al. (2024). Our result is the same ordering for a carried fast weight at test time, so the ordering itself is not new; what is new is where the carried state lives.
+- (Discussion) Their intra-document masking result is the analogue of resetting the fast weight at each document, which is what In-Place TTT does.
+
+## Verification
+- Read the arXiv abstract and the HTML version (§2.1, §3.1, §3.2, Table 1, §5.1) on 2026-11-01. Section numbers and figures above were read there. The PDF was not read, and §4 results were read only for the memorisation figure.
+
+# Test-Time Training on Nearest Neighbors for Large Language Models
+
+**Citation:** Moritz Hardt, Yu Sun. ICLR 2024. arXiv:2305.18466.
+
+## Important parts for my research
+- **Method (TTT-NN):** for each test input, retrieve its nearest neighbours from a distributed embedding index of the Pile and fine-tune the model on their text, one gradient iteration per neighbour (long neighbours split into chunks). Main experiments use 50 neighbours; the abstract reports gains with "as few as 20 neighbors, each for only one gradient iteration".
+- **Reset per input:** after each test instance "we reset its trainable parameters to their original states". Nothing is carried between inputs.
+- **Models and optimiser:** GPT-2 Small (117M), GPT-2 Large (774M), GPT-Neo (1.3B); Adam, lr 2e-5 (GPT-2) and 5e-6 (GPT-Neo), default HuggingFace settings without tuning.
+- **Results:** improves more than 20 Pile language-modelling tasks. GPT-2 Large bits per byte, base to TTT-NN: pile_github 1.95 to 0.51, pile_enron 1.44 to 0.72, pile_all 1.07 to 0.85. It narrows the gap between small GPT-2 and a GPT-Neo model more than 10 times larger.
+- **Relatedness matters:** "Sufficient index quality and size, however, are necessary"; training from the nearest to the farthest neighbour works well, the reverse order "performs significantly worse". Unrelated or random training text is not tested.
+
+## What to cite (This is NOT a rule and you do not have to cite it with this prasing, Just a suggesion and only use it like that If it matches the paper)
+- (Related Work) Test-time training on related text improves language modelling, with gradient steps on the slow weights and a reset after every input — Hardt and Sun (2024). Our carry is built by forward passes in a fast weight and is not reset.
+- (Discussion) Precedent that the benefit of test-time adaptation depends on how close the adaptation text is to the target, as in our relatedness gradient.
+
+## Verification
+- Read the arXiv abstract and the HTML version (method, reset sentence, Table 1, appendix hyperparameters) on 2026-11-01. The PDF was not read.

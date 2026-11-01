@@ -148,7 +148,7 @@ class TestMetricArithmetic:
     def test_the_per_source_between_gap_agrees(self, source):
         """`within` is deliberately excluded: it used to be fresh - carry_off,
         and is now lora_only - carry_off (`lora_only` reinstated, `fresh`
-        redefined to the untouched base model — see PLAN.md's cut list, item
+        redefined to the untouched base model — see REBUILD_PLAN.md's cut list, item
         4). `between` is unaffected by that split, so parity still holds."""
         old, summaries = _both_sides()
 

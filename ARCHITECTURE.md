@@ -6,7 +6,7 @@ Read that for *why*. This file is the map: where things go, and what stops
 them going anywhere else.
 
 The rebuild contract — what gets built, in what order, and the decisions
-(D1–D14) behind the deviations noted below — is [`PLAN.md`](PLAN.md).
+(D1–D14) behind the deviations noted below — is [`REBUILD_PLAN.md`](REBUILD_PLAN.md).
 For the mechanism itself, the vocabulary, and a file-by-file map of Ring 0,
 see [`docs/`](docs/README.md).
 
@@ -58,10 +58,10 @@ outer ring exists.
 
 ### Two deviations from the spec's template, both deliberate
 
-1. **The package root is `ttt/`, not bare `core/`** (PLAN.md D2). `import core`
+1. **The package root is `ttt/`, not bare `core/`** (REBUILD_PLAN.md D2). `import core`
    is a landmine in a repo that also runs on Modal. The rings are unchanged;
    they are just namespaced.
-2. **Ring 0 may import `torch`** (PLAN.md D1). Read literally, "no framework"
+2. **Ring 0 may import `torch`** (REBUILD_PLAN.md D1). Read literally, "no framework"
    would exile the TTT scan math — the most correctness-critical code here —
    out of the ring where property tests and reference oracles live. The rule
    that carries the spec's intent is *no I/O, no GPU, no global state,
@@ -114,7 +114,7 @@ reject each, and cleans up.
   Makefile           check / lint / test / test-gpu / guard
   .importlinter      the enforced Dependency Rule
   ARCHITECTURE.md    this file
-  PLAN.md            the rebuild contract (phases, decisions D1-D14)
+  REBUILD_PLAN.md    the rebuild contract (phases, decisions D1-D14)
   MIGRATION.md       what moved where, what was dropped, what proves it
 
   ttt/
@@ -155,7 +155,7 @@ architecture.
 ## Status
 
 Built side by side with the original flat modules in the parent directory
-(PLAN.md D8); nothing there is touched until the parity suite in Phase 6 is
+(REBUILD_PLAN.md D8); nothing there is touched until the parity suite in Phase 6 is
 green, and retiring it is a separate explicit call.
 
 **All six phases complete.** Ring 0 is built and property-tested, Ring 1 holds the

@@ -1,4 +1,4 @@
-# Notes index — 80 papers
+# Notes index — 82 papers
 
 One `_importance.md` file per paper in this folder, each with **Citation /
 Important parts for my research / What to cite / Verification**. Built by
@@ -138,3 +138,10 @@ PDFs are in `../New Papers/`. Notes were written from the PDFs; each note's Veri
 - **[Larimar: Large Language Models with Episodic Memory Control](Larimar%3A%20Large%20Language%20Models%20with%20Episodic%20Memory%20Control_importance.md)** — Das et al. 2024 — episodic memory written by least squares; one-shot edits and forgetting
 - **[Leave No Context Behind: Efficient Infinite Context Transformers with Infini-attention](Leave%20No%20Context%20Behind%3A%20Efficient%20Infinite%20Context%20Transformers%20with%20Infini-attention_importance.md)** — Munkhdalai et al. 2024 — compressive associative memory across segments; Hebbian or delta; gated
 - **[Test-Time Training Done Right](Test-Time%20Training%20Done%20Right_importance.md)** — Zhang et al. 2025 (LaCT) — large-chunk TTT; L2-normalised fast weights against magnitude explosion
+
+## Added 2026-11-01 — positioning of the relatedness result
+
+Written from the arXiv abstract and HTML versions; each note's Verification section says what was read.
+
+- **[Analysing The Impact of Sequence Composition on Language Model Pre-Training](Analysing%20The%20Impact%20of%20Sequence%20Composition%20on%20Language%20Model%20Pre-Training_importance.md)** — Zhao et al. 2024, ACL — in pre-training on SlimPajama, related packed documents help, unrelated ones distract; attention-side counterpart of our gradient
+- **[Test-Time Training on Nearest Neighbors for Large Language Models](Test-Time%20Training%20on%20Nearest%20Neighbors%20for%20Large%20Language%20Models_importance.md)** — Hardt & Sun 2024, ICLR — fine-tune on retrieved neighbours per input, reset after each; TTT on related text helps

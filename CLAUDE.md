@@ -11,7 +11,7 @@ from the code.
   paragraph needs a better name.
 - Docstrings are one line. Add more only for a contract the signature cannot
   express: an invariant, a unit, an edge case, a failure mode.
-- Design rationale lives in `PLAN.md` (decisions D1–D14) and
+- Design rationale lives in `REBUILD_PLAN.md` (decisions D1–D14) and
   `ARCHITECTURE.md`. Do not restate it in the module that implements
   it — cite the decision id in a few words if it matters.
 - A test's name is its documentation. Do not add a comment explaining what a

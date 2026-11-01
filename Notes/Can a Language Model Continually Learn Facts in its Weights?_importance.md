@@ -26,3 +26,5 @@
 
 ## Verification
 - Read the abstract, introduction, problem formulation and results (§1–3.4, PDF pages 1–7) via pdftotext. All numbers above (1%/46%, 13/27/31%, +37.6 [28.9, 46.3], −2.4 [−9.2, 4.1], 46.7 vs 44.4, 4% floor, 91% ceiling, 69% median retained signal) were read directly. The discussion, appendices and second fact set were not read.
+
+- 2026-11-01: the current arXiv abstract page titles the paper "Can a Language Model Learn Facts Continually in Its Weights?"; the bib entry uses that title.
