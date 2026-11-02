@@ -8,10 +8,12 @@ from ttt.extensions.strategies import (
     EVERLASTING,
     HYBRID,
     MINILASTING,
+    MIXED,
     SESSION,
     SOURCE,
     Hybrid,
     Minilasting,
+    Mixed,
 )
 from tests.extensions import _builders
 
@@ -149,3 +151,81 @@ def test_a_wider_session_lets_more_documents_share_a_carry():
 def test_a_docs_per_session_below_one_is_an_error():
     with pytest.raises(ValueError, match="docs_per_session"):
         Minilasting(docs_per_session=0)
+
+
+def _boundaries(sessions, sources):
+    """(same-source, switched) counts over consecutive documents in a session."""
+    same = switched = 0
+    for session in sessions:
+        docs = list(dict.fromkeys(item.doc_idx for item in session.items))
+        for a, b in zip(docs, docs[1:]):
+            if sources[a] == sources[b]:
+                same += 1
+            else:
+                switched += 1
+    return same, switched
+
+
+MIX_LENGTHS = _builders.doc_lengths(600, seed=21)
+MIX_SOURCES = _builders.sources_for(MIX_LENGTHS, seed=22)
+
+
+def test_mixed_carries_within_a_session_not_across_it():
+    assert MIXED.carry_scope == SESSION
+
+
+def test_mixed_uses_every_document_exactly_once():
+    sessions = MIXED.build(MIX_LENGTHS, MIX_SOURCES, _builders.FakeRng(3))
+
+    firsts = [
+        doc_idx
+        for session in sessions
+        for doc_idx in dict.fromkeys(item.doc_idx for item in session.items)
+    ]
+    assert sorted(firsts) == list(range(len(MIX_LENGTHS)))
+
+
+def test_mixed_counts_the_same_items_as_hybrid():
+    assert MIXED.count(MIX_LENGTHS) == HYBRID.count(MIX_LENGTHS)
+
+
+def test_mixed_builds_as_many_items_as_it_counts():
+    sessions = MIXED.build(MIX_LENGTHS, MIX_SOURCES, _builders.FakeRng(3))
+
+    assert sum(len(session.items) for session in sessions) == MIXED.count(MIX_LENGTHS)
+
+
+def test_mixed_caps_a_session_at_docs_per_session_documents():
+    sessions = MIXED.build(MIX_LENGTHS, MIX_SOURCES, _builders.FakeRng(3))
+
+    assert max(len({item.doc_idx for item in s.items}) for s in sessions) == 5
+
+
+def test_mixed_keeps_the_source_at_about_the_configured_share():
+    same, switched = _boundaries(
+        MIXED.build(MIX_LENGTHS, MIX_SOURCES, _builders.FakeRng(3)), MIX_SOURCES
+    )
+
+    assert 0.4 < same / (same + switched) < 0.6
+
+
+@pytest.mark.parametrize("share, other_kind", [(1.0, 1), (0.0, 0)])
+def test_a_share_of_one_or_zero_switches_kind_only_when_a_source_runs_out(share, other_kind):
+    sessions = Mixed(same_source_share=share).build(
+        MIX_LENGTHS[:60], MIX_SOURCES[:60], _builders.FakeRng(4)
+    )
+    same, switched = _boundaries(sessions, MIX_SOURCES[:60])
+
+    assert (same, switched)[other_kind] <= 2
+
+
+def test_mixed_is_deterministic_given_the_seed():
+    def build(seed):
+        return MIXED.build(MIX_LENGTHS, MIX_SOURCES, _builders.FakeRng(seed))
+
+    assert build(7) == build(7) and build(7) != build(8)
+
+
+def test_a_same_source_share_outside_zero_to_one_is_an_error():
+    with pytest.raises(ValueError, match="same_source_share"):
+        Mixed(same_source_share=1.5)

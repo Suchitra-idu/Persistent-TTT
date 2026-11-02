@@ -6,7 +6,7 @@ import pytest
 
 from tests.app import _builders
 from ttt.app import train_loop
-from ttt.extensions.strategies import EVERLASTING, Hybrid
+from ttt.extensions.strategies import EVERLASTING, Hybrid, Mixed
 from ttt.ports.tracker import MICRO_STEP, TRAIN_STEP, outside_budget
 
 NAN = float("nan")
@@ -217,6 +217,13 @@ class TestCarryLifecycle:
         result, wiring = run(n_docs=2, strategy=SLICING_HYBRID, cfg=_builders.config(carry_window=2))
 
         assert wiring.fast_weights.events.count("detach_carry") == result.steps + 2
+
+    def test_a_document_boundary_inside_a_carry_window_keeps_the_earlier_graph(self):
+        _, wiring = run(
+            n_docs=4, strategy=Mixed(docs_per_session=2), cfg=_builders.config(carry_window=2)
+        )
+
+        assert wiring.compute.retained == [True, False, True, False]
 
     def test_a_session_scoped_strategy_installs_no_carrier(self):
         _, wiring = run(n_docs=4, strategy=SLICING_HYBRID)

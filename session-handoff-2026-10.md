@@ -17,8 +17,8 @@ resume without the chat history. Source of truth for numbers is `results/`.
 
 ## Infrastructure facts
 
-- Launch with `~/venv-ardupilot/bin/modal` (the project `env/` has no torch). As of 2026-11-01 neither
-  `~/venv-ardupilot` nor `env/` exists on this machine; recreate before running tests or Modal.
+- Environment is the project's `.venv` (created 2026-11-01, Python 3.14, CPU torch 2.15, `pip install
+  -e ".[dev]"`). Launch with `.venv/bin/modal`. No Modal or W&B credentials on this machine yet.
 - Modal workspace `aiteera-llc`, volume `ttt-checkpoints`. The `suchitra-idu` workspace has a
   different volume; both contain a `ttt-v1.1` folder holding different runs.
 - Hebbian `ttt-v1.1` checkpoints after step 650 are from an older run; excluded.
@@ -27,7 +27,7 @@ resume without the chat history. Source of truth for numbers is `results/`.
 - Always `save_every=50` for experimental runs (two runs were lost to save_every=200).
 - Epoch = 1050 optimizer steps; never use `max_steps` to shorten a run (it rescales the LR
   schedule); stop the app instead.
-- Local tests: `~/venv-ardupilot/bin/python -m pytest tests -o addopts="" -q -W ignore`;
+- Local tests: `.venv/bin/python -m pytest tests -q -W ignore` (2542 pass);
   `tests/parity/test_cli_parity.py` fails on HEAD too (pre-existing).
 - TeX is not installed locally; the thesis is compiled on Overleaf.
 

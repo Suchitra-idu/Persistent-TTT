@@ -33,7 +33,7 @@ def spans_by_doc(sessions):
 
 
 def test_the_registry_has_every_surviving_strategy():
-    assert sorted(STRATEGIES) == ["everlasting", "hybrid", "minilasting"]
+    assert sorted(STRATEGIES) == ["everlasting", "hybrid", "minilasting", "mixed"]
 
 
 @pytest.mark.parametrize("strategy", CASES)
