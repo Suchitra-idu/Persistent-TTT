@@ -38,14 +38,19 @@ For each target, in a seeded order (seed 2027):
 - other source: a 1,024-token block of a fresh SlimPajama holdout document from a non-Wikipedia
   source.
 
-200 cases are reported. Before scoring, a case is removed if its target or any of its primes
-matches a SlimPajama training document (the 4,000 documents selected with seed 42 or seed 43) by
-normalised title on the first line or by a hash of its first 1,000 characters; the number removed
-is reported. Cases are built once, saved, and reused for every model.
+200 cases are reported. A case is skipped, and the next in the seeded order taken, if its target,
+related or random article shares at least 5 ten-word sequences (lower-cased, from its first 2,000
+characters) with any Wikipedia document among the 4,000 SlimPajama training documents selected with
+seed 42 or seed 43 (first 700 tokens, decoded). SlimPajama's Wikipedia text carries no title line and
+comes from an earlier dump, so neither titles nor exact hashes can identify the same article; shared
+word sequences can. The number skipped is reported. Cases are built once, saved to the checkpoint
+volume (`evidence/cases/fresh.json`), and reused for every model.
 
 **SlimPajama regimes.** A new holdout seed (`eval_holdout_seed=1`) from the holdout pool, which is
-disjoint from training by construction, excluding the 106 development documents; 20 documents per
-source (fewer for Book if the pool is short; the count is reported).
+disjoint from training by construction. Up to 40 documents per source are drawn, any of the 106
+development documents (holdout seed 0) are removed by token sequence, and the first 20 per source
+are kept (fewer for Book if the pool is short; the count is reported). These documents also supply
+the other-source primes.
 
 ## 4. Arms
 
@@ -54,12 +59,16 @@ Every arm scores the same target tokens; only what precedes them differs.
 - **reset**: carry reset, no prime.
 - **same, related, random, other source**: carry primed on that block, prime not in attention.
 - **generic**: carry set to the mean of the carried states of 200 random shard-2/3 articles that
-  are neither targets nor primes, each layer rescaled to the median Frobenius norm of those 200
-  single carried states. One generic state per model.
-- **in context**: carry reset; the related prime placed in attention immediately before the target
-  block.
-- **chain k** (k = 1, 2, 5, 10): carry primed on k random articles in sequence (none a target,
-  prime, or generic-carry article), then the target scored.
+  are neither targets nor primes and pass the overlap check, each layer rescaled to the median
+  Frobenius norm of those 200 single carried states. Built separately for each model from the same
+  200 articles.
+- **in context**: carry reset; the related prime and the target read as one input, only the target
+  tokens scored. The within-input fast weights see the prime as they would any earlier text of the
+  same input.
+- **chain k** (k = 1, 2, 5, 10): carry primed on k articles in sequence, then the target scored.
+  Each case has its own 10 chain articles (first 1,024 tokens each), none a target, prime,
+  generic-carry or other case's chain article; chain k uses the first k. The carry is restored
+  after each scoring, so scoring the target never feeds the chain.
 
 ## 5. Measure and statistics
 
@@ -94,9 +103,10 @@ Every arm against reset is also reported with a 95% interval.
   seeds, the boundary-versus-relatedness conflict is explained as accumulated interference.
   Otherwise it is stated as open.
 - **Mixed-session probe** (mixed s42 against carry s42, paired on the same cases). Four contrasts,
-  mixed minus carry: other source, chain 10, related, and between-slice gain on fresh SlimPajama,
-  each with a 95% interval. "Training across documents removes the harm" is written only if the
-  other-source and chain-10 contrasts are positive with intervals excluding zero and the related
+  each the mixed model's gain over its own reset arm minus the carry model's gain over its own,
+  with both models resampled on the same cases: other source, chain 10, related, and the
+  between-slice gain on fresh SlimPajama; each with a 95% interval. "Training across documents
+  removes the harm" is written only if the other-source and chain-10 contrasts are positive with intervals excluding zero and the related
   contrast's interval does not lie wholly below zero. If the mixed model's related and
   between-slice gains are both within 0.01 of zero, the result is reported as "the probe learned to
   ignore the carry". Every mixed result is labelled "in a single-seed probe".

@@ -87,6 +87,7 @@ def paired_estimates(
     *,
     rng: Rng,
     n_boot: int,
+    level: float = stats.DEFAULT_LEVEL,
 ) -> tuple[Estimate, ...]:
     """Joined on the documents both arms measured; sources first, pool last."""
     keys = sorted(set(reference) & set(treated))
@@ -102,12 +103,38 @@ def paired_estimates(
                 measure=measure,
                 source=source,
                 n_docs=len(group),
-                interval=stats.paired_gap(ref, tr, resamples(len(group), n_boot, rng)),
+                interval=stats.paired_gap(ref, tr, resamples(len(group), n_boot, rng), level=level),
                 win_rate=stats.win_rate(ref, tr),
                 reference=metrics.geometric_mean_ppl(ref),
             )
         )
     return tuple(out)
+
+
+def gain_change(
+    measure: str,
+    candidate: tuple[Mapping[Key, float], Mapping[Key, float]],
+    baseline: tuple[Mapping[Key, float], Mapping[Key, float]],
+    *,
+    rng: Rng,
+    n_boot: int,
+    level: float = stats.DEFAULT_LEVEL,
+) -> Estimate:
+    """How much more the candidate model gains from its treated arm than the
+    baseline model does, pooled over the documents all four arms measured.
+    Win rate is the share of documents with a larger per-document gain."""
+    keys = sorted(set(candidate[0]) & set(candidate[1]) & set(baseline[0]) & set(baseline[1]))
+    cand = ([candidate[0][k] for k in keys], [candidate[1][k] for k in keys])
+    base = ([baseline[0][k] for k in keys], [baseline[1][k] for k in keys])
+    diffs = [(cr - ct) - (br - bt) for cr, ct, br, bt in zip(*cand, *base)]
+    return Estimate(
+        measure=measure,
+        source=ALL_SOURCES,
+        n_docs=len(keys),
+        interval=stats.gain_difference(cand, base, resamples(len(keys), n_boot, rng), level=level),
+        win_rate=sum(1.0 if d > 0 else 0.5 if d == 0 else 0.0 for d in diffs) / len(diffs) if diffs else float("nan"),
+        reference=metrics.geometric_mean_ppl(base[0]),
+    )
 
 
 def per_doc(rows: Iterable, *, where=lambda row: True) -> dict[Key, float]:

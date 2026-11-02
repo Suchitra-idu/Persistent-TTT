@@ -93,6 +93,16 @@ class Plan:
     n_related: int = 200
     n_tune: int = 40
     n_wiki_shards: int = 2
+    # Fresh pass (plan/PREREGISTRATION.md); the defaults reproduce the development cases.
+    wiki_first_shard: int = 0
+    wiki_case_seed: int = BOOT_SEED
+    unique_related: bool = False
+    n_generic: int = 0
+    in_context: bool = False
+    chain_lengths: str = ""
+    exclude_holdout_seed: int = -1
+    overlap_seeds: str = ""
+    cases_file: str = ""
     # Sharding dyneval so a preemption costs one shard: a settings subset to tune,
     # fixed per-objective settings to measure instead of tuning, a slice of cases.
     dyneval_grid: str = ""
@@ -132,18 +142,7 @@ def run(
 ) -> dict[str, Any]:
     """Raw per-document rows per suite, plus what the holdout actually held."""
     resolved = _with_docs(resolved, max(plan.n_docs, plan.n_chain, plan.n_targets + plan.n_primes))
-    holdout = data_pipeline.holdout(
-        source=source,
-        spec=resolved.spec,
-        cfg=resolved.train,
-        rng=engine.rng(resolved.train.eval_holdout_seed),
-        tokenizer=engine.tokenizer,
-    )
-    for shortfall in holdout.shortfalls:
-        announce(f"  {shortfall.source}: {shortfall.got} of {shortfall.wanted} held out")
-    by_source: dict[str, list] = {}
-    for doc in holdout.docs:
-        by_source.setdefault(doc.source, []).append(doc)
+    by_source = _holdout_by_source(resolved, engine, source, plan, announce)
     eval_docs = tuple(d for s in sorted(by_source) for d in by_source[s][: plan.n_docs])
     announce(f"{len(eval_docs)} documents across {len(by_source)} sources")
 
@@ -184,20 +183,36 @@ def run(
         from ttt.experiments import _wiki_relatedness
 
         n_tune = plan.n_tune if DYNEVAL in suites else 0
-        cases, _ = _wiki_relatedness.build_cases(
-            n_targets=plan.n_related + n_tune,
-            n_shards=plan.n_wiki_shards,
-            tokenizer=engine.tokenizer,
-            other_docs=[d for s, docs in sorted(by_source.items()) if s != WIKIPEDIA for d in docs],
-            rng=engine.rng(BOOT_SEED),
-            announce=announce,
+        chain_lengths = tuple(int(k) for k in plan.chain_lengths.split(",") if k.strip())
+        cases, generic_blocks = _cached_cases(
+            engine, plan, announce,
+            lambda: _wiki_relatedness.build_cases(
+                n_targets=plan.n_related + n_tune,
+                n_shards=plan.n_wiki_shards,
+                tokenizer=engine.tokenizer,
+                other_docs=[d for s, docs in sorted(by_source.items()) if s != WIKIPEDIA for d in docs],
+                rng=engine.rng(plan.wiki_case_seed),
+                announce=announce,
+                first_shard=plan.wiki_first_shard,
+                unique_related=plan.unique_related,
+                n_generic=plan.n_generic,
+                n_chain=max(chain_lengths, default=0),
+                seen=_training_shingles(resolved, engine, source, plan, announce),
+            ),
         )
         # Selection is sequential, so the first n_related are the relatedness suite's cases.
         reported, tuning = cases[: plan.n_related], cases[plan.n_related :]
         if RELATEDNESS in suites:
+            generic = None
+            if generic_blocks:
+                announce(f"generic carry from {len(generic_blocks)} articles ...")
+                generic = _carry_mean(generic_blocks, engine)
             announce("relatedness ...")
             rows["relatedness"] = evidence.records(
-                relatedness_eval.measure(cases=reported, **ports)
+                relatedness_eval.measure(
+                    cases=reported, generic=generic, in_context=plan.in_context,
+                    chain_lengths=chain_lengths, **ports,
+                )
             )
         if DYNEVAL in suites:
             from ttt.experiments._dynamic_adapter import LoraAdapter
@@ -235,6 +250,102 @@ def run(
         "ttt_layers": None if layers is None else list(layers),
         "describe": dict(resolved.describe()),
     }
+
+
+def _holdout_by_source(resolved, engine, source, plan, announce) -> dict[str, list]:
+    """Per-source holdout documents; with `exclude_holdout_seed`, documents that
+    seed would pick are removed, so a fresh seed never repeats them."""
+    def draw(seed: int, n_per_source: int):
+        cfg = dataclasses.replace(resolved.train, eval_n_docs_per_source=n_per_source)
+        held = data_pipeline.holdout(
+            source=source, spec=resolved.spec, cfg=cfg, rng=engine.rng(seed),
+            tokenizer=engine.tokenizer,
+        )
+        for shortfall in held.shortfalls:
+            announce(f"  {shortfall.source}: {shortfall.got} of {shortfall.wanted} held out")
+        return held.docs
+
+    wanted = resolved.train.eval_n_docs_per_source
+    if plan.exclude_holdout_seed < 0:
+        docs = draw(resolved.train.eval_holdout_seed, wanted)
+    else:
+        old = {d.token_ids for d in draw(plan.exclude_holdout_seed, wanted)}
+        fresh = [d for d in draw(resolved.train.eval_holdout_seed, 2 * wanted) if d.token_ids not in old]
+        announce(f"  excluding {len(old)} documents of holdout seed {plan.exclude_holdout_seed}")
+        docs = fresh
+    by_source: dict[str, list] = {}
+    for doc in docs:
+        if len(by_source.setdefault(doc.source, [])) < wanted:
+            by_source[doc.source].append(doc)
+    return by_source
+
+
+def _training_shingles(resolved, engine, source, plan, announce) -> set[str]:
+    """Shingles of the Wikipedia training documents each listed seed selects."""
+    seeds = [int(x) for x in plan.overlap_seeds.split(",") if x.strip()]
+    if not seeds:
+        return set()
+    if not resolved.limit_docs:
+        raise ValueError("overlap_seeds needs the training flags, including limit_docs")
+    seen: set[str] = set()
+    for seed in seeds:
+        docs = data_pipeline.documents(
+            data_pipeline.load(
+                source=source, spec=resolved.spec, cfg=resolved.train, rng=engine.rng(seed),
+                tokenizer=engine.tokenizer, limit_docs=resolved.limit_docs,
+                weights=resolved.weights,
+            )
+        )
+        wiki = [d for d in docs if d.source == WIKIPEDIA]
+        for doc in wiki:
+            seen |= relatedness_eval.shingles(engine.tokenizer.decode(list(doc.token_ids[:700])))
+        announce(f"  training overlap: seed {seed}, {len(wiki)} Wikipedia documents")
+    return seen
+
+
+def _cached_cases(engine, plan, announce, build):
+    """Built once and saved, so every model is scored on the identical cases."""
+    storage = engine.storage
+    path = f"{EVIDENCE_DIR}/cases/{plan.cases_file}.json" if plan.cases_file else ""
+    if path and storage is not None and storage.exists(path):
+        saved = evidence.load_json(storage, path)
+        announce(f"  cases loaded from {path}")
+        return [_case_from(c) for c in saved["cases"]], [tuple(b) for b in saved["generic"]]
+    cases, _, pools = build()
+    if path and storage is not None:
+        evidence.save_json(storage, path, {
+            "cases": [dataclasses.asdict(c) for c in cases],
+            "generic": [list(b) for b in pools.generic],
+            "excluded_for_overlap": pools.excluded,
+            "plan": dataclasses.asdict(plan),
+        })
+        storage.commit()
+        announce(f"  cases saved to {path}")
+    return cases, list(pools.generic)
+
+
+def _case_from(saved: Mapping[str, Any]) -> relatedness_eval.Case:
+    return relatedness_eval.Case(
+        index=saved["index"],
+        target_title=saved["target_title"],
+        target=tuple(saved["target"]),
+        primes={k: tuple(v) for k, v in saved["primes"].items()},
+        prime_titles=dict(saved["prime_titles"]),
+        chain=tuple(tuple(b) for b in saved.get("chain", ())),
+    )
+
+
+def _carry_mean(blocks, engine):
+    fast_weights = engine.fast_weights
+    fast_weights.set_mode(evolve=True, stream=False, session=True)
+    states = []
+    for block in blocks:
+        fast_weights.reset_carry()
+        engine.compute.eval_loss(block)
+        fast_weights.advance_carry()
+        states.append(fast_weights.snapshot(to_cpu=True))
+    fast_weights.reset_carry()
+    return relatedness_eval.generic_carry(states)
 
 
 def _with_docs(resolved: cli.Resolved, n_docs: int) -> cli.Resolved:
@@ -483,6 +594,15 @@ def main(
     case_slice: str = "",
     tag: str = "",
     n_wiki_shards: int = Plan.n_wiki_shards,
+    wiki_first_shard: int = Plan.wiki_first_shard,
+    wiki_case_seed: int = Plan.wiki_case_seed,
+    unique_related: bool = Plan.unique_related,
+    n_generic: int = Plan.n_generic,
+    in_context: bool = Plan.in_context,
+    chain_lengths: str = Plan.chain_lengths,
+    exclude_holdout_seed: int = Plan.exclude_holdout_seed,
+    overlap_seeds: str = Plan.overlap_seeds,
+    cases_file: str = Plan.cases_file,
     n_boot: int = DEFAULT_N_BOOT,
     out_dir: str = RESULTS_DIR,
     flags: str = "",
@@ -496,6 +616,10 @@ def main(
         n_docs=n_docs, n_slices=n_slices, n_chain=n_chain, n_repeats=n_repeats,
         n_primes=n_primes, n_targets=n_targets, n_related=n_related, n_tune=n_tune, n_wiki_shards=n_wiki_shards,
         dyneval_grid=dyneval_grid, dyneval_fixed=dyneval_fixed, case_slice=case_slice,
+        wiki_first_shard=wiki_first_shard, wiki_case_seed=wiki_case_seed,
+        unique_related=unique_related, n_generic=n_generic, in_context=in_context,
+        chain_lengths=chain_lengths, exclude_holdout_seed=exclude_holdout_seed,
+        overlap_seeds=overlap_seeds, cases_file=cases_file,
     )
     run_part, step = bundle_parts(checkpoint, resolved.train.run_name)
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")

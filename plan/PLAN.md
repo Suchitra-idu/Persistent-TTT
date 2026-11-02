@@ -168,22 +168,22 @@ Owner is the author unless marked (Claude).
 - [x] 2026-11-01 Thesis condensed (22k to 17k words): four contributions; literature review 6.7k to 2.8k words; Q2 and the capacity section condensed; dynamic evaluation moved to an appendix with no comparison claim
 
 ### A. Set-up (week 1)
-- [ ] 1. Check LR schedule totals in W&B [0.5]
-- [ ] 2. Commit all code, thesis and results; tag `pre-fresh-set`
+- [x] 1. Check LR schedule totals in W&B [0.5]. 2026-11-02: control, delta, original Hebbian (`NoFreezheb`) and carry s42 log identical LRs (1,050 steps); s43 has 1,048 (seed picks other documents). Open: confirm the `ttt-v1.1` checkpoints are `NoFreezheb`'s, not `freeze50,Hebbian`'s (LoRA frozen after step 50), by comparing LoRA weights at steps 50 and 600
+- [x] 2. Commit all code, thesis and results (tag `fresh-pass` on the Tier 1 code commit instead)
 - [ ] 3. Ask Prof. Yapa (reader, co-author if contributing) [0.3]
-- [ ] 4. `plan/PREREGISTRATION.md` from §4 analysis rules; commit and push before any fresh run [1.2]
+- [ ] 4. `plan/PREREGISTRATION.md` written and committed 2026-11-02; **push still needed** (no GitHub credentials on this machine) before any fresh run [1.2]
 
 ### B. Code (Claude, week 1)
-- [ ] 5. `mixed` session strategy with unit tests (source mix, no document reused, step count equal to `hybrid`, gradient reaches the previous document when the boundary is inside a window); local smoke run; cost estimate [1.5]
-- [ ] 6. Wikipedia shard offset; one target per related prime; title overlap check; new SlimPajama holdout seed excluding the old 106 documents [1.2]
-- [ ] 7. Generic-carry arm, norm-matched [1.1]
-- [ ] 8. In-context arm [1.3]
-- [ ] 9. Chain-length arm in the relatedness suite [1.4]
-- [ ] 10. 10,000 bootstrap resamples and Bonferroni-adjusted intervals in `paper_analysis` [§4]
-- [ ] 11. Unit tests with fakes, comment-budget test, local smoke run, cost per suite for approval
+- [x] 5. `mixed` session strategy with unit tests (source mix, no document reused, step count equal to `hybrid`, gradient reaches the previous document when the boundary is inside a window); local smoke run; cost estimate [1.5]
+- [x] 6. Wikipedia shard offset; one target per related prime; training-text overlap check (shared ten-word sequences; titles cannot work, see preregistration §3); new SlimPajama holdout seed excluding the old 106 documents [1.2]
+- [x] 7. Generic-carry arm, norm-matched [1.1]
+- [x] 8. In-context arm [1.3]
+- [x] 9. Chain-length arm in the relatedness suite [1.4]
+- [x] 10. Bonferroni-adjusted intervals and the mixed-probe gain change (`relatedness_eval.gain_changes`); 10,000 resamples via `--n-boot 10000` (a 200-case rerender takes about a minute) [§4]
+- [x] 11. Unit tests with fakes, comment-budget test, local smoke runs (strategy on production flags; case builder on real shard 2)
 
 ### C. Runs (week 2)
-- [ ] 12. Approve cost; train `mixed-carry-600` (seed 42, `save_every=50`, detached watcher that stops it after step 600) [1.5]
+- [ ] 12. Running since 2026-11-02 09:08 (app `ap-Upelq6cp2A7B6S7fynJTUJ`, W&B `s0xqfoab`, commit 9a31954); train `mixed-carry-600` (seed 42, `save_every=50`, detached watcher that stops it after step 600) [1.5]
 - [ ] 13. Approve cost; run the fresh pass on both seeds' step-600 checkpoints and `mixed-carry-600` from the tagged commit [1.1 to 1.5]
 - [ ] 14. Analyse exactly as preregistered; regenerate `results/paper/`; update `FINDINGS.md`
 

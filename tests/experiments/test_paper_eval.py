@@ -115,3 +115,102 @@ def test_config_diff_lists_only_keys_that_differ():
     assert compare_checkpoints_v1.config_diff({"a": 1, "b": 2}, {"a": 1, "b": 3, "c": 4}) == [
         ("b", 2, 3), ("c", None, 4),
     ]
+
+
+def _holdout(plan, resolution=None):
+    resolution = resolution or _builders.wider_holdout(_builders.resolved(), holdout_last_n=12)
+    eng = _builders.engine(resolution)
+    resolution = paper_eval_v1._with_docs(resolution, plan.n_docs)
+    source = _builders.data_source(sources=_builders.SOURCES * 6)
+    return paper_eval_v1._holdout_by_source(resolution, eng, source, plan, [].append), resolution, eng, source
+
+
+def test_a_fresh_holdout_never_repeats_the_excluded_seeds_documents():
+    plan = dataclasses.replace(PLAN, n_docs=1, exclude_holdout_seed=0)
+    fresh, resolution, eng, source = _holdout(plan)
+    old, *_ = _holdout(dataclasses.replace(PLAN, n_docs=1))
+
+    old_ids = {d.token_ids for docs in old.values() for d in docs}
+    assert fresh and old_ids
+    assert all(d.token_ids not in old_ids for docs in fresh.values() for d in docs)
+
+
+def test_without_an_exclusion_the_holdout_is_the_seeds_own_pick():
+    first, *_ = _holdout(PLAN)
+    again, *_ = _holdout(PLAN)
+
+    assert {s: [d.token_ids for d in docs] for s, docs in first.items()} == {
+        s: [d.token_ids for d in docs] for s, docs in again.items()
+    }
+
+
+def _case(index):
+    from ttt.app.relatedness_eval import Case
+
+    return Case(index=index, target_title=f"T{index}", target=(1, 2), primes={"self": (3,)},
+                prime_titles={"self": "T"}, chain=((4, 5),))
+
+
+def test_cases_are_built_once_and_reloaded_identically():
+    from ttt.experiments._wiki_relatedness import Pools
+
+    eng = _builders.engine()
+    plan = dataclasses.replace(PLAN, cases_file="fresh")
+    builds = []
+
+    def build():
+        builds.append(1)
+        return [_case(0), _case(1)], [], Pools(generic=((7, 8),), excluded=3)
+
+    first = paper_eval_v1._cached_cases(eng, plan, [].append, build)
+    second = paper_eval_v1._cached_cases(eng, plan, [].append, build)
+
+    assert len(builds) == 1
+    assert first == second == ([_case(0), _case(1)], [(7, 8)])
+
+
+def test_without_a_cases_file_the_cases_are_rebuilt_every_time():
+    from ttt.experiments._wiki_relatedness import Pools
+
+    eng = _builders.engine()
+    builds = []
+
+    def build():
+        builds.append(1)
+        return [_case(0)], [], Pools()
+
+    paper_eval_v1._cached_cases(eng, PLAN, [].append, build)
+    paper_eval_v1._cached_cases(eng, PLAN, [].append, build)
+
+    assert len(builds) == 2
+
+
+def _shingle_run(monkeypatch, plan, **overrides):
+    from ttt.app import relatedness_eval
+
+    decoded = []
+    monkeypatch.setattr(paper_eval_v1, "WIKIPEDIA", "FixtureProse")
+    monkeypatch.setattr(relatedness_eval, "shingles", lambda text: decoded.append(text) or {text})
+    resolution = _builders.resolved(**overrides)
+    seen = paper_eval_v1._training_shingles(
+        resolution, _builders.engine(resolution), _builders.data_source(sources=_builders.SOURCES * 6),
+        plan, [].append,
+    )
+    return seen, decoded
+
+
+def test_training_overlap_reads_the_wikipedia_training_documents_of_each_seed(monkeypatch):
+    seen, decoded = _shingle_run(monkeypatch, dataclasses.replace(PLAN, overlap_seeds="42,43"), limit_docs=6)
+
+    assert decoded and seen == set(decoded)
+
+
+def test_no_overlap_seeds_means_no_training_text_is_read(monkeypatch):
+    seen, decoded = _shingle_run(monkeypatch, PLAN, limit_docs=6)
+
+    assert (seen, decoded) == (set(), [])
+
+
+def test_an_overlap_check_without_the_training_document_limit_is_an_error(monkeypatch):
+    with pytest.raises(ValueError, match="limit_docs"):
+        _shingle_run(monkeypatch, dataclasses.replace(PLAN, overlap_seeds="42"))

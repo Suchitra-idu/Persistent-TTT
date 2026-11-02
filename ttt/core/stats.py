@@ -104,6 +104,28 @@ def paired_gap(
     return bootstrap(statistic, len(reference), resamples, level=level)
 
 
+def gain_difference(
+    candidate: tuple[Sequence[float], Sequence[float]],
+    baseline: tuple[Sequence[float], Sequence[float]],
+    resamples: Sequence[Sequence[int]],
+    *,
+    level: float = DEFAULT_LEVEL,
+) -> Interval:
+    """(reference, treated) per model on the same documents; the candidate's
+    gap minus the baseline's, every resample drawing the same documents for both."""
+    lengths = {len(arm) for pair in (candidate, baseline) for arm in pair}
+    if len(lengths) != 1:
+        raise ValueError(f"all four arms must cover the same documents, got lengths {sorted(lengths)}")
+
+    def statistic(indices: Sequence[int]) -> float:
+        def gap(pair):
+            return ppl_gap([pair[0][i] for i in indices], [pair[1][i] for i in indices])
+
+        return gap(candidate) - gap(baseline)
+
+    return bootstrap(statistic, lengths.pop(), resamples, level=level)
+
+
 def win_rate(reference: Sequence[float], treated: Sequence[float]) -> float:
     """Fraction of documents where `treated` is strictly lower; ties count half."""
     if not reference:
