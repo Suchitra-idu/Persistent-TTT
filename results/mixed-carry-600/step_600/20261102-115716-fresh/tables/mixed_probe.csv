@@ -1,0 +1,7 @@
+measure,source,n_docs,delta_ppl,ci_low,ci_high,excludes_zero,reference_ppl,relative,win_rate
+other_source_gain_change,ALL,200,0.120298,0.102612,0.139857,1,18.5096,0.00649923,0.8950
+chain_10_gain_change,ALL,200,0.0405995,0.0279005,0.0535286,1,18.5096,0.00219343,0.6650
+related_gain_change,ALL,200,0.0268295,0.0129861,0.0411809,1,18.5096,0.00144949,0.5450
+between_slices_gain_change,ALL,73,-0.0519647,-0.0784822,-0.0320535,1,11.9061,-0.00436456,0.1781
+related_gain,ALL,200,0.112353,0.100117,0.124916,1,18.5367,0.00606111,0.9100
+between_slices_gain,ALL,73,0.0729088,0.0499431,0.101501,1,11.9034,0.00612504,0.9452

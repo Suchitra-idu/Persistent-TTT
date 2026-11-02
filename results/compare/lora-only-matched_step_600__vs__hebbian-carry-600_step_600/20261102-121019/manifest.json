@@ -1,0 +1,34 @@
+{
+  "baseline": "/home/suchitra/MyStuff/Persistent-TTT/results/lora-only-matched/step_600/20261102-120720-fresh",
+  "boot_seed": 0,
+  "candidate": "/home/suchitra/MyStuff/Persistent-TTT/results/hebbian-carry-600/step_600/20261102-112255-fresh",
+  "config_diff": [
+    [
+      "carry_backprop",
+      "False",
+      "True"
+    ],
+    [
+      "carry_gate",
+      "False",
+      "True"
+    ],
+    [
+      "layer_indices",
+      "()",
+      "None"
+    ],
+    [
+      "output_gate_bias_init",
+      "-2.0",
+      "-6.0"
+    ],
+    [
+      "run_name",
+      "'lora-only-matched'",
+      "'hebbian-carry-600'"
+    ]
+  ],
+  "n_boot": 10000,
+  "unmatched_docs": 0
+}

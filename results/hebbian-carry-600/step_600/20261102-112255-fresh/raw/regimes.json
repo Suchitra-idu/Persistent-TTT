@@ -1,0 +1,2338 @@
+[
+  {
+    "doc_idx": 68,
+    "n_tokens": 13086,
+    "ppl": 8.30636421187068,
+    "regime": "cold_carry",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 20792.064313829214
+  },
+  {
+    "doc_idx": 68,
+    "n_tokens": 13086,
+    "ppl": 8.331514585952698,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 3612.045870855433
+  },
+  {
+    "doc_idx": 68,
+    "n_tokens": 13086,
+    "ppl": 8.327498738487607,
+    "regime": "lora_only",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 68,
+    "n_tokens": 13086,
+    "ppl": 9.839912325410046,
+    "regime": "fresh",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 180,
+    "n_tokens": 7298,
+    "ppl": 5.109900628477773,
+    "regime": "cold_carry",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 11727.56394405176
+  },
+  {
+    "doc_idx": 180,
+    "n_tokens": 7298,
+    "ppl": 5.124304118347187,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 2101.9274602048536
+  },
+  {
+    "doc_idx": 180,
+    "n_tokens": 7298,
+    "ppl": 5.1263450140763664,
+    "regime": "lora_only",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 180,
+    "n_tokens": 7298,
+    "ppl": 5.8472683320528605,
+    "regime": "fresh",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 284,
+    "n_tokens": 14576,
+    "ppl": 6.38036072115379,
+    "regime": "cold_carry",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 22191.317232889898
+  },
+  {
+    "doc_idx": 284,
+    "n_tokens": 14576,
+    "ppl": 6.396105389760936,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 4014.678143027128
+  },
+  {
+    "doc_idx": 284,
+    "n_tokens": 14576,
+    "ppl": 6.401678650767718,
+    "regime": "lora_only",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 284,
+    "n_tokens": 14576,
+    "ppl": 7.575657964327821,
+    "regime": "fresh",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 182,
+    "n_tokens": 16384,
+    "ppl": 4.267043983475569,
+    "regime": "cold_carry",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 25046.358981590573
+  },
+  {
+    "doc_idx": 182,
+    "n_tokens": 16384,
+    "ppl": 4.279139366380844,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 4959.809978963451
+  },
+  {
+    "doc_idx": 182,
+    "n_tokens": 16384,
+    "ppl": 4.280069339953883,
+    "regime": "lora_only",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 182,
+    "n_tokens": 16384,
+    "ppl": 4.906447124295174,
+    "regime": "fresh",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 224,
+    "n_tokens": 4453,
+    "ppl": 5.578421747108378,
+    "regime": "cold_carry",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 7658.171116408956
+  },
+  {
+    "doc_idx": 224,
+    "n_tokens": 4453,
+    "ppl": 5.63315261475426,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 1371.4355450039427
+  },
+  {
+    "doc_idx": 224,
+    "n_tokens": 4453,
+    "ppl": 5.63671375786007,
+    "regime": "lora_only",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 224,
+    "n_tokens": 4453,
+    "ppl": 6.542245403564966,
+    "regime": "fresh",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 348,
+    "n_tokens": 6884,
+    "ppl": 13.650048757858276,
+    "regime": "cold_carry",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 11736.700351246953
+  },
+  {
+    "doc_idx": 348,
+    "n_tokens": 6884,
+    "ppl": 13.72771359230366,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 2047.3901315874102
+  },
+  {
+    "doc_idx": 348,
+    "n_tokens": 6884,
+    "ppl": 13.72993813358674,
+    "regime": "lora_only",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 348,
+    "n_tokens": 6884,
+    "ppl": 16.428948446180396,
+    "regime": "fresh",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 280,
+    "n_tokens": 16384,
+    "ppl": 6.156463640915714,
+    "regime": "cold_carry",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 24246.538916741243
+  },
+  {
+    "doc_idx": 280,
+    "n_tokens": 16384,
+    "ppl": 6.164740981820247,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 4335.65485504747
+  },
+  {
+    "doc_idx": 280,
+    "n_tokens": 16384,
+    "ppl": 6.163221132012747,
+    "regime": "lora_only",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 280,
+    "n_tokens": 16384,
+    "ppl": 7.308206367155856,
+    "regime": "fresh",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 316,
+    "n_tokens": 2341,
+    "ppl": 16.432705882579235,
+    "regime": "cold_carry",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 3877.9595929464
+  },
+  {
+    "doc_idx": 316,
+    "n_tokens": 2341,
+    "ppl": 16.910949274360267,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 758.6637968642224
+  },
+  {
+    "doc_idx": 316,
+    "n_tokens": 2341,
+    "ppl": 16.919619915474136,
+    "regime": "lora_only",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 316,
+    "n_tokens": 2341,
+    "ppl": 20.90106973463787,
+    "regime": "fresh",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 461,
+    "n_tokens": 16384,
+    "ppl": 5.516509199999956,
+    "regime": "cold_carry",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 22929.674982903387
+  },
+  {
+    "doc_idx": 461,
+    "n_tokens": 16384,
+    "ppl": 5.523120422354336,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 4021.9427113295847
+  },
+  {
+    "doc_idx": 461,
+    "n_tokens": 16384,
+    "ppl": 5.525597164923547,
+    "regime": "lora_only",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 461,
+    "n_tokens": 16384,
+    "ppl": 6.466262229274555,
+    "regime": "fresh",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 399,
+    "n_tokens": 6754,
+    "ppl": 10.071285258257614,
+    "regime": "cold_carry",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 11215.171072601936
+  },
+  {
+    "doc_idx": 399,
+    "n_tokens": 6754,
+    "ppl": 10.173394528543982,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 2014.163559636372
+  },
+  {
+    "doc_idx": 399,
+    "n_tokens": 6754,
+    "ppl": 10.175828296354998,
+    "regime": "lora_only",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 399,
+    "n_tokens": 6754,
+    "ppl": 11.961189898400603,
+    "regime": "fresh",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 167,
+    "n_tokens": 10326,
+    "ppl": 4.159096759200801,
+    "regime": "cold_carry",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 15949.81189571871
+  },
+  {
+    "doc_idx": 167,
+    "n_tokens": 10326,
+    "ppl": 4.175133440784596,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 2775.8615107523424
+  },
+  {
+    "doc_idx": 167,
+    "n_tokens": 10326,
+    "ppl": 4.177296561010046,
+    "regime": "lora_only",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 167,
+    "n_tokens": 10326,
+    "ppl": 4.9357177428833445,
+    "regime": "fresh",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 353,
+    "n_tokens": 6914,
+    "ppl": 5.65022053520443,
+    "regime": "cold_carry",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 11097.764245734184
+  },
+  {
+    "doc_idx": 353,
+    "n_tokens": 6914,
+    "ppl": 5.667584093767588,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 2008.8080069692405
+  },
+  {
+    "doc_idx": 353,
+    "n_tokens": 6914,
+    "ppl": 5.668139154982575,
+    "regime": "lora_only",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 353,
+    "n_tokens": 6914,
+    "ppl": 6.543324594541992,
+    "regime": "fresh",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 130,
+    "n_tokens": 16384,
+    "ppl": 7.694244042530525,
+    "regime": "cold_carry",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 25775.88352251906
+  },
+  {
+    "doc_idx": 130,
+    "n_tokens": 16384,
+    "ppl": 7.723337000343501,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 4560.739672672317
+  },
+  {
+    "doc_idx": 130,
+    "n_tokens": 16384,
+    "ppl": 7.725686622271067,
+    "regime": "lora_only",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 130,
+    "n_tokens": 16384,
+    "ppl": 9.08568191770872,
+    "regime": "fresh",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 254,
+    "n_tokens": 9709,
+    "ppl": 4.654928101142532,
+    "regime": "cold_carry",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 16806.867866099936
+  },
+  {
+    "doc_idx": 254,
+    "n_tokens": 9709,
+    "ppl": 4.673099175060178,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 2899.747965958748
+  },
+  {
+    "doc_idx": 254,
+    "n_tokens": 9709,
+    "ppl": 4.679473527609661,
+    "regime": "lora_only",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 254,
+    "n_tokens": 9709,
+    "ppl": 5.547393762918197,
+    "regime": "fresh",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 59,
+    "n_tokens": 16384,
+    "ppl": 7.569695184882169,
+    "regime": "cold_carry",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 23515.289957197783
+  },
+  {
+    "doc_idx": 59,
+    "n_tokens": 16384,
+    "ppl": 7.586298510498985,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 4672.359013106203
+  },
+  {
+    "doc_idx": 59,
+    "n_tokens": 16384,
+    "ppl": 7.586349945992273,
+    "regime": "lora_only",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 59,
+    "n_tokens": 16384,
+    "ppl": 8.97852529642804,
+    "regime": "fresh",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 74,
+    "n_tokens": 7692,
+    "ppl": 12.361035628185796,
+    "regime": "cold_carry",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 13104.258585928548
+  },
+  {
+    "doc_idx": 74,
+    "n_tokens": 7692,
+    "ppl": 12.4820919361844,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 2390.4914848777653
+  },
+  {
+    "doc_idx": 74,
+    "n_tokens": 7692,
+    "ppl": 12.48662879297896,
+    "regime": "lora_only",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 74,
+    "n_tokens": 7692,
+    "ppl": 15.331366972009958,
+    "regime": "fresh",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 146,
+    "n_tokens": 12067,
+    "ppl": 15.877392105745347,
+    "regime": "cold_carry",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 18421.570287700084
+  },
+  {
+    "doc_idx": 146,
+    "n_tokens": 12067,
+    "ppl": 15.923710421822875,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 3580.3632502206287
+  },
+  {
+    "doc_idx": 146,
+    "n_tokens": 12067,
+    "ppl": 15.916577015335697,
+    "regime": "lora_only",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 146,
+    "n_tokens": 12067,
+    "ppl": 19.226266061555194,
+    "regime": "fresh",
+    "source": "RedPajamaArXiv",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 16,
+    "n_tokens": 1775,
+    "ppl": 29.433240109633413,
+    "regime": "cold_carry",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 3178.46107753341
+  },
+  {
+    "doc_idx": 16,
+    "n_tokens": 1775,
+    "ppl": 29.865624237715547,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 581.2576378064737
+  },
+  {
+    "doc_idx": 16,
+    "n_tokens": 1775,
+    "ppl": 29.83341453607659,
+    "regime": "lora_only",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 16,
+    "n_tokens": 1775,
+    "ppl": 38.25235908320211,
+    "regime": "fresh",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 134,
+    "n_tokens": 1778,
+    "ppl": 31.36946937316478,
+    "regime": "cold_carry",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 3018.6860470294678
+  },
+  {
+    "doc_idx": 134,
+    "n_tokens": 1778,
+    "ppl": 31.914223081319047,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 614.295992658784
+  },
+  {
+    "doc_idx": 134,
+    "n_tokens": 1778,
+    "ppl": 31.9291715908042,
+    "regime": "lora_only",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 134,
+    "n_tokens": 1778,
+    "ppl": 38.887911387512496,
+    "regime": "fresh",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 452,
+    "n_tokens": 2683,
+    "ppl": 27.493016633557865,
+    "regime": "cold_carry",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 4423.2503263777335
+  },
+  {
+    "doc_idx": 452,
+    "n_tokens": 2683,
+    "ppl": 27.8440158382531,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 770.1984189708766
+  },
+  {
+    "doc_idx": 452,
+    "n_tokens": 2683,
+    "ppl": 27.911786025399323,
+    "regime": "lora_only",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 452,
+    "n_tokens": 2683,
+    "ppl": 35.3280309961816,
+    "regime": "fresh",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 216,
+    "n_tokens": 3349,
+    "ppl": 21.72044310577795,
+    "regime": "cold_carry",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 6464.373316300784
+  },
+  {
+    "doc_idx": 216,
+    "n_tokens": 3349,
+    "ppl": 21.903859744934987,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 1215.395310211081
+  },
+  {
+    "doc_idx": 216,
+    "n_tokens": 3349,
+    "ppl": 21.90520833567063,
+    "regime": "lora_only",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 216,
+    "n_tokens": 3349,
+    "ppl": 26.259554788521264,
+    "regime": "fresh",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 14,
+    "n_tokens": 1841,
+    "ppl": 25.514902782264915,
+    "regime": "cold_carry",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 3143.0520108451674
+  },
+  {
+    "doc_idx": 14,
+    "n_tokens": 1841,
+    "ppl": 26.10683172296157,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 600.926007303802
+  },
+  {
+    "doc_idx": 14,
+    "n_tokens": 1841,
+    "ppl": 26.098840254052032,
+    "regime": "lora_only",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 14,
+    "n_tokens": 1841,
+    "ppl": 31.890759233641255,
+    "regime": "fresh",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 71,
+    "n_tokens": 2281,
+    "ppl": 22.958612414504405,
+    "regime": "cold_carry",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 4080.8928473885703
+  },
+  {
+    "doc_idx": 71,
+    "n_tokens": 2281,
+    "ppl": 23.28170481010126,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 812.0160866133139
+  },
+  {
+    "doc_idx": 71,
+    "n_tokens": 2281,
+    "ppl": 23.323047157643504,
+    "regime": "lora_only",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 71,
+    "n_tokens": 2281,
+    "ppl": 28.1167055107651,
+    "regime": "fresh",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 384,
+    "n_tokens": 1921,
+    "ppl": 26.471893502350433,
+    "regime": "cold_carry",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 3709.4441944095547
+  },
+  {
+    "doc_idx": 384,
+    "n_tokens": 1921,
+    "ppl": 27.44035777313369,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 713.7262827828488
+  },
+  {
+    "doc_idx": 384,
+    "n_tokens": 1921,
+    "ppl": 27.480467610331388,
+    "regime": "lora_only",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 384,
+    "n_tokens": 1921,
+    "ppl": 33.58266877734343,
+    "regime": "fresh",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 21,
+    "n_tokens": 1768,
+    "ppl": 26.34690631240482,
+    "regime": "cold_carry",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 3120.6845297341674
+  },
+  {
+    "doc_idx": 21,
+    "n_tokens": 1768,
+    "ppl": 27.04848820229726,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 588.9966042290315
+  },
+  {
+    "doc_idx": 21,
+    "n_tokens": 1768,
+    "ppl": 27.049195974175266,
+    "regime": "lora_only",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 21,
+    "n_tokens": 1768,
+    "ppl": 32.98032924266176,
+    "regime": "fresh",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 398,
+    "n_tokens": 3008,
+    "ppl": 24.574063756156406,
+    "regime": "cold_carry",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 5214.115168069913
+  },
+  {
+    "doc_idx": 398,
+    "n_tokens": 3008,
+    "ppl": 24.835559786792608,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 1006.8771466386554
+  },
+  {
+    "doc_idx": 398,
+    "n_tokens": 3008,
+    "ppl": 24.861925594534927,
+    "regime": "lora_only",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 398,
+    "n_tokens": 3008,
+    "ppl": 30.352864076292448,
+    "regime": "fresh",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 342,
+    "n_tokens": 2509,
+    "ppl": 29.668281856593484,
+    "regime": "cold_carry",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 4609.233128579903
+  },
+  {
+    "doc_idx": 342,
+    "n_tokens": 2509,
+    "ppl": 29.938473761112256,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 827.6445924545939
+  },
+  {
+    "doc_idx": 342,
+    "n_tokens": 2509,
+    "ppl": 29.96982092176393,
+    "regime": "lora_only",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 342,
+    "n_tokens": 2509,
+    "ppl": 37.761828299757504,
+    "regime": "fresh",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 382,
+    "n_tokens": 4130,
+    "ppl": 40.74828074856751,
+    "regime": "cold_carry",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 7157.458737596653
+  },
+  {
+    "doc_idx": 382,
+    "n_tokens": 4130,
+    "ppl": 41.19070404115291,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 1554.037774152663
+  },
+  {
+    "doc_idx": 382,
+    "n_tokens": 4130,
+    "ppl": 41.21328271967636,
+    "regime": "lora_only",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 382,
+    "n_tokens": 4130,
+    "ppl": 49.6341601438004,
+    "regime": "fresh",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 217,
+    "n_tokens": 3321,
+    "ppl": 74.70649195832685,
+    "regime": "cold_carry",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 6355.67363053574
+  },
+  {
+    "doc_idx": 217,
+    "n_tokens": 3321,
+    "ppl": 75.56935255111654,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 1174.0465180732633
+  },
+  {
+    "doc_idx": 217,
+    "n_tokens": 3321,
+    "ppl": 75.60358887266702,
+    "regime": "lora_only",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 217,
+    "n_tokens": 3321,
+    "ppl": 95.13452896103361,
+    "regime": "fresh",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 246,
+    "n_tokens": 1594,
+    "ppl": 24.94616832959291,
+    "regime": "cold_carry",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 2805.168687043114
+  },
+  {
+    "doc_idx": 246,
+    "n_tokens": 1594,
+    "ppl": 25.70349515184055,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 498.02517750840747
+  },
+  {
+    "doc_idx": 246,
+    "n_tokens": 1594,
+    "ppl": 25.699323887852813,
+    "regime": "lora_only",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 246,
+    "n_tokens": 1594,
+    "ppl": 31.860994749845613,
+    "regime": "fresh",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 188,
+    "n_tokens": 2800,
+    "ppl": 16.659162848329363,
+    "regime": "cold_carry",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 4289.144539760761
+  },
+  {
+    "doc_idx": 188,
+    "n_tokens": 2800,
+    "ppl": 16.737327541606184,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 804.531713909324
+  },
+  {
+    "doc_idx": 188,
+    "n_tokens": 2800,
+    "ppl": 16.73952195605387,
+    "regime": "lora_only",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 188,
+    "n_tokens": 2800,
+    "ppl": 19.373703548119806,
+    "regime": "fresh",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 456,
+    "n_tokens": 2553,
+    "ppl": 6.541590090201346,
+    "regime": "cold_carry",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 5589.127385647663
+  },
+  {
+    "doc_idx": 456,
+    "n_tokens": 2553,
+    "ppl": 6.6029627366439385,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 1052.2881225258438
+  },
+  {
+    "doc_idx": 456,
+    "n_tokens": 2553,
+    "ppl": 6.604811341325967,
+    "regime": "lora_only",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 456,
+    "n_tokens": 2553,
+    "ppl": 7.46858607498942,
+    "regime": "fresh",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 159,
+    "n_tokens": 1805,
+    "ppl": 150.48033721797773,
+    "regime": "cold_carry",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 4003.344546495862
+  },
+  {
+    "doc_idx": 159,
+    "n_tokens": 1805,
+    "ppl": 153.92739727158732,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 704.4024036093912
+  },
+  {
+    "doc_idx": 159,
+    "n_tokens": 1805,
+    "ppl": 154.13523493453448,
+    "regime": "lora_only",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 159,
+    "n_tokens": 1805,
+    "ppl": 185.5028390758424,
+    "regime": "fresh",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 294,
+    "n_tokens": 2045,
+    "ppl": 18.821971550991087,
+    "regime": "cold_carry",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 4072.7414628525416
+  },
+  {
+    "doc_idx": 294,
+    "n_tokens": 2045,
+    "ppl": 19.25061214135875,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 906.0803323146831
+  },
+  {
+    "doc_idx": 294,
+    "n_tokens": 2045,
+    "ppl": 19.24727548263404,
+    "regime": "lora_only",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 294,
+    "n_tokens": 2045,
+    "ppl": 22.897086154785164,
+    "regime": "fresh",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 171,
+    "n_tokens": 2504,
+    "ppl": 27.228712572561275,
+    "regime": "cold_carry",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 4415.894440560133
+  },
+  {
+    "doc_idx": 171,
+    "n_tokens": 2504,
+    "ppl": 27.805481881848625,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 841.9033846972218
+  },
+  {
+    "doc_idx": 171,
+    "n_tokens": 2504,
+    "ppl": 27.884049296351897,
+    "regime": "lora_only",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 171,
+    "n_tokens": 2504,
+    "ppl": 33.93054143299967,
+    "regime": "fresh",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 440,
+    "n_tokens": 1619,
+    "ppl": 38.23224308118364,
+    "regime": "cold_carry",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 3176.2372947486106
+  },
+  {
+    "doc_idx": 440,
+    "n_tokens": 1619,
+    "ppl": 39.061312354879064,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 601.7900970703338
+  },
+  {
+    "doc_idx": 440,
+    "n_tokens": 1619,
+    "ppl": 39.00624422060636,
+    "regime": "lora_only",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 440,
+    "n_tokens": 1619,
+    "ppl": 47.948004093518364,
+    "regime": "fresh",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 1,
+    "n_tokens": 2283,
+    "ppl": 38.94922758358175,
+    "regime": "cold_carry",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 3818.0731214636953
+  },
+  {
+    "doc_idx": 1,
+    "n_tokens": 2283,
+    "ppl": 39.301562766436,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 723.445559555796
+  },
+  {
+    "doc_idx": 1,
+    "n_tokens": 2283,
+    "ppl": 39.33353872989703,
+    "regime": "lora_only",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 1,
+    "n_tokens": 2283,
+    "ppl": 49.30911441359762,
+    "regime": "fresh",
+    "source": "RedPajamaC4",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 310,
+    "n_tokens": 4757,
+    "ppl": 4.4557449490517715,
+    "regime": "cold_carry",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 8448.57468103374
+  },
+  {
+    "doc_idx": 310,
+    "n_tokens": 4757,
+    "ppl": 4.488627228938087,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 1439.6406134319845
+  },
+  {
+    "doc_idx": 310,
+    "n_tokens": 4757,
+    "ppl": 4.493184861270212,
+    "regime": "lora_only",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 310,
+    "n_tokens": 4757,
+    "ppl": 5.156607843848042,
+    "regime": "fresh",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 219,
+    "n_tokens": 4427,
+    "ppl": 5.4297484942838175,
+    "regime": "cold_carry",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 9682.009116021522
+  },
+  {
+    "doc_idx": 219,
+    "n_tokens": 4427,
+    "ppl": 5.409590797552103,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 1752.4200951189598
+  },
+  {
+    "doc_idx": 219,
+    "n_tokens": 4427,
+    "ppl": 5.401669171918512,
+    "regime": "lora_only",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 219,
+    "n_tokens": 4427,
+    "ppl": 6.001407770046092,
+    "regime": "fresh",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 312,
+    "n_tokens": 16384,
+    "ppl": 3.3918722891194175,
+    "regime": "cold_carry",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 28486.65037367747
+  },
+  {
+    "doc_idx": 312,
+    "n_tokens": 16384,
+    "ppl": 3.390674408042849,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 5718.556471160986
+  },
+  {
+    "doc_idx": 312,
+    "n_tokens": 16384,
+    "ppl": 3.391178710163963,
+    "regime": "lora_only",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 312,
+    "n_tokens": 16384,
+    "ppl": 3.7779005822304454,
+    "regime": "fresh",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 309,
+    "n_tokens": 2869,
+    "ppl": 20.282113406572716,
+    "regime": "cold_carry",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 4914.285594994745
+  },
+  {
+    "doc_idx": 309,
+    "n_tokens": 2869,
+    "ppl": 20.67605338301285,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 987.4167943527901
+  },
+  {
+    "doc_idx": 309,
+    "n_tokens": 2869,
+    "ppl": 20.693802803360313,
+    "regime": "lora_only",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 309,
+    "n_tokens": 2869,
+    "ppl": 25.048341745233227,
+    "regime": "fresh",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 190,
+    "n_tokens": 3336,
+    "ppl": 2.9179716090258125,
+    "regime": "cold_carry",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 5167.760572031125
+  },
+  {
+    "doc_idx": 190,
+    "n_tokens": 3336,
+    "ppl": 2.915575607066236,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 983.453687483586
+  },
+  {
+    "doc_idx": 190,
+    "n_tokens": 3336,
+    "ppl": 2.9184286970916475,
+    "regime": "lora_only",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 190,
+    "n_tokens": 3336,
+    "ppl": 3.0883163178071533,
+    "regime": "fresh",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 200,
+    "n_tokens": 1799,
+    "ppl": 4.745592534942658,
+    "regime": "cold_carry",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 3244.9486988904623
+  },
+  {
+    "doc_idx": 200,
+    "n_tokens": 1799,
+    "ppl": 4.795158454715435,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 634.8222820492938
+  },
+  {
+    "doc_idx": 200,
+    "n_tokens": 1799,
+    "ppl": 4.801414772550659,
+    "regime": "lora_only",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 200,
+    "n_tokens": 1799,
+    "ppl": 5.309224515905588,
+    "regime": "fresh",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 156,
+    "n_tokens": 2157,
+    "ppl": 20.620944909343436,
+    "regime": "cold_carry",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 3651.5225217443754
+  },
+  {
+    "doc_idx": 156,
+    "n_tokens": 2157,
+    "ppl": 21.206732906192638,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 701.6936441566404
+  },
+  {
+    "doc_idx": 156,
+    "n_tokens": 2157,
+    "ppl": 21.228970007089153,
+    "regime": "lora_only",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 156,
+    "n_tokens": 2157,
+    "ppl": 26.56909004552461,
+    "regime": "fresh",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 422,
+    "n_tokens": 2696,
+    "ppl": 2.3528428620910202,
+    "regime": "cold_carry",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 5461.482628180421
+  },
+  {
+    "doc_idx": 422,
+    "n_tokens": 2696,
+    "ppl": 2.3680970988538292,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 1013.0956748629035
+  },
+  {
+    "doc_idx": 422,
+    "n_tokens": 2696,
+    "ppl": 2.3629526580973472,
+    "regime": "lora_only",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 422,
+    "n_tokens": 2696,
+    "ppl": 2.628274012560522,
+    "regime": "fresh",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 290,
+    "n_tokens": 1871,
+    "ppl": 4.506530505759506,
+    "regime": "cold_carry",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 3372.3546763002273
+  },
+  {
+    "doc_idx": 290,
+    "n_tokens": 1871,
+    "ppl": 4.5354135983658175,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 726.87974402028
+  },
+  {
+    "doc_idx": 290,
+    "n_tokens": 1871,
+    "ppl": 4.532356058840217,
+    "regime": "lora_only",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 290,
+    "n_tokens": 1871,
+    "ppl": 5.06809671619011,
+    "regime": "fresh",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 136,
+    "n_tokens": 2081,
+    "ppl": 8.750195514117078,
+    "regime": "cold_carry",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 3299.8487569336858
+  },
+  {
+    "doc_idx": 136,
+    "n_tokens": 2081,
+    "ppl": 8.83328435161527,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 674.7109792121445
+  },
+  {
+    "doc_idx": 136,
+    "n_tokens": 2081,
+    "ppl": 8.812701976362382,
+    "regime": "lora_only",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 136,
+    "n_tokens": 2081,
+    "ppl": 10.241949171546722,
+    "regime": "fresh",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 75,
+    "n_tokens": 3762,
+    "ppl": 3.2688634977400493,
+    "regime": "cold_carry",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 6161.46795352375
+  },
+  {
+    "doc_idx": 75,
+    "n_tokens": 3762,
+    "ppl": 3.2868209349538517,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 1152.5310356938987
+  },
+  {
+    "doc_idx": 75,
+    "n_tokens": 3762,
+    "ppl": 3.2864471934892947,
+    "regime": "lora_only",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 75,
+    "n_tokens": 3762,
+    "ppl": 3.619207024440584,
+    "regime": "fresh",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 454,
+    "n_tokens": 3067,
+    "ppl": 3.7809776763009553,
+    "regime": "cold_carry",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 4785.119439606081
+  },
+  {
+    "doc_idx": 454,
+    "n_tokens": 3067,
+    "ppl": 3.757401727360584,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 977.2035504348565
+  },
+  {
+    "doc_idx": 454,
+    "n_tokens": 3067,
+    "ppl": 3.7521009660385585,
+    "regime": "lora_only",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 454,
+    "n_tokens": 3067,
+    "ppl": 4.137863006376492,
+    "regime": "fresh",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 485,
+    "n_tokens": 3635,
+    "ppl": 3.3906756016350403,
+    "regime": "cold_carry",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 7513.287085376433
+  },
+  {
+    "doc_idx": 485,
+    "n_tokens": 3635,
+    "ppl": 3.4186318894481498,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 1552.0880389787417
+  },
+  {
+    "doc_idx": 485,
+    "n_tokens": 3635,
+    "ppl": 3.420592226330729,
+    "regime": "lora_only",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 485,
+    "n_tokens": 3635,
+    "ppl": 4.0353973451173,
+    "regime": "fresh",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 105,
+    "n_tokens": 2113,
+    "ppl": 4.310525038443765,
+    "regime": "cold_carry",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 3782.2226929081558
+  },
+  {
+    "doc_idx": 105,
+    "n_tokens": 2113,
+    "ppl": 4.3277101371898015,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 739.8109097271112
+  },
+  {
+    "doc_idx": 105,
+    "n_tokens": 2113,
+    "ppl": 4.320004421892609,
+    "regime": "lora_only",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 105,
+    "n_tokens": 2113,
+    "ppl": 4.832484121700128,
+    "regime": "fresh",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 153,
+    "n_tokens": 2927,
+    "ppl": 8.336693383474714,
+    "regime": "cold_carry",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 4398.735069431322
+  },
+  {
+    "doc_idx": 153,
+    "n_tokens": 2927,
+    "ppl": 8.488937569254341,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 834.5965653995366
+  },
+  {
+    "doc_idx": 153,
+    "n_tokens": 2927,
+    "ppl": 8.483880143773264,
+    "regime": "lora_only",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 153,
+    "n_tokens": 2927,
+    "ppl": 10.152403449322751,
+    "regime": "fresh",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 79,
+    "n_tokens": 16384,
+    "ppl": 7.30412111723836,
+    "regime": "cold_carry",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 21017.03424111331
+  },
+  {
+    "doc_idx": 79,
+    "n_tokens": 16384,
+    "ppl": 7.329713945303295,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 3770.808167009417
+  },
+  {
+    "doc_idx": 79,
+    "n_tokens": 16384,
+    "ppl": 7.333277608480986,
+    "regime": "lora_only",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 79,
+    "n_tokens": 16384,
+    "ppl": 8.585041510057932,
+    "regime": "fresh",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 264,
+    "n_tokens": 1942,
+    "ppl": 11.283611340884882,
+    "regime": "cold_carry",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 3543.6307530285985
+  },
+  {
+    "doc_idx": 264,
+    "n_tokens": 1942,
+    "ppl": 11.408771773102647,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 651.111649560906
+  },
+  {
+    "doc_idx": 264,
+    "n_tokens": 1942,
+    "ppl": 11.391641685638781,
+    "regime": "lora_only",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 264,
+    "n_tokens": 1942,
+    "ppl": 12.85263807415451,
+    "regime": "fresh",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 175,
+    "n_tokens": 2034,
+    "ppl": 4.88821914691595,
+    "regime": "cold_carry",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 3476.3024812236918
+  },
+  {
+    "doc_idx": 175,
+    "n_tokens": 2034,
+    "ppl": 4.905878471340378,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 711.3827304336983
+  },
+  {
+    "doc_idx": 175,
+    "n_tokens": 2034,
+    "ppl": 4.896405626831104,
+    "regime": "lora_only",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 175,
+    "n_tokens": 2034,
+    "ppl": 5.511831328950311,
+    "regime": "fresh",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 121,
+    "n_tokens": 6499,
+    "ppl": 5.251172337181356,
+    "regime": "cold_carry",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 9238.675172687916
+  },
+  {
+    "doc_idx": 121,
+    "n_tokens": 6499,
+    "ppl": 5.270137630737974,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 1716.388088879619
+  },
+  {
+    "doc_idx": 121,
+    "n_tokens": 6499,
+    "ppl": 5.270718913612314,
+    "regime": "lora_only",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 121,
+    "n_tokens": 6499,
+    "ppl": 5.939297400995681,
+    "regime": "fresh",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 206,
+    "n_tokens": 2734,
+    "ppl": 7.3063791927175,
+    "regime": "cold_carry",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 4043.149410010611
+  },
+  {
+    "doc_idx": 206,
+    "n_tokens": 2734,
+    "ppl": 7.364293236120479,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 1149.9121256753879
+  },
+  {
+    "doc_idx": 206,
+    "n_tokens": 2734,
+    "ppl": 7.360820675717466,
+    "regime": "lora_only",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 206,
+    "n_tokens": 2734,
+    "ppl": 8.49475660294442,
+    "regime": "fresh",
+    "source": "RedPajamaGithub",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 172,
+    "n_tokens": 3020,
+    "ppl": 4.297159267640258,
+    "regime": "cold_carry",
+    "source": "RedPajamaStackExchange",
+    "state_ratio_final": 5077.776610225111
+  },
+  {
+    "doc_idx": 172,
+    "n_tokens": 3020,
+    "ppl": 4.305546296166544,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaStackExchange",
+    "state_ratio_final": 1180.1087433644232
+  },
+  {
+    "doc_idx": 172,
+    "n_tokens": 3020,
+    "ppl": 4.307383866746958,
+    "regime": "lora_only",
+    "source": "RedPajamaStackExchange",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 172,
+    "n_tokens": 3020,
+    "ppl": 4.798459789118922,
+    "regime": "fresh",
+    "source": "RedPajamaStackExchange",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 447,
+    "n_tokens": 2716,
+    "ppl": 13.80019376256858,
+    "regime": "cold_carry",
+    "source": "RedPajamaStackExchange",
+    "state_ratio_final": 4208.93141251709
+  },
+  {
+    "doc_idx": 447,
+    "n_tokens": 2716,
+    "ppl": 13.922009273537972,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaStackExchange",
+    "state_ratio_final": 781.9849097245072
+  },
+  {
+    "doc_idx": 447,
+    "n_tokens": 2716,
+    "ppl": 14.005818099902106,
+    "regime": "lora_only",
+    "source": "RedPajamaStackExchange",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 447,
+    "n_tokens": 2716,
+    "ppl": 17.362765425090636,
+    "regime": "fresh",
+    "source": "RedPajamaStackExchange",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 211,
+    "n_tokens": 1917,
+    "ppl": 17.202002747932166,
+    "regime": "cold_carry",
+    "source": "RedPajamaStackExchange",
+    "state_ratio_final": 2959.32647363594
+  },
+  {
+    "doc_idx": 211,
+    "n_tokens": 1917,
+    "ppl": 17.602179532681866,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaStackExchange",
+    "state_ratio_final": 629.2561756047354
+  },
+  {
+    "doc_idx": 211,
+    "n_tokens": 1917,
+    "ppl": 17.73783423904313,
+    "regime": "lora_only",
+    "source": "RedPajamaStackExchange",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 211,
+    "n_tokens": 1917,
+    "ppl": 21.73300810661552,
+    "regime": "fresh",
+    "source": "RedPajamaStackExchange",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 268,
+    "n_tokens": 1895,
+    "ppl": 21.153026445978455,
+    "regime": "cold_carry",
+    "source": "RedPajamaStackExchange",
+    "state_ratio_final": 3530.0685682925937
+  },
+  {
+    "doc_idx": 268,
+    "n_tokens": 1895,
+    "ppl": 21.558723502998216,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaStackExchange",
+    "state_ratio_final": 666.8815536898825
+  },
+  {
+    "doc_idx": 268,
+    "n_tokens": 1895,
+    "ppl": 21.647140242800297,
+    "regime": "lora_only",
+    "source": "RedPajamaStackExchange",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 268,
+    "n_tokens": 1895,
+    "ppl": 25.845358671456996,
+    "regime": "fresh",
+    "source": "RedPajamaStackExchange",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 148,
+    "n_tokens": 3228,
+    "ppl": 10.354378193062123,
+    "regime": "cold_carry",
+    "source": "RedPajamaStackExchange",
+    "state_ratio_final": 5639.889858816123
+  },
+  {
+    "doc_idx": 148,
+    "n_tokens": 3228,
+    "ppl": 10.34295414385852,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaStackExchange",
+    "state_ratio_final": 925.0992928223546
+  },
+  {
+    "doc_idx": 148,
+    "n_tokens": 3228,
+    "ppl": 10.348796422600312,
+    "regime": "lora_only",
+    "source": "RedPajamaStackExchange",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 148,
+    "n_tokens": 3228,
+    "ppl": 11.5596163739853,
+    "regime": "fresh",
+    "source": "RedPajamaStackExchange",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 140,
+    "n_tokens": 4446,
+    "ppl": 15.70992525568688,
+    "regime": "cold_carry",
+    "source": "RedPajamaWikipedia",
+    "state_ratio_final": 12718.005314164793
+  },
+  {
+    "doc_idx": 140,
+    "n_tokens": 4446,
+    "ppl": 15.9337024013295,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaWikipedia",
+    "state_ratio_final": 2200.610626729379
+  },
+  {
+    "doc_idx": 140,
+    "n_tokens": 4446,
+    "ppl": 16.017547020565914,
+    "regime": "lora_only",
+    "source": "RedPajamaWikipedia",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 140,
+    "n_tokens": 4446,
+    "ppl": 18.81010272002532,
+    "regime": "fresh",
+    "source": "RedPajamaWikipedia",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 7,
+    "n_tokens": 3053,
+    "ppl": 22.58090629433879,
+    "regime": "cold_carry",
+    "source": "RedPajamaWikipedia",
+    "state_ratio_final": 9939.155003504153
+  },
+  {
+    "doc_idx": 7,
+    "n_tokens": 3053,
+    "ppl": 22.912483519227273,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaWikipedia",
+    "state_ratio_final": 1507.6687984907724
+  },
+  {
+    "doc_idx": 7,
+    "n_tokens": 3053,
+    "ppl": 23.08984859399698,
+    "regime": "lora_only",
+    "source": "RedPajamaWikipedia",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 7,
+    "n_tokens": 3053,
+    "ppl": 27.7612984675422,
+    "regime": "fresh",
+    "source": "RedPajamaWikipedia",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 276,
+    "n_tokens": 5555,
+    "ppl": 28.225800885465496,
+    "regime": "cold_carry",
+    "source": "RedPajamaWikipedia",
+    "state_ratio_final": 19658.097620054785
+  },
+  {
+    "doc_idx": 276,
+    "n_tokens": 5555,
+    "ppl": 28.50943421009706,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaWikipedia",
+    "state_ratio_final": 3226.820899833052
+  },
+  {
+    "doc_idx": 276,
+    "n_tokens": 5555,
+    "ppl": 28.661737129757885,
+    "regime": "lora_only",
+    "source": "RedPajamaWikipedia",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 276,
+    "n_tokens": 5555,
+    "ppl": 35.2691906474721,
+    "regime": "fresh",
+    "source": "RedPajamaWikipedia",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 328,
+    "n_tokens": 4125,
+    "ppl": 12.606682120893861,
+    "regime": "cold_carry",
+    "source": "RedPajamaWikipedia",
+    "state_ratio_final": 11411.02092620341
+  },
+  {
+    "doc_idx": 328,
+    "n_tokens": 4125,
+    "ppl": 12.650781303597498,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaWikipedia",
+    "state_ratio_final": 1948.2202890708256
+  },
+  {
+    "doc_idx": 328,
+    "n_tokens": 4125,
+    "ppl": 12.670970319976828,
+    "regime": "lora_only",
+    "source": "RedPajamaWikipedia",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 328,
+    "n_tokens": 4125,
+    "ppl": 14.153791604946163,
+    "regime": "fresh",
+    "source": "RedPajamaWikipedia",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 413,
+    "n_tokens": 5141,
+    "ppl": 11.687889436991359,
+    "regime": "cold_carry",
+    "source": "RedPajamaWikipedia",
+    "state_ratio_final": 13726.055426261286
+  },
+  {
+    "doc_idx": 413,
+    "n_tokens": 5141,
+    "ppl": 11.808342246859912,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaWikipedia",
+    "state_ratio_final": 2454.575872414708
+  },
+  {
+    "doc_idx": 413,
+    "n_tokens": 5141,
+    "ppl": 11.803474462106688,
+    "regime": "lora_only",
+    "source": "RedPajamaWikipedia",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 413,
+    "n_tokens": 5141,
+    "ppl": 13.35283352907732,
+    "regime": "fresh",
+    "source": "RedPajamaWikipedia",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 243,
+    "n_tokens": 2986,
+    "ppl": 19.750720941122754,
+    "regime": "cold_carry",
+    "source": "RedPajamaWikipedia",
+    "state_ratio_final": 6446.702772753658
+  },
+  {
+    "doc_idx": 243,
+    "n_tokens": 2986,
+    "ppl": 20.23837804157123,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaWikipedia",
+    "state_ratio_final": 1130.6272593064796
+  },
+  {
+    "doc_idx": 243,
+    "n_tokens": 2986,
+    "ppl": 20.243377765681036,
+    "regime": "lora_only",
+    "source": "RedPajamaWikipedia",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 243,
+    "n_tokens": 2986,
+    "ppl": 23.835956576525128,
+    "regime": "fresh",
+    "source": "RedPajamaWikipedia",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 363,
+    "n_tokens": 2557,
+    "ppl": 16.652634514890114,
+    "regime": "cold_carry",
+    "source": "RedPajamaWikipedia",
+    "state_ratio_final": 5119.309799842675
+  },
+  {
+    "doc_idx": 363,
+    "n_tokens": 2557,
+    "ppl": 16.797817443444888,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaWikipedia",
+    "state_ratio_final": 1066.266428029256
+  },
+  {
+    "doc_idx": 363,
+    "n_tokens": 2557,
+    "ppl": 16.861645204213207,
+    "regime": "lora_only",
+    "source": "RedPajamaWikipedia",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 363,
+    "n_tokens": 2557,
+    "ppl": 20.164328436628683,
+    "regime": "fresh",
+    "source": "RedPajamaWikipedia",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 133,
+    "n_tokens": 2306,
+    "ppl": 21.36950149452052,
+    "regime": "cold_carry",
+    "source": "RedPajamaWikipedia",
+    "state_ratio_final": 3724.6294427632574
+  },
+  {
+    "doc_idx": 133,
+    "n_tokens": 2306,
+    "ppl": 21.952847509820543,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaWikipedia",
+    "state_ratio_final": 800.1801670949839
+  },
+  {
+    "doc_idx": 133,
+    "n_tokens": 2306,
+    "ppl": 22.03109650451801,
+    "regime": "lora_only",
+    "source": "RedPajamaWikipedia",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 133,
+    "n_tokens": 2306,
+    "ppl": 27.779874546036336,
+    "regime": "fresh",
+    "source": "RedPajamaWikipedia",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 109,
+    "n_tokens": 4240,
+    "ppl": 15.616947921142353,
+    "regime": "cold_carry",
+    "source": "RedPajamaWikipedia",
+    "state_ratio_final": 12340.076165876953
+  },
+  {
+    "doc_idx": 109,
+    "n_tokens": 4240,
+    "ppl": 15.853350330769828,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaWikipedia",
+    "state_ratio_final": 2018.1826551041122
+  },
+  {
+    "doc_idx": 109,
+    "n_tokens": 4240,
+    "ppl": 15.949162953779117,
+    "regime": "lora_only",
+    "source": "RedPajamaWikipedia",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 109,
+    "n_tokens": 4240,
+    "ppl": 18.67929514154376,
+    "regime": "fresh",
+    "source": "RedPajamaWikipedia",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 244,
+    "n_tokens": 3037,
+    "ppl": 24.742031830286244,
+    "regime": "cold_carry",
+    "source": "RedPajamaWikipedia",
+    "state_ratio_final": 4873.418781619965
+  },
+  {
+    "doc_idx": 244,
+    "n_tokens": 3037,
+    "ppl": 24.917617599726576,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaWikipedia",
+    "state_ratio_final": 875.4608178550451
+  },
+  {
+    "doc_idx": 244,
+    "n_tokens": 3037,
+    "ppl": 25.036833645301922,
+    "regime": "lora_only",
+    "source": "RedPajamaWikipedia",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 244,
+    "n_tokens": 3037,
+    "ppl": 29.245653596793694,
+    "regime": "fresh",
+    "source": "RedPajamaWikipedia",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 417,
+    "n_tokens": 3705,
+    "ppl": 17.736287140358968,
+    "regime": "cold_carry",
+    "source": "RedPajamaWikipedia",
+    "state_ratio_final": 10003.919338991154
+  },
+  {
+    "doc_idx": 417,
+    "n_tokens": 3705,
+    "ppl": 17.91744007888088,
+    "regime": "cold_carry_off",
+    "source": "RedPajamaWikipedia",
+    "state_ratio_final": 1518.1533201444067
+  },
+  {
+    "doc_idx": 417,
+    "n_tokens": 3705,
+    "ppl": 18.07380475811705,
+    "regime": "lora_only",
+    "source": "RedPajamaWikipedia",
+    "state_ratio_final": 0.0
+  },
+  {
+    "doc_idx": 417,
+    "n_tokens": 3705,
+    "ppl": 21.31269312193554,
+    "regime": "fresh",
+    "source": "RedPajamaWikipedia",
+    "state_ratio_final": 0.0
+  }
+]
