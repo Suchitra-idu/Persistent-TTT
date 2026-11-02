@@ -9,8 +9,9 @@ WT="${FRESH_WORKTREE:-$REPO/../Persistent-TTT-fresh-pass}"
 OUT="$REPO/results"
 
 git -C "$REPO" fetch --tags origin >/dev/null 2>&1 || true
-if ! git -C "$REPO" ls-remote --exit-code --tags origin fresh-pass >/dev/null; then
-  echo "fresh-pass is not on origin; push it first (git push origin main --tags)" >&2
+git -C "$REPO" fetch origin main >/dev/null
+if ! git -C "$REPO" merge-base --is-ancestor 'fresh-pass^{commit}' origin/main; then
+  echo "the fresh-pass commit is not on origin/main; push it first" >&2
   exit 1
 fi
 [ -d "$WT" ] || git -C "$REPO" worktree add --detach "$WT" fresh-pass
