@@ -21,12 +21,13 @@ them.
    its clip is saturated, but so is the working carry's, so the clip alone does not explain it.
 2. A carry path trained within documents gives a reliable between-slice gain (2 seeds); in a
    single-seed ablation its two changes appear to work together.
-3. Across documents, the gain is ordered by relatedness; the paper reports how much of it survives
-   a generic-carry control, that the carry harms after other-source text or a long chain, and, in a
-   single-seed probe trained on sessions that cross document boundaries (1.5), whether that
-   training removes the harm while keeping the gain.
-4. Against attention on the same prime, which fits in the carry's own memory budget, the carry is
-   small; it does not accumulate with re-reading.
+3. Across documents, on a fresh preregistered set, the gain is ordered by relatedness and part of
+   it is document-specific (related beats a generic carry, both seeds); other-source text harms,
+   while a chain of same-source Wikipedia articles adds gain. In a single-seed probe trained across
+   document boundaries (1.5), the harm goes away but the carry becomes generic and the
+   between-slice gain falls.
+4. Against attention on the same prime, which fits in the carry's own memory budget, the carry's
+   mean gain is smaller but more consistent across cases; it does not accumulate with re-reading.
 
 **Out of scope, stated once in the paper.** A full study of cross-document training (only the
 one-seed mixed-session probe 1.5); training past
@@ -74,21 +75,47 @@ Hebbian, step 600 (FINDINGS 4b to 4f).
 - No accumulation with re-reading. The carry path's clip is still saturated (state ratio median
   about 8k s42, 15k s43).
 
+**Fresh pass, 2026-11-02** (preregistered, `plan/PREREGISTRATION.md` with its Deviations; bundles
+`results/*/step_600/20261102-*-fresh`, 10,000 resamples; s42 / s43).
+
+- Relatedness, 200 fresh Wikipedia cases: same +0.105 / +0.117, related +0.086 / +0.086, random
+  +0.055 / +0.036, other source −0.084 / −0.059, generic carry +0.071 / +0.068.
+- Headline, Bonferroni 98.75 percent: same − generic +0.034 [+0.025, +0.045] / +0.049 [+0.035,
+  +0.064]; related − generic +0.015 [+0.006, +0.024] / +0.018 [+0.007, +0.029]; related − random
+  +0.031 [+0.016, +0.045] / +0.050 [+0.036, +0.064]; carry − in context −0.235 [−0.641, +0.066] /
+  −0.224 [−0.626, +0.076]. In context: mean +0.321 / +0.310 but lower perplexity than the carry on
+  only 43 / 42 percent of cases; its per-case gain has median −0.143 / −0.146 (worse than reset on
+  most cases) and a long upper tail (max +13.8), exploratory, from the raw rows.
+- Chain: gains 1, 2, 5, 10 articles +0.054, +0.064, +0.067, +0.071 (s42); chain 10 − chain 1
+  +0.017 [+0.009, +0.025] / +0.026 [+0.018, +0.034].
+- Regimes, fresh holdout of 73 documents (5 sources, no Book): between slices +0.125 / +0.118;
+  vs matched LoRA-only, carry on +0.257 / +0.233, LoRA path +0.120 / +0.108.
+- Mixed probe (s42 vs carry s42, gain changes): other source +0.120 [+0.103, +0.140], chain 10
+  +0.041 [+0.028, +0.054], related +0.027 [+0.013, +0.041], between slices −0.052 [−0.078,
+  −0.032]. Mixed alone: related − generic −0.002 [−0.007, +0.003], same − generic +0.002
+  [−0.003, +0.007].
+
+**Decision rules, as applied.** "Document-specific transfer" allowed (H2 excludes zero, both seeds).
+Ordering replicates. Chain rule not met, and the effect runs the other way, so the boundary vs
+relatedness conflict is stated as open. Mixed probe: "training across documents removes the harm"
+is met; the "ignores the carry" rule is not triggered, but the probe's carry is generic and its
+between-slice gain is lower, and both are reported with the verdict.
+
 **Reviewer objections, in order of danger, and where each is answered.**
 
 | # | Objection | Answer |
 |---|---|---|
-| 1 | Random-article gain is a generic "this is Wikipedia" prior | 1.1 generic carry; headline contrasts are against it |
-| 2 | Every design choice was made on the evaluation documents | 1.2 fresh set, preregistered |
-| 3 | No in-context baseline on the relatedness cases | 1.3 (also the equal-memory baseline) |
-| 4 | Boundary suite (harm) and relatedness suite (help) disagree | 1.4 chain length, on Wikipedia |
+| 1 | Random-article gain is a generic "this is Wikipedia" prior | Answered: related beats the generic carry, both seeds (fresh) |
+| 2 | Every design choice was made on the evaluation documents | Answered: fresh preregistered set replicates the ordering |
+| 3 | No in-context baseline on the relatedness cases | Reported: larger mean, fewer wins; difference not resolved |
+| 4 | Boundary suite (harm) and relatedness suite (help) disagree | Not accumulation (Wikipedia chains add gain); stated as open |
 | 5 | "Related" is title mention, confounded with word overlap | Defined as title-linked, word overlap included; no topic-vs-overlap claim |
 | 6 | Training stopped at 600 of a 1,050-step schedule; cross-document effect still drifting | Limitation, with the drift reported |
-| 7 | The carry is never trained across documents | 1.5 mixed-session probe (one seed); scope sentence (§1) |
+| 7 | The carry is never trained across documents | Mixed probe: harm removed, specificity lost (one seed); scope sentence (§1) |
 | 8 | Two seeds; ablation single-seed at step 200 | Limitation |
 | 9 | Dynamic-evaluation baseline on a different model | No comparison claim; appendix only |
 | 10 | Clip-as-cause and novelty overclaims | Fixed in the thesis 2026-11-01 |
-| 11 | Wikipedia eval articles may be in training data | 1.2 title and hash check |
+| 11 | Wikipedia eval articles may be in training data | Shared ten-word sequence check; 1 case dropped |
 
 ---
 
@@ -171,7 +198,7 @@ Owner is the author unless marked (Claude).
 - [x] 1. Check LR schedule totals in W&B [0.5]. 2026-11-02: control, delta, original Hebbian (`NoFreezheb`) and carry s42 log identical LRs (1,050 steps); s43 has 1,048 (seed picks other documents). The `ttt-v1.1` checkpoints the thesis used (`suchitra-idu` volume, where its evidence bundles live) are `NoFreezheb`'s: every adapter from step 50 to 650 was written 2026-09-15 07:29–08:54 UTC, inside that run (W&B `6bh23t5l`, created 07:15 UTC, 657 steps); `freeze50,Hebbian`'s 09-14 files were overwritten. LoRA moves 7.6% between steps 50 and 600, so it was not frozen
 - [x] 2. Commit all code, thesis and results (tag `fresh-pass` on the Tier 1 code commit instead)
 - [ ] 3. Ask Prof. Yapa (reader, co-author if contributing) [0.3]
-- [ ] 4. `plan/PREREGISTRATION.md` written and committed 2026-11-02; **push still needed** (no GitHub credentials on this machine) before any fresh run [1.2]
+- [x] 4. `plan/PREREGISTRATION.md` committed and pushed (on `origin/main`) before the fresh run, 2026-11-02 [1.2]
 
 ### B. Code (Claude, week 1)
 - [x] 5. `mixed` session strategy with unit tests (source mix, no document reused, step count equal to `hybrid`, gradient reaches the previous document when the boundary is inside a window); local smoke run; cost estimate [1.5]
@@ -184,12 +211,12 @@ Owner is the author unless marked (Claude).
 
 ### C. Runs (week 2)
 - [x] 12. Trained `mixed-carry-600` 2026-11-02 09:08–10:50 (app `ap-Upelq6cp2A7B6S7fynJTUJ`, W&B `s0xqfoab`, commit 9a31954, seed 42); `step_600` saved, run stopped at step 631, no later checkpoint written [1.5]
-- [ ] 13. Approve cost; run the fresh pass on both seeds' step-600 checkpoints and `mixed-carry-600` from the tagged commit [1.1 to 1.5]
-- [ ] 14. Analyse exactly as preregistered; regenerate `results/paper/`; update `FINDINGS.md`
+- [x] 13. Fresh pass run 2026-11-02 11:22–12:10 from `9fa62d3` (`plan/fresh_pass.sh`), four models; deviations appended to the preregistration [1.1 to 1.5]
+- [ ] 14. Analysed as preregistered (§3 above, `tables/mixed_probe*`, `results/compare/`). Development selectors now skip `-fresh` bundles (`paper_analysis_v1.is_development`); `results/paper/` regenerated with identical tables; fresh headline figure F18. Still to do: update `FINDINGS.md`
 
 ### D. Thesis (weeks 3 to 4, Claude drafts, author reviews)
 - [ ] 15. Fresh results as headline, development set in an appendix; claims-to-evidence table; configuration list; provenance of −6; update the limitations to what the fresh set shows
-- [ ] 16. Re-audit (every number against `results/`, every citation against `Notes/`)
+- [ ] 16. Re-audit (every number against `results/`, every citation against `Notes/`). Reviewer-style pass 2026-11-02 done: 18 issues fixed in the thesis (claims, setup errors, figure, reproducibility); thesis not compiled locally (no LaTeX)
 - [ ] 17. Defence sheet [0.2]; supervisor reading
 
 ### E. Paper and submission (weeks 5 to 8)

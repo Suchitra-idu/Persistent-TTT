@@ -21,7 +21,7 @@ def _style(index: int) -> dict:
 
 
 def _title(fig, text: str) -> None:
-    fig.suptitle(text, x=0.01, ha="left", fontsize=11, color=INK, fontweight="bold")
+    """No in-figure title: the report's caption is the title."""
 
 
 def _end_label(ax, x: float, y: float, text: str, *, above: bool = False, nudge: float = 0.0) -> None:
@@ -67,7 +67,7 @@ def gains_vs_step(
         ax.margins(x=0.25)
         _chrome(ax)
     axes[0][0].legend(frameon=False, fontsize=8, loc="lower right")
-    _title(fig, "Where the gain comes from, by training step (95% CI, 106 held-out documents)")
+    _title(fig, "Where the gain comes from, by training step (95% CI; 106 documents, 24 across documents)")
     fig.tight_layout()
     return _save(fig, path)
 

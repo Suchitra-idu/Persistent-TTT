@@ -11,7 +11,7 @@ case,measure,n_docs,delta_ppl,ci_low,ci_high,excludes_zero,win_rate
 "seed 42, step 600",gain_random,200,0.0508374,0.0368023,0.0647086,1,0.6950
 "seed 42, step 600",gain_related,200,0.0851601,0.0703661,0.0989009,1,0.8500
 "seed 42, step 600",gain_self,200,0.103166,0.0895018,0.118016,1,0.8900
-"seed 42, step 600",related_vs_random,200,0.0343227,0.0241485,0.0442495,1,0.6950
+"seed 42, step 600",related_vs_random,200,0.0343227,0.0237344,0.0452008,1,0.6950
 "seed 42, step 600",vs_matched_lora,106,0.234092,0.187902,0.292521,1,1.0000
 "seed 42, step 600",within,106,0.0250517,0.017117,0.0354717,1,0.7642
 "seed 43, step 400",between_slices,106,0.0618992,0.0456708,0.083591,1,0.9623
@@ -26,6 +26,6 @@ case,measure,n_docs,delta_ppl,ci_low,ci_high,excludes_zero,win_rate
 "seed 43, step 600",gain_random,200,0.0340015,0.0232039,0.0449775,1,0.6750
 "seed 43, step 600",gain_related,200,0.0827805,0.0694538,0.093742,1,0.8450
 "seed 43, step 600",gain_self,200,0.116061,0.102759,0.130693,1,0.9300
-"seed 43, step 600",related_vs_random,200,0.048779,0.0380406,0.0599537,1,0.7450
+"seed 43, step 600",related_vs_random,200,0.048779,0.0376164,0.05987,1,0.7450
 "seed 43, step 600",vs_matched_lora,106,0.21419,0.171693,0.267419,1,0.9906
 "seed 43, step 600",within,106,0.0144127,0.00702554,0.0228308,1,0.6981

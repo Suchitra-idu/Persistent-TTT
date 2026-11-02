@@ -86,7 +86,7 @@ failure; 600 steps is not full training (schedule is 1050).
 
 - `results/paper/`: tables T1..T11, figures F1..F15 (PDF), `FINDINGS.md`, `inputs/`.
 - `paper/main.tex` + `paper/references.bib` + `paper/figures/`: thesis (report class, ~10.4k words).
-- Regenerate: `python -m ttt.experiments.paper_analysis_v1 --control lora-only-matched --run hebbian=ttt-v1.1 --run delta_chunk=ttt-v1.1-clean-deltachunk --steps 200,400,600 --w0-norms results/paper/inputs/w0_norms.json`
+- Regenerate: `python -m ttt.experiments.paper_analysis_v1 --control lora-only-matched --run Hebbian=ttt-v1.1 --run Delta=ttt-v1.1-clean-deltachunk --steps 200,400,600 --w0-norms results/paper/inputs/w0_norms.json`
   then `python -m ttt.experiments.thesis_figures_v1`.
 
 ## Publication plan (proposed, user deciding)

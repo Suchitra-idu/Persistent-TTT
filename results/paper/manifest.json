@@ -86,14 +86,14 @@
   "clip_threshold": 0.42946575603179715,
   "control": "lora-only-matched",
   "git": {
-    "commit": "ebbc8c95f32c97d90c1fe226c7dfd42be7fcaedd",
+    "commit": "7adea6f833b6e6562b7a93bfb5ab08ea698f59a1",
     "dirty": true
   },
   "mechanism_step": 600,
   "n_boot": 1000,
   "runs": {
-    "delta_chunk": "ttt-v1.1-clean-deltachunk",
-    "hebbian": "ttt-v1.1"
+    "Delta": "ttt-v1.1-clean-deltachunk",
+    "Hebbian": "ttt-v1.1"
   },
   "steps": [
     200,

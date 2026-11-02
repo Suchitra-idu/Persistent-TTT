@@ -59,9 +59,9 @@ accept, accept with minor revision, or reject; there is no major revision [T6].
    - the prime simply being usable in attention (in-context baseline);
    - selection bias from developing on the test set (fresh preregistered set);
    - seed luck (each seed shown);
-   - the boundary harm vs. relatedness help conflict (chain length);
+   - the boundary harm vs. relatedness help conflict (chain length rules out accumulation on Wikipedia; the conflict is stated as open);
    - undertraining, with the cross-document effect still drifting at step 600 (stated);
-   - Wikipedia evaluation text present in training (title and hash check);
+   - Wikipedia evaluation text present in training (shared ten-word sequence check; 1 case dropped);
    - the carry never trained across documents (mixed-session probe, one seed; scope).
 6. **Preregister.** Commit and push the analysis plan before running the fresh set; the decision
    rules in `plan/PLAN.md` §4 apply whatever the outcome [R7] **(judgement)**.
@@ -266,16 +266,16 @@ answer basic questions were all solo authors [B5]. Study `plan/DEFENCE_QA.md`.
 - [ ] Profiles and conflicts complete; quota checked
 - [ ] arXiv novelty search on the submission day; not under review elsewhere
 
-### Claim bank (update after Tier 1)
+### Claim bank (updated 2026-11-02 after the fresh pass)
 
-| Safe now (development set) | Only if the fresh set supports it | Never |
+| Supported on the fresh set (preregistered, 2 seeds unless marked) | Development set only | Never |
 |---|---|---|
-| The naive carry has no measurable cross-document effect | Related minus generic carry > 0 ("document-specific") | Stores facts, remembers, or recalls documents |
-| The carry path lowers perplexity between slices by about 1 percent, 2 seeds | Related > random holds on fresh data | Useful where attention cannot reach |
-| Same > related > random same-source > other source (harm), 2 seeds | Harm grows with chain length | Continual learning or personalisation |
-| A long same-source chain causes small harm | Training across documents removes the harm (single-seed probe, preregistered rule) | Beats dynamic evaluation; best model; topic rather than word overlap; the carry learns when to apply itself (from one seed) |
-| No accumulation with re-reading | | Generalises to other models, domains or longer training |
-| Recovers about 4 percent of the in-context gain | | The clip causes the naive carry's failure |
+| Part of the carry's cross-document gain is document-specific: related minus generic carry > 0 (Bonferroni-adjusted interval) | The naive carry has no measurable cross-document effect | Stores facts, remembers, or recalls documents |
+| Same > related > random same-source > other source (harm) replicates | A long same-source SlimPajama chain (boundary suite) causes small harm, drifting with training | Useful where attention cannot reach |
+| The carry path lowers perplexity between slices by about 1 percent, and beats matched LoRA-only (pooled; per source is development only) | No accumulation with re-reading | Continual learning or personalisation |
+| On Wikipedia, the gain grows with the number of earlier articles carried (1 to 10) and approaches the generic carry; the boundary-suite harm is not explained by accumulation, so that conflict is open | Recovers about 4 percent of the gain of the previous slice in attention | Beats dynamic evaluation; best model; topic rather than word overlap; the carry learns when to apply itself (from one seed) |
+| The mean difference between the carry and the prime in attention is not resolved (the in-context arm also shifts positions; its median is negative, exploratory) | | Beats or matches in-context use of the prime; attention harms most targets |
+| Single-seed probe: training across documents removes the other-source harm (preregistered rule met), but the carry becomes generic (related minus generic about 0) and the between-slice gain falls by about 40 percent | | Training across documents is free, or keeps document specificity; generalises to other models, domains or longer training; the clip causes the naive carry's failure |
 
 ---
 

@@ -124,7 +124,7 @@ Run 2026-11-02 11:22–12:10 IST from commit `9fa62d3` (clean worktree; every ma
 was not pushed.
 
 1. **Fresh SlimPajama holdout smaller than expected.** The procedure in §3 was followed as written,
-   but the holdout pool (long-enough documents in the reserved last 5,000 rows) is small, and
+   but the holdout pool (long-enough documents in the reserved last 15,000 rows) is small, and
    removing the 106 development documents left 73 documents across 5 sources: ArXiv 17, C4 20,
    GitHub 20, StackExchange 5, Wikipedia 11, Book 0 (all 6 pool documents were development
    documents). §3 anticipated a shortfall for Book only. Regimes results on the fresh set are

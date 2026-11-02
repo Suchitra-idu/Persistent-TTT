@@ -25,15 +25,15 @@ from ttt.experiments import paper_eval_v1
 from ttt.experiments._evidence_figures import (
     GRID, INK, MUTED, SERIES, SURFACE, _chrome, _ordered_sources, _pyplot, _save,
 )
-from ttt.experiments.paper_analysis_v1 import RESULTS_DIR, Bundle, newest_bundle
+from ttt.experiments.paper_analysis_v1 import RESULTS_DIR, Bundle, is_development, newest_bundle
 
 OUT = RESULTS_DIR / "paper"
 CONTROL = "lora-only-matched"
-RUNS = {"hebbian": "ttt-v1.1", "delta_chunk": "ttt-v1.1-clean-deltachunk"}
+RUNS = {"Hebbian": "ttt-v1.1", "Delta": "ttt-v1.1-clean-deltachunk"}
 STEPS = (200, 400, 600)
 CONTROL_COLOUR = "#1baf7a"
-MARKERS = {"LoRA-only": "^", "hebbian": "o", "delta_chunk": "s"}
-COLOURS = {"LoRA-only": CONTROL_COLOUR, "hebbian": SERIES[0], "delta_chunk": SERIES[1]}
+MARKERS = {"LoRA-only": "^", "Hebbian": "o", "Delta": "s"}
+COLOURS = {"LoRA-only": CONTROL_COLOUR, "Hebbian": SERIES[0], "Delta": SERIES[1]}
 HEAT = ("#f0efec", "#cde2fb", "#86b6ef", "#3987e5", "#1c5cab", "#0d366b")
 NOCLIP_LOGS = OUT / "inputs" / "noclip_training"
 LOG_LINE = re.compile(r"step (\d+)/\d+ loss ([\d.]+) \|g\| lora ([\d.]+) wdown ([\d.]+) new ([\d.]+)")
@@ -44,7 +44,7 @@ def _rows(run: str, step: int, name: str):
     """From the newest bundle at that step that measured `name`; a step can
     hold several bundles, each with different suites."""
     for stamp in sorted((RESULTS_DIR / run / f"step_{step}").glob("*/raw"), reverse=True):
-        if (stamp / f"{name}.json").is_file():
+        if (stamp / f"{name}.json").is_file() and is_development(stamp.parent):
             return Bundle(run=run, step=step, path=stamp.parent).rows(name)
     return newest_bundle(RESULTS_DIR, run, step).rows(name)
 
@@ -54,7 +54,7 @@ def _short(source: str) -> str:
 
 
 def _title(fig, text: str) -> None:
-    fig.suptitle(text, x=0.01, ha="left", fontsize=11, color=INK, fontweight="bold")
+    """No in-figure title: the report's caption is the title."""
 
 
 def absolute_ppl(path: Path) -> str:
@@ -96,7 +96,7 @@ def source_heatmaps(estimates, path: Path) -> str:
     """Relative gain in percent of the reference perplexity, so sources compare."""
     plt = _pyplot()
     panels = [(label, measure) for measure in ("within", paper_analysis.VS_MATCHED) for label in RUNS]
-    sources = [s for s in _ordered_sources(estimates[("hebbian", "within", STEPS[0])]) if s != ALL_SOURCES]
+    sources = [s for s in _ordered_sources(estimates[("Hebbian", "within", STEPS[0])]) if s != ALL_SOURCES]
     fig, axes = plt.subplots(1, len(panels), figsize=(3.3 * len(panels), 3.6), squeeze=False)
     for ax, (label, measure) in zip(axes[0], panels):
         grid = [[100 * estimates[(label, measure, s)][src].relative for s in STEPS] for src in sources]
@@ -226,8 +226,8 @@ def state_distribution(threshold: float, path: Path) -> str:
 def noclip_training(path: Path) -> str:
     plt = _pyplot()
     runs = {
-        "hebbian, no clip": ("hebbian-noclip", SERIES[0], "o"),
-        "delta_chunk, no clip": ("delta-noclip-probe", SERIES[1], "s"),
+        "Hebbian, no clip": ("hebbian-noclip", SERIES[0], "o"),
+        "Delta, no clip": ("delta-noclip-probe", SERIES[1], "s"),
     }
     fig, (loss_ax, grad_ax) = plt.subplots(1, 2, figsize=(10, 3.6))
     for label, (name, colour, marker) in runs.items():
@@ -253,10 +253,10 @@ def noclip_training(path: Path) -> str:
 def gates(path: Path) -> str:
     plt = _pyplot()
     cases = (
-        ("hebbian, clip, step 600", "ttt-v1.1", 600, SERIES[0]),
-        ("delta_chunk, clip, step 600", "ttt-v1.1-clean-deltachunk", 600, SERIES[1]),
-        ("delta_chunk, clip, step 100", "ttt-v1.1-clean-deltachunk", 100, SERIES[1]),
-        ("delta_chunk, no clip, step 100", "delta-noclip", 100, MUTED),
+        ("Hebbian, clip, step 600", "ttt-v1.1", 600, SERIES[0]),
+        ("Delta, clip, step 600", "ttt-v1.1-clean-deltachunk", 600, SERIES[1]),
+        ("Delta, clip, step 100", "ttt-v1.1-clean-deltachunk", 100, SERIES[1]),
+        ("Delta, no clip, step 100", "delta-noclip", 100, MUTED),
     )
     fig, ax = plt.subplots(figsize=(6.4, 3.2))
     names, values = [], []
@@ -332,8 +332,8 @@ def write_tables(estimates, correlates) -> None:
 CARRY_DESIGN = "hebbian-carry-b"
 CARRY_DESIGN_LONG = "hebbian-carry-600"
 CARRY_DESIGN_CASES = (
-    ("plain Hebbian, step 200", "ttt-v1.1", 200),
-    ("plain Hebbian, step 600", "ttt-v1.1", 600),
+    ("original Hebbian, step 200", "ttt-v1.1", 200),
+    ("original Hebbian, step 600", "ttt-v1.1", 600),
     ("carry design, step 100", CARRY_DESIGN, 100),
     ("carry design, step 200", CARRY_DESIGN, 200),
     ("carry design, step 400", CARRY_DESIGN_LONG, 400),
@@ -393,7 +393,7 @@ def carry_design_figure(estimates, path: Path) -> str:
 def carry_design_by_position(path: Path) -> str:
     plt = _pyplot()
     fig, ax = plt.subplots(figsize=(6.4, 3.8))
-    cases = (("plain Hebbian, step 600", "ttt-v1.1", 600, SERIES[0], "o"),
+    cases = (("original Hebbian, step 600", "ttt-v1.1", 600, SERIES[0], "o"),
              ("carry design, step 200", CARRY_DESIGN, 200, MUTED, "D"),
              ("carry design, step 600", CARRY_DESIGN_LONG, 600, SERIES[1], "v"))
     for label, run, step, colour, marker in cases:
@@ -448,7 +448,7 @@ def carry_design_curve(estimates, path: Path) -> str:
 
 # (label, run, raw rows, colour, marker, line style); the two carry seeds share a colour.
 RELATEDNESS_CASES = (
-    ("plain Hebbian carry", "ttt-v1.1", "relatedness", MUTED, "o", "-"),
+    ("original Hebbian carry", "ttt-v1.1", "relatedness", MUTED, "o", "-"),
     ("carry design, seed 42", CARRY_DESIGN_LONG, "relatedness", SERIES[1], "s", "-"),
     ("carry design, seed 43", "hebbian-carry-600-s43", "relatedness", SERIES[1], "D", "--"),
     ("dynamic evaluation, tuned for related", CONTROL, "dyneval_related", SERIES[0], "^", "-"),
@@ -492,6 +492,55 @@ def relatedness_figure(estimates, path: Path) -> str:
     return _save(fig, str(path))
 
 
+FRESH_CASES = (
+    ("carry design, seed 42", CARRY_DESIGN_LONG, SERIES[1], "s"),
+    ("carry design, seed 43", "hebbian-carry-600-s43", SERIES[1], "D"),
+    ("trained across documents, seed 42", "mixed-carry-600", SERIES[0], "o"),
+)
+FRESH_LEVELS = (
+    ("gain_self", "same\ndocument"),
+    ("gain_related", "related\narticle"),
+    ("gain_generic", "generic\ncarry"),
+    ("gain_random", "random\narticle"),
+    ("gain_chain_10", "chain of\n10 articles"),
+    ("gain_other_source", "other\nsource"),
+)
+
+
+def fresh_relatedness(run: str) -> dict[str, tuple[float, float, float]]:
+    """Pooled (point, low, high) per measure from the run's preregistered fresh-pass bundle."""
+    (bundle,) = sorted(p for p in (RESULTS_DIR / run / "step_600").glob("*") if not is_development(p))[-1:]
+    lines = (bundle / "tables" / "relatedness.csv").read_text().splitlines()
+    out = {}
+    for line in lines[1:]:
+        measure, source, _, point, low, high, *_ = line.split(",")
+        if source == ALL_SOURCES:
+            out[measure] = (float(point), float(low), float(high))
+    return out
+
+
+def fresh_relatedness_figure(path: Path) -> str:
+    plt = _pyplot()
+    fig, ax = plt.subplots(figsize=(7.6, 4.4))
+    width = 0.22
+    for offset, (label, run, colour, marker) in zip((-width, 0.0, width), FRESH_CASES):
+        estimates = fresh_relatedness(run)
+        xs = [i + offset for i in range(len(FRESH_LEVELS))]
+        points = [estimates[m] for m, _ in FRESH_LEVELS]
+        ax.errorbar(xs, [p for p, _, _ in points],
+                    yerr=[[p - lo for p, lo, _ in points], [hi - p for p, _, hi in points]],
+                    fmt=marker, color=colour, markersize=6, capsize=2, linewidth=1.2, label=label,
+                    markerfacecolor="white" if "across" in label else colour)
+    ax.axhline(0, color=MUTED, linewidth=1)
+    ax.set_xticks(range(len(FRESH_LEVELS)), [name for _, name in FRESH_LEVELS])
+    ax.set_xlabel("text carried into the target")
+    ax.set_ylabel("Δppl vs reset carry  (+ = helps)")
+    ax.legend(frameon=False, fontsize=7, loc="lower left")
+    _chrome(ax)
+    fig.tight_layout()
+    return _save(fig, str(path))
+
+
 def carry_vs_dyneval() -> list[str]:
     """Per arm, the carry's log-perplexity gain minus dynamic evaluation's, paired
     by case, in percent; dynamic evaluation tuned for the related arm."""
@@ -524,7 +573,7 @@ def _gain_differences(carry, dyn, arm: str) -> list[float]:
 
 def repeat_summary() -> list[str]:
     lines = ["model,measure,n_docs,delta_ppl,ci_low,ci_high,excludes_zero,win_rate"]
-    for label, run in (("plain Hebbian", "ttt-v1.1"), ("carry design seed 42", CARRY_DESIGN_LONG),
+    for label, run in (("original Hebbian", "ttt-v1.1"), ("carry design seed 42", CARRY_DESIGN_LONG),
                        ("carry design seed 43", "hebbian-carry-600-s43")):
         rows = _rows(run, 600, "repeat")
         estimates = evidence.repeat_trend(rows, rng=NumpyRng(0), n_boot=N_BOOT)
@@ -664,6 +713,7 @@ def main() -> None:
     (OUT / "tables" / "T14_seeds.csv").write_text("\n".join(carry_design_table(seed_estimates())) + "\n")
     related = relatedness_estimates()
     made.append(relatedness_figure(related, figures / "F16_relatedness.pdf"))
+    made.append(fresh_relatedness_figure(figures / "F18_fresh_relatedness.pdf"))
     (OUT / "tables" / "T15_carry_vs_dyneval.csv").write_text("\n".join(carry_vs_dyneval()) + "\n")
     (OUT / "tables" / "T16_repeat.csv").write_text("\n".join(repeat_summary()) + "\n")
     (OUT / "tables" / "T12_relatedness.csv").write_text("\n".join(relatedness_table(related)) + "\n")

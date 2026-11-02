@@ -1,7 +1,7 @@
 """The paper's cross-checkpoint tables and figures from paper_eval bundles. Local, no GPU.
 
     python -m ttt.experiments.paper_analysis_v1 --control lora-only-matched \\
-        --run hebbian=ttt-v1.1 --run delta_chunk=ttt-v1.1-clean-deltachunk \\
+        --run Hebbian=ttt-v1.1 --run Delta=ttt-v1.1-clean-deltachunk \\
         --steps 200,400,600 --w0-norms results/paper/inputs/w0_norms.json
 
 Each (run, step) reads its newest bundle under results/<run>/step_<n>/. Rewrites
@@ -86,11 +86,19 @@ class Paper:
     clip_threshold: float = float("nan")
 
 
+FRESH_SUFFIX = "-fresh"
+
+
+def is_development(bundle_dir: Path) -> bool:
+    """Fresh-pass bundles (plan/PREREGISTRATION.md) hold other documents and must never be paired with development ones."""
+    return not bundle_dir.name.endswith(FRESH_SUFFIX)
+
+
 def newest_bundle(results: Path, run: str, step: int, needs: str = "regimes") -> Bundle:
-    """The newest bundle at that step holding `needs`; a step can carry bundles
-    of different suites, and a newer one need not have the regimes."""
+    """The newest development bundle at that step holding `needs`; a step can
+    carry bundles of different suites, and a newer one need not have the regimes."""
     folder = results / run / f"step_{step}"
-    stamps = sorted(folder.glob(f"*/raw/{needs}.json"))
+    stamps = sorted(p for p in folder.glob(f"*/raw/{needs}.json") if is_development(p.parent.parent))
     if not stamps:
         raise FileNotFoundError(f"no paper_eval bundle with {needs} under {folder}")
     return Bundle(run=run, step=step, path=stamps[-1].parent.parent)
