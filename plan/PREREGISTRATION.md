@@ -116,3 +116,21 @@ Every arm against reset is also reported with a 95% interval.
 Prime and target lengths (1,024 tokens), the minimum-mention rule, the generic-carry size (200),
 the chain lengths, the bootstrap settings and the case seed. Nothing is tuned on the fresh cases.
 Development-set results stay reported as development results.
+
+## Deviations (appended 2026-11-02, after the run)
+
+Run 2026-11-02 11:22–12:10 IST from commit `9fa62d3` (clean worktree; every manifest records it),
+`plan/fresh_pass.sh`. The commit was on `origin/main` before the run; the `fresh-pass` tag itself
+was not pushed.
+
+1. **Fresh SlimPajama holdout smaller than expected.** The procedure in §3 was followed as written,
+   but the holdout pool (long-enough documents in the reserved last 5,000 rows) is small, and
+   removing the 106 development documents left 73 documents across 5 sources: ArXiv 17, C4 20,
+   GitHub 20, StackExchange 5, Wikipedia 11, Book 0 (all 6 pool documents were development
+   documents). §3 anticipated a shortfall for Book only. Regimes results on the fresh set are
+   therefore reported pooled; per-source regimes results remain development results. Seen before
+   any outcome was returned; the draw was not changed.
+2. **Overlap exclusion.** 1 case was skipped for overlap with training text (400 Wikipedia training
+   documents per seed).
+
+No other deviation: cases, arms, resamples (10,000, seed 0) and contrasts are as in §3–§6.
