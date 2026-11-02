@@ -514,3 +514,26 @@ def _budget_keys():
     from ttt.ports.tracker import BUDGET
 
     return set(BUDGET)
+
+
+def test_fast_weights_never_evolve_during_training_when_updates_are_off():
+    def evaluate(**_):
+        wiring.fast_weights.set_mode(evolve=True, stream=False, session=True)
+        return {}
+
+    wiring = _builders.Wiring(losses=(1.0,), total_norm=1.0)
+    evolving = []
+    loss = wiring.compute.loss
+    wiring.compute.loss = lambda ids: (evolving.append(wiring.fast_weights.evolve), loss(ids))[1]
+    train_loop.train(
+        docs=_builders.docs(8),
+        compute=wiring.compute,
+        fast_weights=wiring.fast_weights,
+        tracker=wiring.tracker,
+        strategy=EVERLASTING,
+        cfg=_builders.config(fast_weight_updates=False, eval_every=1),
+        rng=wiring.rng,
+        evaluate=evaluate,
+    )
+
+    assert evolving and not any(evolving)

@@ -77,7 +77,7 @@ def train(
     carried: dict[str, Carry] = dict(carries or {})
     n_updates: dict[str, int] = {}
 
-    fast_weights.set_mode(evolve=True, stream=False, session=cfg.session_training)
+    _training_mode(fast_weights, cfg)
     step = micro = sessions = nonfinite = nonfinite_steps = total_tokens = 0
     accumulated = 0
     step_loss = window_loss = 0.0
@@ -172,6 +172,7 @@ def train(
                     checkpoint(step=step, carries=carried, n_updates=n_updates)
                 if evaluate is not None and cfg.eval_every > 0:
                     _maybe_eval(step, cfg, evaluate, tracker, announce, carried)
+                    _training_mode(fast_weights, cfg)
             sessions += 1
 
     if checkpoint is not None:
@@ -187,6 +188,13 @@ def train(
         total_steps=total_steps,
         carries=carried,
         n_updates=n_updates,
+    )
+
+
+def _training_mode(fast_weights, cfg: TrainConfig) -> None:
+    """Re-applied after every in-training eval, which leaves the fast weights evolving."""
+    fast_weights.set_mode(
+        evolve=cfg.fast_weight_updates, stream=False, session=cfg.session_training
     )
 
 

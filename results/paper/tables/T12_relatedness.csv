@@ -1,20 +1,4 @@
 model,measure,n_docs,delta_ppl,ci_low,ci_high,excludes_zero,win_rate
-"carry design, seed 42",gain_other_source,200,-0.0665018,-0.0838388,-0.0516618,1,0.2800
-"carry design, seed 42",gain_random,200,0.0508374,0.0368023,0.0647086,1,0.6950
-"carry design, seed 42",gain_related,200,0.0851601,0.0703661,0.0989009,1,0.8500
-"carry design, seed 42",gain_self,200,0.103166,0.0895018,0.118016,1,0.8900
-"carry design, seed 42",random_vs_other_source,200,0.117339,0.0971244,0.136506,1,0.8100
-"carry design, seed 42",related_vs_random,200,0.0343227,0.0237344,0.0452008,1,0.6950
-"carry design, seed 42",related_vs_random_adjusted,200,0.0343227,0.0217308,0.0477061,1,0.6950
-"carry design, seed 42",self_vs_related,200,0.0180063,0.0106075,0.0257593,1,0.6150
-"carry design, seed 43",gain_other_source,200,-0.0461032,-0.0579689,-0.0348292,1,0.2950
-"carry design, seed 43",gain_random,200,0.0340015,0.0232039,0.0449775,1,0.6750
-"carry design, seed 43",gain_related,200,0.0827805,0.0694538,0.093742,1,0.8450
-"carry design, seed 43",gain_self,200,0.116061,0.102759,0.130693,1,0.9300
-"carry design, seed 43",random_vs_other_source,200,0.0801046,0.0659956,0.0944746,1,0.8000
-"carry design, seed 43",related_vs_random,200,0.048779,0.0376164,0.05987,1,0.7450
-"carry design, seed 43",related_vs_random_adjusted,200,0.048779,0.0347993,0.0619605,1,0.7450
-"carry design, seed 43",self_vs_related,200,0.0332807,0.0246899,0.0422931,1,0.6800
 "dynamic evaluation, tuned for related",gain_other_source,200,-0.021888,-0.0287262,-0.0153308,1,0.3450
 "dynamic evaluation, tuned for related",gain_random,200,-0.01876,-0.0266305,-0.0120535,1,0.3650
 "dynamic evaluation, tuned for related",gain_related,200,0.0285189,0.014013,0.0423479,1,0.5600
@@ -31,11 +15,27 @@ model,measure,n_docs,delta_ppl,ci_low,ci_high,excludes_zero,win_rate
 "dynamic evaluation, tuned for same document",related_vs_random,200,0.0483114,0.00739521,0.0926047,1,0.5350
 "dynamic evaluation, tuned for same document",related_vs_random_adjusted,200,0.0483114,-0.00530367,0.108531,0,0.5350
 "dynamic evaluation, tuned for same document",self_vs_related,200,0.506885,0.435348,0.582714,1,0.9000
-"original Hebbian carry",gain_other_source,200,-0.0125331,-0.0177393,-0.00736485,1,0.3850
-"original Hebbian carry",gain_random,200,0.000510422,-0.00424569,0.00506048,0,0.4750
-"original Hebbian carry",gain_related,200,0.00379093,-0.000549067,0.00814745,0,0.5850
-"original Hebbian carry",gain_self,200,-0.00163566,-0.00590707,0.00307551,0,0.4950
-"original Hebbian carry",random_vs_other_source,200,0.0130436,0.00898988,0.0178352,1,0.6650
-"original Hebbian carry",related_vs_random,200,0.0032805,-0.000887448,0.00728611,0,0.5850
-"original Hebbian carry",related_vs_random_adjusted,200,0.0032805,-0.00170617,0.00832358,0,0.5850
-"original Hebbian carry",self_vs_related,200,-0.00542659,-0.00944212,-0.00186577,1,0.4300
+"gated carry, seed 42",gain_other_source,200,-0.0665018,-0.0838388,-0.0516618,1,0.2800
+"gated carry, seed 42",gain_random,200,0.0508374,0.0368023,0.0647086,1,0.6950
+"gated carry, seed 42",gain_related,200,0.0851601,0.0703661,0.0989009,1,0.8500
+"gated carry, seed 42",gain_self,200,0.103166,0.0895018,0.118016,1,0.8900
+"gated carry, seed 42",random_vs_other_source,200,0.117339,0.0971244,0.136506,1,0.8100
+"gated carry, seed 42",related_vs_random,200,0.0343227,0.0237344,0.0452008,1,0.6950
+"gated carry, seed 42",related_vs_random_adjusted,200,0.0343227,0.0217308,0.0477061,1,0.6950
+"gated carry, seed 42",self_vs_related,200,0.0180063,0.0106075,0.0257593,1,0.6150
+"gated carry, seed 43",gain_other_source,200,-0.0461032,-0.0579689,-0.0348292,1,0.2950
+"gated carry, seed 43",gain_random,200,0.0340015,0.0232039,0.0449775,1,0.6750
+"gated carry, seed 43",gain_related,200,0.0827805,0.0694538,0.093742,1,0.8450
+"gated carry, seed 43",gain_self,200,0.116061,0.102759,0.130693,1,0.9300
+"gated carry, seed 43",random_vs_other_source,200,0.0801046,0.0659956,0.0944746,1,0.8000
+"gated carry, seed 43",related_vs_random,200,0.048779,0.0376164,0.05987,1,0.7450
+"gated carry, seed 43",related_vs_random_adjusted,200,0.048779,0.0347993,0.0619605,1,0.7450
+"gated carry, seed 43",self_vs_related,200,0.0332807,0.0246899,0.0422931,1,0.6800
+"ungated carry",gain_other_source,200,-0.0125331,-0.0177393,-0.00736485,1,0.3850
+"ungated carry",gain_random,200,0.000510422,-0.00424569,0.00506048,0,0.4750
+"ungated carry",gain_related,200,0.00379093,-0.000549067,0.00814745,0,0.5850
+"ungated carry",gain_self,200,-0.00163566,-0.00590707,0.00307551,0,0.4950
+"ungated carry",random_vs_other_source,200,0.0130436,0.00898988,0.0178352,1,0.6650
+"ungated carry",related_vs_random,200,0.0032805,-0.000887448,0.00728611,0,0.5850
+"ungated carry",related_vs_random_adjusted,200,0.0032805,-0.00170617,0.00832358,0,0.5850
+"ungated carry",self_vs_related,200,-0.00542659,-0.00944212,-0.00186577,1,0.4300

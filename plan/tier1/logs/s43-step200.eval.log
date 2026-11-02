@@ -1,0 +1,25 @@
+Note that running a local entrypoint in detached mode only keeps the last triggered Modal function alive after the parent process has been killed or disconnected.
+✓ Initialized. View run at 
+https://modal.com/apps/vihanganoob123/main/ap-4A9W4V4wbINSlOMikt2SCw
+✓ Created objects.
+├── ✓ Uploaded 
+│   /home/suchitra/MyStuff/Persistent-TTT/ttt/experiments/paper_eval_v1.py
+├── ✓ Uploaded PythonPackage:ttt
+└── ✓ Created Function paper_eval.
+
+[1ALoading weights:   0%|          | 0/311 [00:00<?, ?it/s]
+[1ALoading weights:   1%|          | 2/311 [00:00<00:33,  9.09it/s]
+[1ALoading weights:  18%|█▊        | 56/311 [00:00<00:01, 217.60it/s]
+[1ALoading weights:  48%|████▊     | 148/311 [00:00<00:00, 464.11it/s]
+[1ALoading weights:  79%|███████▉  | 247/311 [00:00<00:00, 639.02it/s]
+[1ALoading weights: 100%|██████████| 311/311 [00:00<00:00, 528.14it/s]
+loading 'DKYoon/SlimPajama-6B'...
+  loaded 5,489,000 rows in 12.5s
+  labeled sources in 4.0s
+  RedPajamaBook: 6 of 20 held out
+106 documents across 6 sources
+regimes ...
+boundary ...
+bundle -> /home/suchitra/MyStuff/Persistent-TTT/results/hebbian-carry-600-s43/step_200/20261102-210327
+✓ App completed. View run at 
+https://modal.com/apps/vihanganoob123/main/ap-4A9W4V4wbINSlOMikt2SCw

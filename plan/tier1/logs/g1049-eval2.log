@@ -1,0 +1,69 @@
+Note that running a local entrypoint in detached mode only keeps the last triggered Modal function alive after the parent process has been killed or disconnected.
+✓ Initialized. View run at 
+https://modal.com/apps/aiteera-llc/main/ap-RuzK7ZzWx3DKOY4TqhZb5d
+✓ Created objects.
+├── ✓ Uploaded 
+│   /home/suchitra/MyStuff/Persistent-TTT/ttt/experiments/paper_eval_v1.py
+├── ✓ Uploaded PythonPackage:ttt
+└── ✓ Created Function paper_eval.
+
+[1ALoading weights:   0%|          | 0/311 [00:00<?, ?it/s]
+[1ALoading weights:   1%|          | 2/311 [00:00<00:24, 12.83it/s]
+[1ALoading weights:  26%|██▋       | 82/311 [00:00<00:00, 377.36it/s]
+[1ALoading weights:  62%|██████▏   | 193/311 [00:00<00:00, 654.42it/s]
+[1ALoading weights: 100%|██████████| 311/311 [00:00<00:00, 667.26it/s]
+loading 'DKYoon/SlimPajama-6B'...
+  loaded 5,489,000 rows in 8.1s
+  labeled sources in 3.7s
+  RedPajamaBook: 6 of 20 held out
+106 documents across 6 sources
+wikipedia cases ...
+
+[1AGenerating train split: 0 examples [00:00, ? examples/s]
+[1AGenerating train split: 1000 examples [00:00, 6744.54 examples/s]
+[1AGenerating train split: 7000 examples [00:00, 30681.62 examples/s]
+[1AGenerating train split: 20000 examples [00:00, 68398.46 examples/s]
+[1AGenerating train split: 33000 examples [00:00, 87358.13 examples/s]
+[1AGenerating train split: 46000 examples [00:00, 98466.84 examples/s]
+[1AGenerating train split: 58000 examples [00:00, 104817.82 examples/s]
+[1AGenerating train split: 71000 examples [00:00, 110515.38 examples/s]
+[1AGenerating train split: 84000 examples [00:00, 114217.36 examples/s]
+[1AGenerating train split: 97000 examples [00:01, 114878.71 examples/s]
+[1AGenerating train split: 110000 examples [00:01, 112192.58 examples/s]
+[1AGenerating train split: 123000 examples [00:01, 114743.52 examples/s]
+[1AGenerating train split: 136000 examples [00:01, 114070.17 examples/s]
+[1AGenerating train split: 148000 examples [00:01, 115261.51 examples/s]
+[1AGenerating train split: 165289 examples [00:01, 112902.27 examples/s]
+[1AGenerating train split: 179289 examples [00:01, 117341.91 examples/s]
+[1AGenerating train split: 192289 examples [00:01, 119285.32 examples/s]
+[1AGenerating train split: 206289 examples [00:01, 122233.48 examples/s]
+[1AGenerating train split: 220289 examples [00:02, 126692.28 examples/s]
+[1AGenerating train split: 234289 examples [00:02, 126550.21 examples/s]
+[1AGenerating train split: 249289 examples [00:02, 130692.72 examples/s]
+[1AGenerating train split: 263289 examples [00:02, 131011.37 examples/s]
+[1AGenerating train split: 278289 examples [00:02, 133869.38 examples/s]
+[1AGenerating train split: 292289 examples [00:02, 133261.37 examples/s]
+[1AGenerating train split: 308289 examples [00:02, 136234.78 examples/s]
+[1AGenerating train split: 312578 examples [00:02, 115212.02 examples/s]
+
+[1AFilter:   0%|          | 0/312578 [00:00<?, ? examples/s]
+[1AFilter:   5%|▌         | 16000/312578 [00:00<00:02, 147732.28 examples/s]
+[1AFilter:  13%|█▎        | 41000/312578 [00:00<00:01, 205367.31 examples/s]
+[1AFilter:  22%|██▏       | 69000/312578 [00:00<00:01, 235313.46 examples/s]
+[1AFilter:  31%|███       | 97000/312578 [00:00<00:00, 250655.12 examples/s]
+[1AFilter:  40%|████      | 126000/312578 [00:00<00:00, 260878.71 examples/s]
+[1AFilter:  49%|████▉     | 154000/312578 [00:00<00:00, 265013.29 examples/s]
+[1AFilter:  59%|█████▊    | 183000/312578 [00:00<00:00, 270253.02 examples/s]
+[1AFilter:  68%|██████▊   | 212000/312578 [00:00<00:00, 273150.97 examples/s]
+[1AFilter:  77%|███████▋  | 242000/312578 [00:00<00:00, 277828.45 examples/s]
+[1AFilter:  87%|████████▋ | 272000/312578 [00:01<00:00, 281714.91 examples/s]
+[1AFilter:  97%|█████████▋| 303000/312578 [00:01<00:00, 286484.89 examples/s]
+[1AFilter: 100%|██████████| 312578/312578 [00:01<00:00, 265493.16 examples/s]
+  wikipedia: 55,761 articles, 18,747 long enough as targets
+  relatedness: 200 cases, 0 dropped for overlap with training text
+relatedness ...
+bundle -> /home/suchitra/MyStuff/Persistent-TTT/results/gated-carry-1050/step_1049/20261103-001618
+Runner terminated.
+✓ App completed. View run at 
+https://modal.com/apps/aiteera-llc/main/ap-RuzK7ZzWx3DKOY4TqhZb5d
+EXIT 0

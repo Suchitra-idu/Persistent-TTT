@@ -1,0 +1,11 @@
+2026-11-02T21:03:22+05:30 train start on suchitra-idu: update_rule=hebbian,state_aware_gate=false,limit_docs=4000,carry_gate=true,carry_backprop=true,output_gate_bias_init=-6,fast_weight_updates=false,eval_every=50,save_every=50,log_every=10,run_name=pmatched-control-600
+2026-11-02T21:03:32+05:30 train app ap-hxzQxGVkMVZPfz1wOeewLm
+2026-11-02T22:05:12+05:30 step_600 saved; stopping ap-hxzQxGVkMVZPfz1wOeewLm
+2026-11-02T22:05:26+05:30 train finished (exit 1)
+2026-11-02T22:05:26+05:30 eval start: --checkpoint pmatched-control-600/step_600 --suites regimes --out-dir /home/suchitra/MyStuff/Persistent-TTT/results --flags update_rule=hebbian,state_aware_gate=false,limit_docs=4000,carry_gate=true,carry_backprop=true,output_gate_bias_init=-6,fast_weight_updates=false,run_name=pmatched-control-600
+2026-11-02T22:09:29+05:30 eval done (exit 0)
+2026-11-02T22:09:29+05:30 eval start: --checkpoint pmatched-control-600/step_200 --suites regimes --out-dir /home/suchitra/MyStuff/Persistent-TTT/results --flags update_rule=hebbian,state_aware_gate=false,limit_docs=4000,carry_gate=true,carry_backprop=true,output_gate_bias_init=-6,fast_weight_updates=false,run_name=pmatched-control-600
+2026-11-02T22:15:11+05:30 eval done (exit 0)
+2026-11-02T22:15:11+05:30 eval start: --checkpoint pmatched-control-600/step_600 --suites regimes --exclude-holdout-seed 0 --n-boot 10000 --tag fresh --out-dir /home/suchitra/MyStuff/Persistent-TTT/results --flags update_rule=hebbian,state_aware_gate=false,limit_docs=4000,carry_gate=true,carry_backprop=true,output_gate_bias_init=-6,fast_weight_updates=false,eval_holdout_seed=1,run_name=pmatched-control-600
+2026-11-02T22:18:53+05:30 eval done (exit 0)
+2026-11-02T22:18:53+05:30 pipeline complete

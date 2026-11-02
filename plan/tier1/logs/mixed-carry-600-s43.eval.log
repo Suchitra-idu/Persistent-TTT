@@ -1,0 +1,32 @@
+Note that running a local entrypoint in detached mode only keeps the last triggered Modal function alive after the parent process has been killed or disconnected.
+✓ Initialized. View run at 
+https://modal.com/apps/suchitra-idu/main/ap-1QvyO7eMX08L8t4awHHA1z
+✓ Created objects.
+├── ✓ Uploaded 
+│   /home/suchitra/MyStuff/Persistent-TTT/ttt/experiments/paper_eval_v1.py
+├── ✓ Uploaded PythonPackage:ttt
+└── ✓ Created Function paper_eval.
+
+[1ALoading weights:   0%|          | 0/311 [00:00<?, ?it/s]
+[1ALoading weights:   1%|          | 2/311 [00:00<00:28, 10.78it/s]
+[1ALoading weights:  22%|██▏       | 68/311 [00:00<00:00, 289.09it/s]
+[1ALoading weights:  51%|█████     | 159/311 [00:00<00:00, 508.65it/s]
+[1ALoading weights:  80%|████████  | 249/311 [00:00<00:00, 643.36it/s]Loading weights: 100%|██████████| 311/311 [00:00<00:00, 563.92it/s]
+loading 'DKYoon/SlimPajama-6B'...
+  loaded 5,489,000 rows in 2.8s
+  labeled sources in 3.6s
+  RedPajamaBook: 6 of 20 held out
+  RedPajamaArXiv: 37 of 40 held out
+  RedPajamaBook: 6 of 40 held out
+  RedPajamaStackExchange: 25 of 40 held out
+  RedPajamaWikipedia: 31 of 40 held out
+  excluding 106 documents of holdout seed 0
+73 documents across 5 sources
+regimes ...
+wikipedia cases ...
+  cases loaded from evidence/cases/fresh.json
+generic carry from 200 articles ...
+relatedness ...
+bundle -> /home/suchitra/MyStuff/Persistent-TTT/results/mixed-carry-600-s43/step_600/20261102-225743-fresh
+✓ App completed. View run at 
+https://modal.com/apps/suchitra-idu/main/ap-1QvyO7eMX08L8t4awHHA1z

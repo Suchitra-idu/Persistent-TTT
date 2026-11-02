@@ -1,0 +1,80 @@
+Note that running a local entrypoint in detached mode only keeps the last triggered Modal function alive after the parent process has been killed or disconnected.
+✓ Initialized. View run at 
+https://modal.com/apps/suchitra-idu/main/ap-OPAJe7Rk9f7P8gEvJYz0vq
+✓ Created objects.
+├── ✓ Uploaded 
+│   /home/suchitra/MyStuff/Persistent-TTT/ttt/experiments/paper_eval_v1.py
+├── ✓ Uploaded PythonPackage:ttt
+└── ✓ Created Function paper_eval.
+
+[1ALoading weights:   0%|          | 0/311 [00:00<?, ?it/s]
+[1ALoading weights:   1%|          | 2/311 [00:00<00:31,  9.94it/s]
+[1ALoading weights:  21%|██        | 65/311 [00:00<00:00, 259.54it/s]
+[1ALoading weights:  50%|█████     | 157/311 [00:00<00:00, 491.04it/s]
+[1ALoading weights:  85%|████████▍ | 263/311 [00:00<00:00, 666.50it/s]Loading weights: 100%|██████████| 311/311 [00:00<00:00, 507.49it/s]
+loading 'DKYoon/SlimPajama-6B'...
+  loaded 5,489,000 rows in 3.0s
+  labeled sources in 4.0s
+  RedPajamaBook: 6 of 20 held out
+106 documents across 6 sources
+regimes ...
+bundle -> /home/suchitra/MyStuff/Persistent-TTT/results/pmatched-control-600/step_600/20261102-220534
+✓ App completed. View run at 
+https://modal.com/apps/suchitra-idu/main/ap-OPAJe7Rk9f7P8gEvJYz0vq
+Note that running a local entrypoint in detached mode only keeps the last triggered Modal function alive after the parent process has been killed or disconnected.
+✓ Initialized. View run at 
+https://modal.com/apps/suchitra-idu/main/ap-CRndkJyZAcK2Hl1LqCQS19
+✓ Created objects.
+├── ✓ Uploaded 
+│   /home/suchitra/MyStuff/Persistent-TTT/ttt/experiments/paper_eval_v1.py
+├── ✓ Uploaded PythonPackage:ttt
+└── ✓ Created Function paper_eval.
+
+[1ALoading weights:   0%|          | 0/311 [00:00<?, ?it/s]
+[1ALoading weights:   1%|          | 2/311 [00:00<00:33,  9.35it/s]
+[1ALoading weights:  17%|█▋        | 54/311 [00:00<00:01, 213.33it/s]
+[1ALoading weights:  44%|████▍     | 137/311 [00:00<00:00, 430.20it/s]
+[1ALoading weights:  72%|███████▏  | 225/311 [00:00<00:00, 581.21it/s]
+[1ALoading weights:  94%|█████████▍| 292/311 [00:00<00:00, 609.61it/s]
+[1ALoading weights: 100%|██████████| 311/311 [00:00<00:00, 494.39it/s]
+loading 'DKYoon/SlimPajama-6B'...
+  loaded 5,489,000 rows in 34.2s
+  labeled sources in 4.3s
+  RedPajamaBook: 6 of 20 held out
+106 documents across 6 sources
+regimes ...
+bundle -> /home/suchitra/MyStuff/Persistent-TTT/results/pmatched-control-600/step_200/20261102-220948
+[modal-client] 2026-11-02T22:15:11+0530 Timed out waiting for final app logs.
+✓ App completed. View run at 
+https://modal.com/apps/suchitra-idu/main/ap-CRndkJyZAcK2Hl1LqCQS19
+Note that running a local entrypoint in detached mode only keeps the last triggered Modal function alive after the parent process has been killed or disconnected.
+✓ Initialized. View run at 
+https://modal.com/apps/suchitra-idu/main/ap-YWBCex1ItIgILglO7lYijJ
+✓ Created objects.
+├── ✓ Uploaded 
+│   /home/suchitra/MyStuff/Persistent-TTT/ttt/experiments/paper_eval_v1.py
+├── ✓ Uploaded PythonPackage:ttt
+└── ✓ Created Function paper_eval.
+
+[1ALoading weights:   0%|          | 0/311 [00:00<?, ?it/s]
+[1ALoading weights:   1%|          | 2/311 [00:00<00:36,  8.49it/s]
+[1ALoading weights:   9%|▊         | 27/311 [00:00<00:03, 89.59it/s]
+[1ALoading weights:  21%|██        | 65/311 [00:00<00:01, 184.23it/s]
+[1ALoading weights:  30%|██▉       | 92/311 [00:00<00:01, 210.55it/s]
+[1ALoading weights:  39%|███▉      | 122/311 [00:00<00:00, 191.70it/s]
+[1ALoading weights:  59%|█████▊    | 182/311 [00:00<00:00, 291.70it/s]
+[1ALoading weights:  89%|████████▉ | 277/311 [00:00<00:00, 461.09it/s]Loading weights: 100%|██████████| 311/311 [00:00<00:00, 315.34it/s]
+loading 'DKYoon/SlimPajama-6B'...
+  loaded 5,489,000 rows in 4.5s
+  labeled sources in 4.0s
+  RedPajamaBook: 6 of 20 held out
+  RedPajamaArXiv: 37 of 40 held out
+  RedPajamaBook: 6 of 40 held out
+  RedPajamaStackExchange: 25 of 40 held out
+  RedPajamaWikipedia: 31 of 40 held out
+  excluding 106 documents of holdout seed 0
+73 documents across 5 sources
+regimes ...
+bundle -> /home/suchitra/MyStuff/Persistent-TTT/results/pmatched-control-600/step_600/20261102-221533-fresh
+✓ App completed. View run at 
+https://modal.com/apps/suchitra-idu/main/ap-YWBCex1ItIgILglO7lYijJ

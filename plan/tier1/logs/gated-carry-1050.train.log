@@ -1,0 +1,487 @@
+Note that running a local entrypoint in detached mode only keeps the last triggered Modal function alive after the parent process has been killed or disconnected.
+✓ Initialized. View run at 
+https://modal.com/apps/aiteera-llc/main/ap-wtIrS85OfZfBaod4HQFIr5
+✓ Created objects.
+├── ✓ Uploaded /home/suchitra/MyStuff/Persistent-TTT/ttt/experiments/train_v1.py
+├── ✓ Uploaded PythonPackage:ttt
+└── ✓ Created Function train.
+
+[1ALoading weights:   0%|          | 0/311 [00:00<?, ?it/s]
+[1ALoading weights:   0%|          | 1/311 [00:00<01:15,  4.11it/s]
+[1ALoading weights:   1%|          | 2/311 [00:00<01:02,  4.93it/s]
+[1ALoading weights:   8%|▊         | 25/311 [00:00<00:04, 67.46it/s]
+[1ALoading weights:  12%|█▏        | 37/311 [00:00<00:03, 80.49it/s]
+[1ALoading weights:  15%|█▌        | 47/311 [00:00<00:03, 66.36it/s]
+[1ALoading weights:  30%|██▉       | 93/311 [00:00<00:01, 158.50it/s]
+[1ALoading weights:  50%|█████     | 156/311 [00:01<00:00, 275.50it/s]
+[1ALoading weights:  77%|███████▋  | 240/311 [00:01<00:00, 418.97it/s]
+[1ALoading weights:  93%|█████████▎| 289/311 [00:01<00:00, 371.81it/s]Loading weights: 100%|██████████| 311/311 [00:01<00:00, 232.60it/s]
+wandb: [wandb.login()] Loaded credentials for https://api.wandb.ai from WANDB_API_KEY.
+wandb: Currently logged in as: suchitra-malimbada (suchitra-malimbada-nibm) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+wandb: setting up run gi5gi4sh
+wandb: Tracking run with wandb version 0.30.0
+wandb: Run data is saved locally in /root/wandb/run-20261102_153356-gi5gi4sh
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run gated-carry-1050
+wandb: ⭐️ View project at https://wandb.ai/suchitra-malimbada-nibm/inplace-ttt
+wandb: 🚀 View run at https://wandb.ai/suchitra-malimbada-nibm/inplace-ttt/runs/gi5gi4sh
+loading 'DKYoon/SlimPajama-6B'...
+  loaded 5,489,000 rows in 4.4s
+  labeled sources in 4.4s
+  split_holdout: 5,489,000 -> 5,474,000 rows in 13.9s
+  filter_sources: 5,474,000 -> 3,746,335 rows in 4.0s
+  shuffle: 3,746,335 -> 3,746,335 rows in 8.2s
+  prefilter: 3,746,335 -> 217,347 rows in 1.4s
+  balance: 217,347 -> 8,000 rows in 0.1s
+    tokenize: batch 1/4 (2,000/8,000 docs)
+    tokenize: batch 2/4 (4,000/8,000 docs)
+    tokenize: batch 3/4 (6,000/8,000 docs)
+    tokenize: batch 4/4 (8,000/8,000 docs)
+  tokenize: 8,000 -> 8,000 rows in 278.9s
+
+[1Afilter input_ids:   0%|          | 0/8000 [00:00<?, ? examples/s]
+[1Afilter input_ids:  12%|█▎        | 1000/8000 [00:00<00:01, 5174.66 examples/s]
+[1Afilter input_ids:  25%|██▌       | 2000/8000 [00:00<00:01, 5599.89 examples/s]
+[1Afilter input_ids:  38%|███▊      | 3000/8000 [00:00<00:00, 5509.60 examples/s]
+[1Afilter input_ids:  50%|█████     | 4000/8000 [00:00<00:00, 4547.33 examples/s]
+[1Afilter input_ids:  62%|██████▎   | 5000/8000 [00:01<00:00, 4154.35 examples/s]
+[1Afilter input_ids:  75%|███████▌  | 6000/8000 [00:01<00:00, 3750.89 examples/s]
+[1Afilter input_ids:  88%|████████▊ | 7000/8000 [00:01<00:00, 2921.02 examples/s]
+[1Afilter input_ids: 100%|██████████| 8000/8000 [00:02<00:00, 2083.90 examples/s]
+[1Afilter input_ids: 100%|██████████| 8000/8000 [00:02<00:00, 2963.77 examples/s]
+
+[1AFlattening the indices:   0%|          | 0/6567 [00:00<?, ? examples/s]
+[1AFlattening the indices:  15%|█▌        | 1000/6567 [00:00<00:00, 8561.48 examples/s]
+[1AFlattening the indices:  30%|███       | 2000/6567 [00:00<00:00, 7255.89 examples/s]
+[1AFlattening the indices:  46%|████▌     | 3000/6567 [00:00<00:00, 6567.66 examples/s]
+[1AFlattening the indices:  61%|██████    | 4000/6567 [00:00<00:00, 6155.26 examples/s]
+[1AFlattening the indices:  76%|███████▌  | 5000/6567 [00:00<00:00, 5456.75 examples/s]
+[1AFlattening the indices:  91%|█████████▏| 6000/6567 [00:01<00:00, 3333.43 examples/s]
+[1AFlattening the indices: 100%|██████████| 6567/6567 [00:01<00:00, 2477.92 examples/s]
+[1AFlattening the indices: 100%|██████████| 6567/6567 [00:01<00:00, 3622.05 examples/s]
+  drop_short: 8,000 -> 6,567 rows in 21.3s
+
+[1AFlattening the indices:   0%|          | 0/4000 [00:00<?, ? examples/s]
+[1AFlattening the indices:  25%|██▌       | 1000/4000 [00:00<00:00, 9494.06 examples/s]
+[1AFlattening the indices:  50%|█████     | 2000/4000 [00:00<00:00, 7006.22 examples/s]
+[1AFlattening the indices:  75%|███████▌  | 3000/4000 [00:00<00:00, 6122.64 examples/s]
+[1AFlattening the indices: 100%|██████████| 4000/4000 [00:00<00:00, 3383.33 examples/s]
+[1AFlattening the indices: 100%|██████████| 4000/4000 [00:00<00:00, 4125.32 examples/s]
+  rebalance: 6,567 -> 4,000 rows in 1.0s
+
+[1AFlattening the indices:   0%|          | 0/4000 [00:00<?, ? examples/s]
+[1AFlattening the indices:  50%|█████     | 2000/4000 [00:00<00:00, 11784.29 examples/s]
+[1AFlattening the indices: 100%|██████████| 4000/4000 [00:00<00:00, 5632.53 examples/s] 
+[1AFlattening the indices: 100%|██████████| 4000/4000 [00:00<00:00, 6070.53 examples/s]
+  cap: 4,000 -> 4,000 rows in 0.7s
+Qwen/Qwen3-0.6B  dataset=slimpajama-6b
+hybrid: one doc per session; < 2100 tokens whole, else 2-6 slices of >= 1000 tokens
+4000 documents, 30,888,706 tokens, seed=42
+trainable lora 9.2M, new 14.8M, wdown 44.0M
+  first micro-step: 1,037 tokens, starting forward
+  first micro-step: forward+backward-eligible loss returned
+step 10/1050 loss 2.5343 |g| lora 0.599 wdown 1.435 new 0.146
+step 20/1050 loss 2.3363 |g| lora 1.145 wdown 1.560 new 1.484
+step 30/1050 loss 2.3145 |g| lora 0.438 wdown 0.838 new 0.108
+step 40/1050 loss 2.3547 |g| lora 0.353 wdown 0.686 new 0.032
+step 50/1050 loss 2.2866 |g| lora 0.344 wdown 0.729 new 0.037
+  checkpoint saved: gated-carry-1050/step_50
+source                  n_docs   n_tok  cold-c  cold-co    lora   fresh   Δlora  Δwithin  Δbetween
+RedPajamaArXiv               5  63,802   5.500    5.551   5.616   6.071  +0.455   +0.065    +0.051
+RedPajamaBook                5  81,920  25.690   25.939  26.401  30.587  +4.187   +0.462    +0.249
+RedPajamaC4                  5  15,656  35.436   36.310  36.910  41.754  +4.844   +0.600    +0.874
+RedPajamaGithub              5  32,713   3.584    3.627   3.648   3.818  +0.169   +0.021    +0.043
+RedPajamaStackExchange       5  13,718  13.523   13.779  13.861  15.062  +1.201   +0.081    +0.256
+RedPajamaWikipedia           5  35,035  20.651   20.924  21.565  24.502  +2.936   +0.641    +0.273
+  carry gain by slice (carried minus reset, + = carry helps): s2 +0.255 s3 +0.321 s4 +0.250 s5 +0.286 s6 +0.254 s7 +0.182 s8 +0.272 | trend -0.061
+  [eval] carry_gain_slice_1 0.2549 carry_gain_slice_2 0.3208 carry_gain_slice_3 0.2502 carry_gain_slice_4 0.2858 carry_gain_slice_5 0.2541 carry_gain_slice_6 0.1823 carry_gain_slice_7 0.2716 carry_gain_trend -0.06091 carry_off_ppl 15.13 carry_ppl 14.9 fresh_ppl 17 gap_between 0.229 gap_lora 1.653 gap_total 2.107 gap_within 0.225 lora_only_ppl 15.35 state_ratio_final 5.827e+04
+step 60/1050 loss 2.0301 |g| lora 0.365 wdown 0.703 new 0.118
+step 70/1050 loss 2.2749 |g| lora 0.282 wdown 0.573 new 0.036
+step 80/1050 loss 2.2751 |g| lora 0.468 wdown 0.964 new 0.025
+step 90/1050 loss 2.3770 |g| lora 0.319 wdown 0.614 new 0.045
+step 100/1050 loss 2.4492 |g| lora 0.311 wdown 0.617 new 0.093
+  checkpoint saved: gated-carry-1050/step_100
+source                  n_docs   n_tok  cold-c  cold-co    lora   fresh   Δlora  Δwithin  Δbetween
+RedPajamaArXiv               5  63,802   5.422    5.460   5.482   6.071  +0.589   +0.022    +0.039
+RedPajamaBook                5  81,920  25.281   25.415  25.586  30.587  +5.002   +0.171    +0.134
+RedPajamaC4                  5  15,656  34.743   35.257  35.645  41.754  +6.109   +0.388    +0.514
+RedPajamaGithub              5  32,713   3.547    3.568   3.581   3.818  +0.237   +0.014    +0.020
+RedPajamaStackExchange       5  13,718  13.236   13.348  13.428  15.062  +1.634   +0.080    +0.112
+RedPajamaWikipedia           5  35,035  20.310   20.448  20.793  24.502  +3.708   +0.345    +0.139
+  carry gain by slice (carried minus reset, + = carry helps): s2 +0.145 s3 +0.169 s4 +0.157 s5 +0.136 s6 +0.162 s7 +0.108 s8 +0.147 | trend -0.029
+  [eval] carry_gain_slice_1 0.1446 carry_gain_slice_2 0.1692 carry_gain_slice_3 0.1571 carry_gain_slice_4 0.1356 carry_gain_slice_5 0.1618 carry_gain_slice_6 0.1081 carry_gain_slice_7 0.1468 carry_gain_trend -0.02942 carry_off_ppl 14.78 carry_ppl 14.65 fresh_ppl 17 gap_between 0.1291 gap_lora 2.112 gap_total 2.356 gap_within 0.1151 lora_only_ppl 14.89 state_ratio_final 5.346e+04
+step 110/1050 loss 2.2127 |g| lora 0.377 wdown 0.725 new 0.036
+step 120/1050 loss 2.0794 |g| lora 0.362 wdown 0.639 new 0.073
+step 130/1050 loss 2.2312 |g| lora 0.337 wdown 0.682 new 0.033
+step 140/1050 loss 2.2942 |g| lora 0.338 wdown 0.656 new 0.081
+step 150/1050 loss 2.2241 |g| lora 0.372 wdown 0.746 new 0.044
+  checkpoint saved: gated-carry-1050/step_150
+source                  n_docs   n_tok  cold-c  cold-co    lora   fresh   Δlora  Δwithin  Δbetween
+RedPajamaArXiv               5  63,802   5.363    5.407   5.421   6.071  +0.650   +0.014    +0.044
+RedPajamaBook                5  81,920  25.047   25.153  25.223  30.587  +5.365   +0.069    +0.106
+RedPajamaC4                  5  15,656  34.288   34.727  35.180  41.754  +6.574   +0.453    +0.439
+RedPajamaGithub              5  32,713   3.522    3.543   3.550   3.818  +0.268   +0.007    +0.021
+RedPajamaStackExchange       5  13,718  13.089   13.176  13.246  15.062  +1.815   +0.070    +0.087
+RedPajamaWikipedia           5  35,035  20.066   20.229  20.443  24.502  +4.059   +0.214    +0.163
+  carry gain by slice (carried minus reset, + = carry helps): s2 +0.133 s3 +0.145 s4 +0.139 s5 +0.138 s6 +0.149 s7 +0.108 s8 +0.133 | trend -0.019
+  [eval] carry_gain_slice_1 0.1329 carry_gain_slice_2 0.1454 carry_gain_slice_3 0.1386 carry_gain_slice_4 0.1376 carry_gain_slice_5 0.1486 carry_gain_slice_6 0.108 carry_gain_slice_7 0.1327 carry_gain_trend -0.01883 carry_off_ppl 14.61 carry_ppl 14.49 fresh_ppl 17 gap_between 0.1193 gap_lora 2.31 gap_total 2.517 gap_within 0.08803 lora_only_ppl 14.69 state_ratio_final 3.256e+04
+step 160/1050 loss 2.5390 |g| lora 0.403 wdown 0.855 new 0.027
+step 170/1050 loss 2.3592 |g| lora 0.367 wdown 0.617 new 0.043
+step 180/1050 loss 2.2508 |g| lora 0.314 wdown 0.596 new 0.066
+step 190/1050 loss 2.3898 |g| lora 0.350 wdown 0.662 new 0.040
+step 200/1050 loss 2.5182 |g| lora 0.408 wdown 0.905 new 0.071
+  checkpoint saved: gated-carry-1050/step_200
+source                  n_docs   n_tok  cold-c  cold-co    lora   fresh   Δlora  Δwithin  Δbetween
+RedPajamaArXiv               5  63,802   5.345    5.380   5.389   6.071  +0.682   +0.009    +0.034
+RedPajamaBook                5  81,920  24.927   24.988  25.013  30.587  +5.575   +0.025    +0.061
+RedPajamaC4                  5  15,656  34.118   34.443  34.783  41.754  +6.971   +0.339    +0.325
+RedPajamaGithub              5  32,713   3.517    3.526   3.528   3.818  +0.290   +0.002    +0.008
+RedPajamaStackExchange       5  13,718  12.967   13.102  13.128  15.062  +1.934   +0.026    +0.136
+RedPajamaWikipedia           5  35,035  19.932   20.055  20.226  24.502  +4.275   +0.171    +0.123
+  carry gain by slice (carried minus reset, + = carry helps): s2 +0.145 s3 +0.119 s4 +0.098 s5 +0.113 s6 +0.106 s7 +0.100 s8 +0.136 | trend -0.013
+  [eval] carry_gain_slice_1 0.1446 carry_gain_slice_2 0.1186 carry_gain_slice_3 0.09844 carry_gain_slice_4 0.1135 carry_gain_slice_5 0.1056 carry_gain_slice_6 0.1004 carry_gain_slice_7 0.1359 carry_gain_trend -0.01342 carry_off_ppl 14.5 carry_ppl 14.4 fresh_ppl 17 gap_between 0.1024 gap_lora 2.442 gap_total 2.603 gap_within 0.05854 lora_only_ppl 14.56 state_ratio_final 1.936e+04
+Container terminated due to preemption. For more details, see https://modal.com/docs/guide/preemption
+
+[1ALoading weights:   0%|          | 0/311 [00:00<?, ?it/s]
+[1ALoading weights:   1%|          | 2/311 [00:00<00:28, 10.89it/s]
+[1ALoading weights:  20%|█▉        | 61/311 [00:00<00:00, 253.57it/s]
+[1ALoading weights:  48%|████▊     | 148/311 [00:00<00:00, 479.25it/s]
+[1ALoading weights:  79%|███████▉  | 247/311 [00:00<00:00, 655.67it/s]Loading weights: 100%|██████████| 311/311 [00:00<00:00, 553.61it/s]
+wandb: [wandb.login()] Loaded credentials for https://api.wandb.ai from WANDB_API_KEY.
+wandb: Currently logged in as: suchitra-malimbada (suchitra-malimbada-nibm) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+wandb: setting up run wn0xy990
+wandb: Tracking run with wandb version 0.30.0
+wandb: Run data is saved locally in /root/wandb/run-20261102_161203-wn0xy990
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run gated-carry-1050
+wandb: ⭐️ View project at https://wandb.ai/suchitra-malimbada-nibm/inplace-ttt
+wandb: 🚀 View run at https://wandb.ai/suchitra-malimbada-nibm/inplace-ttt/runs/wn0xy990
+loading 'DKYoon/SlimPajama-6B'...
+  loaded 5,489,000 rows in 4.2s
+  labeled sources in 4.0s
+  split_holdout: 5,489,000 -> 5,474,000 rows in 11.8s
+  filter_sources: 5,474,000 -> 3,746,335 rows in 2.9s
+  shuffle: 3,746,335 -> 3,746,335 rows in 7.0s
+  prefilter: 3,746,335 -> 217,347 rows in 1.2s
+  balance: 217,347 -> 8,000 rows in 0.1s
+    tokenize: batch 1/4 (2,000/8,000 docs)
+    tokenize: batch 2/4 (4,000/8,000 docs)
+    tokenize: batch 3/4 (6,000/8,000 docs)
+    tokenize: batch 4/4 (8,000/8,000 docs)
+  tokenize: 8,000 -> 8,000 rows in 245.9s
+  drop_short: 8,000 -> 6,567 rows in 14.0s
+  rebalance: 6,567 -> 4,000 rows in 2.2s
+  cap: 4,000 -> 4,000 rows in 0.9s
+Qwen/Qwen3-0.6B  dataset=slimpajama-6b
+hybrid: one doc per session; < 2100 tokens whole, else 2-6 slices of >= 1000 tokens
+4000 documents, 30,888,706 tokens, seed=42
+trainable lora 9.2M, new 14.8M, wdown 44.0M
+  first micro-step: 1,037 tokens, starting forward
+  first micro-step: forward+backward-eligible loss returned
+step 10/1050 loss 2.5349 |g| lora 0.645 wdown 1.430 new 0.115
+step 20/1050 loss 2.3386 |g| lora 0.943 wdown 1.455 new 0.798
+step 30/1050 loss 2.3243 |g| lora 0.430 wdown 0.885 new 0.709
+step 40/1050 loss 2.3610 |g| lora 0.343 wdown 0.671 new 0.061
+step 50/1050 loss 2.2986 |g| lora 0.363 wdown 0.765 new 0.167
+  checkpoint saved: gated-carry-1050/step_50
+source                  n_docs   n_tok  cold-c  cold-co    lora   fresh   Δlora  Δwithin  Δbetween
+RedPajamaArXiv               5  63,802   5.512    5.569   5.615   6.071  +0.456   +0.045    +0.057
+RedPajamaBook                5  81,920  25.938   26.092  26.442  30.587  +4.145   +0.350    +0.154
+RedPajamaC4                  5  15,656  35.597   36.121  36.994  41.754  +4.760   +0.873    +0.524
+RedPajamaGithub              5  32,713   3.600    3.641   3.650   3.818  +0.168   +0.009    +0.042
+RedPajamaStackExchange       5  13,718  13.577   13.820  13.876  15.062  +1.186   +0.056    +0.243
+RedPajamaWikipedia           5  35,035  20.815   20.950  21.617  24.502  +2.884   +0.667    +0.135
+  carry gain by slice (carried minus reset, + = carry helps): s2 +0.235 s3 +0.281 s4 +0.160 s5 +0.273 s6 +0.162 s7 +0.117 s8 +0.145 | trend -0.127
+  [eval] carry_gain_slice_1 0.2351 carry_gain_slice_2 0.2809 carry_gain_slice_3 0.1603 carry_gain_slice_4 0.2727 carry_gain_slice_5 0.1615 carry_gain_slice_6 0.1167 carry_gain_slice_7 0.1453 carry_gain_trend -0.127 carry_off_ppl 15.15 carry_ppl 14.98 fresh_ppl 17 gap_between 0.1708 gap_lora 1.633 gap_total 2.02 gap_within 0.2158 lora_only_ppl 15.37 state_ratio_final 6.906e+04
+step 60/1050 loss 2.0358 |g| lora 0.368 wdown 0.712 new 0.134
+step 70/1050 loss 2.2795 |g| lora 0.295 wdown 0.583 new 0.067
+step 80/1050 loss 2.2787 |g| lora 0.486 wdown 1.013 new 0.130
+step 90/1050 loss 2.3814 |g| lora 0.325 wdown 0.626 new 0.144
+step 100/1050 loss 2.4520 |g| lora 0.314 wdown 0.620 new 0.118
+  checkpoint saved: gated-carry-1050/step_100
+source                  n_docs   n_tok  cold-c  cold-co    lora   fresh   Δlora  Δwithin  Δbetween
+RedPajamaArXiv               5  63,802   5.429    5.453   5.482   6.071  +0.589   +0.029    +0.023
+RedPajamaBook                5  81,920  25.397   25.478  25.620  30.587  +4.967   +0.142    +0.082
+RedPajamaC4                  5  15,656  34.738   35.251  35.663  41.754  +6.090   +0.413    +0.512
+RedPajamaGithub              5  32,713   3.561    3.581   3.582   3.818  +0.236   +0.001    +0.020
+RedPajamaStackExchange       5  13,718  13.321   13.430  13.436  15.062  +1.625   +0.006    +0.109
+RedPajamaWikipedia           5  35,035  20.438   20.524  20.855  24.502  +3.647   +0.330    +0.087
+  carry gain by slice (carried minus reset, + = carry helps): s2 +0.148 s3 +0.166 s4 +0.111 s5 +0.147 s6 +0.131 s7 +0.056 s8 +0.090 | trend -0.084
+  [eval] carry_gain_slice_1 0.1481 carry_gain_slice_2 0.1658 carry_gain_slice_3 0.111 carry_gain_slice_4 0.1473 carry_gain_slice_5 0.1305 carry_gain_slice_6 0.05562 carry_gain_slice_7 0.08961 carry_gain_trend -0.08433 carry_off_ppl 14.81 carry_ppl 14.7 fresh_ppl 17 gap_between 0.1059 gap_lora 2.097 gap_total 2.304 gap_within 0.1011 lora_only_ppl 14.91 state_ratio_final 5.637e+04
+step 110/1050 loss 2.2146 |g| lora 0.371 wdown 0.721 new 0.044
+step 120/1050 loss 2.0813 |g| lora 0.291 wdown 0.583 new 0.035
+step 130/1050 loss 2.2342 |g| lora 0.343 wdown 0.683 new 0.048
+step 140/1050 loss 2.2960 |g| lora 0.339 wdown 0.658 new 0.120
+step 150/1050 loss 2.2255 |g| lora 0.374 wdown 0.749 new 0.075
+  checkpoint saved: gated-carry-1050/step_150
+source                  n_docs   n_tok  cold-c  cold-co    lora   fresh   Δlora  Δwithin  Δbetween
+RedPajamaArXiv               5  63,802   5.382    5.409   5.421   6.071  +0.650   +0.012    +0.027
+RedPajamaBook                5  81,920  25.101   25.190  25.252  30.587  +5.335   +0.062    +0.088
+RedPajamaC4                  5  15,656  34.401   34.823  35.171  41.754  +6.583   +0.348    +0.422
+RedPajamaGithub              5  32,713   3.526    3.544   3.551   3.818  +0.267   +0.007    +0.017
+RedPajamaStackExchange       5  13,718  13.181   13.249  13.265  15.062  +1.797   +0.015    +0.068
+RedPajamaWikipedia           5  35,035  20.140   20.254  20.480  24.502  +4.022   +0.226    +0.114
+  carry gain by slice (carried minus reset, + = carry helps): s2 +0.138 s3 +0.146 s4 +0.114 s5 +0.112 s6 +0.112 s7 +0.082 s8 +0.069 | trend -0.066
+  [eval] carry_gain_slice_1 0.1381 carry_gain_slice_2 0.146 carry_gain_slice_3 0.1139 carry_gain_slice_4 0.1122 carry_gain_slice_5 0.1118 carry_gain_slice_6 0.08207 carry_gain_slice_7 0.06904 carry_gain_trend -0.06649 carry_off_ppl 14.63 carry_ppl 14.54 fresh_ppl 17 gap_between 0.09663 gap_lora 2.3 gap_total 2.466 gap_within 0.06938 lora_only_ppl 14.7 state_ratio_final 4.369e+04
+step 160/1050 loss 2.5417 |g| lora 0.408 wdown 0.862 new 0.058
+step 170/1050 loss 2.3614 |g| lora 0.364 wdown 0.622 new 0.021
+step 180/1050 loss 2.2526 |g| lora 0.317 wdown 0.605 new 0.074
+step 190/1050 loss 2.3909 |g| lora 0.350 wdown 0.671 new 0.017
+step 200/1050 loss 2.5197 |g| lora 0.398 wdown 0.899 new 0.073
+  checkpoint saved: gated-carry-1050/step_200
+source                  n_docs   n_tok  cold-c  cold-co    lora   fresh   Δlora  Δwithin  Δbetween
+RedPajamaArXiv               5  63,802   5.362    5.383   5.389   6.071  +0.682   +0.006    +0.021
+RedPajamaBook                5  81,920  24.973   25.011  25.044  30.587  +5.543   +0.033    +0.038
+RedPajamaC4                  5  15,656  34.223   34.573  34.841  41.754  +6.913   +0.268    +0.350
+RedPajamaGithub              5  32,713   3.518    3.529   3.531   3.818  +0.286   +0.003    +0.010
+RedPajamaStackExchange       5  13,718  13.031   13.127  13.151  15.062  +1.911   +0.024    +0.096
+RedPajamaWikipedia           5  35,035  20.034   20.142  20.262  24.502  +4.239   +0.121    +0.108
+  carry gain by slice (carried minus reset, + = carry helps): s2 +0.140 s3 +0.105 s4 +0.104 s5 +0.082 s6 +0.103 s7 +0.056 s8 +0.079 | trend -0.054
+  [eval] carry_gain_slice_1 0.1397 carry_gain_slice_2 0.1046 carry_gain_slice_3 0.1036 carry_gain_slice_4 0.08167 carry_gain_slice_5 0.103 carry_gain_slice_6 0.05627 carry_gain_slice_7 0.07917 carry_gain_trend -0.05445 carry_off_ppl 14.53 carry_ppl 14.45 fresh_ppl 17 gap_between 0.08339 gap_lora 2.423 gap_total 2.556 gap_within 0.04908 lora_only_ppl 14.58 state_ratio_final 2.702e+04
+step 210/1050 loss 2.3280 |g| lora 0.355 wdown 0.654 new 0.058
+step 220/1050 loss 2.0410 |g| lora 0.379 wdown 0.640 new 0.027
+step 230/1050 loss 2.5536 |g| lora 0.353 wdown 0.642 new 0.076
+step 240/1050 loss 2.1415 |g| lora 0.362 wdown 0.606 new 0.150
+step 250/1050 loss 2.2326 |g| lora 0.356 wdown 0.598 new 0.057
+  checkpoint saved: gated-carry-1050/step_250
+source                  n_docs   n_tok  cold-c  cold-co    lora   fresh   Δlora  Δwithin  Δbetween
+RedPajamaArXiv               5  63,802   5.339    5.353   5.357   6.071  +0.714   +0.003    +0.014
+RedPajamaBook                5  81,920  24.868   24.909  24.916  30.587  +5.672   +0.007    +0.041
+RedPajamaC4                  5  15,656  34.082   34.451  34.564  41.754  +7.190   +0.113    +0.369
+RedPajamaGithub              5  32,713   3.501    3.510   3.513   3.818  +0.305   +0.003    +0.009
+RedPajamaStackExchange       5  13,718  12.987   13.046  13.060  15.062  +2.002   +0.014    +0.059
+RedPajamaWikipedia           5  35,035  20.045   20.140  20.103  24.502  +4.398   -0.036    +0.095
+  carry gain by slice (carried minus reset, + = carry helps): s2 +0.140 s3 +0.081 s4 +0.073 s5 +0.092 s6 +0.079 s7 +0.066 s8 +0.056 | trend -0.049
+  [eval] carry_gain_slice_1 0.1401 carry_gain_slice_2 0.08089 carry_gain_slice_3 0.07251 carry_gain_slice_4 0.09212 carry_gain_slice_5 0.07916 carry_gain_slice_6 0.06621 carry_gain_slice_7 0.05631 carry_gain_trend -0.04926 carry_off_ppl 14.47 carry_ppl 14.39 fresh_ppl 17 gap_between 0.07317 gap_lora 2.522 gap_total 2.61 gap_within 0.01434 lora_only_ppl 14.48 state_ratio_final 3e+04
+step 260/1050 loss 2.1695 |g| lora 0.334 wdown 0.599 new 0.021
+step 270/1050 loss 2.4284 |g| lora 0.439 wdown 0.743 new 0.399
+step 280/1050 loss 2.3788 |g| lora 0.419 wdown 0.764 new 0.022
+step 290/1050 loss 2.2963 |g| lora 0.607 wdown 0.990 new 0.095
+step 300/1050 loss 2.3595 |g| lora 0.349 wdown 0.620 new 0.017
+  checkpoint saved: gated-carry-1050/step_300
+source                  n_docs   n_tok  cold-c  cold-co    lora   fresh   Δlora  Δwithin  Δbetween
+RedPajamaArXiv               5  63,802   5.327    5.335   5.336   6.071  +0.734   +0.001    +0.008
+RedPajamaBook                5  81,920  24.796   24.807  24.811  30.587  +5.776   +0.005    +0.011
+RedPajamaC4                  5  15,656  34.072   34.257  34.372  41.754  +7.382   +0.116    +0.184
+RedPajamaGithub              5  32,713   3.497    3.500   3.500   3.818  +0.318   -0.000    +0.003
+RedPajamaStackExchange       5  13,718  12.964   13.006  12.987  15.062  +2.075   -0.019    +0.042
+RedPajamaWikipedia           5  35,035  19.923   19.984  20.019  24.502  +4.483   +0.035    +0.061
+  carry gain by slice (carried minus reset, + = carry helps): s2 +0.058 s3 +0.076 s4 +0.060 s5 +0.055 s6 +0.043 s7 +0.031 s8 +0.013 | trend -0.045
+  [eval] carry_gain_slice_1 0.0577 carry_gain_slice_2 0.07634 carry_gain_slice_3 0.06041 carry_gain_slice_4 0.05453 carry_gain_slice_5 0.04311 carry_gain_slice_6 0.03133 carry_gain_slice_7 0.01346 carry_gain_trend -0.04462 carry_off_ppl 14.4 carry_ppl 14.36 fresh_ppl 17 gap_between 0.04191 gap_lora 2.59 gap_total 2.645 gap_within 0.01267 lora_only_ppl 14.41 state_ratio_final 2.166e+04
+step 310/1050 loss 2.4579 |g| lora 0.316 wdown 0.547 new 0.021
+step 320/1050 loss 2.2725 |g| lora 0.375 wdown 0.647 new 0.012
+step 330/1050 loss 2.3033 |g| lora 0.395 wdown 0.662 new 0.016
+step 340/1050 loss 2.3045 |g| lora 0.312 wdown 0.548 new 0.008
+step 350/1050 loss 2.3411 |g| lora 0.341 wdown 0.564 new 0.013
+  checkpoint saved: gated-carry-1050/step_350
+source                  n_docs   n_tok  cold-c  cold-co    lora   fresh   Δlora  Δwithin  Δbetween
+RedPajamaArXiv               5  63,802   5.313    5.321   5.320   6.071  +0.751   -0.002    +0.008
+RedPajamaBook                5  81,920  24.737   24.772  24.724  30.587  +5.863   -0.047    +0.035
+RedPajamaC4                  5  15,656  34.062   34.154  34.208  41.754  +7.546   +0.053    +0.092
+RedPajamaGithub              5  32,713   3.490    3.495   3.493   3.818  +0.325   -0.002    +0.005
+RedPajamaStackExchange       5  13,718  12.907   12.966  12.962  15.062  +2.100   -0.004    +0.058
+RedPajamaWikipedia           5  35,035  19.805   19.876  19.925  24.502  +4.577   +0.049    +0.071
+  carry gain by slice (carried minus reset, + = carry helps): s2 +0.070 s3 +0.070 s4 +0.044 s5 +0.055 s6 +0.043 s7 +0.045 s8 +0.031 | trend -0.031
+  [eval] carry_gain_slice_1 0.06977 carry_gain_slice_2 0.06972 carry_gain_slice_3 0.04374 carry_gain_slice_4 0.055 carry_gain_slice_5 0.04326 carry_gain_slice_6 0.04532 carry_gain_slice_7 0.03133 carry_gain_trend -0.03141 carry_off_ppl 14.36 carry_ppl 14.32 fresh_ppl 17 gap_between 0.0445 gap_lora 2.641 gap_total 2.687 gap_within 0.001799 lora_only_ppl 14.36 state_ratio_final 2.067e+04
+step 360/1050 loss 2.1461 |g| lora 0.324 wdown 0.577 new 0.020
+step 370/1050 loss 2.2592 |g| lora 0.401 wdown 0.657 new 0.015
+step 380/1050 loss 2.1875 |g| lora 0.415 wdown 0.659 new 0.095
+step 390/1050 loss 2.5820 |g| lora 0.500 wdown 0.893 new 0.170
+step 400/1050 loss 2.1647 |g| lora 0.368 wdown 0.678 new 0.010
+  checkpoint saved: gated-carry-1050/step_400
+source                  n_docs   n_tok  cold-c  cold-co    lora   fresh   Δlora  Δwithin  Δbetween
+RedPajamaArXiv               5  63,802   5.300    5.310   5.309   6.071  +0.761   -0.001    +0.010
+RedPajamaBook                5  81,920  24.678   24.690  24.693  30.587  +5.895   +0.003    +0.012
+RedPajamaC4                  5  15,656  33.810   34.022  34.054  41.754  +7.700   +0.032    +0.212
+RedPajamaGithub              5  32,713   3.483    3.487   3.485   3.818  +0.332   -0.001    +0.003
+RedPajamaStackExchange       5  13,718  12.811   12.871  12.897  15.062  +2.165   +0.026    +0.060
+RedPajamaWikipedia           5  35,035  19.785   19.848  19.874  24.502  +4.627   +0.027    +0.063
+  carry gain by slice (carried minus reset, + = carry helps): s2 +0.102 s3 +0.018 s4 +0.057 s5 +0.075 s6 +0.053 s7 +0.045 s8 +0.038 | trend -0.019
+  [eval] carry_gain_slice_1 0.1016 carry_gain_slice_2 0.01809 carry_gain_slice_3 0.05663 carry_gain_slice_4 0.07469 carry_gain_slice_5 0.05265 carry_gain_slice_6 0.04459 carry_gain_slice_7 0.03799 carry_gain_trend -0.01855 carry_off_ppl 14.31 carry_ppl 14.26 fresh_ppl 17 gap_between 0.04862 gap_lora 2.685 gap_total 2.745 gap_within 0.0117 lora_only_ppl 14.32 state_ratio_final 1.565e+04
+step 410/1050 loss 2.4081 |g| lora 0.435 wdown 0.689 new 0.023
+step 420/1050 loss 2.0752 |g| lora 0.379 wdown 0.642 new 0.056
+step 430/1050 loss 1.9608 |g| lora 0.357 wdown 0.574 new 0.017
+step 440/1050 loss 2.1298 |g| lora 0.447 wdown 0.747 new 0.019
+step 450/1050 loss 2.1409 |g| lora 0.460 wdown 0.772 new 0.015
+  checkpoint saved: gated-carry-1050/step_450
+source                  n_docs   n_tok  cold-c  cold-co    lora   fresh   Δlora  Δwithin  Δbetween
+RedPajamaArXiv               5  63,802   5.289    5.296   5.298   6.071  +0.773   +0.001    +0.007
+RedPajamaBook                5  81,920  24.630   24.645  24.651  30.587  +5.937   +0.006    +0.015
+RedPajamaC4                  5  15,656  33.664   33.935  33.963  41.754  +7.791   +0.029    +0.271
+RedPajamaGithub              5  32,713   3.477    3.478   3.480   3.818  +0.338   +0.002    +0.002
+RedPajamaStackExchange       5  13,718  12.800   12.859  12.872  15.062  +2.190   +0.013    +0.060
+RedPajamaWikipedia           5  35,035  19.736   19.814  19.825  24.502  +4.676   +0.011    +0.078
+  carry gain by slice (carried minus reset, + = carry helps): s2 +0.087 s3 +0.034 s4 +0.060 s5 +0.058 s6 +0.064 s7 +0.054 s8 +0.040 | trend -0.013
+  [eval] carry_gain_slice_1 0.0866 carry_gain_slice_2 0.03382 carry_gain_slice_3 0.05982 carry_gain_slice_4 0.05793 carry_gain_slice_5 0.06368 carry_gain_slice_6 0.05449 carry_gain_slice_7 0.04034 carry_gain_trend -0.0128 carry_off_ppl 14.28 carry_ppl 14.23 fresh_ppl 17 gap_between 0.05014 gap_lora 2.715 gap_total 2.776 gap_within 0.01076 lora_only_ppl 14.29 state_ratio_final 1.212e+04
+step 460/1050 loss 2.2756 |g| lora 0.390 wdown 0.615 new 0.019
+step 470/1050 loss 2.2404 |g| lora 0.530 wdown 0.831 new 0.033
+step 480/1050 loss 2.1440 |g| lora 0.410 wdown 0.846 new 0.043
+step 490/1050 loss 2.0383 |g| lora 0.417 wdown 0.753 new 0.019
+step 500/1050 loss 2.2055 |g| lora 0.321 wdown 0.486 new 0.011
+  checkpoint saved: gated-carry-1050/step_500
+source                  n_docs   n_tok  cold-c  cold-co    lora   fresh   Δlora  Δwithin  Δbetween
+RedPajamaArXiv               5  63,802   5.279    5.291   5.291   6.071  +0.779   +0.001    +0.012
+RedPajamaBook                5  81,920  24.593   24.614  24.620  30.587  +5.967   +0.006    +0.021
+RedPajamaC4                  5  15,656  33.453   33.840  33.884  41.754  +7.870   +0.043    +0.387
+RedPajamaGithub              5  32,713   3.471    3.476   3.476   3.818  +0.342   +0.000    +0.004
+RedPajamaStackExchange       5  13,718  12.762   12.851  12.836  15.062  +2.226   -0.015    +0.089
+RedPajamaWikipedia           5  35,035  19.724   19.778  19.785  24.502  +4.717   +0.007    +0.054
+  carry gain by slice (carried minus reset, + = carry helps): s2 +0.110 s3 +0.050 s4 +0.067 s5 +0.093 s6 +0.111 s7 +0.081 s8 +0.069 | trend -0.005
+  [eval] carry_gain_slice_1 0.1097 carry_gain_slice_2 0.05049 carry_gain_slice_3 0.0669 carry_gain_slice_4 0.09315 carry_gain_slice_5 0.1115 carry_gain_slice_6 0.08069 carry_gain_slice_7 0.06882 carry_gain_trend -0.005325 carry_off_ppl 14.25 carry_ppl 14.18 fresh_ppl 17 gap_between 0.07401 gap_lora 2.741 gap_total 2.824 gap_within 0.00838 lora_only_ppl 14.26 state_ratio_final 1.741e+04
+step 510/1050 loss 2.1222 |g| lora 0.458 wdown 0.754 new 0.023
+step 520/1050 loss 2.0452 |g| lora 0.499 wdown 0.757 new 0.089
+step 530/1050 loss 2.1850 |g| lora 0.345 wdown 0.528 new 0.067
+step 540/1050 loss 2.5475 |g| lora 0.373 wdown 0.578 new 0.017
+step 550/1050 loss 2.5169 |g| lora 0.421 wdown 0.718 new 0.008
+  checkpoint saved: gated-carry-1050/step_550
+source                  n_docs   n_tok  cold-c  cold-co    lora   fresh   Δlora  Δwithin  Δbetween
+RedPajamaArXiv               5  63,802   5.278    5.287   5.285   6.071  +0.786   -0.002    +0.009
+RedPajamaBook                5  81,920  24.601   24.622  24.621  30.587  +5.966   -0.001    +0.021
+RedPajamaC4                  5  15,656  33.489   33.818  33.851  41.754  +7.903   +0.033    +0.329
+RedPajamaGithub              5  32,713   3.469    3.474   3.475   3.818  +0.343   +0.001    +0.005
+RedPajamaStackExchange       5  13,718  12.740   12.806  12.830  15.062  +2.232   +0.024    +0.066
+RedPajamaWikipedia           5  35,035  19.657   19.746  19.773  24.502  +4.728   +0.028    +0.089
+  carry gain by slice (carried minus reset, + = carry helps): s2 +0.126 s3 +0.047 s4 +0.059 s5 +0.097 s6 +0.085 s7 +0.076 s8 +0.044 | trend -0.027
+  [eval] carry_gain_slice_1 0.1264 carry_gain_slice_2 0.04703 carry_gain_slice_3 0.05882 carry_gain_slice_4 0.09731 carry_gain_slice_5 0.08484 carry_gain_slice_6 0.07609 carry_gain_slice_7 0.04362 carry_gain_trend -0.02685 carry_off_ppl 14.24 carry_ppl 14.17 fresh_ppl 17 gap_between 0.06734 gap_lora 2.751 gap_total 2.831 gap_within 0.01245 lora_only_ppl 14.25 state_ratio_final 4.735e+04
+step 560/1050 loss 2.4044 |g| lora 0.423 wdown 0.722 new 0.015
+step 570/1050 loss 2.5538 |g| lora 0.461 wdown 0.738 new 0.022
+step 580/1050 loss 2.4517 |g| lora 0.406 wdown 0.612 new 0.020
+step 590/1050 loss 2.3008 |g| lora 0.363 wdown 0.559 new 0.007
+step 600/1050 loss 2.1772 |g| lora 0.522 wdown 0.815 new 0.049
+  checkpoint saved: gated-carry-1050/step_600
+source                  n_docs   n_tok  cold-c  cold-co    lora   fresh   Δlora  Δwithin  Δbetween
+RedPajamaArXiv               5  63,802   5.269    5.280   5.280   6.071  +0.790   +0.000    +0.012
+RedPajamaBook                5  81,920  24.544   24.575  24.576  30.587  +6.011   +0.002    +0.030
+RedPajamaC4                  5  15,656  33.250   33.732  33.779  41.754  +7.975   +0.047    +0.482
+RedPajamaGithub              5  32,713   3.465    3.470   3.472   3.818  +0.345   +0.002    +0.005
+RedPajamaStackExchange       5  13,718  12.693   12.785  12.817  15.062  +2.245   +0.032    +0.092
+RedPajamaWikipedia           5  35,035  19.591   19.694  19.744  24.502  +4.757   +0.050    +0.103
+  carry gain by slice (carried minus reset, + = carry helps): s2 +0.131 s3 +0.096 s4 +0.086 s5 +0.105 s6 +0.101 s7 +0.100 s8 +0.098 | trend -0.014
+  [eval] carry_gain_slice_1 0.1313 carry_gain_slice_2 0.09605 carry_gain_slice_3 0.08627 carry_gain_slice_4 0.1051 carry_gain_slice_5 0.1006 carry_gain_slice_6 0.1004 carry_gain_slice_7 0.09831 carry_gain_trend -0.01432 carry_off_ppl 14.21 carry_ppl 14.12 fresh_ppl 17 gap_between 0.0903 gap_lora 2.77 gap_total 2.882 gap_within 0.02101 lora_only_ppl 14.23 state_ratio_final 4.548e+04
+step 610/1050 loss 1.8321 |g| lora 0.392 wdown 0.594 new 0.010
+step 620/1050 loss 2.1033 |g| lora 0.373 wdown 0.574 new 0.005
+step 630/1050 loss 2.1985 |g| lora 0.337 wdown 0.517 new 0.017
+step 640/1050 loss 2.5877 |g| lora 0.414 wdown 0.628 new 0.008
+step 650/1050 loss 2.3105 |g| lora 0.458 wdown 0.671 new 0.009
+  checkpoint saved: gated-carry-1050/step_650
+source                  n_docs   n_tok  cold-c  cold-co    lora   fresh   Δlora  Δwithin  Δbetween
+RedPajamaArXiv               5  63,802   5.264    5.279   5.280   6.071  +0.791   +0.001    +0.015
+RedPajamaBook                5  81,920  24.531   24.570  24.567  30.587  +6.021   -0.003    +0.039
+RedPajamaC4                  5  15,656  33.277   33.739  33.762  41.754  +7.992   +0.023    +0.462
+RedPajamaGithub              5  32,713   3.461    3.471   3.469   3.818  +0.349   -0.001    +0.009
+RedPajamaStackExchange       5  13,718  12.618   12.745  12.778  15.062  +2.283   +0.033    +0.127
+RedPajamaWikipedia           5  35,035  19.563   19.681  19.734  24.502  +4.767   +0.053    +0.118
+  carry gain by slice (carried minus reset, + = carry helps): s2 +0.164 s3 +0.102 s4 +0.113 s5 +0.128 s6 +0.092 s7 +0.089 s8 +0.114 | trend -0.031
+  [eval] carry_gain_slice_1 0.1643 carry_gain_slice_2 0.1025 carry_gain_slice_3 0.1133 carry_gain_slice_4 0.1283 carry_gain_slice_5 0.09198 carry_gain_slice_6 0.08945 carry_gain_slice_7 0.1144 carry_gain_trend -0.03147 carry_off_ppl 14.2 carry_ppl 14.1 fresh_ppl 17 gap_between 0.1005 gap_lora 2.783 gap_total 2.901 gap_within 0.01704 lora_only_ppl 14.22 state_ratio_final 4.574e+04
+step 660/1050 loss 1.9765 |g| lora 0.462 wdown 0.728 new 0.015
+step 670/1050 loss 2.3015 |g| lora 0.427 wdown 0.717 new 0.006
+step 680/1050 loss 2.1435 |g| lora 0.370 wdown 0.592 new 0.008
+step 690/1050 loss 2.1111 |g| lora 0.454 wdown 0.773 new 0.005
+step 700/1050 loss 2.2944 |g| lora 0.344 wdown 0.528 new 0.006
+  checkpoint saved: gated-carry-1050/step_700
+source                  n_docs   n_tok  cold-c  cold-co    lora   fresh   Δlora  Δwithin  Δbetween
+RedPajamaArXiv               5  63,802   5.261    5.276   5.278   6.071  +0.792   +0.003    +0.015
+RedPajamaBook                5  81,920  24.504   24.565  24.555  30.587  +6.033   -0.010    +0.061
+RedPajamaC4                  5  15,656  33.184   33.690  33.716  41.754  +8.038   +0.026    +0.505
+RedPajamaGithub              5  32,713   3.459    3.468   3.469   3.818  +0.349   +0.001    +0.009
+RedPajamaStackExchange       5  13,718  12.620   12.750  12.771  15.062  +2.290   +0.022    +0.129
+RedPajamaWikipedia           5  35,035  19.550   19.675  19.730  24.502  +4.771   +0.055    +0.126
+  carry gain by slice (carried minus reset, + = carry helps): s2 +0.170 s3 +0.112 s4 +0.123 s5 +0.121 s6 +0.114 s7 +0.097 s8 +0.108 | trend -0.038
+  [eval] carry_gain_slice_1 0.1702 carry_gain_slice_2 0.1118 carry_gain_slice_3 0.1228 carry_gain_slice_4 0.1211 carry_gain_slice_5 0.1143 carry_gain_slice_6 0.09731 carry_gain_slice_7 0.108 carry_gain_trend -0.03832 carry_off_ppl 14.2 carry_ppl 14.09 fresh_ppl 17 gap_between 0.106 gap_lora 2.79 gap_total 2.913 gap_within 0.01713 lora_only_ppl 14.21 state_ratio_final 4.559e+04
+step 710/1050 loss 1.9203 |g| lora 0.356 wdown 0.527 new 0.006
+step 720/1050 loss 2.4137 |g| lora 0.404 wdown 0.599 new 0.012
+step 730/1050 loss 2.1383 |g| lora 0.313 wdown 0.499 new 0.007
+step 740/1050 loss 2.2310 |g| lora 0.374 wdown 0.593 new 0.010
+step 750/1050 loss 1.9997 |g| lora 0.429 wdown 0.656 new 0.008
+  checkpoint saved: gated-carry-1050/step_750
+source                  n_docs   n_tok  cold-c  cold-co    lora   fresh   Δlora  Δwithin  Δbetween
+RedPajamaArXiv               5  63,802   5.258    5.274   5.275   6.071  +0.795   +0.001    +0.016
+RedPajamaBook                5  81,920  24.495   24.550  24.548  30.587  +6.039   -0.002    +0.055
+RedPajamaC4                  5  15,656  33.148   33.701  33.702  41.754  +8.052   +0.001    +0.553
+RedPajamaGithub              5  32,713   3.459    3.468   3.467   3.818  +0.351   -0.001    +0.009
+RedPajamaStackExchange       5  13,718  12.575   12.734  12.770  15.062  +2.291   +0.036    +0.159
+RedPajamaWikipedia           5  35,035  19.521   19.668  19.719  24.502  +4.783   +0.051    +0.147
+  carry gain by slice (carried minus reset, + = carry helps): s2 +0.185 s3 +0.120 s4 +0.157 s5 +0.128 s6 +0.111 s7 +0.112 s8 +0.129 | trend -0.032
+  [eval] carry_gain_slice_1 0.1855 carry_gain_slice_2 0.1198 carry_gain_slice_3 0.1572 carry_gain_slice_4 0.1277 carry_gain_slice_5 0.1113 carry_gain_slice_6 0.1123 carry_gain_slice_7 0.1294 carry_gain_trend -0.03181 carry_off_ppl 14.19 carry_ppl 14.07 fresh_ppl 17 gap_between 0.1181 gap_lora 2.795 gap_total 2.93 gap_within 0.01635 lora_only_ppl 14.21 state_ratio_final 4.575e+04
+step 760/1050 loss 2.3070 |g| lora 0.399 wdown 0.589 new 0.029
+step 770/1050 loss 2.3883 |g| lora 0.369 wdown 0.583 new 0.012
+step 780/1050 loss 2.5045 |g| lora 0.382 wdown 0.599 new 0.009
+step 790/1050 loss 2.1299 |g| lora 0.420 wdown 0.685 new 0.009
+step 800/1050 loss 2.4545 |g| lora 0.362 wdown 0.567 new 0.005
+  checkpoint saved: gated-carry-1050/step_800
+source                  n_docs   n_tok  cold-c  cold-co    lora   fresh   Δlora  Δwithin  Δbetween
+RedPajamaArXiv               5  63,802   5.255    5.273   5.274   6.071  +0.796   +0.002    +0.018
+RedPajamaBook                5  81,920  24.478   24.544  24.537  30.587  +6.050   -0.007    +0.066
+RedPajamaC4                  5  15,656  33.137   33.676  33.697  41.754  +8.057   +0.021    +0.539
+RedPajamaGithub              5  32,713   3.460    3.469   3.468   3.818  +0.350   -0.001    +0.009
+RedPajamaStackExchange       5  13,718  12.542   12.722  12.766  15.062  +2.296   +0.044    +0.180
+RedPajamaWikipedia           5  35,035  19.513   19.669  19.715  24.502  +4.787   +0.046    +0.156
+  carry gain by slice (carried minus reset, + = carry helps): s2 +0.203 s3 +0.138 s4 +0.156 s5 +0.145 s6 +0.117 s7 +0.115 s8 +0.136 | trend -0.045
+  [eval] carry_gain_slice_1 0.2034 carry_gain_slice_2 0.1379 carry_gain_slice_3 0.1559 carry_gain_slice_4 0.1447 carry_gain_slice_5 0.1168 carry_gain_slice_6 0.1149 carry_gain_slice_7 0.1361 carry_gain_trend -0.04515 carry_off_ppl 14.19 carry_ppl 14.06 fresh_ppl 17 gap_between 0.1262 gap_lora 2.797 gap_total 2.943 gap_within 0.01938 lora_only_ppl 14.21 state_ratio_final 4.563e+04
+step 810/1050 loss 2.4443 |g| lora 0.461 wdown 0.729 new 0.008
+step 820/1050 loss 1.9939 |g| lora 0.387 wdown 0.640 new 0.015
+step 830/1050 loss 2.2422 |g| lora 0.367 wdown 0.566 new 0.008
+step 840/1050 loss 1.8990 |g| lora 0.335 wdown 0.500 new 0.112
+step 850/1050 loss 1.9091 |g| lora 0.417 wdown 0.684 new 0.045
+  checkpoint saved: gated-carry-1050/step_850
+source                  n_docs   n_tok  cold-c  cold-co    lora   fresh   Δlora  Δwithin  Δbetween
+RedPajamaArXiv               5  63,802   5.251    5.271   5.273   6.071  +0.797   +0.002    +0.020
+RedPajamaBook                5  81,920  24.472   24.533  24.537  30.587  +6.051   +0.004    +0.061
+RedPajamaC4                  5  15,656  33.060   33.672  33.690  41.754  +8.064   +0.018    +0.612
+RedPajamaGithub              5  32,713   3.456    3.467   3.465   3.818  +0.352   -0.002    +0.011
+RedPajamaStackExchange       5  13,718  12.526   12.715  12.760  15.062  +2.301   +0.045    +0.190
+RedPajamaWikipedia           5  35,035  19.507   19.666  19.715  24.502  +4.787   +0.048    +0.159
+  carry gain by slice (carried minus reset, + = carry helps): s2 +0.203 s3 +0.152 s4 +0.178 s5 +0.146 s6 +0.131 s7 +0.131 s8 +0.146 | trend -0.039
+  [eval] carry_gain_slice_1 0.2032 carry_gain_slice_2 0.1516 carry_gain_slice_3 0.1779 carry_gain_slice_4 0.146 carry_gain_slice_5 0.1306 carry_gain_slice_6 0.1307 carry_gain_slice_7 0.1458 carry_gain_trend -0.03915 carry_off_ppl 14.18 carry_ppl 14.04 fresh_ppl 17 gap_between 0.1361 gap_lora 2.803 gap_total 2.959 gap_within 0.01992 lora_only_ppl 14.2 state_ratio_final 4.548e+04
+step 860/1050 loss 2.2780 |g| lora 0.376 wdown 0.563 new 0.007
+step 870/1050 loss 2.2991 |g| lora 0.466 wdown 0.726 new 0.035
+step 880/1050 loss 2.2895 |g| lora 0.393 wdown 0.584 new 0.009
+step 890/1050 loss 2.3722 |g| lora 0.430 wdown 0.621 new 0.020
+step 900/1050 loss 2.0418 |g| lora 0.362 wdown 0.549 new 0.015
+  checkpoint saved: gated-carry-1050/step_900
+source                  n_docs   n_tok  cold-c  cold-co    lora   fresh   Δlora  Δwithin  Δbetween
+RedPajamaArXiv               5  63,802   5.250    5.271   5.273   6.071  +0.797   +0.003    +0.020
+RedPajamaBook                5  81,920  24.467   24.535  24.534  30.587  +6.053   -0.001    +0.068
+RedPajamaC4                  5  15,656  33.054   33.674  33.689  41.754  +8.065   +0.015    +0.620
+RedPajamaGithub              5  32,713   3.453    3.468   3.468   3.818  +0.350   -0.000    +0.015
+RedPajamaStackExchange       5  13,718  12.516   12.702  12.752  15.062  +2.309   +0.051    +0.185
+RedPajamaWikipedia           5  35,035  19.505   19.655  19.718  24.502  +4.784   +0.063    +0.150
+  carry gain by slice (carried minus reset, + = carry helps): s2 +0.209 s3 +0.153 s4 +0.182 s5 +0.155 s6 +0.128 s7 +0.133 s8 +0.139 | trend -0.045
+  [eval] carry_gain_slice_1 0.2094 carry_gain_slice_2 0.1531 carry_gain_slice_3 0.1823 carry_gain_slice_4 0.1547 carry_gain_slice_5 0.1277 carry_gain_slice_6 0.1332 carry_gain_slice_7 0.1395 carry_gain_trend -0.04489 carry_off_ppl 14.18 carry_ppl 14.04 fresh_ppl 17 gap_between 0.1377 gap_lora 2.802 gap_total 2.965 gap_within 0.02487 lora_only_ppl 14.2 state_ratio_final 4.553e+04
+step 910/1050 loss 1.9381 |g| lora 0.438 wdown 0.736 new 0.018
+step 920/1050 loss 2.0882 |g| lora 0.415 wdown 0.607 new 0.011
+step 930/1050 loss 2.4255 |g| lora 0.396 wdown 0.655 new 0.010
+step 940/1050 loss 2.1717 |g| lora 0.402 wdown 0.584 new 0.010
+step 950/1050 loss 1.9436 |g| lora 0.351 wdown 0.525 new 0.021
+  checkpoint saved: gated-carry-1050/step_950
+source                  n_docs   n_tok  cold-c  cold-co    lora   fresh   Δlora  Δwithin  Δbetween
+RedPajamaArXiv               5  63,802   5.248    5.269   5.274   6.071  +0.797   +0.005    +0.021
+RedPajamaBook                5  81,920  24.464   24.534  24.534  30.587  +6.054   -0.000    +0.070
+RedPajamaC4                  5  15,656  33.013   33.652  33.686  41.754  +8.068   +0.034    +0.640
+RedPajamaGithub              5  32,713   3.454    3.467   3.467   3.818  +0.351   +0.000    +0.013
+RedPajamaStackExchange       5  13,718  12.520   12.707  12.757  15.062  +2.304   +0.051    +0.187
+RedPajamaWikipedia           5  35,035  19.511   19.664  19.717  24.502  +4.784   +0.054    +0.153
+  carry gain by slice (carried minus reset, + = carry helps): s2 +0.212 s3 +0.147 s4 +0.176 s5 +0.156 s6 +0.135 s7 +0.139 s8 +0.149 | trend -0.036
+  [eval] carry_gain_slice_1 0.2122 carry_gain_slice_2 0.147 carry_gain_slice_3 0.1763 carry_gain_slice_4 0.1562 carry_gain_slice_5 0.1346 carry_gain_slice_6 0.1386 carry_gain_slice_7 0.1488 carry_gain_trend -0.03591 carry_off_ppl 14.18 carry_ppl 14.04 fresh_ppl 17 gap_between 0.1396 gap_lora 2.802 gap_total 2.967 gap_within 0.02526 lora_only_ppl 14.2 state_ratio_final 4.553e+04
+step 960/1050 loss 2.1109 |g| lora 0.367 wdown 0.552 new 0.011
+step 970/1050 loss 2.1405 |g| lora 0.396 wdown 0.630 new 0.013
+step 980/1050 loss 2.1711 |g| lora 0.372 wdown 0.588 new 0.022
+step 990/1050 loss 2.1787 |g| lora 0.412 wdown 0.606 new 0.007
+step 1000/1050 loss 2.0804 |g| lora 0.351 wdown 0.568 new 0.006
+  checkpoint saved: gated-carry-1050/step_1000
+source                  n_docs   n_tok  cold-c  cold-co    lora   fresh   Δlora  Δwithin  Δbetween
+RedPajamaArXiv               5  63,802   5.247    5.269   5.272   6.071  +0.798   +0.003    +0.022
+RedPajamaBook                5  81,920  24.465   24.532  24.533  30.587  +6.054   +0.001    +0.067
+RedPajamaC4                  5  15,656  33.014   33.660  33.683  41.754  +8.071   +0.024    +0.646
+RedPajamaGithub              5  32,713   3.453    3.466   3.467   3.818  +0.351   +0.001    +0.013
+RedPajamaStackExchange       5  13,718  12.516   12.702  12.755  15.062  +2.306   +0.053    +0.186
+RedPajamaWikipedia           5  35,035  19.509   19.665  19.715  24.502  +4.787   +0.049    +0.156
+  carry gain by slice (carried minus reset, + = carry helps): s2 +0.213 s3 +0.156 s4 +0.173 s5 +0.159 s6 +0.133 s7 +0.142 s8 +0.145 | trend -0.041
+  [eval] carry_gain_slice_1 0.2127 carry_gain_slice_2 0.1561 carry_gain_slice_3 0.1733 carry_gain_slice_4 0.1589 carry_gain_slice_5 0.1331 carry_gain_slice_6 0.1424 carry_gain_slice_7 0.1451 carry_gain_trend -0.04061 carry_off_ppl 14.18 carry_ppl 14.03 fresh_ppl 17 gap_between 0.1405 gap_lora 2.802 gap_total 2.969 gap_within 0.02619 lora_only_ppl 14.2 state_ratio_final 4.55e+04
+step 1010/1050 loss 2.1587 |g| lora 0.360 wdown 0.535 new 0.009
+step 1020/1050 loss 2.3098 |g| lora 0.400 wdown 0.593 new 0.011
+step 1030/1050 loss 2.4994 |g| lora 0.366 wdown 0.588 new 0.006
+step 1040/1050 loss 2.2679 |g| lora 0.459 wdown 0.743 new 0.012
+╭─ Error ──────────────────────────────────────────────────────────────────────╮
+│ [Errno -3] Temporary failure in name resolution                              │
+╰──────────────────────────────────────────────────────────────────────────────╯

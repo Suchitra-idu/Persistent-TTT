@@ -1,0 +1,27 @@
+Note that running a local entrypoint in detached mode only keeps the last triggered Modal function alive after the parent process has been killed or disconnected.
+✓ Initialized. View run at 
+https://modal.com/apps/aiteera-llc/main/ap-sVQryvLlhCS7qFM184Kw8a
+✓ Created objects.
+├── ✓ Uploaded 
+│   /home/suchitra/MyStuff/Persistent-TTT/ttt/experiments/paper_eval_v1.py
+├── ✓ Uploaded PythonPackage:ttt
+└── ✓ Created Function paper_eval.
+
+[1ALoading weights:   0%|          | 0/311 [00:00<?, ?it/s]
+[1ALoading weights:   1%|          | 2/311 [00:00<00:32,  9.49it/s]
+[1ALoading weights:  13%|█▎        | 41/311 [00:00<00:01, 162.29it/s]
+[1ALoading weights:  40%|████      | 125/311 [00:00<00:00, 407.65it/s]
+[1ALoading weights:  63%|██████▎   | 196/311 [00:00<00:00, 508.84it/s]
+[1ALoading weights:  90%|█████████ | 280/311 [00:00<00:00, 611.46it/s]Loading weights: 100%|██████████| 311/311 [00:00<00:00, 493.10it/s]
+loading 'DKYoon/SlimPajama-6B'...
+  loaded 5,489,000 rows in 26.1s
+  labeled sources in 4.6s
+  RedPajamaBook: 6 of 20 held out
+106 documents across 6 sources
+regimes ...
+boundary ...
+context ...
+bundle -> /home/suchitra/MyStuff/Persistent-TTT/results/gated-carry-1050/step_1049/20261103-001617
+✓ App completed. View run at 
+https://modal.com/apps/aiteera-llc/main/ap-sVQryvLlhCS7qFM184Kw8a
+EXIT 0

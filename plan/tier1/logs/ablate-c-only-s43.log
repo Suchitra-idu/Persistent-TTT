@@ -1,0 +1,7 @@
+2026-11-02T21:03:22+05:30 train start on vihanganoob123: update_rule=hebbian,state_aware_gate=false,limit_docs=4000,output_gate_bias_init=-6,seed=43,eval_every=50,save_every=50,log_every=10,run_name=ablate-c-only-s43
+2026-11-02T21:03:32+05:30 train app ap-cPLPJoeyUXbRKFZmFLhWsp
+2026-11-02T21:41:35+05:30 step_200 saved; stopping ap-cPLPJoeyUXbRKFZmFLhWsp
+2026-11-02T21:41:50+05:30 train finished (exit 1)
+2026-11-02T21:41:50+05:30 eval start: --checkpoint ablate-c-only-s43/step_200 --suites regimes,boundary --n-chain 20 --out-dir /home/suchitra/MyStuff/Persistent-TTT/results --flags update_rule=hebbian,state_aware_gate=false,limit_docs=4000,output_gate_bias_init=-6,seed=43,run_name=ablate-c-only-s43
+2026-11-02T21:47:46+05:30 eval done (exit 0)
+2026-11-02T21:47:46+05:30 pipeline complete

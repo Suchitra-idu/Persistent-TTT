@@ -1,0 +1,24 @@
+Note that running a local entrypoint in detached mode only keeps the last triggered Modal function alive after the parent process has been killed or disconnected.
+✓ Initialized. View run at 
+https://modal.com/apps/suchitra-idu/main/ap-CAfhPA99dgAUayMwxzzMJl
+✓ Created objects.
+├── ✓ Uploaded 
+│   /home/suchitra/MyStuff/Persistent-TTT/ttt/experiments/paper_eval_v1.py
+├── ✓ Uploaded PythonPackage:ttt
+└── ✓ Created Function paper_eval.
+
+[1ALoading weights:   0%|          | 0/311 [00:00<?, ?it/s]
+[1ALoading weights:   0%|          | 1/311 [00:00<01:24,  3.66it/s]
+[1ALoading weights:  19%|█▊        | 58/311 [00:00<00:01, 193.46it/s]
+[1ALoading weights:  50%|█████     | 156/311 [00:00<00:00, 448.05it/s]
+[1ALoading weights:  79%|███████▉  | 247/311 [00:00<00:00, 582.84it/s]Loading weights: 100%|██████████| 311/311 [00:00<00:00, 486.68it/s]
+loading 'DKYoon/SlimPajama-6B'...
+  loaded 5,489,000 rows in 7.6s
+  labeled sources in 4.2s
+  RedPajamaBook: 6 of 20 held out
+106 documents across 6 sources
+regimes ...
+boundary ...
+bundle -> /tmp/claude-1000/-home-suchitra-MyStuff-Persistent-TTT/ab4401d1-80b4-4a6e-a4ab-f97c783f839e/scratchpad/recheck/ablate-c-only/step_200/20261102-220314-recheck
+✓ App completed. View run at 
+https://modal.com/apps/suchitra-idu/main/ap-CAfhPA99dgAUayMwxzzMJl

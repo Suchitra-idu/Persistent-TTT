@@ -1,0 +1,175 @@
+Note that running a local entrypoint in detached mode only keeps the last triggered Modal function alive after the parent process has been killed or disconnected.
+✓ Initialized. View run at 
+https://modal.com/apps/vihanganoob123/main/ap-cPLPJoeyUXbRKFZmFLhWsp
+✓ Created objects.
+├── ✓ Uploaded /home/suchitra/MyStuff/Persistent-TTT/ttt/experiments/train_v1.py
+├── ✓ Uploaded PythonPackage:ttt
+└── ✓ Created Function train.
+
+[1ALoading weights:   0%|          | 0/311 [00:00<?, ?it/s]
+[1ALoading weights:   0%|          | 1/311 [00:00<00:44,  6.93it/s]
+[1ALoading weights:   1%|          | 2/311 [00:00<01:04,  4.76it/s]
+[1ALoading weights:   6%|▌         | 18/311 [00:00<00:06, 43.87it/s]
+[1ALoading weights:  11%|█▏        | 35/311 [00:00<00:03, 72.87it/s]
+[1ALoading weights:  19%|█▉        | 60/311 [00:00<00:02, 109.27it/s]
+[1ALoading weights:  37%|███▋      | 115/311 [00:00<00:00, 219.42it/s]
+[1ALoading weights:  48%|████▊     | 148/311 [00:01<00:00, 217.71it/s]
+[1ALoading weights:  58%|█████▊    | 180/311 [00:01<00:00, 240.45it/s]
+[1ALoading weights:  67%|██████▋   | 208/311 [00:01<00:00, 248.32it/s]
+[1ALoading weights:  76%|███████▌  | 235/311 [00:01<00:00, 243.99it/s]
+[1ALoading weights:  84%|████████▍ | 261/311 [00:01<00:00, 242.77it/s]
+[1ALoading weights:  92%|█████████▏| 287/311 [00:01<00:00, 237.73it/s]Loading weights: 100%|██████████| 311/311 [00:01<00:00, 191.63it/s]
+wandb: [wandb.login()] Loaded credentials for https://api.wandb.ai from WANDB_API_KEY.
+wandb: Currently logged in as: suchitra-malimbada (suchitra-malimbada-nibm) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+wandb: setting up run kp57h1x8
+wandb: Tracking run with wandb version 0.29.0
+wandb: Run data is saved locally in /root/wandb/run-20261102_153409-kp57h1x8
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run ablate-c-only-s43
+wandb: ⭐️ View project at https://wandb.ai/suchitra-malimbada-nibm/inplace-ttt
+wandb: 🚀 View run at https://wandb.ai/suchitra-malimbada-nibm/inplace-ttt/runs/kp57h1x8
+loading 'DKYoon/SlimPajama-6B'...
+  loaded 5,489,000 rows in 13.0s
+  labeled sources in 8.1s
+  split_holdout: 5,489,000 -> 5,474,000 rows in 27.7s
+  filter_sources: 5,474,000 -> 3,746,335 rows in 4.5s
+  shuffle: 3,746,335 -> 3,746,335 rows in 21.7s
+  prefilter: 3,746,335 -> 217,347 rows in 8.1s
+  balance: 217,347 -> 8,000 rows in 0.9s
+    tokenize: batch 1/4 (2,000/8,000 docs)
+    tokenize: batch 2/4 (4,000/8,000 docs)
+    tokenize: batch 3/4 (6,000/8,000 docs)
+    tokenize: batch 4/4 (8,000/8,000 docs)
+  tokenize: 8,000 -> 8,000 rows in 275.9s
+
+[1Afilter input_ids:   0%|          | 0/8000 [00:00<?, ? examples/s]
+[1Afilter input_ids:  12%|█▎        | 1000/8000 [00:00<00:01, 6116.54 examples/s]
+[1Afilter input_ids:  25%|██▌       | 2000/8000 [00:00<00:00, 6375.51 examples/s]
+[1Afilter input_ids:  38%|███▊      | 3000/8000 [00:00<00:00, 6474.65 examples/s]
+[1Afilter input_ids:  50%|█████     | 4000/8000 [00:00<00:00, 5407.69 examples/s]
+[1Afilter input_ids:  62%|██████▎   | 5000/8000 [00:00<00:00, 4879.37 examples/s]
+[1Afilter input_ids:  75%|███████▌  | 6000/8000 [00:01<00:00, 4421.61 examples/s]
+[1Afilter input_ids:  88%|████████▊ | 7000/8000 [00:01<00:00, 3233.13 examples/s]
+[1Afilter input_ids: 100%|██████████| 8000/8000 [00:02<00:00, 2201.69 examples/s]
+[1Afilter input_ids: 100%|██████████| 8000/8000 [00:02<00:00, 3257.90 examples/s]
+
+[1AFlattening the indices:   0%|          | 0/6675 [00:00<?, ? examples/s]
+[1AFlattening the indices:  30%|██▉       | 2000/6675 [00:00<00:00, 8274.18 examples/s]
+[1AFlattening the indices:  45%|████▍     | 3000/6675 [00:00<00:00, 7122.66 examples/s]
+[1AFlattening the indices:  60%|█████▉    | 4000/6675 [00:00<00:00, 6671.04 examples/s]
+[1AFlattening the indices:  75%|███████▍  | 5000/6675 [00:00<00:00, 6117.15 examples/s]
+[1AFlattening the indices:  90%|████████▉ | 6000/6675 [00:01<00:00, 4012.48 examples/s]
+[1AFlattening the indices: 100%|██████████| 6675/6675 [00:01<00:00, 2813.02 examples/s]
+[1AFlattening the indices: 100%|██████████| 6675/6675 [00:01<00:00, 4027.13 examples/s]
+  drop_short: 8,000 -> 6,675 rows in 31.0s
+
+[1AFlattening the indices:   0%|          | 0/4000 [00:00<?, ? examples/s]
+[1AFlattening the indices:  50%|█████     | 2000/4000 [00:00<00:00, 7984.58 examples/s]
+[1AFlattening the indices:  75%|███████▌  | 3000/4000 [00:00<00:00, 6761.21 examples/s]
+[1AFlattening the indices: 100%|██████████| 4000/4000 [00:00<00:00, 3720.36 examples/s]
+[1AFlattening the indices: 100%|██████████| 4000/4000 [00:00<00:00, 4401.62 examples/s]
+  rebalance: 6,675 -> 4,000 rows in 0.9s
+
+[1AFlattening the indices:   0%|          | 0/4000 [00:00<?, ? examples/s]
+[1AFlattening the indices:  50%|█████     | 2000/4000 [00:00<00:00, 13146.74 examples/s]
+[1AFlattening the indices: 100%|██████████| 4000/4000 [00:00<00:00, 6055.43 examples/s] 
+[1AFlattening the indices: 100%|██████████| 4000/4000 [00:00<00:00, 6545.13 examples/s]
+  cap: 4,000 -> 4,000 rows in 0.6s
+Qwen/Qwen3-0.6B  dataset=slimpajama-6b
+hybrid: one doc per session; < 2100 tokens whole, else 2-6 slices of >= 1000 tokens
+4000 documents, 30,816,942 tokens, seed=43
+trainable lora 9.2M, new 14.8M, wdown 44.0M
+  first micro-step: 1,735 tokens, starting forward
+  first micro-step: forward+backward-eligible loss returned
+step 10/1048 loss 2.1996 |g| lora 0.723 wdown 1.394 new 0.093
+step 20/1048 loss 2.4675 |g| lora 1.004 wdown 1.700 new 0.617
+step 30/1048 loss 2.4300 |g| lora 0.390 wdown 0.845 new 0.054
+step 40/1048 loss 2.4198 |g| lora 0.475 wdown 0.888 new 0.042
+step 50/1048 loss 2.0993 |g| lora 0.375 wdown 0.729 new 0.025
+  checkpoint saved: ablate-c-only-s43/step_50
+source                  n_docs   n_tok  cold-c  cold-co    lora   fresh   Δlora  Δwithin  Δbetween
+RedPajamaArXiv               5  63,802   5.548    5.554   5.571   6.071  +0.500   +0.017    +0.005
+RedPajamaBook                5  81,920  25.799   25.818  26.037  30.587  +4.550   +0.219    +0.019
+RedPajamaC4                  5  15,656  35.911   35.973  36.633  41.754  +5.120   +0.661    +0.062
+RedPajamaGithub              5  32,713   3.612    3.617   3.626   3.818  +0.192   +0.009    +0.005
+RedPajamaStackExchange       5  13,718  13.790   13.817  13.745  15.062  +1.317   -0.073    +0.027
+RedPajamaWikipedia           5  35,035  20.790   20.813  21.269  24.502  +3.233   +0.456    +0.023
+  carry gain by slice (carried minus reset, + = carry helps): s2 +0.012 s3 +0.057 s4 +0.042 s5 +0.036 s6 +0.025 s7 +0.004 s8 -0.023 | trend -0.044
+  [eval] carry_gain_slice_1 0.01229 carry_gain_slice_2 0.05655 carry_gain_slice_3 0.04159 carry_gain_slice_4 0.03614 carry_gain_slice_5 0.02482 carry_gain_slice_6 0.003507 carry_gain_slice_7 -0.02291 carry_gain_trend -0.04412 carry_off_ppl 15.07 carry_ppl 15.05 fresh_ppl 17 gap_between 0.01898 gap_lora 1.801 gap_total 1.954 gap_within 0.1336 lora_only_ppl 15.2 state_ratio_final 8.168e+04
+step 60/1048 loss 2.5301 |g| lora 0.333 wdown 0.652 new 0.024
+step 70/1048 loss 2.1937 |g| lora 0.329 wdown 0.700 new 0.010
+step 80/1048 loss 2.2851 |g| lora 0.370 wdown 0.788 new 0.020
+step 90/1048 loss 2.2195 |g| lora 0.385 wdown 0.708 new 0.016
+step 100/1048 loss 2.1681 |g| lora 0.321 wdown 0.652 new 0.013
+  checkpoint saved: ablate-c-only-s43/step_100
+source                  n_docs   n_tok  cold-c  cold-co    lora   fresh   Δlora  Δwithin  Δbetween
+RedPajamaArXiv               5  63,802   5.440    5.442   5.450   6.071  +0.620   +0.008    +0.003
+RedPajamaBook                5  81,920  25.378   25.389  25.432  30.587  +5.156   +0.043    +0.011
+RedPajamaC4                  5  15,656  35.181   35.272  35.626  41.754  +6.128   +0.354    +0.092
+RedPajamaGithub              5  32,713   3.568    3.567   3.570   3.818  +0.248   +0.003    -0.001
+RedPajamaStackExchange       5  13,718  13.415   13.408  13.421  15.062  +1.641   +0.013    -0.008
+RedPajamaWikipedia           5  35,035  20.340   20.367  20.563  24.502  +3.939   +0.196    +0.027
+  carry gain by slice (carried minus reset, + = carry helps): s2 +0.009 s3 +0.037 s4 +0.015 s5 +0.016 s6 +0.016 s7 -0.013 s8 +0.007 | trend -0.026
+  [eval] carry_gain_slice_1 0.008945 carry_gain_slice_2 0.03739 carry_gain_slice_3 0.01485 carry_gain_slice_4 0.0163 carry_gain_slice_5 0.01616 carry_gain_slice_6 -0.01307 carry_gain_slice_7 0.007303 carry_gain_trend -0.02605 carry_off_ppl 14.76 carry_ppl 14.75 fresh_ppl 17 gap_between 0.01066 gap_lora 2.18 gap_total 2.257 gap_within 0.0665 lora_only_ppl 14.82 state_ratio_final 5.743e+04
+step 110/1048 loss 2.3064 |g| lora 0.368 wdown 0.729 new 0.008
+step 120/1048 loss 2.2743 |g| lora 0.373 wdown 0.751 new 0.022
+step 130/1048 loss 2.3243 |g| lora 0.393 wdown 0.771 new 0.014
+step 140/1048 loss 2.2018 |g| lora 0.369 wdown 0.740 new 0.012
+step 150/1048 loss 2.5674 |g| lora 0.374 wdown 0.736 new 0.018
+  checkpoint saved: ablate-c-only-s43/step_150
+source                  n_docs   n_tok  cold-c  cold-co    lora   fresh   Δlora  Δwithin  Δbetween
+RedPajamaArXiv               5  63,802   5.393    5.397   5.399   6.071  +0.671   +0.002    +0.004
+RedPajamaBook                5  81,920  25.112   25.113  25.141  30.587  +5.446   +0.029    +0.001
+RedPajamaC4                  5  15,656  34.564   34.754  35.069  41.754  +6.685   +0.314    +0.190
+RedPajamaGithub              5  32,713   3.537    3.535   3.542   3.818  +0.276   +0.007    -0.002
+RedPajamaStackExchange       5  13,718  13.194   13.217  13.271  15.062  +1.791   +0.053    +0.023
+RedPajamaWikipedia           5  35,035  20.131   20.145  20.290  24.502  +4.212   +0.144    +0.014
+  carry gain by slice (carried minus reset, + = carry helps): s2 +0.025 s3 +0.035 s4 +0.041 s5 +0.042 s6 +0.020 s7 +0.006 s8 +0.000 | trend -0.027
+  [eval] carry_gain_slice_1 0.02543 carry_gain_slice_2 0.03474 carry_gain_slice_3 0.04089 carry_gain_slice_4 0.04222 carry_gain_slice_5 0.01992 carry_gain_slice_6 0.005729 carry_gain_slice_7 0.000228 carry_gain_trend -0.02711 carry_off_ppl 14.59 carry_ppl 14.57 fresh_ppl 17 gap_between 0.02119 gap_lora 2.355 gap_total 2.437 gap_within 0.06075 lora_only_ppl 14.65 state_ratio_final 3.567e+04
+step 160/1048 loss 2.2290 |g| lora 0.304 wdown 0.543 new 0.020
+step 170/1048 loss 2.1920 |g| lora 0.353 wdown 0.651 new 0.034
+step 180/1048 loss 2.2833 |g| lora 0.377 wdown 0.673 new 0.004
+step 190/1048 loss 2.4051 |g| lora 0.299 wdown 0.552 new 0.009
+step 200/1048 loss 2.1366 |g| lora 0.387 wdown 0.716 new 0.019
+  checkpoint saved: ablate-c-only-s43/step_200
+Stopping app - user stopped from CLI.
+[1;34mwandb[0m: 
+[1;34mwandb[0m: 🚀 View run [33mablate-c-only-s43[0m at: [34mhttps://wandb.ai/suchitra-malimbada-nibm/inplace-ttt/runs/kp57h1x8[0m
+[1;34mwandb[0m: Find logs at: [1;35mwandb/run-20261102_153409-kp57h1x8/logs[0m
+╭───────────────────── Traceback (most recent call last) ──────────────────────╮
+│ /home/suchitra/MyStuff/Persistent-TTT/ttt/experiments/train_v1.py:155 in     │
+│ main                                                                         │
+│                                                                              │
+│   154 def main(flags: str = ""):                                             │
+│ ❱ 155 │   train.spawn(invocation=cli.invocation(), **cli.parse_flags(flags)) │
+│   156                                                                        │
+│                                                                              │
+│ /home/suchitra/MyStuff/Persistent-TTT/.venv/lib/python3.14/site-packages/mod │
+│ al/_object.py:49 in wrapped                                                  │
+│                                                                              │
+│    48 │   │   await self.hydrate()                                           │
+│ ❱  49 │   │   return await method(self, *args, **kwargs)                     │
+│    50                                                                        │
+│                                                                              │
+│ /home/suchitra/MyStuff/Persistent-TTT/.venv/lib/python3.14/site-packages/mod │
+│ al/_functions.py:2424 in get                                                 │
+│                                                                              │
+│   2423 │   │   """                                                           │
+│ ❱ 2424 │   │   return await self._invocation().poll_function(timeout=timeout │
+│   2425                                                                       │
+│                                                                              │
+│ /home/suchitra/MyStuff/Persistent-TTT/.venv/lib/python3.14/site-packages/mod │
+│ al/_functions.py:350 in poll_function                                        │
+│                                                                              │
+│    349 │   │                                                                 │
+│ ❱  350 │   │   return await _process_result(                                 │
+│    351 │   │   │   response.outputs[0].result, response.outputs[0].data_form │
+│                                                                              │
+│ /home/suchitra/MyStuff/Persistent-TTT/.venv/lib/python3.14/site-packages/mod │
+│ al/_utils/function_utils.py:574 in _process_result                           │
+│                                                                              │
+│   573 │   │                                                                  │
+│ ❱ 574 │   │   raise RemoteError(result.exception)                            │
+│   575                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────╯
+RemoteError

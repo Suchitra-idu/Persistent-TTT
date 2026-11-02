@@ -87,13 +87,7 @@
 \end{center}
 \vspace{0.3cm}
 
-This study asks whether the fast weights that test-time training (TTT) builds while a language model reads one document can be carried into the next document, how much that carry contributes, and which domains benefit most. The data are the SlimPajama-6B corpus, which mixes six sources (ArXiv, Book, C4, Github, StackExchange and Wikipedia), and English Wikipedia articles from the November 2023 dump. Models are trained on 4000 SlimPajama documents and evaluated on 106 held-out documents, on 200 Wikipedia target articles, each read after text of varying relatedness, and on a confirmatory test set of 200 further targets and 73 SlimPajama documents whose analysis plan was published before it was run.
-
-The problems addressed are that existing TTT methods discard their adaptation at every document boundary, that it is unknown whether a carried fast weight helps or harms the next document, and that small perplexity effects are easy to overstate. In-Place TTT layers are added to the MLP down-projections of Qwen3-0.6B and trained with a Hebbian and a chunked delta update rule, against a LoRA-only model trained with the same data, schedule and learning rate. Paired evaluation conditions separate the training gain, adaptation within a document and the carried state, with bootstrap intervals over documents. A redesigned carry adds a separate gated path with a zero-initialised scale and is trained through the boundary between slices of one document.
-
-Carrying the original fast weight across documents has no measurable effect, and its read-time norm clip is saturated on every measurement. The redesigned carry lowers perplexity on later slices of the same document by about 0.1, roughly 1 percent. Carried into another document, its effect is ordered by relatedness, and this replicates on the confirmatory test set at two training seeds. A carry from an article that the target mentions lowers perplexity by 0.086, about 0.5 percent, one from an unrelated article by 0.036 to 0.055, and one from another source raises it by 0.059 to 0.084. Most of this gain is generic, since a carry averaged over 200 articles lowers perplexity by about 0.07, but a related article still beats it by 0.015 and 0.018, with Bonferroni-adjusted intervals that exclude zero. In a single-seed probe trained across document boundaries, the harm from other-source text disappears, but so does the advantage of related text, and the gain within a document falls by about 40 percent.
-
-A trained fast-weight carry therefore transfers across documents according to their relatedness and harms after a change of source. The evidence is perplexity only, so it concerns stream and domain adaptation rather than recall of what was read, and attention on the earlier text remains a far stronger channel when that text is available.
+Test-time training (TTT) methods for language models adapt a set of fast weights while reading and discard them at every document boundary. We study what a fast weight carried into the next document does. Building on In-Place TTT in Qwen3-0.6B, we introduce a gated carry, in which the state accumulated over earlier text is read through a separate, zero-initialised gated path and trained by backpropagation across slice boundaries. Compared with resetting the state, the gated carry lowers perplexity on the continuation of a document by about 1\%, whereas carrying the state through the existing TTT path gains at most 0.027 within a document and nothing measurable across documents. Across documents the gated carry's effect depends on how the documents relate. On a preregistered test set of 200 Wikipedia targets, at two training seeds, it helps most after the target's own opening, less after a related article and less again after an unrelated one, and it raises perplexity after text from another source. Most of the gain is a generic effect of the source, but a related article still outperforms a carry averaged over 200 articles. Training across document boundaries removes the harm and, with it, this advantage of related text, at two seeds. The gated carry also beats a control with the same architecture and parameters but no fast-weight updates, and trained to the end of its schedule its transfer becomes more specific to related text. All evidence is perplexity, so the findings concern stream and domain adaptation rather than recall.
 
 \clearpage
 \phantomsection
@@ -114,37 +108,34 @@ A trained fast-weight carry therefore transfers across documents according to th
 \chapter{INTRODUCTION}
 \label{ch-intro}
 
-Large language models adapt to their input only through attention, so what they learn from a document is lost once that document leaves the context. Test-time training (TTT) lets a model update part of its weights while it reads, and In-Place TTT does so in the MLP of an existing transformer, but it resets the adapted weights at every document boundary. This report studies what happens when that reset is removed and the adapted fast weight is carried into the next document. The research question is whether such a carry contributes to language modelling, when it helps and when it harms, and which domains benefit. The objectives are to build and train a session-persistent TTT model, to measure the carry against a reset and against a matched baseline, and to test any effect on a confirmatory test set fixed in advance.
+A language model adapts to its input through attention, so whatever it gains from a document is lost once the document leaves its context. Test-time training (TTT) offers a second channel. Part of the model is updated while it reads, and In-Place TTT \citep{feng2026inplace} does this inside the MLP blocks of an existing transformer. Every such method, however, resets its fast weights at the end of each document. This report asks what happens if the reset is removed: whether a fast weight built on one document helps or harms the next, and on what this depends.
 
-As in the proposal, the study is scoped to inference-time improvement measured by perplexity on held-out text. It makes no claim that a model retains and can later use specific information, which would require behavioural testing. In the terms of \citet{song2026beyond}, our evidence is evidence of stream and domain adaptation, measured by perplexity. It does not show that a carried state stores information that the model can later retrieve. The proposal also planned individual RULER tasks \citep{hsieh2024ruler} as an additional held-out probe. They were left out. While the original designs carried nothing measurable across documents there was no carried signal for a retrieval probe to detect, and once the redesigned carry produced one, the remaining compute budget went to the relatedness, ablation, seed and dynamic-evaluation experiments that measure it in perplexity. Section~\ref{sec-limits} returns to this.
+We answer in perplexity on held-out text. In the terms of \citet{song2026beyond}, this is evidence of stream and domain adaptation. It does not show that a carried state stores information that the model can later retrieve, which would require behavioural tests, and we make no such claim.
 
 \section{Background of the study}
 
-A trained large language model answers every input with the same parameters. This makes inference efficient, but it also means the model cannot specialise to the context in which it is being used. In-context learning lets a model adapt to its input without changing any weight, but only while that input stays in its context window \citep{brown2020language,dong2024survey}. Test-time training (TTT) relaxes this restriction by updating part of the model on the input it is currently reading, using a self-supervised objective that needs no labels \citep{sun2020ttt}. Applied to language models, TTT has been used to build sequence layers whose hidden state is itself a small model trained online \citep{sun2025learning}, long-term memory modules placed beside attention \citep{behrouz2025titans}, and most recently In-Place TTT \citep{feng2026inplace}, which turns the MLP down-projection of an existing transformer into a fast weight that adapts while the model reads. These methods descend from fast weights, weights that change during inference and act as an associative memory of what has been read \citep{ba2016using,schlag2021linear}.
+A trained large language model answers every input with the same parameters. This makes inference efficient, but it also means the model cannot specialise to the context in which it is being used. In-context learning lets a model adapt to its input without changing any weight, but only while that input stays in its context window \citep{brown2020language,dong2024survey}. Test-time training relaxes this restriction by updating part of the model on the input it is currently reading, using a self-supervised objective that needs no labels \citep{sun2020ttt}. Applied to language models, TTT has been used to build sequence layers whose hidden state is itself a small model trained online \citep{sun2025learning}, long-term memory modules placed beside attention \citep{behrouz2025titans}, and In-Place TTT \citep{feng2026inplace}, which turns the MLP down-projection of an existing transformer into a fast weight that adapts while the model reads. These methods descend from fast weights, weights that change during inference and act as an associative memory of what has been read \citep{ba2016using,schlag2021linear}.
 
 \section{Justification of the problem}
 
-Every one of these methods resets its adapted state at the end of each document. In-Place TTT does so deliberately, to prevent information leaking between unrelated inputs, and never tests carrying the fast weights forward \citep{feng2026inplace}. Related work approaches persistence from other directions. Some methods meta-learn a test-time initialisation or update weights over one long context \citep{tandon2025endtoend,bansal2025letsnot,wang2026learning}, and others carry cached activations or memory tokens across segments of a single stream \citep{dai2019transformerxl,rae2019compressive,bulatov2022rmt}. Dynamic evaluation adapts a model along its test sequence, and has been applied to successive texts, but by gradient steps on the slow weights \citep{krause2018dynamic,lazaridou2021mind}, and test-time training on retrieved neighbours of an input helps but is reset after every input \citep{hardt2024test}. Carrying a state across packed documents is not new in itself. Selective state-space models pass or reset their state at document boundaries \citep{gu2024mamba}, and in pre-training, earlier documents in the attention context help when they are related and distract when they are not \citep{zhao2024analysing}. To our knowledge, no work gives a TTT fast weight a trained carry path and measures how its transfer to the next document depends on how the two documents relate. Whether the In-Place TTT reset is necessary, and what a carried fast weight does to the next document, is the question this report studies.
+Every one of these methods resets its adapted state at the end of each document. In-Place TTT does so deliberately, to prevent information leaking between unrelated inputs, and does not test carrying the fast weights forward \citep{feng2026inplace}. Related work approaches persistence from other directions. Some methods meta-learn a test-time initialisation or update weights over one long context \citep{tandon2025endtoend,bansal2025letsnot,wang2026learning}, and others carry cached activations or memory tokens across segments of a single stream \citep{dai2019transformerxl,rae2019compressive,bulatov2022rmt}. Dynamic evaluation adapts a model along its test sequence, and has been applied to successive texts, but by gradient steps on the slow weights \citep{krause2018dynamic,lazaridou2021mind}, and test-time training on retrieved neighbours of an input helps but is reset after every input \citep{hardt2024test}. Carrying a state across packed documents is not new in itself. Selective state-space models learn to pass or reset their state at document boundaries \citep{gu2024mamba}, and in pre-training, earlier documents in the attention context help when they are related and distract when they are not \citep{zhao2024analysing}. A carried fast weight could therefore accumulate useful adaptation across a stream of related documents, or interfere with the next one. To our knowledge, no work gives a TTT fast weight a trained carry path and measures how its effect on the next document depends on how the two documents relate.
 
 \section{Objectives of the study}
 
-This report addresses two research questions, as stated in the research proposal.
+The report addresses two research questions.
 \begin{description}
-  \item[Q1.] How much does carry, the information retained from the previous session, contribute to language model improvement?
-  \item[Q2.] What kind of domains perform best with session-persistent TTT?
+  \item[Q1.] How much does the carry, the information retained from the previous document, contribute to language modelling?
+  \item[Q2.] Which domains benefit most from session-persistent TTT?
 \end{description}
 
-The primary objective is to develop and empirically analyse a session-persistent test-time training method for pretrained language models. Following the proposal, the method exposes two logically independent components that can be measured separately, within-document adaptation without any persistence, and cross-document persistence of the fast weight.
-
-The study makes four contributions.
+The objective is to develop and analyse a session-persistent test-time training method for a pretrained language model, measuring separately the adaptation within a document and the persistence of the fast weight across documents, against a reset at the document boundary and against a matched baseline, and to confirm the main effects on a test set fixed in advance. The report makes four contributions.
 \begin{enumerate}
-  \item An analysis of the naive carry. With the In-Place TTT reset removed, the carried fast weight contributes nothing measurable to the next document, at three training checkpoints and for a Hebbian and a delta update rule. The read-time clip is saturated on every measurement, so a carried state reaches the output only as a direction, but the redesigned carry works with the clip still saturated, so the clip alone does not explain the null result (Sections~\ref{ch-q1} and~\ref{ch-why}).
-  \item A carry design trained within documents. A separate, zero-initialised carry path, trained through the boundary between slices, raises the gain from carrying state between slices of a document about sevenfold at step 200, and replicates with a second training seed. A single-seed ablation suggests that its two main changes work together (Section~\ref{ch-design}).
-  \item A relatedness gradient for transfer across documents, replicated on a preregistered confirmatory test set. The redesigned carry helps the next document most when it is the same article, less when it is a related article and less again when it is an unrelated article of the same source, and it harms after text from another source. Most of the gain is a generic effect of the source, but a related article beats a generic carry in both seeds. In a single-seed probe, training across document boundaries removes the harm and with it the document-specific part (Section~\ref{ch-design}).
-  \item A comparison with attention and with repeated reading. Attention on the preceding text of the same document gives a gain about 25 times the carry's. The carry's state is as large as the attention cache of about 1500 tokens, and it gains nothing from reading the same text again (Section~\ref{ch-design}).
+  \item A gated carry for In-Place TTT fast weights, with its own zero-initialised path and trained through the boundary between slices (Section~\ref{sec-design-method}). Against a reset, it lowers perplexity on the continuation of a document by about 1\%, replicated at two seeds (Section~\ref{ch-design}). An ablation at two seeds shows that removing the reset alone gains little, and that only the combination of the separate path and training through the boundary recovers the gain (Section~\ref{sec-ablation}).
+  \item Evidence that transfer across documents is ordered by relatedness, confirmed on a preregistered test set at two seeds. Most of the gain is generic to the source, a small part depends on the relation between the documents, and text from another source raises perplexity (Sections~\ref{sec-related} and~\ref{sec-confirmatory}).
+  \item Evidence at two seeds that training across document boundaries removes the harm, at the cost of the advantage of related text (Section~\ref{sec-mixed}).
+  \item An analysis of where the gains come from. Most of the lead of a TTT model over a matched LoRA control is present with its fast weights switched off, a parameter-matched control shows that the gated carry still leads by 0.07 to 0.10, attention on the earlier text is a far stronger channel when that text is available, and the read-time clip that keeps the fast weights stable passes on only the direction of the state (Sections~\ref{ch-why} and~\ref{sec-compare}).
 \end{enumerate}
 
-% ======================================================================
 \chapter{LITERATURE REVIEW}
 \label{ch-lit}
 
@@ -229,7 +220,7 @@ Table~\ref{tab-positioning} summarises where each method keeps its test-time sta
     Context distillation TTT \citep{wang2026learning} & fast weights, distillation target & within one context \\
     In-Place TTT \citep{feng2026inplace} & MLP down-projection & no, reset per document \\
     TTT with next-token prediction \citep{ouyang2026ttt} & MLP down-projection & no, restored after every sample \\
-    \textbf{This report} & MLP down-projection, with its own gated carry path in the redesign & \textbf{yes, carried with a moving average} \\
+    \textbf{This report} & MLP down-projection, read through a separate gated carry path & \textbf{yes, carried with a moving average} \\
     \bottomrule
   \end{tabularx}
 \end{table}
@@ -240,14 +231,14 @@ Second, the update-rule literature predicts that a carried fast weight will be h
 
 Third, whether adaptation on one text helps another depends on how the two relate. Test-time training provably helps in the convex case when its gradient is aligned with that of the main task \citep{sun2020ttt} and can hurt when its signal is misaligned \citep{gandelsman2022ttt}. Fine-tuning on retrieved neighbours of an input improves language modelling, and the order from nearest to farthest neighbour matters \citep{hardt2024test}. In pre-training on SlimPajama, packing related documents together lowers perplexity, packing documents of one source helps less, and unrelated earlier documents distract the model \citep{zhao2024analysing}. That transfer follows relatedness is therefore expected, and the open question is whether a carried fast weight shows it.
 
-The gap is therefore specific. To our knowledge, no prior work gives a TTT fast weight a trained carry path, measures what the carry contributes against a reset at the document boundary, or asks how its effect depends on the relatedness of the earlier text. This report adds such a carry to an In-Place TTT design, compares a Hebbian and a delta update rule, and measures within-document and cross-document effects separately with paired conditions and bootstrap intervals.
+The gap is therefore specific. To our knowledge, no prior work gives a TTT fast weight a trained carry path, measures what the carry contributes against a reset at the document boundary, or asks how its effect depends on the relatedness of the earlier text. This report adds a gated carry to In-Place TTT, compares it with carrying the state through the existing path under a Hebbian and a delta update rule, and measures within-document and cross-document effects separately with paired conditions and bootstrap intervals.
 
 % ======================================================================
 \chapter{METHODOLOGY}
 \label{ch-method}
 \label{ch-eval}
 
-The study is experimental. Pretrained language models are extended with fast-weight layers, trained under matched settings, and compared on held-out text in paired evaluation conditions that isolate each source of gain. The work is implemented in Python with PyTorch, Hugging Face Transformers and PEFT, and the models are trained and evaluated on cloud GPUs. Every reported number is computed from stored per-document results, so each table and figure can be regenerated without a GPU.
+We extend a pretrained language model with In-Place TTT layers and a gated carry, train it alongside a matched control, and compare them on held-out text in paired evaluation conditions that isolate each source of gain. The models are implemented with PyTorch, Hugging Face Transformers and PEFT.
 
 \section{Data Collection}
 
@@ -347,7 +338,7 @@ A session is a sequence of work items, either whole documents or slices of one d
 \begin{equation}
   S_{\mathrm{carried}} \leftarrow \lambda\, S_{\mathrm{carried}} + \Delta S_{\mathrm{item}}, \qquad \lambda = 0.9 ,
 \end{equation}
-and the next item starts from $S_{\mathrm{carried}}$ instead of from zero. This is the decayed accumulation that \citet{ba2016using} use for fast weights within a sequence, applied here between items. In the original design the carried state is detached between items, which limits backpropagation through time to one item, and the redesign of Section~\ref{ch-design} keeps it in the graph for two items. During training every session is a single document, except in the probe of Section~\ref{sec-mixed}, so the carry is learned only between the slices of one document. Carrying it across documents is applied at evaluation, as a test of whether a state learned within documents transfers to the next one. Figure~\ref{fig-persist} contrasts this with resetting.
+and the next item starts from $S_{\mathrm{carried}}$ instead of from zero. This is the decayed accumulation that \citet{ba2016using} use for fast weights within a sequence, applied here between items. In the ungated carry this state is detached between items, so the layer learns to read it but is never trained on what it writes for the next item. The gated carry of Section~\ref{sec-design-method} reads it through a separate path and keeps it in the graph for two items. During training every session is a single document, except in the probe of Section~\ref{sec-mixed}, so the carry is learned only between the slices of one document. Carrying it across documents is applied at evaluation, as a test of whether a state learned within documents transfers to the next one. Figure~\ref{fig-persist} contrasts this with resetting.
 
 \begin{figure}[H]
   \centering
@@ -372,38 +363,39 @@ and the next item starts from $S_{\mathrm{carried}}$ instead of from zero. This 
 
 \subsection{Stabilisation}
 
-Two mechanisms keep the fast weights stable. A Frobenius norm clip rescales the state whenever it is read, so that $\lVert \eta S \rVert_F \le \tau$ with $\tau = 20$, while preserving its direction. In-Place TTT similarly bounds the Frobenius norm of each chunk's update \citep{feng2026inplace}, while here the bound is applied to the state when it is read. For the Hebbian rule the clip acts only on the read, while for the delta rule the clipped state is also what the next chunk accumulates onto. The output gate is initialised with bias $b_g = -2$, so the TTT term enters at about 12 percent strength at the start of training and the model can learn to open or close it. Separately, the gradients of all trainable parameters are clipped to a total norm of 10. The read-time clip bounds the forward pass, including at evaluation where no gradients exist, while the gradient clip bounds each optimiser step. Section~\ref{ch-why} returns to the role of the read-time clip.
+Two mechanisms keep the fast weights stable. A Frobenius norm clip rescales the state whenever it is read, so that $\lVert \eta S \rVert_F \le \tau$ with $\tau = 20$, while preserving its direction. In-Place TTT similarly bounds the Frobenius norm of each chunk's update \citep{feng2026inplace}, while here the bound is applied to the state when it is read. For the Hebbian rule the clip acts only on the read, while for the delta rule the clipped state is also what the next chunk accumulates onto. The output gate is initialised with bias $b_g = -2$, except in the gated carry, so the TTT term enters at about 12 percent strength at the start of training and the model can learn to open or close it. Separately, the gradients of all trainable parameters are clipped to a total norm of 10. The read-time clip bounds the forward pass, including at evaluation where no gradients exist, while the gradient clip bounds each optimiser step. Section~\ref{ch-why} returns to the role of the read-time clip.
 
 \subsection{Training objective and parameters}
 
-All models are trained with the standard next-token cross-entropy. LoRA adapters \citep{hu2022lora} are trained in every model, so that the TTT models and the control differ only in the TTT layers. The TTT models additionally train the down-projection $W_0$ of the TTT layers and the new modules (target projection, convolution and gate). Counted from the layer shapes of Qwen3-0.6B, this gives about 68.0 million trainable parameters for a TTT model (9.2 million LoRA, 44.0 million in the 14 down-projections, 14.8 million in the new modules) against about 10.1 million for the LoRA-only control. This difference matters for interpreting the results and is discussed in Sections~\ref{ch-q1} and~\ref{sec-limits}.
+All models are trained with the standard next-token cross-entropy. LoRA adapters \citep{hu2022lora} are trained in every model, so that the TTT models and the control differ only in the TTT layers. The TTT models additionally train the down-projection $W_0$ of the TTT layers and the new modules (target projection, convolution and gate). Counted from the layer shapes of Qwen3-0.6B, this gives about 68.0 million trainable parameters for a TTT model (9.2 million LoRA, 44.0 million in the 14 down-projections, 14.8 million in the new modules) against about 10.1 million for the LoRA-only control. This difference matters for interpreting the results and is discussed in Sections~\ref{sec-compare} and~\ref{sec-limits}.
 
-All runs use LoRA of rank 16 with $\alpha = 32$ and dropout 0.05, a LoRA learning rate of $10^{-5}$, AdamW, 16 gradient accumulation steps, a warmup of 2 percent of steps, cosine decay over the full epoch of 1050 optimiser steps, and seed 42. TTT runs train their down-projections at $3 \times 10^{-5}$ and their new modules at $6 \times 10^{-2}$. Checkpoints at steps 200, 400 and 600 are evaluated. Because the epoch length depends only on the data and the session strategy, all seed-42 runs share the same 1050-step schedule and data order. The second seed of the carry design selects different documents, giving 1048 steps, and the probe of Section~\ref{sec-mixed} keeps the seed-42 documents and step count but groups them into different sessions. Appendix~\ref{app-hparams} lists every setting.
+All runs use LoRA of rank 16 with $\alpha = 32$ and dropout 0.05, a LoRA learning rate of $10^{-5}$, AdamW, 16 gradient accumulation steps, a warmup of 2 percent of steps, cosine decay over the full epoch of 1050 optimiser steps, and seed 42. TTT runs train their down-projections at $3 \times 10^{-5}$ and their new modules at $6 \times 10^{-2}$. Checkpoints at steps 200, 400 and 600 are evaluated, and one gated-carry run at seed 42 is trained to the end of the schedule, which the data ends at step 1049. Because the epoch length depends only on the data and the session strategy, all seed-42 runs share the same 1050-step schedule and data order. Seed 43 selects different documents, giving 1048 steps, and the probes of Section~\ref{sec-mixed} keep the documents and step count of their seed but group them into different sessions. Appendix~\ref{app-hparams} lists every setting.
 
-\subsection{Models compared}
-
-\begin{description}
-  \item[LoRA-only.] The matched control, with no TTT layers.
-  \item[Hebbian.] TTT layers with the Hebbian rule.
-  \item[Delta.] TTT layers with the chunked delta rule.
-\end{description}
-
-\subsection{The redesigned carry}
+\subsection{The gated carry}
 \label{sec-design-method}
 
-The results in Sections~\ref{ch-q1} and~\ref{ch-why} show that the carry, as first designed, contributes little even between slices of the same document, where the text it carries is directly relevant. Three features of the training setup are plausible causes. The carried state was detached between slices, so only the parts of the model that read the carry were trained, never the parts that decide what to write. The carry was added into the same sum as the current slice's state and clipped together with it, so the current slice could dominate it. And the Hebbian rule starts training with a loss spike during which the fast weights are unusable. The saturated clip of Section~\ref{ch-why} is kept, so the redesign also tests whether a carry whose magnitude never reaches the output can still be useful once its write is trained. A redesigned carry, built for the Hebbian rule and trained and evaluated with the same protocol, addresses these three points.
-
-All changes are configuration options, and every other setting is identical to the original Hebbian run.
+Simply starting each item from the carried state, the ungated carry, leaves three problems. The state is detached between items, so nothing trains what an earlier item writes for a later one to read. The carried state enters the same sum as the current item's state and is clipped with it, so the current item can dominate it. And a Hebbian layer whose gate starts at 12 percent strength begins training with a loss spike during which its fast weights are unusable. The gated carry addresses each of these with one change, built for the Hebbian rule, with every other setting as in the ungated Hebbian model.
 
 \paragraph{A separate carry path.} The carried state is read through its own term with its own clip, gate and scale,
 \begin{equation}
   \mathrm{out} = W_0 z + g(h)\, \eta\, S_{\mathrm{in}} z + \alpha\, g_c(h)\, \eta\, \mathrm{clip}(S_{\mathrm{carried}})\, z ,
 \end{equation}
-where $S_{\mathrm{in}}$ is the state built inside the current slice, $g_c$ is a second gate and $\alpha$ is a learnable scalar initialised to zero. As with the zero-initialised factor of LoRA \citep{hu2022lora}, the layer is therefore exactly the original Hebbian layer at initialisation, and the carried term enters only if training finds it useful.
+where $S_{\mathrm{in}}$ is the state built inside the current slice, $g_c$ is a second gate and $\alpha$ is a learnable scalar initialised to zero. As with the zero-initialised factor of LoRA \citep{hu2022lora}, the layer is therefore exactly the In-Place TTT layer at initialisation, and the carried term enters only if training finds it useful.
 
-\paragraph{Training through the carry.} The carried state is kept in the autograd graph between the slices of a session, so the loss on a later slice also trains what an earlier slice wrote. This follows the Recurrent Memory Transformer, whose memory improves substantially when it is trained by backpropagation across more segments \citep{bulatov2022rmt}. To bound memory, the carry is detached after every second slice and at every optimiser step. AutoCompressors make the same choice, stopping gradients after two compression steps with no loss of quality \citep{chevalier2023adapting}. Gradient checkpointing re-runs each layer's forward pass during the backward pass, and with the carry in the graph a layer can be re-run after its carry has moved on, which silently corrupts the gradient. The recompute is therefore given the carry the layer actually read, and a test confirms that gradients with and without checkpointing are identical, and that they differ without this correction.
+\paragraph{Training through the carry.} The carried state is kept in the autograd graph between the slices of a session, so the loss on a later slice also trains what an earlier slice wrote. This follows the Recurrent Memory Transformer, whose memory improves substantially when it is trained by backpropagation across more segments \citep{bulatov2022rmt}. To bound memory, the carry is detached after every second slice and at every optimiser step. AutoCompressors make the same choice, stopping gradients after two compression steps with no loss of quality \citep{chevalier2023adapting}. Because gradient checkpointing re-runs each layer's forward pass during the backward pass, the recompute is given the carry the layer actually read, and we verified that gradients with and without checkpointing are identical.
 
-\paragraph{A nearly closed main gate at the start.} The main gate's bias is initialised at $-6$ instead of $-2$, so the in-document fast weights start at about 0.25 percent strength rather than 12 percent. This is close to where the original Hebbian model's gate ends after training (0.002).
+\paragraph{A nearly closed main gate at the start.} The main gate's bias is initialised at $-6$ instead of $-2$, so the in-document fast weights start at about 0.25 percent strength rather than 12 percent. This is close to the value the gate of the ungated Hebbian model reaches after training (0.002).
+
+\subsection{Models compared}
+
+\begin{description}
+  \item[LoRA-only.] The matched control, with no TTT layers.
+  \item[Gated carry.] TTT layers with the Hebbian rule and the gated carry, trained at seeds 42 and 43.
+  \item[Ungated carry.] TTT layers whose state is carried through the existing path, with the Hebbian and with the chunked delta rule. These are the In-Place TTT layer with its reset removed, and serve as the ablation without the carry path.
+  \item[Parameter-matched control.] The gated-carry architecture with the same trainable parameters, trained to step 600 with its fast weights never written, so that it isolates the effect of the extra parameters. Because in-training evaluation switches the fast weights on, the training loop restores this setting after every evaluation.
+  \item[Ablations.] Three runs to step 200 at seeds 42 and 43 that remove components of the gated carry in turn (Section~\ref{sec-ablation}).
+  \item[Probe trained across documents.] The gated carry trained on sessions of several documents, at seeds 42 and 43 (Section~\ref{sec-mixed-method}).
+\end{description}
 
 \section{Evaluation}
 
@@ -439,22 +431,22 @@ Differences between conditions give the decomposition reported throughout.
 
 Three further suites probe persistence directly.
 \begin{description}
-  \item[Boundary.] For each source, a chain of five documents is read under three conditions, carrying state across documents, resetting at document boundaries, and resetting at every slice. The cross-document gain compares the first two conditions on documents two to five of each chain (24 documents), and the cross-slice gain compares the last two on all 30 documents. The condition that resets at document boundaries follows the reset rule of In-Place TTT, so the cross-document gain compares our persistent method with a reset in the style of In-Place TTT on the same model, data and documents. It is not a reproduction of the original system, which uses chunks of 512 or 1024 tokens, clips each chunk's update rather than the state, has no output gate and no LoRA, and was evaluated on models of 4B parameters and more \citep{feng2026inplace}.
+  \item[Boundary.] For each source, a chain of five documents is read under three conditions, carrying state across documents, resetting at document boundaries, and resetting at every slice. The cross-document gain compares the first two conditions on documents two to five of each chain (24 documents), and the cross-slice gain compares the last two on all 30 documents. For the gated carry from step 200 onwards the chains have 20 documents per source, so the cross-document gain rests on 100 documents. The condition that resets at document boundaries follows the reset rule of In-Place TTT, so the cross-document gain compares carrying with resetting on the same model, data and documents. The reset condition is not a reproduction of In-Place TTT as published, which uses chunks of 512 or 1024 tokens, clips each chunk's update rather than the state, has no output gate and no LoRA, and was evaluated on models of 4B parameters and more \citep{feng2026inplace}.
   \item[Repeat.] Each document is read ten times in a row with its carried state never reset. Each later reading is compared with the first, and the tenth reading is also compared with the second, which tests whether the carry keeps compounding after one exposure. This is the most favourable test possible for a carried state, since the state was built from the very document being read again.
-  \item[Swap.] A target document is read after the state has been primed on two documents from the same source or from a different source, each read whole, and compared with reading it unprimed, to test whether any carried benefit is source-specific, as planned in the proposal.
+  \item[Swap.] A target document is read after the state has been primed on two documents from the same source or from a different source, each read whole, and compared with reading it unprimed, to test whether any carried effect is source-specific.
 \end{description}
 
 \subsection{Relatedness suite}
 \label{sec-relatedness-method}
 
-The boundary suite compares two points, the same document and a different document of the same source. To test documents that are distinct but related, a further suite uses English Wikipedia, a source on which the redesigned carry gains strongly between slices (Section~\ref{ch-q2}). The articles come from two shards of the November 2023 English dump. They may overlap the Wikipedia portion of the training data. Every condition scores the same target tokens, so an overlap affects the target alike in every condition, although a prime seen in training may act differently from an unseen one. For each of 200 target articles, chosen in a seeded order, the second block of 1024 tokens is scored after the carry is reset and after it is primed by a block of 1024 tokens from one of four texts, ordered by relatedness.
+The boundary suite compares two points, the same document and a different document of the same source. To test documents that are distinct but related, a further suite uses English Wikipedia, a source on which the gated carry gains strongly between slices (Section~\ref{ch-q2}). The articles come from two shards of the November 2023 English dump. They may overlap the Wikipedia portion of the training data. Every condition scores the same target tokens, so an overlap affects the target alike in every condition, although a prime seen in training may act differently from an unseen one. For each of 200 target articles, chosen in a seeded order, the second block of 1024 tokens is scored after the carry is reset and after it is primed by a block of 1024 tokens from one of four texts, ordered by relatedness.
 \begin{description}
   \item[Same document.] The target article's own first 1024 tokens.
   \item[Related article.] The article the target mentions most often by title, at least twice, matching whole multi-word titles only.
   \item[Random article.] An article that neither mentions the target nor is mentioned by it.
   \item[Other source.] A held-out document from one of the other five SlimPajama sources.
 \end{description}
-Every prime has the same length and every condition scores exactly the same target tokens, so only the prime varies. Because relatedness is defined by title mentions, a related prime also tends to share more words with the target, and no control here separates relatedness in topic from word overlap. The same 200 cases, identical title for title, were measured on the carry design and on the original Hebbian model, both at step 600. These are development cases, and Section~\ref{sec-confirmatory} repeats the suite on confirmatory ones.
+Every prime has the same length and every condition scores exactly the same target tokens, so only the prime varies. Because relatedness is defined by title mentions, a related prime also tends to share more words with the target, and no control here separates relatedness in topic from word overlap. The same 200 cases, identical title for title, were measured on the gated carry and on the ungated Hebbian model, both at step 600. These are development cases, and Section~\ref{sec-confirmatory} repeats the suite on confirmatory ones.
 
 \subsection{Confirmatory test set fixed in advance}
 \label{sec-confirmatory-method}
@@ -464,16 +456,17 @@ The development results come from the documents on which the design was develope
 \subsection{Probe trained across documents}
 \label{sec-mixed-method}
 
-The main models are trained only within documents, so their use across documents is a transfer test. To see what changes when the carry is trained across boundaries, a single-seed probe was trained with the same data, seed, schedule and settings as the seed-42 carry design, except that each training session chains five documents, each next document from the same source with probability one half and otherwise from another source, with the carried state never reset inside a session. It was evaluated on the same confirmatory cases, and each contrast is its gain over its own reset carry minus that of the seed-42 model, both resampled on the same cases.
+The main models are trained only within documents, so their use across documents is a transfer test. To see what changes when the carry is trained across boundaries, a probe was trained at each seed with the same data, schedule and settings as the gated carry of that seed, except that each training session chains five documents, each next document from the same source with probability one half and otherwise from another source, with the carried state never reset inside a session. It was evaluated on the same confirmatory cases, and each contrast is its gain over its own reset carry minus that of the gated carry of the same seed, both resampled on the same cases.
 
 \subsection{Statistics}
 
 Perplexity within a document is token-weighted over its slices. A gap between two conditions is the difference of their geometric-mean perplexities over documents, positive when the second condition has lower perplexity. We report 95 percent percentile bootstrap intervals from 1000 resamples of documents (10{,}000 for the confirmatory test set of Section~\ref{sec-confirmatory}), with both conditions resampled on the same indices, and the win rate, the fraction of documents on which the second condition is lower. A star marks an interval that excludes zero. Following \citet{meister2021beyond}, every result is reported as an effect size with its interval rather than as a significance test alone.
 
-\subsection{Measurement integrity}
+\subsection{Sanity checks}
 
-Two errors in the evaluation pipeline were found and fixed during the study, and both are reported for transparency. First, the in-training evaluation of the original runs ran with LoRA dropout active, which perturbed every condition slightly. The fix puts every evaluation, in training and final, in evaluation mode. All numbers in Sections~\ref{ch-q1} to~\ref{ch-why} come from the final evaluation. Section~\ref{ch-design} also reports in-training evaluation points to describe training dynamics, and all of them come from runs made after the fix. Second, the base condition initially kept the trained $W_0$ of the TTT layers instead of the pretrained one, which understated the training gain of TTT models. The fixed pipeline restores the pretrained $W_0$, and earlier evaluations were corrected by taking the base condition from the LoRA-only evaluation, which contains the true base model on the same documents. Two sanity checks confirm the pipeline. The LoRA-only model, which has no fast weights, gives a within-document and between-slice gain of exactly 0.000 at every step, and the base-model perplexities are identical across all LoRA-only evaluations. Checkpoints of an earlier, differently configured run that had been saved under the same name were identified by their timestamps and excluded.
+Every evaluation runs with dropout disabled, and the base condition restores the pretrained $W_0$. Two checks confirm the evaluation. The LoRA-only model, which has no fast weights, gives a within-document and between-slice gain of exactly 0.000 at every step, and the base-model perplexities are identical across all LoRA-only evaluations. In-training evaluations, which use 30 documents and no intervals, are reported only to describe training dynamics.
 
+% ======================================================================
 % ======================================================================
 \chapter{RESULTS}
 \label{ch-results}
@@ -505,23 +498,316 @@ The six sources differ strongly in how hard they are for the base model (Table~\
   \end{tabular}
 \end{table}
 
-Figure~\ref{fig-absolute} shows the held-out perplexity of each model. All three improve substantially on the base model, whose geometric-mean perplexity is 12.838, and at every checkpoint the delta model is best, the Hebbian model second and the LoRA-only control third.
+Training lowers perplexity substantially for every model. The base model's geometric-mean perplexity over the development holdout is 12.838, and at step 600 the training gain is 1.859 for the LoRA-only control, 1.928 and 1.992 for the ungated Hebbian and delta models, and 1.971 for the gated carry. Figure~\ref{fig-absolute} shows the held-out perplexity of the control and the two ungated models across training.
 
 \begin{figure}[H]
   \centering
   \includegraphics[width=0.8\linewidth]{figures/F5_absolute_ppl.pdf}
-  \caption{Geometric-mean held-out perplexity of each model by training step. The base model is at 12.838.}
+  \caption{Geometric-mean held-out perplexity of the LoRA-only control and the ungated Hebbian and delta models by training step. The base model is at 12.838.}
   \label{fig-absolute}
 \end{figure}
 
+\section{Project Outcomes}
+
+\subsection{The gated carry within a document}
+\label{ch-design}
+
+Table~\ref{tab-design} gives the gains of the gated carry across training, against the ungated Hebbian model at step 600, and Figure~\ref{fig-design-curve} shows them with their intervals. With the gated carry the training loss stays between about 1.9 and 2.6 from step 10, for both seeds.
+
 \begin{table}[H]
   \centering
-  \caption{Gains in perplexity on 106 held-out documents. Positive values mean lower perplexity. A star marks a 95 percent interval that excludes zero. Full intervals are in Appendix~\ref{app-full}.}
+  \caption{The gated carry against the ungated Hebbian model, gains in perplexity with the share of documents improved in brackets. A star marks a 95 percent interval that excludes zero. The cross-document measure rests on 24 documents for the ungated model and at step 100, and on 100 documents otherwise.}
+  \label{tab-design}
+  \small
+  \begin{tabular}{lrrrrr}
+    \toprule
+    & Ungated & \multicolumn{4}{c}{Gated carry} \\
+    \cmidrule(lr){2-2} \cmidrule(lr){3-6}
+    Measure & step 600 & step 100 & step 200 & step 400 & step 600 \\
+    \midrule
+    Between slices, same document & $+0.002$ (0.54) & $+0.135$\sig\ (0.99) & $+0.099$\sig\ (0.92) & $+0.062$\sig\ (0.92) & $+0.097$\sig\ (0.97) \\
+    Into a different document & $-0.004$ (0.38) & $+0.011$\sig\ (0.75) & $+0.010$\sig\ (0.64) & $-0.003$ (0.39) & $-0.020$\sig\ (0.29) \\
+    Within a slice & $+0.034$\sig\ (0.89) & $+0.047$\sig\ (0.83) & $+0.018$\sig\ (0.74) & $+0.006$\sig\ (0.63) & $+0.025$\sig\ (0.76) \\
+    Lead over matched LoRA & $+0.106$\sig\ (1.00) & n/a & $+0.215$\sig\ (0.98) & $+0.188$\sig\ (1.00) & $+0.234$\sig\ (1.00) \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{figures/F15_carry_design_curve.pdf}
+  \caption{Carry gains of the gated carry across training, with 95 percent bootstrap bands. Hollow markers are in-training evaluations on 30 documents without intervals. The cross-document point at step 100 rests on 24 documents and the others on 100.}
+  \label{fig-design-curve}
+\end{figure}
+
+\paragraph{Carrying state between slices helps throughout training.} Carrying state from earlier slices of the same document lowers perplexity by 0.135 at step 100, 0.099 at step 200, 0.062 at step 400 and 0.097 at step 600, every interval excluding zero, on 92 to 99 percent of documents. The ungated Hebbian carry gives 0.014 at step 200 and 0.002 at step 600. The in-training evaluations follow the same course, a dip around steps 250 to 400 and a recovery to about 0.10 by step 500, so the gain does not vanish as the slow weights train. The model was trained twice with the same configuration and seed, to step 200 and to step 600, and the two runs' in-training gains at step 100, 0.151 and 0.129, indicate run-to-run variation of about 0.02.
+
+\paragraph{The gain appears from the second slice and does not accumulate.} At step 600 the gain is between 0.099 and 0.121 at every slice from the second to the eighth, each interval excluding zero (Figure~\ref{fig-design-slice}). The in-training evaluations show no rising profile at any step, so along a document the gain stays level or falls slightly.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\linewidth]{figures/F14_carry_design_by_slice.pdf}
+  \caption{Gain from carrying state from earlier slices of the same document, by slice, with 95 percent bootstrap bands.}
+  \label{fig-design-slice}
+\end{figure}
+
+\paragraph{Across documents a small benefit becomes a small harm.} With 100 documents, carrying state into a different document of the same source lowers perplexity by 0.010 $[+0.004, +0.018]$ at step 200, mainly on C4 and Wikipedia. By step 400 the effect is gone ($-0.003$), and at step 600 the carried state makes perplexity worse, by 0.020 $[-0.030, -0.013]$, on 71 percent of documents, with a significant harm on four of the six sources. Its gain on the continuation of the same document stays significant throughout. Because training sessions never cross a document boundary, this measures whether a carry learned within documents transfers across them.
+
+\paragraph{The carry recovers about four percent of the gain of attention.} The context suite compares the carry with placing the previous slice directly in attention, scoring the same tokens. At step 600 the previous slice in attention lowers perplexity by 2.770 (25.7 percent), the carried state by 0.110, so the carry recovers 4.0 percent $[3.3, 4.7]$ of that gain, and 3.9 percent $[3.1, 4.6]$ at step 200. The carried state is a much weaker channel than attention when the text is still available, although it is not small. It holds 44.0 million values, which in the 32-bit precision used here take about 176 MB, as much as the 16-bit attention cache of roughly 1500 tokens of Qwen3-0.6B (28 layers, 8 key-value heads of dimension 128 under grouped-query attention \citep{ainslie2023gqa}). Whether it is useful where attention cannot reach, after the earlier text has left the context, is not tested.
+
+\paragraph{The benefit flows through the carry path.} The main gate stays nearly closed (median 0.0007 at step 200), so in-slice fast weights contribute little and the gain comes through the carry path. The model leads the matched LoRA control by 0.234 $[0.188, 0.293]$ perplexity at step 600 on every document. About 0.11 of this lead is extra trainable capacity, since its training gain is 1.971 against 1.859 for the control (Section~\ref{sec-compare}).
+
+\subsection{Which component matters}
+\label{sec-ablation}
+
+The gated carry combines three components, the separate carry path (A), training through the carry (B) and the nearly closed main gate at the start (C). Three further runs, each trained to step 200 at seed 42 and again at seed 43, remove components in turn, and the ungated Hebbian model, which has none of them, completes the comparison (Table~\ref{tab-ablation}, Figure~\ref{fig-ablation}).
+
+\begin{table}[H]
+  \centering
+  \caption{Ablation of the gated carry at step 200, at two training seeds, gains in perplexity with 95 percent bootstrap intervals. The cross-document gain rests on 24 documents for the ungated model and on 100 for the others. The ungated carry with gate bias $-2$ was trained at seed 42 only.}
+  \label{tab-ablation}
+  \footnotesize
+  \begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}Xrrr}
+    \toprule
+    Variant & Between slices & Into a different document & Lead over matched LoRA \\
+    \midrule
+    \multicolumn{4}{l}{\emph{Seed 42}} \\
+    Ungated carry, gate bias $-2$ (none) & $+0.014$ {\footnotesize [$+0.008$, $+0.021$]} & $+0.008$ {\footnotesize [$-0.004$, $+0.024$]} & $+0.073$ {\footnotesize [$+0.057$, $+0.094$]} \\
+    Ungated carry, closed gate (C) & $+0.008$ {\footnotesize [$+0.001$, $+0.015$]} & $+0.003$ {\footnotesize [$+0.001$, $+0.006$]} & $+0.130$ {\footnotesize [$+0.104$, $+0.161$]} \\
+    Separate path, not trained through (A and C) & $+0.023$ {\footnotesize [$+0.013$, $+0.034$]} & $+0.011$ {\footnotesize [$+0.006$, $+0.016$]} & $+0.172$ {\footnotesize [$+0.141$, $+0.211$]} \\
+    Trained through, no separate path (B and C) & $+0.035$ {\footnotesize [$+0.022$, $+0.052$]} & $+0.014$ {\footnotesize [$+0.007$, $+0.021$]} & $+0.163$ {\footnotesize [$+0.129$, $+0.203$]} \\
+    Gated carry (A, B and C) & $+0.099$ {\footnotesize [$+0.074$, $+0.133$]} & $+0.010$ {\footnotesize [$+0.004$, $+0.018$]} & $+0.215$ {\footnotesize [$+0.174$, $+0.264$]} \\
+    \midrule
+    \multicolumn{4}{l}{\emph{Seed 43}} \\
+    Ungated carry, closed gate (C) & $+0.040$ {\footnotesize [$+0.027$, $+0.056$]} & $+0.038$ {\footnotesize [$+0.026$, $+0.053$]} & $+0.117$ {\footnotesize [$+0.095$, $+0.142$]} \\
+    Separate path, not trained through (A and C) & $+0.034$ {\footnotesize [$+0.026$, $+0.045$]} & $+0.008$ {\footnotesize [$+0.005$, $+0.012$]} & $+0.153$ {\footnotesize [$+0.125$, $+0.186$]} \\
+    Trained through, no separate path (B and C) & $+0.015$ {\footnotesize [$+0.010$, $+0.022$]} & $+0.004$ {\footnotesize [$+0.001$, $+0.007$]} & $+0.179$ {\footnotesize [$+0.148$, $+0.217$]} \\
+    Gated carry (A, B and C) & $+0.104$ {\footnotesize [$+0.081$, $+0.133$]} & $+0.008$ {\footnotesize [$+0.002$, $+0.014$]} & $+0.214$ {\footnotesize [$+0.175$, $+0.262$]} \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{figures/F17_ablation.pdf}
+  \caption{Ablation of the gated carry at step 200, seed 42, with 95 percent bootstrap intervals.}
+  \label{fig-ablation}
+\end{figure}
+
+\paragraph{The closed gate does not explain the gain.} With the closed gate alone, the carry between slices gives 0.008 and 0.040 at the two seeds, against 0.099 and 0.104 for the gated carry. Starting the gate nearly closed raises the lead over the control, from 0.073 to 0.130 at seed 42, but not the carry to the level of the full design.
+
+\paragraph{Only the combination recovers the gain.} At both seeds only the full gated carry gives a large gain between slices, 0.099 and 0.104, and the largest lead over the control, 0.215 and 0.214. Every partial variant stays at or below 0.040. Their order is not stable across seeds. At seed 42 training through the carry alone gives the most (0.035) and the separate path 0.023, at seed 43 the closed gate alone gives 0.040, the separate path 0.034 and training through the carry 0.015. In-training evaluations of the partial variants also move by up to 0.05 between steps 50 and 200 within one run, so their ranking at step 200 is not informative, and the seed-42 reading that the two components are super-additive does not replicate. What replicates is that neither the separate path nor training through the carry recovers the gain on its own. A plausible account is that the separate path lets a carried state reach the output without being drowned by the current slice, and that training through the carry teaches the model what to write for a later slice to read, but the ablation does not establish this.
+
+\paragraph{The closed gate and the zero-initialised scale are needed for stable training.} Two further configurations could not be trained usefully. With the separate path but without the zero-initialised scale, and with the gate bias at $-2$, carrying state between slices raised perplexity from 16.3 to 31.5 at step 100, worse on every source. The clip bounds the carried state at $\tau = 20$, about 4.2 to 5.3 times the largest singular value of the pretrained down-projection, so a clipped state concentrated in few directions adds about half the strength of $W_0$ along them even through a gate at 12 percent. With the scale but the gate bias still at $-2$, the in-slice Hebbian fast weights, not the carry, raised perplexity to 4703 at step 50 and 1024 at step 100, against 16.6 and 16.2 with them off, before the model recovered by step 150. Starting the gate nearly closed removes this spike.
+
+\paragraph{Cross-document carry is small in most variants.} At step 200 the variants carry a small effect into a different document, between 0.003 and 0.014, except the closed gate alone at seed 43, at 0.038. We draw no conclusion from that single value.
+
+\subsection{A relatedness gradient on the development cases}
+\label{sec-related}
+
+\begin{table}[H]
+  \centering
+  \caption{Gain from the carry by relatedness of the priming text, against a reset carry, on the same 200 development Wikipedia targets at step 600. Shares of targets improved in brackets. A star marks a 95 percent interval that excludes zero.}
+  \label{tab-related}
+  \small
+  \begin{tabular}{lrr}
+    \toprule
+    Carry built from & Ungated Hebbian & Gated carry \\
+    \midrule
+    Same document & $-0.002$ (0.50) & $+0.103$\sig\ (0.89) \\
+    Related article & $+0.004$ (0.59) & $+0.085$\sig\ (0.85) \\
+    Random article & $+0.001$ (0.48) & $+0.051$\sig\ (0.70) \\
+    Other source & $-0.013$\sig\ (0.39) & $-0.067$\sig\ (0.28) \\
+    \midrule
+    Same document against related & $-0.005$\sig & $+0.018$\sig \\
+    Related against random & $+0.003$ & $+0.034$\sig \\
+    Random against other source & $+0.013$\sig & $+0.117$\sig \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\linewidth]{figures/F16_relatedness.pdf}
+  \caption{Gain from adapting on earlier text, by its relatedness to the target, on the same 200 development Wikipedia targets at step 600, with 95 percent bootstrap bands. The gated carry with two training seeds, the ungated Hebbian carry, and dynamic evaluation of the LoRA-only model tuned for the related condition and for the same-document condition (Appendix~\ref{app-dyneval}).}
+  \label{fig-related}
+\end{figure}
+
+\paragraph{The carry's effect falls steadily with relatedness.} For the gated carry every step down the scale is significant (Table~\ref{tab-related}, Figure~\ref{fig-related}). A carry built from the same article lowers perplexity by 0.103, one built from an article the target mentions by 0.085, one built from an unrelated article by 0.051, and one built from a different source raises it by 0.067. The key contrast, a related article against an unrelated one, is $+0.034$ $[+0.024, +0.045]$, in favour of the related article on 70 percent of targets.
+
+\paragraph{The gradient requires the gated carry.} On the same cases the ungated Hebbian carry has no significant gain at any level, and only a small harm from other-source text.
+
+\paragraph{Robustness.} Title matching also links articles to date pages, such as an article mentioning ``August 1''. Removing the 18 targets whose related prime is a date page leaves every estimate within 0.003 of the full result, including the related against random contrast.
+
+\paragraph{A random article helps here, while a chain of documents harms in the boundary suite.} In the boundary suite a carried state from earlier documents of the same source harmed perplexity at step 600, and this holds on Wikipedia itself, by 0.017 (not significant) for seed 42 and by 0.051 $[0.016, 0.084]$ for seed 43. Here an unrelated Wikipedia article helps. The setups differ in what is carried. Here the prime is one block of 1024 tokens, the opening of a single article. The boundary suite instead carries the decayed state of a chain of whole earlier documents, each read in eight slices. One reading is that a long accumulation of unrelated content adds interference, but on the confirmatory cases of Section~\ref{sec-confirmatory} a chain of up to ten Wikipedia articles helps more than one, so accumulation alone does not explain the harm. We treat the difference as an open finding. Both suites agree that text from another source harms, and the relatedness suite shows that among single primes the most related text helps most.
+
+\subsection{The carry does not accumulate}
+
+A carry that accumulated would help more each time it saw the same text. The repeat suite reads each of the 106 held-out SlimPajama documents ten times in a row with the carried state never reset, and compares later readings with earlier ones.
+
+\begin{table}[H]
+  \centering
+  \caption{Reading the same document repeatedly with the carry never reset, at step 600, 106 documents, gains in perplexity with 95 percent intervals.}
+  \label{tab-repeat}
+  \small
+  \begin{tabular}{lrr}
+    \toprule
+    Model & Second reading against first & Tenth against second \\
+    \midrule
+    Ungated Hebbian & $+0.001$ {\footnotesize [$-0.001$, $+0.002$]} & $+0.000$ {\footnotesize [$-0.001$, $+0.001$]} \\
+    Gated carry, seed 42 & $+0.006$\sig {\footnotesize [$+0.003$, $+0.009$]} & $+0.000$ {\footnotesize [$-0.001$, $+0.001$]} \\
+    Gated carry, seed 43 & $+0.008$\sig {\footnotesize [$+0.005$, $+0.012$]} & $-0.001$ {\footnotesize [$-0.002$, $+0.000$]} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+A second reading with the carried state helps the gated carry slightly, and every further reading adds nothing, although the carried state keeps growing, by a factor of about 3.4 from the second reading to the tenth (Table~\ref{tab-repeat}). Why this gain is so much smaller than the 0.103 of a same-document prime in the relatedness suite is not resolved. The two differ in how much text the state is built from, a whole document of up to 16{,}384 tokens against one block of 1024, and in what is scored, the whole document again against the next block of a new article. Together with the flat profile across the slices of a document, this indicates that the carry passes on what the most recent text offers and gains nothing from further exposure to the same text.
+
+\subsection{Replication with a second seed}
+
+The gated carry was trained again to step 600 with a second training seed, 43, and evaluated on the same held-out documents and the same 200 Wikipedia cases, identical title for title. Table~\ref{tab-seeds} compares the two seeds.
+
+\begin{table}[H]
+  \centering
+  \caption{The gated carry with two training seeds, gains in perplexity at step 600. A star marks a 95 percent interval that excludes zero.}
+  \label{tab-seeds}
+  \small
+  \begin{tabular}{lrr}
+    \toprule
+    Measure & Seed 42 & Seed 43 \\
+    \midrule
+    Between slices, same document & $+0.097$\sig & $+0.092$\sig \\
+    Into a different document (100 documents) & $-0.020$\sig & $-0.031$\sig \\
+    Within a slice & $+0.025$\sig & $+0.014$\sig \\
+    Lead over matched LoRA & $+0.234$\sig & $+0.214$\sig \\
+    Carry share of the previous slice in context & 4.0\% & 3.8\% \\
+    \midrule
+    Relatedness, same document & $+0.103$\sig & $+0.116$\sig \\
+    Relatedness, related article & $+0.085$\sig & $+0.083$\sig \\
+    Relatedness, random article & $+0.051$\sig & $+0.034$\sig \\
+    Relatedness, other source & $-0.067$\sig & $-0.046$\sig \\
+    Related against random & $+0.034$\sig & $+0.049$\sig \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Every result in Table~\ref{tab-seeds} replicates in sign and significance, and most in size. The cross-document harm is stronger with the second seed, worse on 84 percent of documents and significant on all six sources against four with the first. At step 400 the two seeds agree on the carry between slices, 0.062 in both, and on the lead over the control, 0.188 and 0.180, but not fully across documents, $-0.003$ and not significant for seed 42 against $-0.007$ and significant for seed 43.
+
+\subsection{Training to the end of the schedule}
+\label{sec-full}
+
+The gated carry was trained once more at seed 42 to the end of its schedule, where the data runs out at step 1049, with sessions of one document as before. Table~\ref{tab-full-schedule} compares it with step 600.
+
+\begin{table}[H]
+  \centering
+  \caption{The gated carry at seed 42, at step 600 and at the end of the schedule, gains in perplexity with 95 percent intervals. Development measures on 106 documents (100 across documents), relatedness on the 200 development cases.}
+  \label{tab-full-schedule}
+  \small
+  \begin{tabular}{lrr}
+    \toprule
+    Measure & Step 600 & Step 1049 \\
+    \midrule
+    Between slices, same document & $+0.097$\sig & $+0.119$\sig {\footnotesize [$+0.091$, $+0.155$]} \\
+    Into a different document & $-0.020$\sig & $-0.040$\sig {\footnotesize [$-0.054$, $-0.029$]} \\
+    Within a slice & $+0.025$\sig & $+0.027$\sig {\footnotesize [$+0.017$, $+0.039$]} \\
+    Training gain & $+1.971$\sig & $+2.007$\sig \\
+    Tenth reading against first & $+0.000$ & $+0.000$ {\footnotesize [$-0.001$, $+0.002$]} \\
+    Previous slice in attention, carry's share & 4.0\% & 4.9\% \\
+    \midrule
+    Relatedness, same document & $+0.103$\sig & $+0.142$\sig \\
+    Relatedness, related article & $+0.085$\sig & $+0.094$\sig \\
+    Relatedness, random article & $+0.051$\sig & $+0.019$\sig \\
+    Relatedness, other source & $-0.067$\sig & $-0.097$\sig \\
+    Related against random & $+0.034$\sig & $+0.075$\sig {\footnotesize [$+0.061$, $+0.090$]} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\paragraph{With full training the carry becomes more specific.} Between slices of a document the gain grows to 0.119, and every one of the 106 documents improves. Across documents the effects move apart. The gain after the target's own opening grows from 0.103 to 0.142 and after a related article from 0.085 to 0.094, while the gain after a random article falls from 0.051 to 0.019 and the harm after other-source text grows from 0.067 to 0.097. The related article's lead over a random one more than doubles, to 0.075. In the boundary suite the harm after a chain of whole same-source documents doubles, to 0.040, on 89 percent of documents. The drift that was still under way at step 600 therefore continues in one direction: the carry helps more after the same or related text and harms more after unrelated text. Re-reading still adds nothing, and attention on the previous slice is still about 20 times stronger. No control was trained to this step, so the lead over a control is reported at step 600 only.
+
+\subsection{Results on the confirmatory test set}
+\label{sec-confirmatory}
+
+\begin{table}[H]
+  \centering
+  \caption{Gains from the carry on the 200 confirmatory Wikipedia cases, against a reset carry, at step 600 unless marked, with the share of targets improved in brackets. Every gain has a 95 percent interval that excludes zero except where marked with a dagger. The in-context condition reads the related prime in attention.}
+  \label{tab-confirmatory}
+  \small
+  \footnotesize
+  \begin{tabular}{lrrrrr}
+    \toprule
+    & \multicolumn{3}{c}{Trained within documents} & \multicolumn{2}{c}{Trained across documents} \\
+    \cmidrule(lr){2-4} \cmidrule(lr){5-6}
+    Condition & Seed 42 & Seed 43 & Step 1049 & Seed 42 & Seed 43 \\
+    \midrule
+    Same document & $+0.105$ (0.89) & $+0.117$ (0.94) & $+0.135$ (0.92) & $+0.117$ (0.94) & $+0.111$ (0.95) \\
+    Related article & $+0.086$ (0.85) & $+0.086$ (0.86) & $+0.102$ (0.86) & $+0.112$ (0.91) & $+0.102$ (0.89) \\
+    Random article & $+0.055$ (0.74) & $+0.036$ (0.69) & $+0.021$ (0.59) & $+0.101$ (0.89) & $+0.083$ (0.84) \\
+    Other source & $-0.084$ (0.21) & $-0.059$ (0.24) & $-0.109$ (0.18) & $+0.037$ (0.74) & $+0.004^{\dagger}$ (0.53) \\
+    Generic carry & $+0.071$ (0.80) & $+0.068$ (0.83) & $+0.065$ (0.74) & $+0.115$ (0.92) & $+0.103$ (0.91) \\
+    Chain of 1 article & $+0.054$ (0.76) & $+0.034$ (0.72) & $+0.013^{\dagger}$ (0.58) & $+0.104$ (0.93) & $+0.084$ (0.86) \\
+    Chain of 10 articles & $+0.071$ (0.81) & $+0.060$ (0.80) & $+0.055$ (0.74) & $+0.111$ (0.91) & $+0.099$ (0.91) \\
+    Related article in context & $+0.321$ (0.46) & $+0.310$ (0.45) & $+0.311$ (0.45) & $+0.357$ (0.46) & $+0.331$ (0.45) \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}[H]
+  \centering
+  \caption{Preregistered primary contrasts on the confirmatory cases, with Bonferroni-adjusted 98.75 percent intervals.}
+  \label{tab-confirmatory-headline}
+  \small
+  \begin{tabular}{lrrr}
+    \toprule
+    Contrast & Seed 42 & Seed 43 & Step 1049 \\
+    \midrule
+    Same document against generic & $+0.034$ {\footnotesize [$+0.025$, $+0.045$]} & $+0.049$ {\footnotesize [$+0.035$, $+0.064$]} & $+0.070$ {\footnotesize [$+0.052$, $+0.089$]} \\
+    Related against generic & $+0.015$ {\footnotesize [$+0.006$, $+0.024$]} & $+0.018$ {\footnotesize [$+0.007$, $+0.029$]} & $+0.037$ {\footnotesize [$+0.021$, $+0.054$]} \\
+    Related against random & $+0.031$ {\footnotesize [$+0.016$, $+0.045$]} & $+0.050$ {\footnotesize [$+0.036$, $+0.064$]} & $+0.081$ {\footnotesize [$+0.061$, $+0.102$]} \\
+    Carry against in context & $-0.235$ {\footnotesize [$-0.641$, $+0.066$]} & $-0.224$ {\footnotesize [$-0.626$, $+0.076$]} & $-0.209$ {\footnotesize [$-0.611$, $+0.089$]} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.85\linewidth]{figures/F18_fresh_relatedness.pdf}
+  \caption{Gain from the carried text against a reset carry, on the 200 confirmatory Wikipedia cases at step 600, with 95 percent bootstrap intervals from 10{,}000 resamples. Filled markers are the gated carry trained within documents, open markers the seed-42 probe trained across documents. The in-context condition is omitted because its scale is about four times larger and it is not cleanly comparable.}
+  \label{fig-confirmatory}
+\end{figure}
+
+\paragraph{The gradient replicates.} On the confirmatory cases the ordering is the same as on the development cases, in both seeds (Table~\ref{tab-confirmatory}, Figure~\ref{fig-confirmatory}). The same article helps most, then a related article, then a random one, and text of another source harms, and every step of the ordering has an interval that excludes zero. A related article lowers the target's perplexity by 0.086, about 0.5 percent. Related against random is $+0.031$ and $+0.050$, close to the development values of $+0.034$ and $+0.049$.
+
+\paragraph{Part of the transfer is specific to the document.} The generic carry helps by about 0.07, so much of the gain after a Wikipedia article is a generic effect of having read Wikipedia. A related article still beats the generic carry, by 0.015 and 0.018, with adjusted intervals that exclude zero in both seeds (Table~\ref{tab-confirmatory-headline}). By the preregistered rule this allows the claim that some transfer is specific to the document. It is small, below 0.1 percent of perplexity, and the larger part of the gain is the generic one. What is specific is the relation between the prime and the target, since the related article is a different document, and because relatedness is defined by title mentions this part may rest partly on shared words.
+
+\paragraph{A longer chain adds gain, not harm.} Carrying more random Wikipedia articles before the target helps slightly more, from 0.054 after one article to 0.071 after ten for seed 42, and ten against one is $+0.017$ $[+0.009, +0.025]$ and $+0.026$ $[+0.018, +0.034]$. Harm therefore does not grow with the number of earlier articles, at least for article openings of the same source. After ten articles the gain, 0.071 and 0.060, is close to that of the generic carry, 0.071 and 0.068. With a decay of 0.9 the carried state after many articles is close to an average over them, so a plausible reading, not tested further, is that a long chain converges to the generic carry. By the preregistered rule the difference from the boundary suite remains open.
+
+\paragraph{At the end of the schedule the specific part doubles.} Trained to step 1049, the gated carry meets every preregistered contrast with larger margins (Table~\ref{tab-confirmatory-headline}). A related article beats the generic carry by 0.037 $[0.021, 0.054]$ and a random article by 0.081 $[0.061, 0.102]$, about twice the margins at step 600, while the generic carry itself, 0.065, is no larger than at step 600. A single random article now helps little, 0.013 and not significant as the first link of a chain, and text of another source harms by 0.109. The confirmatory cases therefore show the same sharpening as the development cases.
+
+\paragraph{Attention on the prime is not cleanly comparable.} Placing the related article in attention lowers mean perplexity by 0.32, about four times the carry's gain, but it improves only 45 percent of targets. The carry has the lower perplexity on 57 and 58 percent of targets, and the mean difference between the two has an interval that includes zero. The per-target gains from attention, examined after the preregistered analysis, have a median of about $-0.14$ and a long upper tail reaching $+13.8$, so a related article in attention helps a few targets greatly and slightly harms most. That a related article in attention harms the typical target is surprising, and the condition differs from the others in more than the channel. It scores the target at positions 1024 to 2047 rather than from the start of the input, and the target's own fast weights are built on top of the prime. We therefore draw no conclusion from it beyond the preregistered one, that the mean difference between the carry and attention is not resolved.
+
+\paragraph{Within documents and against the control.} On the 73 confirmatory SlimPajama documents the carry between slices gives $+0.125$ and $+0.118$, about 1 percent of perplexity, and the lead over the matched LoRA-only model is $+0.257$ and $+0.233$, of which $+0.120$ and $+0.108$ remain with the fast weights switched off, consistent with the development results.
+
+\subsection{Training the carry across documents}
+\label{sec-mixed}
+
+\paragraph{The harm after other-source text disappears.} After text of another source the probe gains $+0.037$ where the gated carry trained within documents loses $0.084$, a change of $+0.120$ $[+0.103, +0.140]$. The chain of ten articles gains $+0.041$ $[+0.028, +0.054]$ more, and the related article $+0.027$ $[+0.013, +0.041]$ more. These meet the preregistered rule for the claim that training across documents removes the harm. The seed-43 probe, compared with the seed-43 gated carry, meets it too: other-source text gains 0.064 $[0.051, 0.077]$ more and no longer changes perplexity ($+0.004$, $[-0.005, +0.014]$), the chain of ten articles gains 0.039 $[0.027, 0.051]$ more and the related article 0.016 $[0.004, 0.028]$ more. The harm meant here is the harm after other-source text and after a chain on the confirmatory cases. The boundary suite was not run on the probes.
+
+\paragraph{The carry becomes largely generic.} In the probe every condition gains about the same (Table~\ref{tab-confirmatory}). Related against the generic carry is $-0.002$ $[-0.007, +0.003]$, and the same article against the generic carry $+0.002$ $[-0.003, +0.007]$, so the part of the transfer that was specific to the document is gone. Within a document the carry between slices falls from $+0.125$ to $+0.073$, a change of $-0.052$ $[-0.078, -0.032]$. Other-source text still gains less, $+0.037$, so the carry is not independent of the source, but within Wikipedia it no longer distinguishes related from unrelated text. At seed 43 related against generic is $-0.001$ $[-0.007, +0.004]$, and the carry between slices falls from $+0.118$ to $+0.087$, a change of $-0.030$ $[-0.052, -0.014]$. Training across documents thus trades the harm for a largely generic carry at both seeds, and loses 26 to 40 percent of the gain the carry gives within a document. Both seeds use one mixing ratio.
+
+\subsection{Fast weights within a slice and the ungated carry}
+\label{ch-q1}
+
+The ungated Hebbian and delta models, trained to step 600, show what In-Place TTT fast weights do within a slice, and what carrying their state without a carry path does. Table~\ref{tab-main} and Figure~\ref{fig-gains} give their gains.
+
+\begin{table}[H]
+  \centering
+  \caption{Gains of the ungated models in perplexity on 106 held-out documents. Positive values mean lower perplexity. A star marks a 95 percent interval that excludes zero. The cross-document gain rests on 24 documents. Full intervals are in Appendix~\ref{app-full}.}
   \label{tab-main}
   \small
   \begin{tabular}{llrrrr}
     \toprule
-    Step & Model & Training gain & Within-document & Cross-document & Matched gain \\
+    Step & Model & Training gain & Within a slice & Cross-document & Lead over control \\
     \midrule
     \multirow{3}{*}{200} & LoRA-only & $+1.610$\sig & $0$ & n/a & n/a \\
      & Hebbian & $+1.653$\sig & $+0.016$\sig & $+0.008$ & $+0.073$\sig \\
@@ -541,33 +827,26 @@ Figure~\ref{fig-absolute} shows the held-out perplexity of each model. All three
 \begin{figure}[H]
   \centering
   \includegraphics[width=\linewidth]{figures/F1_gains_vs_step.pdf}
-  \caption{Gains by training step with 95 percent bootstrap bands. Left, the TTT model against the matched LoRA-only control. Middle, fast-weight updates within a document. Right, state carried across document boundaries, which rests on 24 documents. Each panel has its own scale.}
+  \caption{Gains of the ungated models by training step with 95 percent bootstrap bands. Left, the TTT model against the matched LoRA-only control. Middle, fast-weight updates within a document. Right, state carried across document boundaries, which rests on 24 documents. Each panel has its own scale.}
   \label{fig-gains}
 \end{figure}
 
-\section{Project Outcomes}
-
-\subsection{The naive carry}
-\label{ch-q1}
-
-Switching the fast weights on inside a slice lowers perplexity at every checkpoint for both rules, on 72 to 100 percent of documents. The delta rule's within-document gain is 9 times the Hebbian gain at step 200, 4 times at step 400 and 1.7 times at step 600. It is largest early, 0.144 at step 200 and 0.276 at step 100, and settles near 0.06, which is consistent with the slow weights absorbing part of what the fast weights first provided.
-
-The gain does not build up along a document (Figure~\ref{fig-position}). It is already present in the first slice, dips in the middle slices and shows no upward trend, so the fast weights adapt locally rather than accumulating knowledge of the document. Carrying state from earlier slices of the same document adds a small gain for the delta rule, 0.012 at step 600 and about 0.015 per slice from the second slice on. For the original designs, this is the only form of persistence found to help.
+\paragraph{Fast weights help within a slice, the delta rule more.} Switching the fast weights on inside a slice lowers perplexity at every checkpoint for both rules, on 72 to 100 percent of documents. The delta rule's gain is 9 times the Hebbian gain at step 200, 4 times at step 400 and 1.7 times at step 600. It is largest early, 0.144 at step 200 and 0.276 at step 100, and settles near 0.06, which is consistent with the slow weights absorbing part of what the fast weights first provided. The gain does not build up along a document (Figure~\ref{fig-position}). It is already present in the first slice, dips in the middle slices and shows no upward trend, so the fast weights adapt locally rather than accumulating knowledge of the document.
 
 \begin{figure}[H]
   \centering
   \includegraphics[width=\linewidth]{figures/F2_by_position.pdf}
-  \caption{Gains at step 600 by slice index, with 95 percent bootstrap bands. Left, fast-weight updates within a slice. Right, state carried from earlier slices, zero at the first slice by construction.}
+  \caption{Gains of the ungated models at step 600 by slice index, with 95 percent bootstrap bands. Left, fast-weight updates within a slice. Right, state carried from earlier slices, zero at the first slice by construction.}
   \label{fig-position}
 \end{figure}
 
-The cross-document gain lies between $-0.004$ and $+0.008$ perplexity at every checkpoint for both rules, and every interval includes zero (Table~\ref{tab-main}, Figure~\ref{fig-gains} right). Three times more training does not move it. Since the reset condition of the boundary suite follows the reset rule of In-Place TTT, this is also the comparison with a reset in that style. On the same model, data and documents, the naive carry adds nothing measurable to it. These intervals come from 24 documents and are about $\pm 0.01$ wide, so they rule out an effect larger than about 0.01 rather than proving that there is none, and Section~\ref{ch-design} measures the redesigned carry on about 100 documents.
+\paragraph{The ungated carry gains little.} Carrying state from earlier slices of the same document adds 0.012 $[0.008, 0.018]$ for the delta rule and 0.002 $[-0.000, 0.006]$ for the Hebbian rule at step 600, and at most 0.027 at any checkpoint (Appendix~\ref{app-full}). Across documents the gain lies between $-0.004$ and $+0.008$ at every checkpoint for both rules, and every interval includes zero (Table~\ref{tab-main}, Figure~\ref{fig-gains} right), with no trend over three times more training. These intervals come from 24 documents and are about $\pm 0.01$ wide, so they rule out an effect larger than about 0.01 rather than proving that there is none.
 
-Table~\ref{tab-persist} collects the persistence measures at step 600. Re-reading a document with its own carried state never helps. Against the first reading, the gain of every later reading up to the tenth is within 0.002 perplexity, and no interval excludes zero, for either rule (Figure~\ref{fig-repeat}). The tenth reading against the second is $+0.000$ with an interval of $\pm 0.001$ for both rules, even though the carried state was built from that very document. The swap suite shows that a foreign carried state can do harm. For the Hebbian model, a state primed on a different source raises perplexity in 15 of the 30 source pairs, by 0.022 on average and by up to 0.07, and never lowers it significantly, while same-source priming is close to neutral ($-0.008$). The Hebbian same-against-other effect of 0.010 in Table~\ref{tab-persist} therefore reflects a foreign state hurting less, not a same-source state helping. For the delta model, priming is neutral in either case, with 3 of 30 pairs significant in mixed directions. For the original designs, no carried state helps the next document.
+Table~\ref{tab-persist} collects the persistence measures at step 600. Re-reading a document with its own carried state never helps. Against the first reading, the gain of every later reading up to the tenth is within 0.002 perplexity, and no interval excludes zero, for either rule (Figure~\ref{fig-repeat}). The swap suite shows that a foreign carried state can do harm. For the Hebbian model, a state primed on a different source raises perplexity in 15 of the 30 source pairs, by 0.022 on average and by up to 0.07, and never lowers it significantly, while same-source priming is close to neutral ($-0.008$). The Hebbian same-against-other effect of 0.010 in Table~\ref{tab-persist} therefore reflects a foreign state hurting less, not a same-source state helping. For the delta model, priming is neutral in either case, with 3 of 30 pairs significant in mixed directions.
 
 \begin{table}[H]
   \centering
-  \caption{Persistence measures at step 600, pooled over sources, with 95 percent bootstrap intervals.}
+  \caption{Persistence measures of the ungated models at step 600, pooled over sources, with 95 percent bootstrap intervals.}
   \label{tab-persist}
   \small
   \begin{tabular}{lrrr}
@@ -582,46 +861,16 @@ Table~\ref{tab-persist} collects the persistence measures at step 600. Re-readin
   \end{tabular}
 \end{table}
 
-For the naive carry, information retained from the previous document contributes nothing measurable to language model improvement in this setting, where the carry is learned within documents and applied across them. The improvement of a TTT model over a matched baseline comes from extra trainable capacity and from adaptation within each document, and the only persistence that helps is carrying state between slices of the same document with the delta rule. Section~\ref{ch-design} revisits this answer with a redesigned carry, which makes the carry between slices of the same document substantially useful. Primed on a single block of earlier text, it transfers to the next document, most when the two are related and least, turning to harm, when they come from different sources, while a long accumulated history of whole documents harms at step 600.
-
-\subsection{Domains}
-\label{ch-q2}
-
-Table~\ref{tab-sources} gives the gains per source at step 600. In absolute perplexity, the lead over the control is largest on C4, Wikipedia and Book, the sources the base model finds hardest. In relative terms, which divide by each source's perplexity, StackExchange and Wikipedia benefit most from adaptation within a document and ArXiv, Book and Github least, and the delta rule helps every source.
-
-\begin{table}[H]
-  \centering
-  \caption{Per-source gains at step 600. Absolute gains in perplexity, relative gains in percent of the reference perplexity. All intervals exclude zero except the Hebbian within-document gain on Book.}
-  \label{tab-sources}
-  \small
-  \begin{tabular}{lrrrrrr}
-    \toprule
-    & & \multicolumn{2}{c}{Within-document} & \multicolumn{2}{c}{Matched gain} & \\
-    \cmidrule(lr){3-4} \cmidrule(lr){5-6}
-    Source & Base ppl & Hebbian & Delta & Hebbian & Delta & Documents \\
-    \midrule
-    ArXiv & 7.45 & $+0.004$ (0.07\%) & $+0.029$ (0.45\%) & $+0.053$ (0.81\%) & $+0.098$ (1.52\%) & 20 \\
-    Book & 29.30 & $+0.022$ (0.09\%) & $+0.083$ (0.35\%) & $+0.172$ (0.72\%) & $+0.331$ (1.39\%) & 6 \\
-    C4 & 37.40 & $+0.064$ (0.21\%) & $+0.161$ (0.53\%) & $+0.247$ (0.81\%) & $+0.536$ (1.76\%) & 20 \\
-    Github & 4.79 & $+0.005$ (0.11\%) & $+0.016$ (0.37\%) & $+0.028$ (0.65\%) & $+0.066$ (1.53\%) & 20 \\
-    StackExchange & 9.47 & $+0.067$ (0.83\%) & $+0.059$ (0.74\%) & $+0.131$ (1.62\%) & $+0.217$ (2.68\%) & 20 \\
-    Wikipedia & 21.53 & $+0.075$ (0.42\%) & $+0.111$ (0.62\%) & $+0.183$ (1.00\%) & $+0.345$ (1.89\%) & 20 \\
-    \bottomrule
-  \end{tabular}
-\end{table}
-
-A natural hypothesis is that test-time adaptation helps most where the base model struggles most, as dynamic evaluation does on out-of-distribution text \citep{krause2018dynamic}. Over the six sources, the rank correlation between relative within-document gain and base perplexity is weak, $\rho = +0.20$ for the Hebbian rule and $+0.09$ for the delta rule, so difficulty does not predict the gain, although with six sources this is descriptive only. For the original designs, no source shows a reliable benefit from carrying state across documents. Per-source estimates rest on four documents each, and the only two intervals that exclude zero are negative and read best as noise among twelve tests.
-
-The redesigned carry of Section~\ref{ch-design} changes the answer within a document. On the development set, at step 600 its between-slice gain is significant on every source for both seeds, largest in relative terms on C4 (1.39 and 1.46 percent for seeds 42 and 43), Wikipedia (0.99 and 1.08 percent) and StackExchange (1.35 and 0.86 percent), and smallest on ArXiv, Github and Book (0.18 to 0.62 percent). Across documents of the same source its effect is negative on every source, significantly so on four sources for seed 42 and on all six for seed 43. The answer to Q2 is therefore that gains differ across domains, that difficulty does not explain the difference, and that no domain benefits from the naive carry across documents.
+Removing the reset alone, then, gains little with either update rule. The delta rule, whose error-correcting write avoids the interference of an additive state, raises the gain between slices at step 600 only from 0.002 to 0.012, so the write rule is not what the ungated carry lacks.
 
 \subsection{The saturated clip}
 \label{ch-why}
 
-\paragraph{The read-time clip is always active.} The clip binds whenever $\lVert \eta S \rVert_F > \tau$. In units of the pretrained down-projection, this is a state ratio $\lVert \eta S \rVert_F / \lVert W_0 \rVert_F$ above $\tau / \lVert W_0 \rVert_F = 0.43$, given a mean $\lVert W_0 \rVert_F$ of 46.6 over the TTT layers. Across every boundary, repeat, swap and main-evaluation measurement at steps 200, 400 and 600, the state ratio is above this threshold on 100 percent of measurements, by a factor of at least 255 for the Hebbian model and at least 1597 for the delta model (Table~\ref{tab-clip}, Figure~\ref{fig-dist}).
+\paragraph{The read-time clip is always active.} The clip binds whenever $\lVert \eta S \rVert_F > \tau$. In units of the pretrained down-projection, this is a state ratio $\lVert \eta S \rVert_F / \lVert W_0 \rVert_F$ above $\tau / \lVert W_0 \rVert_F = 0.43$, given a mean $\lVert W_0 \rVert_F$ of 46.6 over the TTT layers. Across every boundary, repeat, swap and main-evaluation measurement of the ungated models at steps 200, 400 and 600, the state ratio is above this threshold on 100 percent of measurements, by a factor of at least 255 for the Hebbian model and at least 1597 for the delta model (Table~\ref{tab-clip}, Figure~\ref{fig-dist}). For the gated carry at step 600, the carried state ratio has a median of about 8{,}000 for seed 42 and 15{,}000 for seed 43, and is above the threshold on every document by a factor of at least 6400.
 
 \begin{table}[H]
   \centering
-  \caption{Fraction of measurements on which the read-time clip is active, and the smallest margin by which the state exceeds the clip threshold of 0.43.}
+  \caption{Fraction of measurements of the ungated models on which the read-time clip is active, and the smallest margin by which the state exceeds the clip threshold of 0.43.}
   \label{tab-clip}
   \small
   \begin{tabular}{llrrr}
@@ -641,29 +890,27 @@ The redesigned carry of Section~\ref{ch-design} changes the answer within a docu
 \begin{figure}[H]
   \centering
   \includegraphics[width=0.8\linewidth]{figures/F10_state_distribution.pdf}
-  \caption{Distribution of the state ratio over all measurements at step 600, on a log scale, with the clip threshold dashed.}
+  \caption{Distribution of the state ratio of the ungated models over all measurements at step 600, on a log scale, with the clip threshold dashed.}
   \label{fig-dist}
 \end{figure}
 
-\paragraph{Only the direction of the state reaches the output.} A saturated clip means that the magnitude of the state never reaches the output. What reaches it is a vector of norm $\tau$ pointing along the accumulated state. Two observations follow. First, re-reading a document grows the carried state by a factor of about 6.5 over ten readings, from a median state ratio of about 14{,}600 after the first reading to about 95{,}000 after the tenth for the delta model, and from about 2{,}600 to 16{,}900 for the Hebbian model, while perplexity stays flat (Figure~\ref{fig-repeat}, which starts at the second reading). Second, carrying state into a new document makes it about two to four times larger than a state reset at the boundary, again with no effect on perplexity (Figure~\ref{fig-chain}). With $\lambda = 0.9$ the carried direction is an average over earlier documents, and a plausible reading is that, once normalised to $\tau$, it holds nothing the next document can use.
+\paragraph{Only the direction of the state reaches the output.} A saturated clip means that the magnitude of the state never reaches the output. What reaches it is a vector of norm $\tau$ pointing along the accumulated state. For the ungated models, re-reading a document grows the carried state by a factor of about 6.5 over ten readings, from a median state ratio of about 14{,}600 after the first reading to about 95{,}000 after the tenth for the delta model, and from about 2{,}600 to 16{,}900 for the Hebbian model, while perplexity stays flat (Figure~\ref{fig-repeat}, which starts at the second reading). Carrying state into a new document makes it about two to four times larger than a state reset at the boundary, again with no effect on perplexity (Figure~\ref{fig-chain}).
 
 \begin{figure}[H]
   \centering
   \includegraphics[width=\linewidth]{figures/F3_repeat_mechanism.pdf}
-  \caption{Repeated reading of the same document at step 600. Left, the carried state relative to $\lVert W_0 \rVert_F$ on a log scale, with the clip threshold dashed. Right, the perplexity gain against the first reading.}
+  \caption{Repeated reading of the same document by the ungated models at step 600. Left, the carried state relative to $\lVert W_0 \rVert_F$ on a log scale, with the clip threshold dashed. Right, the perplexity gain against the first reading.}
   \label{fig-repeat}
 \end{figure}
 
 \begin{figure}[H]
   \centering
   \includegraphics[width=\linewidth]{figures/F8_chain_states.pdf}
-  \caption{Median state ratio along chains of five documents at step 600, under the three boundary conditions.}
+  \caption{Median state ratio of the ungated models along chains of five documents at step 600, under the three boundary conditions.}
   \label{fig-chain}
 \end{figure}
 
-\paragraph{Removing the clip does not help.} If saturation erases the information in the state's magnitude, removing the clip might let persistence work. We trained both rules without the clip, keeping every other setting, the data order and the gradient clip (Figure~\ref{fig-noclip}).
-
-The Hebbian model collapses. It settles at a training loss of about 8.1, a perplexity of roughly 3300, and does not recover within the 200 steps run, while the clipped Hebbian model trains normally. Its early loss, 25.8 over the first 10 steps, is not by itself evidence, because a clipped Hebbian model can also start with a loss spike that it recovers from (Section~\ref{ch-design}). The unclipped delta model, reading the same data in the same order, stays between 1.8 and 2.8 throughout. A likely account is that without an error term and with a fixed step the Hebbian state grows with every chunk until it overwhelms the forward pass, but this one short run does not isolate the cause.
+\paragraph{Removing the clip does not help.} If saturation erased the information in the state's magnitude, removing the clip might make the ungated carry work. We trained both rules without the clip, keeping every other setting, the data order and the gradient clip (Figure~\ref{fig-noclip}). The Hebbian model collapses. It settles at a training loss of about 8.1, a perplexity of roughly 3300, and does not recover within the 200 steps run, while the clipped Hebbian model trains normally. The unclipped delta model, reading the same data in the same order, stays between 1.8 and 2.8 throughout. A likely account is that without an error term and with a fixed step the Hebbian state grows with every chunk until it overwhelms the forward pass, but this one short run does not isolate the cause.
 
 \begin{figure}[H]
   \centering
@@ -694,7 +941,7 @@ The delta model trains with a normal loss, but it does so by switching the fast 
   \end{tabular}
 \end{table}
 
-\paragraph{The optimiser closed the gate when the fast weights were unusable.} The same response appears twice (Figure~\ref{fig-gates}). The clipped Hebbian model also has a nearly closed gate, with a median of at most 0.003 at every chain position, against about 0.78 for the clipped delta model, and the unclipped delta model closes its gate fully. In both cases the TTT term was too large or too noisy to use, and training reduced it to almost nothing. Two observations do not make this a rule, but they suggest that a closed gate is the optimiser's default response to unusable fast weights.
+\paragraph{The optimiser closes the gate when the fast weights are unusable.} The same response appears twice (Figure~\ref{fig-gates}). The clipped Hebbian model also has a nearly closed gate, with a median of at most 0.003 at every chain position, against about 0.78 for the clipped delta model, and the unclipped delta model closes its gate fully. Two observations do not make this a rule, but they suggest that a closed gate is the optimiser's default response to unusable fast weights.
 
 \begin{figure}[H]
   \centering
@@ -703,268 +950,76 @@ The delta model trains with a normal loss, but it does so by switching the fast 
   \label{fig-gates}
 \end{figure}
 
-\paragraph{Summary.} In these runs the clip is what keeps the fast weights usable, by reducing an unusably large state to a fixed and usable scale, and it does so by discarding the magnitude of the state. In the naive carry, whose write is never trained to serve a later read, the direction that remains is uninformative even about the document that produced it, and in two short single-seed probes removing the clip made the fast weights either unstable or unused. The cause of the naive null result is argued from the mechanism and supported by these probes, rather than shown by a single intervention. A saturated clip does not by itself rule out a useful carry. Section~\ref{ch-design} keeps the clip, which stays saturated, and instead changes how the carry is read and trained, so that the direction it carries is learned to be useful.
+\paragraph{Summary.} The clip keeps the fast weights usable by reducing an unusably large state to a fixed scale, and it does so by discarding the state's magnitude. In two short single-seed runs, removing it made the fast weights either unstable or unused. A saturated clip does not by itself rule out a useful carry, since the gated carry works with the clip as saturated as in the ungated models. What differs is the direction that is carried. The ungated carry's write is never trained to serve a later read, while the gated carry's is, and a plausible reading, supported only by the ablation of Section~\ref{sec-ablation}, is that training through the carry shapes that direction. The other ingredient of the gated carry, the separate path, may matter for the same reason, because in the ungated carry the carried state is clipped together with the current slice's state, so only the direction of their sum reaches the output.
 
-\subsection{The redesigned carry}
-\label{ch-design}
+\subsection{Domains}
+\label{ch-q2}
 
-\paragraph{Two failed attempts.} The design of Section~\ref{sec-design-method} is the third attempt, and the first two explain its last two features.
-
-The first attempt used the separate carry path without the zero-initialised scale and with the usual gate bias of $-2$. At step 100, carrying state between slices raised perplexity from 16.3 to 31.5, worse on every source. The reason is the size of a clipped state. The clip bounds the state at $\tau = 20$, which is about 4.2 to 5.3 times the largest singular value of the pretrained down-projection (3.8 to 4.8 in layers 1, 13 and 27). A clipped state concentrated in few directions, as outer-product states tend to be, therefore adds about half the strength of $W_0$ along those directions even through a gate at 12 percent. The zero-initialised scale removes this.
-
-The second attempt added the scale but kept the gate bias at $-2$. This time the in-document fast weights, not the carry, broke the model during early training. With them switched on, perplexity was 4703 at step 50 and 1024 at step 100, against 16.6 and 16.2 with them off, and the training loss opened at 17.5. The carry cannot be the cause, since its scale starts at zero and the failing condition resets the state at every slice, so the spike comes from the Hebbian fast weights within a slice. The model recovered by step 150, but the spike occupied most of a short run. Closing the gate at the start removes it. The second attempt also ran out of GPU memory near step 195, because training through the carry held every slice of a long document in memory, which the window of two slices fixes.
-
-With all three changes the training loss stays between about 1.9 and 2.6 from step 10, for both seeds. The design was trained twice with the same configuration and seed, once to step 200 with full evaluations at steps 100 and 200, and once to step 600 with full evaluations at steps 400 and 600. The two runs are not bitwise identical, and their in-training between-slice gains at step 100, 0.151 and 0.129, indicate run-to-run variation of about 0.02. From step 200 on, the boundary suite uses chains of 20 documents per source, so the cross-document measure rests on 100 documents instead of 24. Table~\ref{tab-design} compares the design with the original Hebbian model, and Figure~\ref{fig-design-curve} shows the carry gains across training.
+Table~\ref{tab-sources} gives the per-source gains of the ungated models at step 600. In absolute perplexity, the lead over the control is largest on C4, Wikipedia and Book, the sources the base model finds hardest. In relative terms, which divide by each source's perplexity, StackExchange and Wikipedia benefit most from adaptation within a slice and ArXiv, Book and Github least, and the delta rule helps every source.
 
 \begin{table}[H]
   \centering
-  \caption{The carry design against the original Hebbian model, gains in perplexity with the share of documents improved in brackets. A star marks a 95 percent interval that excludes zero. The cross-document measure rests on 24 documents for the original model and at step 100, and on 100 documents otherwise.}
-  \label{tab-design}
+  \caption{Per-source gains of the ungated models at step 600. Absolute gains in perplexity, relative gains in percent of the reference perplexity. All intervals exclude zero except the Hebbian within-document gain on Book.}
+  \label{tab-sources}
   \small
-  \begin{tabular}{lrrrrr}
+  \begin{tabular}{lrrrrrr}
     \toprule
-    & Hebbian & \multicolumn{4}{c}{Carry design} \\
-    \cmidrule(lr){2-2} \cmidrule(lr){3-6}
-    Measure & step 600 & step 100 & step 200 & step 400 & step 600 \\
+    & & \multicolumn{2}{c}{Within a slice} & \multicolumn{2}{c}{Lead over control} & \\
+    \cmidrule(lr){3-4} \cmidrule(lr){5-6}
+    Source & Base ppl & Hebbian & Delta & Hebbian & Delta & Documents \\
     \midrule
-    Between slices, same document & $+0.002$ (0.54) & $+0.135$\sig\ (0.99) & $+0.099$\sig\ (0.92) & $+0.062$\sig\ (0.92) & $+0.097$\sig\ (0.97) \\
-    Into a different document & $-0.004$ (0.38) & $+0.011$\sig\ (0.75) & $+0.010$\sig\ (0.64) & $-0.003$ (0.39) & $-0.020$\sig\ (0.29) \\
-    Within a slice & $+0.034$\sig\ (0.89) & $+0.047$\sig\ (0.83) & $+0.018$\sig\ (0.74) & $+0.006$\sig\ (0.63) & $+0.025$\sig\ (0.76) \\
-    Lead over matched LoRA & $+0.106$\sig\ (1.00) & n/a & $+0.215$\sig\ (0.98) & $+0.188$\sig\ (1.00) & $+0.234$\sig\ (1.00) \\
+    ArXiv & 7.45 & $+0.004$ (0.07\%) & $+0.029$ (0.45\%) & $+0.053$ (0.81\%) & $+0.098$ (1.52\%) & 20 \\
+    Book & 29.30 & $+0.022$ (0.09\%) & $+0.083$ (0.35\%) & $+0.172$ (0.72\%) & $+0.331$ (1.39\%) & 6 \\
+    C4 & 37.40 & $+0.064$ (0.21\%) & $+0.161$ (0.53\%) & $+0.247$ (0.81\%) & $+0.536$ (1.76\%) & 20 \\
+    Github & 4.79 & $+0.005$ (0.11\%) & $+0.016$ (0.37\%) & $+0.028$ (0.65\%) & $+0.066$ (1.53\%) & 20 \\
+    StackExchange & 9.47 & $+0.067$ (0.83\%) & $+0.059$ (0.74\%) & $+0.131$ (1.62\%) & $+0.217$ (2.68\%) & 20 \\
+    Wikipedia & 21.53 & $+0.075$ (0.42\%) & $+0.111$ (0.62\%) & $+0.183$ (1.00\%) & $+0.345$ (1.89\%) & 20 \\
     \bottomrule
   \end{tabular}
 \end{table}
 
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=\linewidth]{figures/F15_carry_design_curve.pdf}
-  \caption{Carry gains of the carry design across training, with 95 percent bootstrap bands. Hollow markers are in-training evaluations on 30 documents without intervals. The cross-document point at step 100 rests on 24 documents and the others on 100.}
-  \label{fig-design-curve}
-\end{figure}
+A natural hypothesis is that test-time adaptation helps most where the base model struggles most, as dynamic evaluation does on out-of-distribution text \citep{krause2018dynamic}. Over the six sources, the rank correlation between relative within-slice gain and base perplexity is weak, $\rho = +0.20$ for the Hebbian rule and $+0.09$ for the delta rule, so difficulty does not predict the gain, although with six sources this is descriptive only. For the ungated carry no source shows a reliable effect across documents. Per-source estimates rest on four documents each, and the only two intervals that exclude zero are negative and read best as noise among twelve tests.
 
-\paragraph{Carry within a document helps through step 600.} Carrying state from earlier slices of the same document lowers perplexity by 0.135 at step 100, 0.099 at step 200, 0.062 at step 400 and 0.097 at step 600, every interval excluding zero, on 92 to 99 percent of documents. The original design's gain is 0.014 at step 200 and 0.002 at step 600. The in-training evaluations follow the same course, a dip around steps 250 to 400 and a recovery to about 0.10 by step 500, so the gain does not vanish as the slow weights train.
-
-\paragraph{The gain appears from the second slice and does not accumulate.} At step 600 the gain is between 0.099 and 0.121 at every slice from the second to the eighth, each interval excluding zero (Figure~\ref{fig-design-slice}). The in-training evaluations show no rising profile at any step, so along a document the gain stays level or falls slightly.
-
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.8\linewidth]{figures/F14_carry_design_by_slice.pdf}
-  \caption{Gain from carrying state from earlier slices of the same document, by slice, with 95 percent bootstrap bands.}
-  \label{fig-design-slice}
-\end{figure}
-
-\paragraph{Across documents a small benefit becomes a small harm.} With 100 documents, carrying state into a different document of the same source lowers perplexity by 0.010 $[+0.004, +0.018]$ at step 200, mainly on C4 and Wikipedia. By step 400 the effect is gone ($-0.003$), and at step 600 the carried state makes perplexity worse, by 0.020 $[-0.030, -0.013]$, on 71 percent of documents, with a significant harm on four of the six sources. Its gain on the continuation of the same document stays significant throughout.
-
-\paragraph{The carry recovers about four percent of the gain of attention.} The context suite compares the carry with placing the previous slice directly in attention, scoring the same tokens. At step 600 the previous slice in attention lowers perplexity by 2.770 (25.7 percent), the carried state by 0.110, so the carry recovers 4.0 percent $[3.3, 4.7]$ of that gain, and 3.9 percent $[3.1, 4.6]$ at step 200. The carried state is a much weaker channel than attention when the text is still available, although it is not small. It holds 44.0 million values, which in the 32-bit precision used here take about 176 MB, as much as the 16-bit attention cache of roughly 1500 tokens of Qwen3-0.6B (28 layers, 8 key-value heads of dimension 128 under grouped-query attention \citep{ainslie2023gqa}). Whether it is useful where attention cannot reach, after the earlier text has left the context, is not tested.
-
-\paragraph{The carry path stays saturated.} At step 600 the carried state ratio has a median of about 8{,}000 for seed 42 and 15{,}000 for seed 43, and is above the clip threshold on every document by a factor of at least 6400. As for the original models, only the direction of the carried state reaches the output. The redesign therefore does not work by relieving the clip. A plausible reading, supported only by the ablation below, is that training through the carry shapes the direction that is carried.
-
-\paragraph{The design leads the matched baseline by more than the original Hebbian model.} The main gate stays nearly closed (median 0.0007 at step 200), so the benefit flows through the carry path. The model leads the matched LoRA baseline by 0.234 $[0.188, 0.293]$ perplexity at step 600 on every document, against 0.106 for the original Hebbian model and 0.203 $[0.165, 0.249]$ for the delta rule, whose interval overlaps. About 0.11 of the lead is extra trainable capacity, since the design's training gain is 1.971 against 1.859 for the control.
-
-\subsection{Which design change matters}
-
-The design combines three changes, the separate carry path (A), training through the carry (B) and the nearly closed main gate at the start (C). Three further runs, each trained to step 200 with the same data and seed, remove ingredients in turn. The fourth combination, A and B without C, is the second failed attempt above, whose early instability made it unusable. Table~\ref{tab-ablation} and Figure~\ref{fig-ablation} compare them with the full design at step 200.
-
-\begin{table}[H]
-  \centering
-  \caption{Ablation of the carry design at step 200, one training seed, gains in perplexity with 95 percent bootstrap intervals. Every interval excludes zero.}
-  \label{tab-ablation}
-  \footnotesize
-  \begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}Xrrr}
-    \toprule
-    Variant & Between slices & Into a different document & Lead over matched LoRA \\
-    \midrule
-    Closed gate only (C) & $+0.008$ {\footnotesize [$+0.001$, $+0.015$]} & $+0.003$ {\footnotesize [$+0.001$, $+0.006$]} & $+0.130$ {\footnotesize [$+0.104$, $+0.161$]} \\
-    Carry path, no training through it (A and C) & $+0.023$ {\footnotesize [$+0.013$, $+0.034$]} & $+0.011$ {\footnotesize [$+0.006$, $+0.016$]} & $+0.172$ {\footnotesize [$+0.141$, $+0.211$]} \\
-    Training through it, no carry path (B and C) & $+0.035$ {\footnotesize [$+0.022$, $+0.052$]} & $+0.014$ {\footnotesize [$+0.007$, $+0.021$]} & $+0.163$ {\footnotesize [$+0.129$, $+0.203$]} \\
-    Full design (A, B and C) & $+0.099$ {\footnotesize [$+0.074$, $+0.133$]} & $+0.010$ {\footnotesize [$+0.004$, $+0.018$]} & $+0.215$ {\footnotesize [$+0.174$, $+0.264$]} \\
-    \bottomrule
-  \end{tabularx}
-\end{table}
-
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=\linewidth]{figures/F17_ablation.pdf}
-  \caption{Ablation of the carry design at step 200, with 95 percent bootstrap intervals.}
-  \label{fig-ablation}
-\end{figure}
-
-\paragraph{The closed gate does not explain the gain.} With the closed gate alone, the carry between slices gives 0.008, close to the original design's 0.014. Starting the gate nearly closed only removes the early instability.
-
-\paragraph{The two carry changes appear to work together.} The separate carry path alone raises the carry gain to 0.023, and training through the carry alone to 0.035, each significant. Together they give 0.099, more than twice the sum of their separate increments over the closed gate alone (0.015 and 0.027 against 0.091). This rests on one seed at step 200, so the interaction is suggestive rather than established. The separate path lets a carried state reach the output without being drowned by the current slice, and training through the carry teaches the model what to write for a later slice to read, and on this evidence each is of limited use without the other. The lead over the matched baseline follows the same order, from 0.130 with the closed gate alone to 0.215 with the full design.
-
-\paragraph{Cross-document carry is small in every variant.} At step 200 every variant carries a small benefit into a different document, between 0.003 and 0.014, with overlapping intervals.
-
-\subsection{A relatedness gradient on the development cases}
-
-\begin{table}[H]
-  \centering
-  \caption{Gain from the carry by relatedness of the priming text, against a reset carry, on the same 200 development Wikipedia targets at step 600. Shares of targets improved in brackets. A star marks a 95 percent interval that excludes zero.}
-  \label{tab-related}
-  \small
-  \begin{tabular}{lrr}
-    \toprule
-    Carry built from & Original Hebbian & Carry design \\
-    \midrule
-    Same document & $-0.002$ (0.50) & $+0.103$\sig\ (0.89) \\
-    Related article & $+0.004$ (0.59) & $+0.085$\sig\ (0.85) \\
-    Random article & $+0.001$ (0.48) & $+0.051$\sig\ (0.70) \\
-    Other source & $-0.013$\sig\ (0.39) & $-0.067$\sig\ (0.28) \\
-    \midrule
-    Same document against related & $-0.005$\sig & $+0.018$\sig \\
-    Related against random & $+0.003$ & $+0.034$\sig \\
-    Random against other source & $+0.013$\sig & $+0.117$\sig \\
-    \bottomrule
-  \end{tabular}
-\end{table}
-
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.8\linewidth]{figures/F16_relatedness.pdf}
-  \caption{Gain from adapting on earlier text, by its relatedness to the target, on the same 200 development Wikipedia targets at step 600, with 95 percent bootstrap bands. The carry design with two training seeds, the original Hebbian carry, and dynamic evaluation of the LoRA-only model tuned for the related condition and for the same-document condition (Appendix~\ref{app-dyneval}).}
-  \label{fig-related}
-\end{figure}
-
-\paragraph{The carry's effect falls steadily with relatedness.} For the carry design every step down the scale is significant (Table~\ref{tab-related}, Figure~\ref{fig-related}). A carry built from the same article lowers perplexity by 0.103, one built from an article the target mentions by 0.085, one built from an unrelated article by 0.051, and one built from a different source raises it by 0.067. The key contrast, a related article against an unrelated one, is $+0.034$ $[+0.024, +0.045]$, in favour of the related article on 70 percent of targets. A distinct but related document therefore helps clearly more than an unrelated one.
-
-\paragraph{The gradient is specific to the redesigned carry.} On the same cases the original Hebbian carry has no significant gain at any level, and only a small harm from other-source text. The graded pattern, its help and its harm, appear only with the redesigned carry.
-
-\paragraph{Robustness.} Title matching also links articles to date pages, such as an article mentioning ``August 1''. Removing the 18 targets whose related prime is a date page leaves every estimate within 0.003 of the full result, including the related against random contrast.
-
-\paragraph{A random article still helps, which the boundary suite does not explain.} In the boundary suite a carried state from earlier documents of the same source harmed perplexity at step 600, and this holds on Wikipedia itself, by 0.017 (not significant) for seed 42 and by 0.051 $[0.016, 0.084]$ for seed 43. Here an unrelated Wikipedia article helps. The setups differ in what is carried. Here the prime is one block of 1024 tokens, the opening of a single article. The boundary suite instead carries the decayed state of a chain of whole earlier documents, each read in eight slices. One reading is that a long accumulation of unrelated content adds interference, but on the confirmatory cases of Section~\ref{sec-confirmatory} a chain of up to ten Wikipedia articles helps more than one, so accumulation alone does not explain the harm. We treat the difference as an open finding. Both suites agree that text from another source harms, and the relatedness suite shows that among single primes the most related text helps most.
-
-\subsection{The carry does not accumulate}
-
-A carry that accumulated would help more each time it saw the same text. The repeat suite reads each of the 106 held-out SlimPajama documents ten times in a row with the carried state never reset, and compares later readings with earlier ones.
-
-\begin{table}[H]
-  \centering
-  \caption{Reading the same document repeatedly with the carry never reset, at step 600, 106 documents, gains in perplexity with 95 percent intervals.}
-  \label{tab-repeat}
-  \small
-  \begin{tabular}{lrr}
-    \toprule
-    Model & Second reading against first & Tenth against second \\
-    \midrule
-    Original Hebbian & $+0.001$ {\footnotesize [$-0.001$, $+0.002$]} & $+0.000$ {\footnotesize [$-0.001$, $+0.001$]} \\
-    Carry design, seed 42 & $+0.006$\sig {\footnotesize [$+0.003$, $+0.009$]} & $+0.000$ {\footnotesize [$-0.001$, $+0.001$]} \\
-    Carry design, seed 43 & $+0.008$\sig {\footnotesize [$+0.005$, $+0.012$]} & $-0.001$ {\footnotesize [$-0.002$, $+0.000$]} \\
-    \bottomrule
-  \end{tabular}
-\end{table}
-
-A second reading with the carried state helps slightly for the carry design, and every further reading adds nothing, although the carried state keeps growing, by a factor of about 3.4 from the second reading to the tenth (Table~\ref{tab-repeat}). Why this gain is so much smaller than the 0.103 of a same-document prime in the relatedness suite is not resolved. The two differ in how much text the state is built from, a whole document of up to 16{,}384 tokens against one block of 1024, and in what is scored, the whole document again against the next block of a new article. Together with the flat profile across the slices of a document, this shows that the carry passes on what the most recent text offers and gains nothing from further exposure to the same text.
-
-\subsection{Replication with a second seed}
-
-The full design was trained again to step 600 with a second training seed, 43, and was evaluated on the same held-out documents. The relatedness suite selects its cases with its own fixed seed, so both runs were measured on the same 200 Wikipedia cases, identical title for title. Table~\ref{tab-seeds} compares the two seeds.
-
-\begin{table}[H]
-  \centering
-  \caption{The carry design with two training seeds, gains in perplexity at step 600. A star marks a 95 percent interval that excludes zero.}
-  \label{tab-seeds}
-  \small
-  \begin{tabular}{lrr}
-    \toprule
-    Measure & Seed 42 & Seed 43 \\
-    \midrule
-    Between slices, same document & $+0.097$\sig & $+0.092$\sig \\
-    Into a different document (100 documents) & $-0.020$\sig & $-0.031$\sig \\
-    Within a slice & $+0.025$\sig & $+0.014$\sig \\
-    Lead over matched LoRA & $+0.234$\sig & $+0.214$\sig \\
-    Carry share of the previous slice in context & 4.0\% & 3.8\% \\
-    \midrule
-    Relatedness, same document & $+0.103$\sig & $+0.116$\sig \\
-    Relatedness, related article & $+0.085$\sig & $+0.083$\sig \\
-    Relatedness, random article & $+0.051$\sig & $+0.034$\sig \\
-    Relatedness, other source & $-0.067$\sig & $-0.046$\sig \\
-    Related against random & $+0.034$\sig & $+0.049$\sig \\
-    \bottomrule
-  \end{tabular}
-\end{table}
-
-Every result in Table~\ref{tab-seeds} replicates in sign and significance, and most in size. The cross-document harm is stronger with the second seed, worse on 84 percent of documents and significant on all six sources against four with the first. At step 400 the two seeds agree on the carry between slices, 0.062 in both, and on the lead over the baseline, 0.188 and 0.180, but not fully across documents, $-0.003$ and not significant for seed 42 against $-0.007$ and significant for seed 43.
-
-\subsection{Results on the confirmatory test set}
-\label{sec-confirmatory}
-
-\begin{table}[H]
-  \centering
-  \caption{Gains from the carry on the 200 confirmatory Wikipedia cases at step 600, against a reset carry, with the share of targets improved in brackets. Every gain has a 95 percent interval that excludes zero. The in-context condition reads the related prime in attention.}
-  \label{tab-confirmatory}
-  \small
-  \begin{tabular}{lrrr}
-    \toprule
-    Condition & Seed 42 & Seed 43 & Mixed probe, seed 42 \\
-    \midrule
-    Same document & $+0.105$ (0.89) & $+0.117$ (0.94) & $+0.117$ (0.94) \\
-    Related article & $+0.086$ (0.85) & $+0.086$ (0.86) & $+0.112$ (0.91) \\
-    Random article & $+0.055$ (0.74) & $+0.036$ (0.69) & $+0.101$ (0.89) \\
-    Other source & $-0.084$ (0.21) & $-0.059$ (0.24) & $+0.037$ (0.74) \\
-    Generic carry & $+0.071$ (0.80) & $+0.068$ (0.83) & $+0.115$ (0.92) \\
-    Chain of 1 article & $+0.054$ (0.76) & $+0.034$ (0.72) & $+0.104$ (0.93) \\
-    Chain of 10 articles & $+0.071$ (0.81) & $+0.060$ (0.80) & $+0.111$ (0.91) \\
-    Related article in context & $+0.321$ (0.46) & $+0.310$ (0.45) & $+0.357$ (0.46) \\
-    \bottomrule
-  \end{tabular}
-\end{table}
-
-\begin{table}[H]
-  \centering
-  \caption{Preregistered primary contrasts on the confirmatory cases, with Bonferroni-adjusted 98.75 percent intervals.}
-  \label{tab-confirmatory-headline}
-  \small
-  \begin{tabular}{lrr}
-    \toprule
-    Contrast & Seed 42 & Seed 43 \\
-    \midrule
-    Same document against generic & $+0.034$ {\footnotesize [$+0.025$, $+0.045$]} & $+0.049$ {\footnotesize [$+0.035$, $+0.064$]} \\
-    Related against generic & $+0.015$ {\footnotesize [$+0.006$, $+0.024$]} & $+0.018$ {\footnotesize [$+0.007$, $+0.029$]} \\
-    Related against random & $+0.031$ {\footnotesize [$+0.016$, $+0.045$]} & $+0.050$ {\footnotesize [$+0.036$, $+0.064$]} \\
-    Carry against in context & $-0.235$ {\footnotesize [$-0.641$, $+0.066$]} & $-0.224$ {\footnotesize [$-0.626$, $+0.076$]} \\
-    \bottomrule
-  \end{tabular}
-\end{table}
-
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.85\linewidth]{figures/F18_fresh_relatedness.pdf}
-  \caption{Gain from the carried text against a reset carry, on the 200 confirmatory Wikipedia cases at step 600, with 95 percent bootstrap intervals from 10{,}000 resamples. Filled markers are the carry design trained within documents, open markers the probe trained across documents. The in-context condition is omitted because its scale is about four times larger and it is not cleanly comparable.}
-  \label{fig-confirmatory}
-\end{figure}
-
-\paragraph{The gradient replicates.} On the confirmatory cases the ordering is the same as on the development cases, in both seeds (Table~\ref{tab-confirmatory}, Figure~\ref{fig-confirmatory}). The same article helps most, then a related article, then a random one, and text of another source harms, and every step of the ordering has an interval that excludes zero. Related against random is $+0.031$ and $+0.050$, close to the development values of $+0.034$ and $+0.049$.
-
-\paragraph{Part of the transfer is specific to the document.} The generic carry helps by about 0.07, more than a random article, so much of the gain after a Wikipedia article is a generic effect of having read Wikipedia. A related article still beats the generic carry, by 0.015 and 0.018, with adjusted intervals that exclude zero in both seeds (Table~\ref{tab-confirmatory-headline}). By the preregistered rule this allows the claim that some transfer is specific to the document. It is small, about 0.1 percent of perplexity, and the larger part of the gain is the generic one. What is specific is the relation between the prime and the target, since the related article is a different document, and because relatedness is defined by title mentions this part may rest partly on shared words.
-
-\paragraph{A longer chain adds gain, not harm.} Carrying more random Wikipedia articles before the target helps slightly more, from 0.054 after one article to 0.071 after ten for seed 42, and ten against one is $+0.017$ $[+0.009, +0.025]$ and $+0.026$ $[+0.018, +0.034]$. Harm therefore does not grow with the number of earlier documents, at least for whole articles of the same source, and the harm after a chain in the boundary suite is not explained by accumulation. After ten articles the gain, 0.071 and 0.060, is close to that of the generic carry, 0.071 and 0.068. With a decay of 0.9 the carried state after many articles is close to an average over them, so a plausible reading, not tested further, is that a long chain converges to the generic carry. By the preregistered rule the difference between the two suites remains open. What the two suites share is that text of another source harms.
-
-\paragraph{Attention on the prime is not cleanly comparable.} Placing the related article in attention lowers mean perplexity by 0.32, about four times the carry's gain, but it improves only 45 percent of targets. The carry has the lower perplexity on 57 and 58 percent of targets, and the mean difference between the two has an interval that includes zero. The per-target gains from attention, examined after the preregistered analysis, have a median of about $-0.14$ and a long upper tail reaching $+13.8$, so a related article in attention helps a few targets greatly and slightly harms most. That a related article in attention harms the typical target is surprising, and the condition differs from the others in more than the channel. It scores the target at positions 1024 to 2047 rather than from the start of the input, and the target's own fast weights are built on top of the prime. We therefore draw no conclusion from it beyond the preregistered one, that the mean difference between the carry and attention is not resolved.
-
-\paragraph{Within documents and against the control.} On the 73 confirmatory SlimPajama documents the carry between slices gives $+0.125$ and $+0.118$, and the lead over the matched LoRA-only model is $+0.257$ and $+0.233$, of which $+0.120$ and $+0.108$ remain with the fast weights switched off, consistent with the development results.
-
-\subsection{Training the carry across documents}
-\label{sec-mixed}
-
-\paragraph{The harm after other-source text disappears.} After text of another source the probe gains $+0.037$ where the within-document model loses $0.084$, a change of $+0.120$ $[+0.103, +0.140]$. The chain of ten articles gains $+0.041$ $[+0.028, +0.054]$ more, and the related article $+0.027$ $[+0.013, +0.041]$ more. These meet the preregistered rule for the claim that training across documents removes the harm, in a single-seed probe. The harm meant here is the harm after other-source text and after a chain on the confirmatory cases. The boundary suite, where the main models were harmed by a chain of SlimPajama documents, was not run on the probe.
-
-\paragraph{The carry becomes largely generic.} In the probe every condition gains about the same (Table~\ref{tab-confirmatory}). Related against the generic carry is $-0.002$ $[-0.007, +0.003]$, and the same article against the generic carry $+0.002$ $[-0.003, +0.007]$, so the part of the transfer that was specific to the document is gone. Within a document the carry between slices falls from $+0.125$ to $+0.073$, a change of $-0.052$ $[-0.078, -0.032]$. Other-source text still gains less, $+0.037$, so the carry is not independent of the source, but within Wikipedia it no longer distinguishes related from unrelated text. Training across documents thus trades the harm for a largely generic carry, and loses about 40 percent of the gain the carry gives within a document. This is one seed and one mixing ratio.
+For the gated carry, on the development set at step 600, the between-slice gain is significant on every source for both seeds, largest in relative terms on C4 (1.39 and 1.46 percent for seeds 42 and 43), Wikipedia (0.99 and 1.08 percent) and StackExchange (1.35 and 0.86 percent), and smallest on ArXiv, Github and Book (0.18 to 0.62 percent). Across documents of the same source its effect in the boundary suite is negative on every source, significantly so on four sources for seed 42 and on all six for seed 43.
 
 \section{Comparison of Results}
+\label{sec-compare}
 
-\subsection{Against the matched baseline}
+\subsection{Against the matched control}
 
-Both TTT models lead the LoRA-only control at every checkpoint (Table~\ref{tab-main}), the Hebbian model by 0.073 to 0.106 perplexity and the delta model by 0.191 to 0.232. Most of this lead is not test-time learning. A TTT model trains about 6.7 times as many parameters, and with its fast weights switched off its training gain already exceeds the control's. At step 600 the Hebbian model's lead of 0.106 splits into 0.069 of extra training gain, 0.034 within documents and 0.002 between slices, and the delta model's lead of 0.203 into 0.133, 0.058 and 0.012, so about two thirds is already present with the fast weights switched off in both, which points to the extra trainable capacity.
+Every TTT model leads the LoRA-only control at every checkpoint, the ungated Hebbian model by 0.073 to 0.106 perplexity, the ungated delta model by 0.191 to 0.232 and the gated carry by 0.188 to 0.234. Most of this lead is not test-time learning. A TTT model trains about 6.7 times as many parameters, and with its fast weights switched off its training gain already exceeds the control's. At step 600 the ungated Hebbian model's lead of 0.106 splits into 0.069 of extra training gain, 0.034 within slices and 0.002 between slices, and the ungated delta model's lead of 0.203 into 0.133, 0.058 and 0.012, so about two thirds is present with the fast weights switched off. For the gated carry about 0.11 of its 0.234 is extra training gain, and on the confirmatory holdout 0.120 and 0.108 of its leads of 0.257 and 0.233 remain with the fast weights off. The within-slice and between-slice gains are the measures that isolate the mechanism.
 
-\subsection{Original and redesigned carry, and the two update rules}
+\subsection{Against a parameter-matched control}
 
-The redesigned carry raises the gain between slices of a document from 0.014 and 0.002 for the original Hebbian design at steps 200 and 600 to 0.099 and 0.097, and it leads the matched baseline by 0.234 at step 600 against 0.106 for the original Hebbian model and 0.203 for the delta rule (Table~\ref{tab-design}). Within a slice the delta rule adapts more than the Hebbian rule, by 9 times at step 200 and 1.7 times at step 600. On the relatedness cases only the redesigned carry shows a gradient, while the original Hebbian carry has no significant gain at any level of relatedness (Table~\ref{tab-related}).
+The parameter-matched control measures the capacity effect directly (Table~\ref{tab-pmatched}). With the gated carry's architecture and trainable parameters but no fast-weight updates, its gain from fast weights is exactly zero, and it already leads the LoRA-only control by 0.146 on the development holdout and 0.158 on the confirmatory holdout. The gated carry still leads it at both seeds and on both holdouts, by 0.068 to 0.098, close to its own gain between slices. With its fast weights switched off the gated carry is slightly worse than the control, by 0.009 and 0.024, so training the fast weights does not buy better slow weights, and the gated carry's lead comes from using its fast weights at test time.
+
+\begin{table}[H]
+  \centering
+  \caption{The parameter-matched control at step 600, gains in perplexity with 95 percent bootstrap intervals. Positive values mean the second model has lower perplexity.}
+  \label{tab-pmatched}
+  \small
+  \begin{tabular}{lrr}
+    \toprule
+    Comparison & Development, 106 & Confirmatory, 73 \\
+    \midrule
+    Control against LoRA-only & $+0.146$ {\footnotesize [$+0.120$, $+0.181$]} & $+0.158$ {\footnotesize [$+0.125$, $+0.200$]} \\
+    Gated carry seed 42 against control & $+0.088$ {\footnotesize [$+0.064$, $+0.119$]} & $+0.098$ {\footnotesize [$+0.064$, $+0.142$]} \\
+    Gated carry seed 43 against control & $+0.068$ {\footnotesize [$+0.047$, $+0.094$]} & $+0.075$ {\footnotesize [$+0.046$, $+0.112$]} \\
+    Gated carry seed 42, fast weights off, against control & $-0.009$ {\footnotesize [$-0.017$, $-0.002$]} & \\
+    Gated carry seed 43, fast weights off, against control & $-0.024$ {\footnotesize [$-0.035$, $-0.015$]} & \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Gated and ungated carry, and the two update rules}
+
+The gated carry raises the gain between slices of a document from 0.014 and 0.002 for the ungated Hebbian model at steps 200 and 600 to 0.099 and 0.097, and from the ungated delta model's 0.012 at step 600. Its lead over the control at step 600, 0.234, and the ungated delta model's, 0.203, have overlapping intervals, so neither is shown to be ahead. Within a slice the delta rule adapts more than the Hebbian rule, by 9 times at step 200 and 1.7 times at step 600. On the relatedness cases only the gated carry shows a gradient, while the ungated Hebbian carry has no significant gain at any level of relatedness (Table~\ref{tab-related}).
 
 \subsection{Carry, attention and dynamic evaluation}
 
-Placing the preceding slice of the same document in attention lowers perplexity by 2.770, about 25 times the carry's gain of 0.110 (Section~\ref{ch-design}). On the confirmatory relatedness cases, attention on a related article has a larger mean gain than the carry but is not cleanly comparable (Section~\ref{sec-confirmatory}). Dynamic evaluation of the LoRA-only model, tuned on development cases, gains more than the carry on the same document and less after a related or unrelated article (Appendix~\ref{app-dyneval}). It is a different model with different slow weights, so it supports no comparison claim.
+Placing the preceding slice of the same document in attention lowers perplexity by 2.770, about 25 times the gated carry's gain of 0.110 on the same tokens (Section~\ref{ch-design}). On the confirmatory relatedness cases, attention on a related article has a larger mean gain than the carry but is not cleanly comparable (Section~\ref{sec-confirmatory}). Dynamic evaluation of the LoRA-only model, tuned on development cases, gains more than the carry on the same document and less after a related or unrelated article (Appendix~\ref{app-dyneval}). It is a different model with different slow weights, so it supports no comparison claim.
 
-The same mechanism, in the same model, helps on the continuation of the same document throughout training, transfers to a distinct but related document, and harms when the next text comes from another source or, in the boundary suite, follows a long chain of other documents. The relatedness suite turns this into a graded result, which replicates on preregistered confirmatory cases. The carry's benefit falls with relatedness, from the same document to a related article to an unrelated article of the same source, and it becomes harm for text from another source. Most of the gain after a Wikipedia article is generic, and a small part is specific to the document. A trained, gated fast-weight carry therefore lowers perplexity reliably after related text, by up to about one percent, still a little after unrelated text of the same source, and interferes with text of another source. This agrees with the swap result of Section~\ref{ch-q1}, where for the original Hebbian model a state primed on a different source made perplexity worse, and with the distraction by unrelated earlier documents that \citet{zhao2024analysing} find in attention. It also suggests that a carry would need a way to decide when to apply it, such as resetting on a change of topic, in the way a selective state-space model can learn to reset its state at a boundary \citep{gu2024mamba}.
+Taken together, the same mechanism in the same model helps on the continuation of the same document throughout training, transfers to a distinct but related document, and harms when the next text comes from another source or, in the boundary suite, follows a chain of other whole documents. The relatedness suite turns this into a graded result, which replicates on preregistered confirmatory cases. Most of the gain after a Wikipedia article is generic, and a small part is specific to the document. This agrees with the swap result of Section~\ref{ch-q1}, where a state primed on a different source made perplexity worse even for the ungated Hebbian model, and with the distraction by unrelated earlier documents that \citet{zhao2024analysing} find in attention. It also suggests that a carry needs a way to decide when to apply itself, such as resetting on a change of topic, in the way a selective state-space model can learn to reset its state at a boundary \citep{gu2024mamba}.
 
 % ======================================================================
 \chapter{DISCUSSION}
@@ -972,56 +1027,58 @@ The same mechanism, in the same model, helps on the continuation of the same doc
 
 \section{Relation to the update-rule literature}
 
-The delta rule's advantage over the Hebbian rule matches most of the literature, although \citet{mao2022finetuning} found the additive rule slightly ahead when fine-tuning GPT-2. An additive store saturates through interference and cannot overwrite stale associations \citep{schlag2021linear,yang2024deltanet}, and \citet{wang2026learning} find an error-correcting write better than In-Place TTT's additive one. Here the delta rule gives a within-document gain up to nine times larger, and only the Hebbian model collapses without the clip, as \citet{schlag2021linear} observe for the additive rule without normalisation. The gate closing on the Hebbian model echoes \citet{yang2024gla}, where an ungated additive accumulator trains poorly. The saturated clip also has a counterpart. Normalised reads, decays and the bounded transition of the delta rule keep a state in range as part of the update \citep{katharopoulos2020transformers,yang2024gla,yang2024deltanet}, whereas a clip applied at read time bounds it from outside and keeps only its direction.
+The delta rule's larger within-slice gain matches most of the literature, although \citet{mao2022finetuning} found the additive rule slightly ahead when fine-tuning GPT-2. An additive store saturates through interference and cannot overwrite stale associations \citep{schlag2021linear,yang2024deltanet}, and \citet{wang2026learning} find an error-correcting write better than In-Place TTT's additive one. Here the delta rule gives a within-slice gain up to nine times larger, and only the Hebbian model collapses without the clip, as \citet{schlag2021linear} observe for the additive rule without normalisation. The gate closing on the Hebbian model echoes \citet{yang2024gla}, where an ungated additive accumulator trains poorly. Yet for persistence the update rule matters little. The ungated carry gains little with either rule, and the gated carry, built on the weaker Hebbian rule, carries far more. The saturated clip also has a counterpart in the literature. Normalised reads, decays and the bounded transition of the delta rule keep a state in range as part of the update \citep{katharopoulos2020transformers,yang2024gla,yang2024deltanet}, whereas a clip applied at read time bounds it from outside and keeps only its direction.
 
 \section{Relation to persistence and continual learning}
 
-The naive carry has a fixed decay and no selectivity, and it receives no training signal across documents, since training sessions never cross a document boundary. Persistence mechanisms that work avoid this in different ways. The Recurrent Memory Transformer trains its memory through several segments \citep{bulatov2022rmt}, dynamic evaluation decays its updates towards the trained weights \citep{krause2018dynamic}, and gated and selective updates let a model choose what to keep \citep{gu2024mamba,yang2025gated}. The redesign adds a learned carry gate and training through the boundary between slices, but its main models, too, are never trained across documents. When a probe is trained across them, on a mix of same-source and other-source boundaries, the harm disappears but the carry stops distinguishing related from unrelated text. A plausible reading is that the probe found a carry that is harmless at both kinds of boundary more easily than one that tells them apart. Its harm after a long chain of documents in the boundary suite fits the continual-learning picture, in which a model that is never reset accumulates errors unless part of it is restored \citep{maharana2026continual}, and retention of an earlier write depends on how the later writes are made \citep{oneill2026continually}. The naive carry's null result also sits beside the finding of \citet{ouyang2026ttt} that the original In-Place TTT target does not improve RULER under matched training, which suggests that small gains from this layer depend heavily on what it writes.
+The ungated carry has a fixed decay, no selectivity and no training signal for what it writes. Persistence mechanisms that work avoid this in different ways. The Recurrent Memory Transformer trains its memory through several segments \citep{bulatov2022rmt}, dynamic evaluation decays its updates towards the trained weights \citep{krause2018dynamic}, and gated and selective updates let a model choose what to keep \citep{gu2024mamba,yang2025gated}. The gated carry adopts the first and third of these within documents, but its main models are never trained across documents. When a probe is trained across them, on a mix of same-source and other-source boundaries, the harm disappears but the carry stops distinguishing related from unrelated text. A plausible reading is that the probe found a carry that is harmless at both kinds of boundary more easily than one that tells them apart. The harm after a chain of documents in the boundary suite fits the continual-learning picture, in which a model that is never reset accumulates errors unless part of it is restored \citep{maharana2026continual}, and retention of an earlier write depends on how the later writes are made \citep{oneill2026continually}. The ungated carry's weak result also sits beside the finding of \citet{ouyang2026ttt} that the original In-Place TTT target does not improve RULER under matched training, which suggests that small gains from this layer depend heavily on what it writes.
 
 \section{Related versus unrelated text}
 
-The redesigned carry separates two questions that the original design left entangled. Whether a carried fast weight can lower perplexity on later text is answered yes, since it helps on the continuation of the same document once it is read through its own path and trained through. Whether it transfers beyond that document is answered by the relatedness gradient, which is the ordering already seen elsewhere. In pre-training, related earlier documents in attention help and unrelated ones distract \citep{zhao2024analysing}, test-time training on retrieved neighbours helps \citep{hardt2024test}, and a test-time update helps when its gradient is aligned with the main task and can hurt when it is not \citep{sun2020ttt,gandelsman2022ttt}. One reading, not tested here, is that a carry built from related text acts as an update aligned with the target and one built from another source as a misaligned one, with interference in shared weights \citep{french1999catastrophic} as a natural account of the harm.
+The results separate two questions. Whether a carried fast weight can lower perplexity on later text is answered yes, but substantially only when it is read through its own path and its write is trained for a later read. Whether it then transfers beyond the document is answered by the relatedness gradient, which is the ordering already seen elsewhere. In pre-training, related earlier documents in attention help and unrelated ones distract \citep{zhao2024analysing}, test-time training on retrieved neighbours helps \citep{hardt2024test}, and a test-time update helps when its gradient is aligned with the main task and can hurt when it is not \citep{sun2020ttt,gandelsman2022ttt}. One reading, not tested here, is that a carry built from related text acts as an update aligned with the target and one built from another source as a misaligned one, with interference in shared weights \citep{french1999catastrophic} as a natural account of the harm.
 
 Two further results fit the literature. That the carry does not accumulate with repeated reading resembles the levelling off of dynamic evaluation within a few thousand characters of in-distribution text \citep{krause2018dynamic}. And the far larger gain from placing the preceding text in attention matches the finding that full attention retrieves much better than test-time training \citep{tandon2025endtoend}, and the result for Generative Adapter, a weight update built in a forward pass, which reaches an F1 of 40.2 on multi-session conversations against 66.0 for prompting with the full history \citep{chen2024generative}.
 
 \section{Implications}
 
-Within the scope of these perplexity measurements, a carried fast weight is worth keeping across documents of the same source, most of all related ones, and should be reset when the source changes, while within a document attention remains far stronger. For research on persistent test-time learning, the results suggest that the write of a carried state has to be trained for a later read, and that this can work even when a read-time clip discards the state's magnitude. A training signal that spans document boundaries removes the harm in our probe, but at the cost of specificity, so such a signal needs a way to keep related and unrelated text apart, for example a learned reset or a gate that sees both documents.
+Within the scope of these perplexity measurements, a carried fast weight helps after related text and should be reset when the source changes. Across unrelated documents of the same source the evidence is mixed, since a single article opening helps and a chain of whole documents harms at step 600. Within a document, attention remains far stronger when the earlier text is available. For research on persistent test-time learning, the results suggest that the write of a carried state has to be trained for a later read, and that this can work even when a read-time clip discards the state's magnitude. A training signal that spans document boundaries removes the harm in our probe, but at the cost of specificity, so such a signal needs a way to keep related and unrelated text apart, for example a learned reset or a gate that sees both documents.
 
 \section{Limitations}
 \label{sec-limits}
 
-\paragraph{Capacity confound.} The TTT models train about 6.7 times as many parameters as the control. Most of their lead over the control is this extra capacity, and a control with matched parameter count, such as the same architecture trained with fast-weight updates disabled, would separate the two cleanly. It was not run for budget reasons. The within-document and between-slice gains are the measures that isolate the mechanism. The same confound applies to the redesign, whose training gain exceeds the control's by about 0.11 of its 0.234 lead.
+\paragraph{Capacity.} The TTT models train about 6.7 times as many parameters as the LoRA-only control, and most of their lead over it is this extra capacity. The parameter-matched control separates the two, but it was trained only to step 600 and for the gated-carry architecture, so the lead beyond capacity is measured at step 600 and not for the ungated models.
 
-\paragraph{Carry trained within documents only.} Every training session is one document, so the models learn to use a carried state between slices of a document but are never trained with a state carried from a different document. The cross-document result therefore measures whether a within-document carry transfers across documents. One probe trained on multi-document sessions is reported (Section~\ref{sec-mixed}), with one seed, one mixing ratio and sessions of five documents, so what such training learns in general is not established. The clip analysis in Section~\ref{ch-why} applies to both cases, since the clip saturates on every measurement regardless of how the state was built.
+\paragraph{Carry trained within documents only.} Every training session of the main models is one document, so they learn to use a carried state between slices of a document but are never trained with a state carried from a different document. The cross-document results therefore measure whether a within-document carry transfers across documents. Probes trained on multi-document sessions are reported at two seeds (Section~\ref{sec-mixed}), with one mixing ratio and sessions of five documents, so what such training learns in general is not established.
 
-\paragraph{Scale.} One model of 0.6 billion parameters is studied, against the 0.6 to 4 billion range planned in the proposal, with one seed per configuration except the carry design, which has two, and the probe trained across documents, which has one, and at most 600 of 1050 optimiser steps. The null result of the naive carry is stable across 200, 400 and 600 steps, which argues against undertraining within this budget. The redesigned carry's cross-document effect is not stable, falling from $+0.010$ at step 200 to $-0.020$ at step 600, so its value at the end of the schedule is unknown. Larger models and longer training are untested. Forgetting under sequential fine-tuning has been found to grow with model size \citep{li2024revisiting}, so the balance between transfer and interference may shift at larger scale.
+\paragraph{Scale.} One model of 0.6 billion parameters is studied. The gated carry, its ablation and the probes have two seeds, the ungated models one, and only one gated-carry run, at seed 42, is trained to the end of the schedule. The ungated carry's cross-document null result is stable across 200, 400 and 600 steps. The gated carry's cross-document effect moves from $+0.010$ at step 200 to $-0.020$ at step 600 and $-0.040$ at step 1049, consistently with its relatedness results becoming more specific, but the end-of-schedule result rests on one seed. Larger models are untested. Forgetting under sequential fine-tuning has been found to grow with model size \citep{li2024revisiting}, so the balance between transfer and interference may shift at larger scale.
 
-\paragraph{Evaluation set.} The held-out set has 106 documents, with only 6 from Book. For the original models the cross-document test rests on 24 documents, about four per source, so it can rule out only effects larger than about 0.01. The redesign's boundary suite uses 100.
+\paragraph{Evaluation set.} The development holdout has 106 documents, with only 6 from Book. For the ungated models the cross-document test rests on 24 documents, about four per source, so it can rule out only effects larger than about 0.01. The gated carry's boundary suite uses 100.
 
-\paragraph{No-clip probes.} The runs without the clip are short, 100 to 200 steps, and single-seed. They show that removing the clip does not rescue persistence early in training, not what a long unclipped run would converge to.
+\paragraph{Runs without the clip.} The runs without the clip are short, 100 to 200 steps, and single-seed. They show that removing the clip does not help early in training, not what a long unclipped run would converge to.
 
-\paragraph{Carry design.} The redesigned carry is replicated with two seeds, which is enough to show its results are not a chance result but not to report a spread, and it exists for the Hebbian rule only. Its ablation stops at step 200 with one seed, while the relatedness results come from step 600, so which changes the relatedness effects depend on is not tested. Its relatedness gradient is measured on Wikipedia only, with relatedness defined by title mentions, which includes word overlap, so the results do not separate relatedness in topic from shared words. The context comparison gives attention one previous slice, while the carry holds a decayed summary of all earlier slices, and the dynamic-evaluation baseline of Appendix~\ref{app-dyneval} uses a sparse form on the LoRA weights of a different model, the LoRA-only control. The in-context condition of Section~\ref{sec-confirmatory} reads the prime and the target as one input of 2048 tokens, so it also changes the position of the scored tokens, and its heavy-tailed gains were examined only after the preregistered analysis. The gap between the boundary and relatedness suites remains unexplained, since accumulation over a chain of Wikipedia articles does not reproduce it.
+\paragraph{Gated carry.} The gated carry is replicated with two seeds, which is enough to show its results are not a chance result but not to report a spread, and it exists for the Hebbian rule only. Its ablation stops at step 200, at two seeds whose partial variants rank differently, while the relatedness results come from step 600, so which components the relatedness effects depend on is not tested. Its relatedness gradient is measured on Wikipedia only, with relatedness defined by title mentions, which includes word overlap, so the results do not separate relatedness in topic from shared words. The context comparison gives attention one previous slice, while the carry holds a decayed summary of all earlier slices, and the dynamic-evaluation baseline of Appendix~\ref{app-dyneval} uses a sparse form on the LoRA weights of a different model, the LoRA-only control. The in-context condition of Section~\ref{sec-confirmatory} reads the prime and the target as one input of 2048 tokens, so it also changes the position of the scored tokens, and its heavy-tailed gains were examined only after the preregistered analysis. The gap between the boundary and relatedness suites remains unexplained, since accumulation over a chain of Wikipedia articles does not reproduce it.
 
-\paragraph{Development and confirmatory sets.} The carry design, the gate bias of $-6$ and the choice of suites were all settled while looking at the same 106 SlimPajama documents and 200 Wikipedia cases. The relatedness results, the generic, in-context and chain conditions, and the pooled gains of the main evaluation are replicated on the preregistered confirmatory set (Section~\ref{sec-confirmatory}). The boundary, repeat, context and per-source results rest on the development set only. The confirmatory SlimPajama holdout has 73 documents from five sources and none from Book, because the reserved pool of long documents is small, so per-source results of the main evaluation could not be checked. The confirmatory Wikipedia cases were checked against the Wikipedia part of the training data by shared ten-word sequences, which removed one case, but a check on the decoded first 700 tokens of each training document cannot rule out every overlap. The confirmatory set tests the same model checkpoints, so it guards against selecting results on the development cases but not against design choices that suit Wikipedia in general.
+\paragraph{Development and confirmatory sets.} The gated carry, its gate bias of $-6$ and the choice of suites were all settled while looking at the same 106 SlimPajama documents and 200 Wikipedia cases. The relatedness results, the generic, in-context and chain conditions, and the pooled gains of the main evaluation are replicated on the preregistered confirmatory set (Section~\ref{sec-confirmatory}). The boundary, repeat, context and per-source results rest on the development set only. The confirmatory SlimPajama holdout has 73 documents from five sources and none from Book, because the reserved pool of long documents is small, so per-source results of the main evaluation could not be checked. The confirmatory Wikipedia cases were checked against the Wikipedia part of the training data by shared ten-word sequences, which removed one case, but a check on the decoded first 700 tokens of each training document cannot rule out every overlap. The confirmatory set tests the same model checkpoints, so it guards against selecting results on the development cases but not against design choices that suit Wikipedia in general.
 
-\paragraph{Perplexity only.} All evidence is perplexity-based, and perplexity alone does not show how generated text or downstream behaviour changes \citep{meister2021beyond}. Lower loss can coexist with no behavioural recall \citep{song2026beyond}, and a written fact can leave a raised log-probability after the model stops using it \citep{oneill2026continually}, so our results support claims about stream and domain adaptation, not about memory. A diagnostic that withholds the earlier text, in the spirit of LongBench \citep{bai2023longbench}, would help separate what is carried from what the base model already knows. The RULER probes planned in the proposal were not run, and no behavioural test of retained information was attempted, consistent with the proposal's scope. Whether the carry helps where attention cannot reach, for example after the previous document has left the context, is not tested.
+\paragraph{Perplexity only.} All evidence is perplexity-based, and perplexity alone does not show how generated text or downstream behaviour changes \citep{meister2021beyond}. Lower loss can coexist with no behavioural recall \citep{song2026beyond}, and a written fact can leave a raised log-probability after the model stops using it \citep{oneill2026continually}, so our results support claims about stream and domain adaptation, not about memory. No retrieval benchmark such as RULER \citep{hsieh2024ruler} and no behavioural test of retained information was run, and a diagnostic that withholds the earlier text, in the spirit of LongBench \citep{bai2023longbench}, would help separate what is carried from what the base model already knows. Whether the carry helps where attention cannot reach, for example after the previous document has left the context, is not tested.
 
 % ======================================================================
 \chapter{CONCLUSION}
 \label{ch-conclusion}
 
-This report asked whether the fast weights that test-time training builds while reading one document can be carried into the next. In perplexity they can, if the carry is designed and trained for it. A gated carry trained only within documents transfers across documents according to their relatedness. Its benefit falls steadily from a related article to an unrelated one of the same source and turns to harm for text from another source, and this holds across two training seeds and on a confirmatory test set analysed by a plan fixed in advance. Most of the benefit is a generic effect of the source, and a small part is specific to the document. Training the carry across documents in a single-seed probe removes the harm but also that specific part. Repeated reading adds nothing beyond the second reading, and next to attention on the preceding text the carry recovers only about four percent of the gain.
+This report asked whether the fast weights that test-time training builds while reading one document can usefully be carried into the next. On Q1, removing the reset alone contributes little, at most 0.027 within a document and nothing measurable across documents, with either update rule. A gated carry, read through its own zero-initialised path and trained through the boundary between slices, lowers perplexity on the continuation of a document by about 1 percent, at two seeds and on the confirmatory holdout. Across documents its contribution is small and its sign depends on how the documents relate. It falls steadily from the same article to a related article to an unrelated one of the same source, and turns to harm for text from another source, and this holds across two training seeds and on a confirmatory test set analysed by a plan fixed in advance. Most of the benefit is a generic effect of the source, and a small part is specific to the relation between the documents. Training the carry across documents removes the harm but also that specific part, at two seeds. Trained to the end of its schedule, the carry becomes more specific: a related article's lead over the generic carry doubles while unrelated text harms more. Against a control with the same parameters, the gated carry still leads by 0.07 to 0.10. Repeated reading adds nothing beyond the second reading, and next to attention on the preceding text the carry recovers only about four percent of the gain.
 
-The naive carry, by contrast, contributes nothing measurable. The norm clip that keeps the fast weights stable is saturated on every measurement, so a carried state reaches the output only as a direction, and in short probes removing the clip made the model either collapse or switch the fast weights off. Giving the carry its own zero-initialised path and training it through the boundary between slices, two changes that in a single-seed ablation appear to work together, makes that direction useful. It raises the Hebbian carry between slices from at most 0.014 to about 0.1, with the clip still saturated. Along the way the attribution shows that most of a TTT model's lead over a matched baseline is already present with its fast weights switched off, which points to its extra trainable capacity, and that within a document the delta rule adapts 1.7 to 9 times more than the Hebbian rule. The open questions are whether the gradient holds to the end of training, beyond Wikipedia and at larger scale, why a long chain harms in one suite and helps in another, and how a model can learn when to apply its carry without losing what makes it specific to a document.
+On Q2, within a document the gated carry gains most, relative to perplexity, on C4, StackExchange and Wikipedia, and least on ArXiv, Github and Book, and the difficulty of a source does not predict the gain. Across documents the answer depends on the setup. At steps 600 and 1049 a chain of earlier documents of the same source harms, while on Wikipedia a single related or unrelated article helps.
+
+Along the way, the attribution shows that most of a TTT model's lead over a matched control is already present with its fast weights switched off, which points to its extra trainable capacity, that within a slice the delta rule adapts 1.7 to 9 times more than the Hebbian rule, and that the read-time clip that keeps the fast weights stable passes on only the direction of the state, so the gated carry works by shaping that direction rather than its size. The open questions are whether the gradient holds to the end of training, beyond Wikipedia and at larger scale, why a chain of documents harms in one suite and helps in another, and how a model can learn when to apply its carry without losing what makes it specific to a document.
 
 \section{Future research}
 
-For the carry design, the most direct extensions are further seeds to report a spread, the relatedness gradient on other domains and with measures of relatedness that separate topic from word overlap, a mechanism that decides when to apply the carry, and the same design for the delta rule. The most important missing checks are dynamic evaluation of the carry model itself with its carry switched off, training to the end of the schedule, further seeds and mixing ratios for training across documents, and a way to keep the document-specific part of the transfer when the carry is trained across boundaries. More broadly, the extensions are a parameter-matched control, dynamic evaluation on all weights, a carried state with a designed bound such as a normalised or gated memory, a learned rather than fixed decay of the carried state \citep{ravi2017optimization,yang2024gla}, training through document boundaries so that the carry receives a learning signal, and replication at larger scale with several seeds.
+For the gated carry, the most direct extensions are further seeds at the full schedule to report a spread, the relatedness gradient on other domains and with measures of relatedness that separate topic from word overlap, and the same design for the delta rule. The most important open question is how a carry trained across document boundaries can keep the document-specific part of the transfer, for example through a learned reset or a gate that sees both documents, which needs further mixing ratios. More broadly, the extensions are a parameter-matched control at the full schedule, dynamic evaluation of the gated-carry model itself, a carried state with a designed bound such as a normalised memory, a learned rather than fixed decay of the carried state \citep{ravi2017optimization,yang2024gla}, behavioural tests of what the carried state retains after the earlier text has left the context, and replication at larger scale.
 
 \section{Recommendations}
 
-Three recommendations follow from the results. A carried fast weight should be kept across documents of the same source, most of all related ones, and reset when the source changes. The write of a carried state should be trained for a later read, as the redesigned carry is, rather than left to the within-document objective. And a carry trained across document boundaries needs a way to keep related and unrelated text apart, such as a learned reset, since the probe trained without one lost its advantage on related text.
+Three recommendations follow from the results. A carried fast weight should be reset when the source of the text changes, and kept only where the earlier text is known to be related, since across unrelated documents of the same source the two suites disagree. The write of a carried state should be trained for a later read, rather than left to the within-document objective. And claims about persistent test-time learning should be tested on data fixed in advance, against a generic carry and an in-context baseline, because most of a perplexity gain can be generic.
 
 \cleardoublepage
 \phantomsection
@@ -1069,12 +1126,14 @@ Three recommendations follow from the results. A carried fast weight should be k
     Schedule & cosine over 1050 steps \\
     Training documents & 4000, 2048 to 16384 tokens \\
     Session strategy & one document, 2 to 6 slices of at least 1000 tokens \\
-    Seed & 42, and 43 for the second carry-design run \\
+    Seed & 42, and 43 for the second gated-carry run, the ablations and the probe \\
+    Parameter-matched control & gated-carry architecture, fast-weight updates disabled, to step 600 \\
+    Full-schedule run & gated carry, seed 42, to step 1049 \\
     Bootstrap resamples & 1000, and 10{,}000 on the confirmatory test set \\
     \midrule
-    Carry design (Section~\ref{sec-design-method}) & separate carry path and gate, zero-initialised scale \\
-    Carry design, training through the carry & window of 2 slices, detached at each optimiser step \\
-    Carry design, main gate bias at initialisation & $-6$ \\
+    Gated carry (Section~\ref{sec-design-method}) & separate carry path and gate, zero-initialised scale \\
+    Gated carry, training through the carry & window of 2 slices, detached at each optimiser step \\
+    Gated carry, main gate bias at initialisation & $-6$ \\
     Probe trained across documents (Section~\ref{sec-mixed}) & sessions of 5 documents, next from the same source with probability 0.5 \\
     \bottomrule
   \end{tabular}
@@ -1085,7 +1144,7 @@ Three recommendations follow from the results. A carried fast weight should be k
 
 \begin{table}[H]
   \centering
-  \caption{All pooled gaps with 95 percent bootstrap intervals and win rates.}
+  \caption{All pooled gaps of the ungated models with 95 percent bootstrap intervals and win rates.}
   \label{tab-full}
   \scriptsize
   \begin{tabular}{llrrr}
@@ -1143,7 +1202,7 @@ Three recommendations follow from the results. A carried fast weight should be k
 \section{Dynamic evaluation baseline}
 \label{app-dyneval}
 
-This baseline is reported for completeness and supports no claim in the main text. It runs on the LoRA-only model rather than on the carry model, so the two conditions also differ in their slow weights. It adapts the LoRA weights with Adam and no decay, unlike the method of \citet{krause2018dynamic}, and it was tuned on development cases.
+This baseline is reported for completeness and supports no claim in the main text. It runs on the LoRA-only model rather than on the gated-carry model, so the two conditions also differ in their slow weights. It adapts the LoRA weights with Adam and no decay, unlike the method of \citet{krause2018dynamic}, and it was tuned on development cases.
 
 The LoRA-only model at step 600 takes Adam steps on its 10.1 million LoRA parameters over each prime, reads the target, and is restored exactly before the next case, with updates made on 32-bit copies. Step size and number of steps were tuned on 40 further Wikipedia cases, disjoint from the 200 reported, separately for the same-document and the related-article gain, over step sizes from $3 \times 10^{-6}$ to $10^{-4}$ and 3, 10 or 30 steps. The best settings lie on a ridge of roughly constant step size times number of steps, and settings beyond it diverge. Tuned for a related article the best setting is $3 \times 10^{-5}$ with 3 steps, and tuned for the same document $3 \times 10^{-5}$ with 10 steps. A coarser first search with plain gradient descent did not bracket its optimum.
 
@@ -1151,7 +1210,7 @@ Tuned for a related article, dynamic evaluation lowers perplexity by 0.224 on th
 
 \begin{table}[H]
   \centering
-  \caption{The carry design against dynamic evaluation tuned for the related condition, on the same 200 Wikipedia targets at step 600. Each cell is the carry's gain minus dynamic evaluation's, in percent of log-perplexity, with a 95 percent bootstrap interval and the share of targets on which the carry gains more. Positive values favour the carry.}
+  \caption{The gated carry against dynamic evaluation tuned for the related condition, on the same 200 Wikipedia targets at step 600. Each cell is the carry's gain minus dynamic evaluation's, in percent of log-perplexity, with a 95 percent bootstrap interval and the share of targets on which the carry gains more. Positive values favour the carry.}
   \label{tab-dyneval}
   \small
   \begin{tabular}{lrr}

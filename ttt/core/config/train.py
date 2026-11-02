@@ -55,6 +55,9 @@ class TrainConfig:
 
     # False is the A1 ablation (every item starts from S_0 = 0), not a mode.
     session_training: bool = True
+    # False trains the TTT architecture with its fast weights never written:
+    # the parameter-matched control.
+    fast_weight_updates: bool = True
 
     seed: int = 42
     log_every: int = 10

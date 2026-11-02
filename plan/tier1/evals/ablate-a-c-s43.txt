@@ -1,0 +1,1 @@
+--checkpoint ablate-a-c-s43/step_200 --suites regimes,boundary --n-chain 20 --out-dir /home/suchitra/MyStuff/Persistent-TTT/results --flags update_rule=hebbian,state_aware_gate=false,limit_docs=4000,carry_gate=true,output_gate_bias_init=-6,seed=43,run_name=ablate-a-c-s43

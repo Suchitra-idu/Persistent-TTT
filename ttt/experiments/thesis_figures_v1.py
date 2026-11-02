@@ -332,12 +332,12 @@ def write_tables(estimates, correlates) -> None:
 CARRY_DESIGN = "hebbian-carry-b"
 CARRY_DESIGN_LONG = "hebbian-carry-600"
 CARRY_DESIGN_CASES = (
-    ("original Hebbian, step 200", "ttt-v1.1", 200),
-    ("original Hebbian, step 600", "ttt-v1.1", 600),
-    ("carry design, step 100", CARRY_DESIGN, 100),
-    ("carry design, step 200", CARRY_DESIGN, 200),
-    ("carry design, step 400", CARRY_DESIGN_LONG, 400),
-    ("carry design, step 600", CARRY_DESIGN_LONG, 600),
+    ("ungated carry, step 200", "ttt-v1.1", 200),
+    ("ungated carry, step 600", "ttt-v1.1", 600),
+    ("gated carry, step 100", CARRY_DESIGN, 100),
+    ("gated carry, step 200", CARRY_DESIGN, 200),
+    ("gated carry, step 400", CARRY_DESIGN_LONG, 400),
+    ("gated carry, step 600", CARRY_DESIGN_LONG, 600),
 )
 CARRY_DESIGN_MEASURES = (
     ("between_slices", "Carried from earlier slices\nof the same document"),
@@ -368,7 +368,7 @@ def carry_design_estimates() -> dict[tuple[str, str], object]:
 def carry_design_figure(estimates, path: Path) -> str:
     plt = _pyplot()
     fig, axes = plt.subplots(1, len(CARRY_DESIGN_MEASURES), figsize=(13, 4.2), squeeze=False)
-    colours = [SERIES[0] if label.startswith("plain") else SERIES[1] for label, _, _ in CARRY_DESIGN_CASES]
+    colours = [SERIES[0] if label.startswith("ungated") else SERIES[1] for label, _, _ in CARRY_DESIGN_CASES]
     markers = "ososDv"
     for ax, (measure, title) in zip(axes[0], CARRY_DESIGN_MEASURES):
         for y, (label, _, _) in enumerate(CARRY_DESIGN_CASES):
@@ -393,9 +393,9 @@ def carry_design_figure(estimates, path: Path) -> str:
 def carry_design_by_position(path: Path) -> str:
     plt = _pyplot()
     fig, ax = plt.subplots(figsize=(6.4, 3.8))
-    cases = (("original Hebbian, step 600", "ttt-v1.1", 600, SERIES[0], "o"),
-             ("carry design, step 200", CARRY_DESIGN, 200, MUTED, "D"),
-             ("carry design, step 600", CARRY_DESIGN_LONG, 600, SERIES[1], "v"))
+    cases = (("ungated carry, step 600", "ttt-v1.1", 600, SERIES[0], "o"),
+             ("gated carry, step 200", CARRY_DESIGN, 200, MUTED, "D"),
+             ("gated carry, step 600", CARRY_DESIGN_LONG, 600, SERIES[1], "v"))
     for label, run, step, colour, marker in cases:
         points = sorted((i, e.interval) for i, e in paper_analysis.position_estimates(
             _rows(run, step, "regime_slices"), rng=NumpyRng(0), n_boot=N_BOOT) if e.measure == "between_slices")
@@ -429,7 +429,7 @@ def carry_design_curve(estimates, path: Path) -> str:
         ax.fill_between(steps, [i.low for i in intervals], [i.high for i in intervals],
                         color=SERIES[1], alpha=0.18, linewidth=0)
         ax.plot(steps, [i.point for i in intervals], color=SERIES[1], marker="o", markersize=6,
-                linewidth=2, label="carry design, full evaluation")
+                linewidth=2, label="gated carry, full evaluation")
         ax.axhline(0, color=MUTED, linewidth=1)
         ax.set_title(title, loc="left", fontsize=9)
         ax.set_xlabel("training step")
@@ -448,9 +448,9 @@ def carry_design_curve(estimates, path: Path) -> str:
 
 # (label, run, raw rows, colour, marker, line style); the two carry seeds share a colour.
 RELATEDNESS_CASES = (
-    ("original Hebbian carry", "ttt-v1.1", "relatedness", MUTED, "o", "-"),
-    ("carry design, seed 42", CARRY_DESIGN_LONG, "relatedness", SERIES[1], "s", "-"),
-    ("carry design, seed 43", "hebbian-carry-600-s43", "relatedness", SERIES[1], "D", "--"),
+    ("ungated carry", "ttt-v1.1", "relatedness", MUTED, "o", "-"),
+    ("gated carry, seed 42", CARRY_DESIGN_LONG, "relatedness", SERIES[1], "s", "-"),
+    ("gated carry, seed 43", "hebbian-carry-600-s43", "relatedness", SERIES[1], "D", "--"),
     ("dynamic evaluation, tuned for related", CONTROL, "dyneval_related", SERIES[0], "^", "-"),
     ("dynamic evaluation, tuned for same document", CONTROL, "dyneval_self", CONTROL_COLOUR, "v", "--"),
 )
@@ -493,8 +493,8 @@ def relatedness_figure(estimates, path: Path) -> str:
 
 
 FRESH_CASES = (
-    ("carry design, seed 42", CARRY_DESIGN_LONG, SERIES[1], "s"),
-    ("carry design, seed 43", "hebbian-carry-600-s43", SERIES[1], "D"),
+    ("gated carry, seed 42", CARRY_DESIGN_LONG, SERIES[1], "s"),
+    ("gated carry, seed 43", "hebbian-carry-600-s43", SERIES[1], "D"),
     ("trained across documents, seed 42", "mixed-carry-600", SERIES[0], "o"),
 )
 FRESH_LEVELS = (
@@ -573,8 +573,8 @@ def _gain_differences(carry, dyn, arm: str) -> list[float]:
 
 def repeat_summary() -> list[str]:
     lines = ["model,measure,n_docs,delta_ppl,ci_low,ci_high,excludes_zero,win_rate"]
-    for label, run in (("original Hebbian", "ttt-v1.1"), ("carry design seed 42", CARRY_DESIGN_LONG),
-                       ("carry design seed 43", "hebbian-carry-600-s43")):
+    for label, run in (("ungated carry", "ttt-v1.1"), ("gated carry seed 42", CARRY_DESIGN_LONG),
+                       ("gated carry seed 43", "hebbian-carry-600-s43")):
         rows = _rows(run, 600, "repeat")
         estimates = evidence.repeat_trend(rows, rng=NumpyRng(0), n_boot=N_BOOT)
         first = [p for p in evidence.repeat_curve(rows, rng=NumpyRng(0), n_boot=N_BOOT)
@@ -600,10 +600,10 @@ def relatedness_table(estimates) -> list[str]:
 
 
 ABLATION_CASES = (
-    ("closed gate only (C)", "ablate-c-only"),
-    ("carry path, no training through it (A+C)", "ablate-a-c"),
-    ("training through it, no carry path (B+C)", "ablate-b-c"),
-    ("full design (A+B+C)", CARRY_DESIGN),
+    ("closed gate only, no carry path (C)", "ablate-c-only"),
+    ("separate path, not trained through (A+C)", "ablate-a-c"),
+    ("trained through, no separate path (B+C)", "ablate-b-c"),
+    ("gated carry (A+B+C)", CARRY_DESIGN),
 )
 ABLATION_MEASURES = (
     ("between_slices", "Carried from earlier slices\nof the same document"),

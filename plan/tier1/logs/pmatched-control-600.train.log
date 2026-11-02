@@ -1,0 +1,289 @@
+Note that running a local entrypoint in detached mode only keeps the last triggered Modal function alive after the parent process has been killed or disconnected.
+✓ Initialized. View run at 
+https://modal.com/apps/suchitra-idu/main/ap-hxzQxGVkMVZPfz1wOeewLm
+✓ Created objects.
+├── ✓ Uploaded /home/suchitra/MyStuff/Persistent-TTT/ttt/experiments/train_v1.py
+├── ✓ Uploaded PythonPackage:ttt
+└── ✓ Created Function train.
+
+[1ALoading weights:   0%|          | 0/311 [00:00<?, ?it/s]
+[1ALoading weights:   1%|          | 2/311 [00:00<00:36,  8.56it/s]
+[1ALoading weights:  12%|█▏        | 38/311 [00:00<00:01, 139.46it/s]
+[1ALoading weights:  38%|███▊      | 119/311 [00:00<00:00, 363.99it/s]
+[1ALoading weights:  61%|██████▏   | 191/311 [00:00<00:00, 480.19it/s]
+[1ALoading weights:  86%|████████▋ | 269/311 [00:00<00:00, 574.16it/s]Loading weights: 100%|██████████| 311/311 [00:00<00:00, 459.34it/s]
+wandb: [wandb.login()] Loaded credentials for https://api.wandb.ai from WANDB_API_KEY.
+wandb: Currently logged in as: suchitra-malimbada (suchitra-malimbada-nibm) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+wandb: Tracking run with wandb version 0.30.0
+wandb: Run data is saved locally in /root/wandb/run-20261102_153343-hk5plgwm
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run pmatched-control-600
+wandb: ⭐️ View project at https://wandb.ai/suchitra-malimbada-nibm/inplace-ttt
+wandb: 🚀 View run at https://wandb.ai/suchitra-malimbada-nibm/inplace-ttt/runs/hk5plgwm
+loading 'DKYoon/SlimPajama-6B'...
+  loaded 5,489,000 rows in 14.1s
+  labeled sources in 4.1s
+  split_holdout: 5,489,000 -> 5,474,000 rows in 20.1s
+  filter_sources: 5,474,000 -> 3,746,335 rows in 7.3s
+  shuffle: 3,746,335 -> 3,746,335 rows in 12.1s
+  prefilter: 3,746,335 -> 217,347 rows in 3.2s
+  balance: 217,347 -> 8,000 rows in 0.5s
+    tokenize: batch 1/4 (2,000/8,000 docs)
+    tokenize: batch 2/4 (4,000/8,000 docs)
+    tokenize: batch 3/4 (6,000/8,000 docs)
+    tokenize: batch 4/4 (8,000/8,000 docs)
+  tokenize: 8,000 -> 8,000 rows in 299.2s
+
+[1Afilter input_ids:   0%|          | 0/8000 [00:00<?, ? examples/s]
+[1Afilter input_ids:  12%|█▎        | 1000/8000 [00:00<00:01, 5364.74 examples/s]
+[1Afilter input_ids:  25%|██▌       | 2000/8000 [00:00<00:01, 5636.28 examples/s]
+[1Afilter input_ids:  38%|███▊      | 3000/8000 [00:00<00:00, 5773.31 examples/s]
+[1Afilter input_ids:  50%|█████     | 4000/8000 [00:00<00:00, 4808.67 examples/s]
+[1Afilter input_ids:  62%|██████▎   | 5000/8000 [00:01<00:00, 4363.57 examples/s]
+[1Afilter input_ids:  75%|███████▌  | 6000/8000 [00:01<00:00, 3931.61 examples/s]
+[1Afilter input_ids:  88%|████████▊ | 7000/8000 [00:01<00:00, 2980.71 examples/s]
+[1Afilter input_ids: 100%|██████████| 8000/8000 [00:02<00:00, 2064.94 examples/s]filter input_ids: 100%|██████████| 8000/8000 [00:02<00:00, 2999.22 examples/s]
+
+[1AFlattening the indices:   0%|          | 0/6567 [00:00<?, ? examples/s]
+[1AFlattening the indices:  15%|█▌        | 1000/6567 [00:00<00:00, 8479.34 examples/s]
+[1AFlattening the indices:  30%|███       | 2000/6567 [00:00<00:00, 6777.49 examples/s]
+[1AFlattening the indices:  46%|████▌     | 3000/6567 [00:00<00:00, 5795.39 examples/s]
+[1AFlattening the indices:  61%|██████    | 4000/6567 [00:00<00:00, 5395.49 examples/s]
+[1AFlattening the indices:  76%|███████▌  | 5000/6567 [00:00<00:00, 4799.63 examples/s]
+[1AFlattening the indices:  91%|█████████▏| 6000/6567 [00:01<00:00, 2962.00 examples/s]
+[1AFlattening the indices: 100%|██████████| 6567/6567 [00:02<00:00, 2144.97 examples/s]
+[1AFlattening the indices: 100%|██████████| 6567/6567 [00:02<00:00, 3168.40 examples/s]
+  drop_short: 8,000 -> 6,567 rows in 22.6s
+
+[1AFlattening the indices:   0%|          | 0/4000 [00:00<?, ? examples/s]
+[1AFlattening the indices:  25%|██▌       | 1000/4000 [00:00<00:00, 8066.29 examples/s]
+[1AFlattening the indices:  50%|█████     | 2000/4000 [00:00<00:00, 6060.08 examples/s]
+[1AFlattening the indices:  75%|███████▌  | 3000/4000 [00:00<00:00, 5294.29 examples/s]
+[1AFlattening the indices: 100%|██████████| 4000/4000 [00:01<00:00, 2695.84 examples/s]
+[1AFlattening the indices: 100%|██████████| 4000/4000 [00:01<00:00, 3343.61 examples/s]
+  rebalance: 6,567 -> 4,000 rows in 1.2s
+
+[1AFlattening the indices:   0%|          | 0/4000 [00:00<?, ? examples/s]
+[1AFlattening the indices:  50%|█████     | 2000/4000 [00:00<00:00, 9610.82 examples/s]
+[1AFlattening the indices:  75%|███████▌  | 3000/4000 [00:00<00:00, 9041.86 examples/s]
+[1AFlattening the indices: 100%|██████████| 4000/4000 [00:00<00:00, 4342.24 examples/s]
+[1AFlattening the indices: 100%|██████████| 4000/4000 [00:00<00:00, 5235.20 examples/s]
+  cap: 4,000 -> 4,000 rows in 0.8s
+Qwen/Qwen3-0.6B  dataset=slimpajama-6b
+hybrid: one doc per session; < 2100 tokens whole, else 2-6 slices of >= 1000 tokens
+4000 documents, 30,888,706 tokens, seed=42
+trainable lora 9.2M, new 14.8M, wdown 44.0M
+  first micro-step: 1,037 tokens, starting forward
+  first micro-step: forward+backward-eligible loss returned
+step 10/1050 loss 2.5614 |g| lora 0.997 wdown 1.771 new 0.000
+step 20/1050 loss 2.3535 |g| lora 0.898 wdown 1.384 new 0.000
+step 30/1050 loss 2.3114 |g| lora 0.519 wdown 1.129 new 0.000
+step 40/1050 loss 2.3470 |g| lora 0.345 wdown 0.657 new 0.000
+step 50/1050 loss 2.2835 |g| lora 0.337 wdown 0.688 new 0.000
+  checkpoint saved: pmatched-control-600/step_50
+source                  n_docs   n_tok  cold-c  cold-co    lora   fresh   Δlora  Δwithin  Δbetween
+RedPajamaArXiv               5  63,802   5.503    5.503   5.503   6.071  +0.567   +0.000    +0.000
+RedPajamaBook                5  81,920  25.689   25.689  25.689  30.587  +4.898   +0.000    +0.000
+RedPajamaC4                  5  15,656  35.717   35.717  35.717  41.754  +6.037   +0.000    +0.000
+RedPajamaGithub              5  32,713   3.594    3.594   3.594   3.818  +0.224   +0.000    +0.000
+RedPajamaStackExchange       5  13,718  13.547   13.547  13.547  15.062  +1.515   +0.000    +0.000
+RedPajamaWikipedia           5  35,035  20.738   20.738  20.738  24.502  +3.764   +0.000    +0.000
+  carry gain by slice (carried minus reset, + = carry helps): s2 +0.000 s3 +0.000 s4 +0.000 s5 +0.000 s6 +0.000 s7 +0.000 s8 +0.000 | trend +0.000
+  [eval] carry_gain_slice_1 0 carry_gain_slice_2 0 carry_gain_slice_3 0 carry_gain_slice_4 0 carry_gain_slice_5 0 carry_gain_slice_6 0 carry_gain_slice_7 0 carry_gain_trend 0 carry_off_ppl 14.94 carry_ppl 14.94 fresh_ppl 17 gap_between 0 gap_lora 2.059 gap_total 2.059 gap_within 0 lora_only_ppl 14.94 state_ratio_final 0
+step 60/1050 loss 2.0295 |g| lora 0.354 wdown 0.704 new 0.000
+step 70/1050 loss 2.2755 |g| lora 0.286 wdown 0.572 new 0.000
+step 80/1050 loss 2.2758 |g| lora 0.481 wdown 0.959 new 0.000
+step 90/1050 loss 2.3775 |g| lora 0.328 wdown 0.618 new 0.000
+step 100/1050 loss 2.4501 |g| lora 0.307 wdown 0.615 new 0.000
+  checkpoint saved: pmatched-control-600/step_100
+source                  n_docs   n_tok  cold-c  cold-co    lora   fresh   Δlora  Δwithin  Δbetween
+RedPajamaArXiv               5  63,802   5.424    5.424   5.424   6.071  +0.647   +0.000    +0.000
+RedPajamaBook                5  81,920  25.296   25.296  25.296  30.587  +5.291   +0.000    +0.000
+RedPajamaC4                  5  15,656  34.927   34.927  34.927  41.754  +6.827   +0.000    +0.000
+RedPajamaGithub              5  32,713   3.550    3.550   3.550   3.818  +0.268   +0.000    +0.000
+RedPajamaStackExchange       5  13,718  13.271   13.271  13.271  15.062  +1.791   +0.000    +0.000
+RedPajamaWikipedia           5  35,035  20.370   20.370  20.370  24.502  +4.131   +0.000    +0.000
+  carry gain by slice (carried minus reset, + = carry helps): s2 +0.000 s3 +0.000 s4 +0.000 s5 +0.000 s6 +0.000 s7 +0.000 s8 +0.000 | trend +0.000
+  [eval] carry_gain_slice_1 0 carry_gain_slice_2 0 carry_gain_slice_3 0 carry_gain_slice_4 0 carry_gain_slice_5 0 carry_gain_slice_6 0 carry_gain_slice_7 0 carry_gain_trend 0 carry_off_ppl 14.68 carry_ppl 14.68 fresh_ppl 17 gap_between 0 gap_lora 2.323 gap_total 2.323 gap_within 0 lora_only_ppl 14.68 state_ratio_final 0
+step 110/1050 loss 2.2137 |g| lora 0.370 wdown 0.728 new 0.000
+step 120/1050 loss 2.0798 |g| lora 0.282 wdown 0.587 new 0.000
+step 130/1050 loss 2.2327 |g| lora 0.339 wdown 0.684 new 0.000
+step 140/1050 loss 2.2952 |g| lora 0.336 wdown 0.658 new 0.000
+step 150/1050 loss 2.2248 |g| lora 0.369 wdown 0.747 new 0.000
+  checkpoint saved: pmatched-control-600/step_150
+source                  n_docs   n_tok  cold-c  cold-co    lora   fresh   Δlora  Δwithin  Δbetween
+RedPajamaArXiv               5  63,802   5.382    5.382   5.382   6.071  +0.689   +0.000    +0.000
+RedPajamaBook                5  81,920  25.071   25.071  25.071  30.587  +5.516   +0.000    +0.000
+RedPajamaC4                  5  15,656  34.646   34.646  34.646  41.754  +7.108   +0.000    +0.000
+RedPajamaGithub              5  32,713   3.525    3.525   3.525   3.818  +0.293   +0.000    +0.000
+RedPajamaStackExchange       5  13,718  13.138   13.138  13.138  15.062  +1.923   +0.000    +0.000
+RedPajamaWikipedia           5  35,035  20.183   20.183  20.183  24.502  +4.319   +0.000    +0.000
+  carry gain by slice (carried minus reset, + = carry helps): s2 +0.000 s3 +0.000 s4 +0.000 s5 +0.000 s6 +0.000 s7 +0.000 s8 +0.000 | trend +0.000
+  [eval] carry_gain_slice_1 0 carry_gain_slice_2 0 carry_gain_slice_3 0 carry_gain_slice_4 0 carry_gain_slice_5 0 carry_gain_slice_6 0 carry_gain_slice_7 0 carry_gain_trend 0 carry_off_ppl 14.55 carry_ppl 14.55 fresh_ppl 17 gap_between 0 gap_lora 2.453 gap_total 2.453 gap_within 0 lora_only_ppl 14.55 state_ratio_final 0
+step 160/1050 loss 2.5411 |g| lora 0.408 wdown 0.854 new 0.000
+step 170/1050 loss 2.3601 |g| lora 0.365 wdown 0.622 new 0.000
+step 180/1050 loss 2.2526 |g| lora 0.316 wdown 0.595 new 0.000
+step 190/1050 loss 2.3905 |g| lora 0.340 wdown 0.650 new 0.000
+step 200/1050 loss 2.5193 |g| lora 0.398 wdown 0.885 new 0.000
+  checkpoint saved: pmatched-control-600/step_200
+source                  n_docs   n_tok  cold-c  cold-co    lora   fresh   Δlora  Δwithin  Δbetween
+RedPajamaArXiv               5  63,802   5.358    5.358   5.358   6.071  +0.713   +0.000    +0.000
+RedPajamaBook                5  81,920  24.931   24.931  24.931  30.587  +5.656   +0.000    +0.000
+RedPajamaC4                  5  15,656  34.382   34.382  34.382  41.754  +7.372   +0.000    +0.000
+RedPajamaGithub              5  32,713   3.511    3.511   3.511   3.818  +0.307   +0.000    +0.000
+RedPajamaStackExchange       5  13,718  13.064   13.064  13.064  15.062  +1.998   +0.000    +0.000
+RedPajamaWikipedia           5  35,035  20.049   20.049  20.049  24.502  +4.452   +0.000    +0.000
+  carry gain by slice (carried minus reset, + = carry helps): s2 +0.000 s3 +0.000 s4 +0.000 s5 +0.000 s6 +0.000 s7 +0.000 s8 +0.000 | trend +0.000
+  [eval] carry_gain_slice_1 0 carry_gain_slice_2 0 carry_gain_slice_3 0 carry_gain_slice_4 0 carry_gain_slice_5 0 carry_gain_slice_6 0 carry_gain_slice_7 0 carry_gain_trend 0 carry_off_ppl 14.46 carry_ppl 14.46 fresh_ppl 17 gap_between 0 gap_lora 2.54 gap_total 2.54 gap_within 0 lora_only_ppl 14.46 state_ratio_final 0
+step 210/1050 loss 2.3278 |g| lora 0.354 wdown 0.655 new 0.000
+step 220/1050 loss 2.0402 |g| lora 0.367 wdown 0.636 new 0.000
+step 230/1050 loss 2.5531 |g| lora 0.349 wdown 0.657 new 0.000
+step 240/1050 loss 2.1398 |g| lora 0.313 wdown 0.530 new 0.000
+step 250/1050 loss 2.2315 |g| lora 0.351 wdown 0.593 new 0.000
+  checkpoint saved: pmatched-control-600/step_250
+source                  n_docs   n_tok  cold-c  cold-co    lora   fresh   Δlora  Δwithin  Δbetween
+RedPajamaArXiv               5  63,802   5.334    5.334   5.334   6.071  +0.737   +0.000    +0.000
+RedPajamaBook                5  81,920  24.854   24.854  24.854  30.587  +5.734   +0.000    +0.000
+RedPajamaC4                  5  15,656  34.239   34.239  34.239  41.754  +7.515   +0.000    +0.000
+RedPajamaGithub              5  32,713   3.496    3.496   3.496   3.818  +0.322   +0.000    +0.000
+RedPajamaStackExchange       5  13,718  12.990   12.990  12.990  15.062  +2.072   +0.000    +0.000
+RedPajamaWikipedia           5  35,035  19.949   19.949  19.949  24.502  +4.553   +0.000    +0.000
+  carry gain by slice (carried minus reset, + = carry helps): s2 +0.000 s3 +0.000 s4 +0.000 s5 +0.000 s6 +0.000 s7 +0.000 s8 +0.000 | trend +0.000
+  [eval] carry_gain_slice_1 0 carry_gain_slice_2 0 carry_gain_slice_3 0 carry_gain_slice_4 0 carry_gain_slice_5 0 carry_gain_slice_6 0 carry_gain_slice_7 0 carry_gain_trend 0 carry_off_ppl 14.4 carry_ppl 14.4 fresh_ppl 17 gap_between 0 gap_lora 2.607 gap_total 2.607 gap_within 0 lora_only_ppl 14.4 state_ratio_final 0
+step 260/1050 loss 2.1685 |g| lora 0.328 wdown 0.601 new 0.000
+step 270/1050 loss 2.4263 |g| lora 0.363 wdown 0.648 new 0.000
+step 280/1050 loss 2.3780 |g| lora 0.418 wdown 0.771 new 0.000
+step 290/1050 loss 2.2953 |g| lora 0.583 wdown 0.985 new 0.000
+step 300/1050 loss 2.3572 |g| lora 0.336 wdown 0.617 new 0.000
+  checkpoint saved: pmatched-control-600/step_300
+source                  n_docs   n_tok  cold-c  cold-co    lora   fresh   Δlora  Δwithin  Δbetween
+RedPajamaArXiv               5  63,802   5.322    5.322   5.322   6.071  +0.748   +0.000    +0.000
+RedPajamaBook                5  81,920  24.759   24.759  24.759  30.587  +5.829   +0.000    +0.000
+RedPajamaC4                  5  15,656  34.122   34.122  34.122  41.754  +7.632   +0.000    +0.000
+RedPajamaGithub              5  32,713   3.489    3.489   3.489   3.818  +0.329   +0.000    +0.000
+RedPajamaStackExchange       5  13,718  12.935   12.935  12.935  15.062  +2.127   +0.000    +0.000
+RedPajamaWikipedia           5  35,035  19.909   19.909  19.909  24.502  +4.593   +0.000    +0.000
+  carry gain by slice (carried minus reset, + = carry helps): s2 +0.000 s3 +0.000 s4 +0.000 s5 +0.000 s6 +0.000 s7 +0.000 s8 +0.000 | trend +0.000
+  [eval] carry_gain_slice_1 0 carry_gain_slice_2 0 carry_gain_slice_3 0 carry_gain_slice_4 0 carry_gain_slice_5 0 carry_gain_slice_6 0 carry_gain_slice_7 0 carry_gain_trend 0 carry_off_ppl 14.35 carry_ppl 14.35 fresh_ppl 17 gap_between 0 gap_lora 2.654 gap_total 2.654 gap_within 0 lora_only_ppl 14.35 state_ratio_final 0
+step 310/1050 loss 2.4569 |g| lora 0.309 wdown 0.548 new 0.000
+step 320/1050 loss 2.2713 |g| lora 0.366 wdown 0.651 new 0.000
+step 330/1050 loss 2.3024 |g| lora 0.380 wdown 0.662 new 0.000
+step 340/1050 loss 2.3036 |g| lora 0.298 wdown 0.545 new 0.000
+step 350/1050 loss 2.3404 |g| lora 0.327 wdown 0.572 new 0.000
+  checkpoint saved: pmatched-control-600/step_350
+source                  n_docs   n_tok  cold-c  cold-co    lora   fresh   Δlora  Δwithin  Δbetween
+RedPajamaArXiv               5  63,802   5.309    5.309   5.309   6.071  +0.762   +0.000    +0.000
+RedPajamaBook                5  81,920  24.697   24.697  24.697  30.587  +5.890   +0.000    +0.000
+RedPajamaC4                  5  15,656  34.041   34.041  34.041  41.754  +7.713   +0.000    +0.000
+RedPajamaGithub              5  32,713   3.484    3.484   3.484   3.818  +0.334   +0.000    +0.000
+RedPajamaStackExchange       5  13,718  12.909   12.909  12.909  15.062  +2.153   +0.000    +0.000
+RedPajamaWikipedia           5  35,035  19.848   19.848  19.848  24.502  +4.654   +0.000    +0.000
+  carry gain by slice (carried minus reset, + = carry helps): s2 +0.000 s3 +0.000 s4 +0.000 s5 +0.000 s6 +0.000 s7 +0.000 s8 +0.000 | trend +0.000
+  [eval] carry_gain_slice_1 0 carry_gain_slice_2 0 carry_gain_slice_3 0 carry_gain_slice_4 0 carry_gain_slice_5 0 carry_gain_slice_6 0 carry_gain_slice_7 0 carry_gain_trend 0 carry_off_ppl 14.32 carry_ppl 14.32 fresh_ppl 17 gap_between 0 gap_lora 2.688 gap_total 2.688 gap_within 0 lora_only_ppl 14.32 state_ratio_final 0
+step 360/1050 loss 2.1450 |g| lora 0.316 wdown 0.581 new 0.000
+step 370/1050 loss 2.2598 |g| lora 0.382 wdown 0.652 new 0.000
+step 380/1050 loss 2.1869 |g| lora 0.383 wdown 0.646 new 0.000
+step 390/1050 loss 2.5820 |g| lora 0.398 wdown 0.748 new 0.000
+step 400/1050 loss 2.1649 |g| lora 0.362 wdown 0.678 new 0.000
+  checkpoint saved: pmatched-control-600/step_400
+source                  n_docs   n_tok  cold-c  cold-co    lora   fresh   Δlora  Δwithin  Δbetween
+RedPajamaArXiv               5  63,802   5.300    5.300   5.300   6.071  +0.770   +0.000    +0.000
+RedPajamaBook                5  81,920  24.664   24.664  24.664  30.587  +5.923   +0.000    +0.000
+RedPajamaC4                  5  15,656  33.895   33.895  33.895  41.754  +7.859   +0.000    +0.000
+RedPajamaGithub              5  32,713   3.478    3.478   3.478   3.818  +0.340   +0.000    +0.000
+RedPajamaStackExchange       5  13,718  12.869   12.869  12.869  15.062  +2.193   +0.000    +0.000
+RedPajamaWikipedia           5  35,035  19.805   19.805  19.805  24.502  +4.696   +0.000    +0.000
+  carry gain by slice (carried minus reset, + = carry helps): s2 +0.000 s3 +0.000 s4 +0.000 s5 +0.000 s6 +0.000 s7 +0.000 s8 +0.000 | trend +0.000
+  [eval] carry_gain_slice_1 0 carry_gain_slice_2 0 carry_gain_slice_3 0 carry_gain_slice_4 0 carry_gain_slice_5 0 carry_gain_slice_6 0 carry_gain_slice_7 0 carry_gain_trend 0 carry_off_ppl 14.28 carry_ppl 14.28 fresh_ppl 17 gap_between 0 gap_lora 2.724 gap_total 2.724 gap_within 0 lora_only_ppl 14.28 state_ratio_final 0
+step 410/1050 loss 2.4071 |g| lora 0.416 wdown 0.691 new 0.000
+step 420/1050 loss 2.0753 |g| lora 0.339 wdown 0.576 new 0.000
+step 430/1050 loss 1.9613 |g| lora 0.346 wdown 0.575 new 0.000
+step 440/1050 loss 2.1297 |g| lora 0.424 wdown 0.729 new 0.000
+step 450/1050 loss 2.1408 |g| lora 0.453 wdown 0.774 new 0.000
+  checkpoint saved: pmatched-control-600/step_450
+source                  n_docs   n_tok  cold-c  cold-co    lora   fresh   Δlora  Δwithin  Δbetween
+RedPajamaArXiv               5  63,802   5.291    5.291   5.291   6.071  +0.780   +0.000    +0.000
+RedPajamaBook                5  81,920  24.620   24.620  24.620  30.587  +5.968   +0.000    +0.000
+RedPajamaC4                  5  15,656  33.821   33.821  33.821  41.754  +7.933   +0.000    +0.000
+RedPajamaGithub              5  32,713   3.475    3.475   3.475   3.818  +0.343   +0.000    +0.000
+RedPajamaStackExchange       5  13,718  12.858   12.858  12.858  15.062  +2.203   +0.000    +0.000
+RedPajamaWikipedia           5  35,035  19.765   19.765  19.765  24.502  +4.737   +0.000    +0.000
+  carry gain by slice (carried minus reset, + = carry helps): s2 +0.000 s3 +0.000 s4 +0.000 s5 +0.000 s6 +0.000 s7 +0.000 s8 +0.000 | trend +0.000
+  [eval] carry_gain_slice_1 0 carry_gain_slice_2 0 carry_gain_slice_3 0 carry_gain_slice_4 0 carry_gain_slice_5 0 carry_gain_slice_6 0 carry_gain_slice_7 0 carry_gain_trend 0 carry_off_ppl 14.26 carry_ppl 14.26 fresh_ppl 17 gap_between 0 gap_lora 2.747 gap_total 2.747 gap_within 0 lora_only_ppl 14.26 state_ratio_final 0
+step 460/1050 loss 2.2753 |g| lora 0.365 wdown 0.607 new 0.000
+step 470/1050 loss 2.2406 |g| lora 0.520 wdown 0.843 new 0.000
+step 480/1050 loss 2.1437 |g| lora 0.394 wdown 0.845 new 0.000
+step 490/1050 loss 2.0379 |g| lora 0.409 wdown 0.752 new 0.000
+step 500/1050 loss 2.2060 |g| lora 0.309 wdown 0.489 new 0.000
+  checkpoint saved: pmatched-control-600/step_500
+source                  n_docs   n_tok  cold-c  cold-co    lora   fresh   Δlora  Δwithin  Δbetween
+RedPajamaArXiv               5  63,802   5.283    5.283   5.283   6.071  +0.788   +0.000    +0.000
+RedPajamaBook                5  81,920  24.590   24.590  24.590  30.587  +5.997   +0.000    +0.000
+RedPajamaC4                  5  15,656  33.776   33.776  33.776  41.754  +7.978   +0.000    +0.000
+RedPajamaGithub              5  32,713   3.471    3.471   3.471   3.818  +0.347   +0.000    +0.000
+RedPajamaStackExchange       5  13,718  12.817   12.817  12.817  15.062  +2.245   +0.000    +0.000
+RedPajamaWikipedia           5  35,035  19.732   19.732  19.732  24.502  +4.770   +0.000    +0.000
+  carry gain by slice (carried minus reset, + = carry helps): s2 +0.000 s3 +0.000 s4 +0.000 s5 +0.000 s6 +0.000 s7 +0.000 s8 +0.000 | trend +0.000
+  [eval] carry_gain_slice_1 0 carry_gain_slice_2 0 carry_gain_slice_3 0 carry_gain_slice_4 0 carry_gain_slice_5 0 carry_gain_slice_6 0 carry_gain_slice_7 0 carry_gain_trend 0 carry_off_ppl 14.23 carry_ppl 14.23 fresh_ppl 17 gap_between 0 gap_lora 2.772 gap_total 2.772 gap_within 0 lora_only_ppl 14.23 state_ratio_final 0
+step 510/1050 loss 2.1214 |g| lora 0.437 wdown 0.753 new 0.000
+step 520/1050 loss 2.0401 |g| lora 0.419 wdown 0.644 new 0.000
+step 530/1050 loss 2.1834 |g| lora 0.326 wdown 0.521 new 0.000
+step 540/1050 loss 2.5387 |g| lora 0.356 wdown 0.575 new 0.000
+step 550/1050 loss 2.5172 |g| lora 0.404 wdown 0.718 new 0.000
+  checkpoint saved: pmatched-control-600/step_550
+source                  n_docs   n_tok  cold-c  cold-co    lora   fresh   Δlora  Δwithin  Δbetween
+RedPajamaArXiv               5  63,802   5.278    5.278   5.278   6.071  +0.793   +0.000    +0.000
+RedPajamaBook                5  81,920  24.578   24.578  24.578  30.587  +6.009   +0.000    +0.000
+RedPajamaC4                  5  15,656  33.734   33.734  33.734  41.754  +8.020   +0.000    +0.000
+RedPajamaGithub              5  32,713   3.468    3.468   3.468   3.818  +0.349   +0.000    +0.000
+RedPajamaStackExchange       5  13,718  12.801   12.801  12.801  15.062  +2.261   +0.000    +0.000
+RedPajamaWikipedia           5  35,035  19.703   19.703  19.703  24.502  +4.799   +0.000    +0.000
+  carry gain by slice (carried minus reset, + = carry helps): s2 +0.000 s3 +0.000 s4 +0.000 s5 +0.000 s6 +0.000 s7 +0.000 s8 +0.000 | trend +0.000
+  [eval] carry_gain_slice_1 0 carry_gain_slice_2 0 carry_gain_slice_3 0 carry_gain_slice_4 0 carry_gain_slice_5 0 carry_gain_slice_6 0 carry_gain_slice_7 0 carry_gain_trend 0 carry_off_ppl 14.22 carry_ppl 14.22 fresh_ppl 17 gap_between 0 gap_lora 2.786 gap_total 2.786 gap_within 0 lora_only_ppl 14.22 state_ratio_final 0
+step 560/1050 loss 2.4051 |g| lora 0.411 wdown 0.715 new 0.000
+step 570/1050 loss 2.5545 |g| lora 0.447 wdown 0.729 new 0.000
+step 580/1050 loss 2.4530 |g| lora 0.380 wdown 0.603 new 0.000
+step 590/1050 loss 2.3014 |g| lora 0.352 wdown 0.558 new 0.000
+step 600/1050 loss 2.1784 |g| lora 0.493 wdown 0.796 new 0.000
+  checkpoint saved: pmatched-control-600/step_600
+Stopping app - user stopped from CLI.
+[1;34mwandb[0m: 
+[1;34mwandb[0m: 🚀 View run [33mpmatched-control-600[0m at: [34mhttps://wandb.ai/suchitra-malimbada-nibm/inplace-ttt/runs/hk5plgwm[0m
+[1;34mwandb[0m: Find logs at: [1;35mwandb/run-20261102_153343-hk5plgwm/logs[0m
+╭───────────────────── Traceback (most recent call last) ──────────────────────╮
+│ /home/suchitra/MyStuff/Persistent-TTT/ttt/experiments/train_v1.py:155 in     │
+│ main                                                                         │
+│                                                                              │
+│   154 def main(flags: str = ""):                                             │
+│ ❱ 155 │   train.spawn(invocation=cli.invocation(), **cli.parse_flags(flags)) │
+│   156                                                                        │
+│                                                                              │
+│ /home/suchitra/MyStuff/Persistent-TTT/.venv/lib/python3.14/site-packages/mod │
+│ al/_object.py:49 in wrapped                                                  │
+│                                                                              │
+│    48 │   │   await self.hydrate()                                           │
+│ ❱  49 │   │   return await method(self, *args, **kwargs)                     │
+│    50                                                                        │
+│                                                                              │
+│ /home/suchitra/MyStuff/Persistent-TTT/.venv/lib/python3.14/site-packages/mod │
+│ al/_functions.py:2424 in get                                                 │
+│                                                                              │
+│   2423 │   │   """                                                           │
+│ ❱ 2424 │   │   return await self._invocation().poll_function(timeout=timeout │
+│   2425                                                                       │
+│                                                                              │
+│ /home/suchitra/MyStuff/Persistent-TTT/.venv/lib/python3.14/site-packages/mod │
+│ al/_functions.py:350 in poll_function                                        │
+│                                                                              │
+│    349 │   │                                                                 │
+│ ❱  350 │   │   return await _process_result(                                 │
+│    351 │   │   │   response.outputs[0].result, response.outputs[0].data_form │
+│                                                                              │
+│ /home/suchitra/MyStuff/Persistent-TTT/.venv/lib/python3.14/site-packages/mod │
+│ al/_utils/function_utils.py:574 in _process_result                           │
+│                                                                              │
+│   573 │   │                                                                  │
+│ ❱ 574 │   │   raise RemoteError(result.exception)                            │
+│   575                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────╯
+RemoteError
