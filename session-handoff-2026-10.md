@@ -18,10 +18,10 @@ resume without the chat history. Source of truth for numbers is `results/`.
 ## Infrastructure facts
 
 - Environment is the project's `.venv` (created 2026-11-01, Python 3.14, CPU torch 2.15, `pip install
-  -e ".[dev]"`). Launch with `.venv/bin/modal`. No Modal or W&B credentials on this machine yet.
-- Modal workspace `aiteera-llc`, volume `ttt-checkpoints`. The `suchitra-idu` workspace has a
+  -e ".[dev]"`). Launch with `.venv/bin/modal`. Modal profiles `vihanganoob123` (active) and `suchitra-idu`; W&B entity `suchitra-malimbada-nibm`, project `inplace-ttt`.
+- Carry runs, LoRA-only and `mixed-carry-600` are on the `vihanganoob123` volume `ttt-checkpoints`. The `suchitra-idu` workspace has a
   different volume; both contain a `ttt-v1.1` folder holding different runs.
-- Hebbian `ttt-v1.1` checkpoints after step 650 are from an older run; excluded.
+- Hebbian `ttt-v1.1` (thesis) is on the `suchitra-idu` volume: steps 50–650 are `NoFreezheb` (W&B `6bh23t5l`, no LoRA freeze), checked by file timestamps 2026-11-02; later steps are from an older run, excluded. The `vihanganoob123` volume's `ttt-v1.1` is an unrelated June run.
 - Launch detached: `setsid nohup ... modal run --detach ttt/experiments/train_v1.py --flags ... &`
   and a detached watcher script that stops the app after the target checkpoint.
 - Always `save_every=50` for experimental runs (two runs were lost to save_every=200).

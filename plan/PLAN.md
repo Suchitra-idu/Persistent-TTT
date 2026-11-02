@@ -168,7 +168,7 @@ Owner is the author unless marked (Claude).
 - [x] 2026-11-01 Thesis condensed (22k to 17k words): four contributions; literature review 6.7k to 2.8k words; Q2 and the capacity section condensed; dynamic evaluation moved to an appendix with no comparison claim
 
 ### A. Set-up (week 1)
-- [x] 1. Check LR schedule totals in W&B [0.5]. 2026-11-02: control, delta, original Hebbian (`NoFreezheb`) and carry s42 log identical LRs (1,050 steps); s43 has 1,048 (seed picks other documents). Open: confirm the `ttt-v1.1` checkpoints are `NoFreezheb`'s, not `freeze50,Hebbian`'s (LoRA frozen after step 50), by comparing LoRA weights at steps 50 and 600
+- [x] 1. Check LR schedule totals in W&B [0.5]. 2026-11-02: control, delta, original Hebbian (`NoFreezheb`) and carry s42 log identical LRs (1,050 steps); s43 has 1,048 (seed picks other documents). The `ttt-v1.1` checkpoints the thesis used (`suchitra-idu` volume, where its evidence bundles live) are `NoFreezheb`'s: every adapter from step 50 to 650 was written 2026-09-15 07:29–08:54 UTC, inside that run (W&B `6bh23t5l`, created 07:15 UTC, 657 steps); `freeze50,Hebbian`'s 09-14 files were overwritten. LoRA moves 7.6% between steps 50 and 600, so it was not frozen
 - [x] 2. Commit all code, thesis and results (tag `fresh-pass` on the Tier 1 code commit instead)
 - [ ] 3. Ask Prof. Yapa (reader, co-author if contributing) [0.3]
 - [ ] 4. `plan/PREREGISTRATION.md` written and committed 2026-11-02; **push still needed** (no GitHub credentials on this machine) before any fresh run [1.2]
@@ -183,7 +183,7 @@ Owner is the author unless marked (Claude).
 - [x] 11. Unit tests with fakes, comment-budget test, local smoke runs (strategy on production flags; case builder on real shard 2)
 
 ### C. Runs (week 2)
-- [ ] 12. Running since 2026-11-02 09:08 (app `ap-Upelq6cp2A7B6S7fynJTUJ`, W&B `s0xqfoab`, commit 9a31954); train `mixed-carry-600` (seed 42, `save_every=50`, detached watcher that stops it after step 600) [1.5]
+- [x] 12. Trained `mixed-carry-600` 2026-11-02 09:08–10:50 (app `ap-Upelq6cp2A7B6S7fynJTUJ`, W&B `s0xqfoab`, commit 9a31954, seed 42); `step_600` saved, run stopped at step 631, no later checkpoint written [1.5]
 - [ ] 13. Approve cost; run the fresh pass on both seeds' step-600 checkpoints and `mixed-carry-600` from the tagged commit [1.1 to 1.5]
 - [ ] 14. Analyse exactly as preregistered; regenerate `results/paper/`; update `FINDINGS.md`
 
