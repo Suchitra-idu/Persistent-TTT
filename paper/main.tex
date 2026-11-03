@@ -276,45 +276,17 @@ All models start from the pretrained Qwen3-0.6B model. TTT layers replace the ML
 
 \subsection{In-Place TTT on the MLP down-projection}
 
-Every transformer block applies a position-wise feed-forward MLP after attention \citep{vaswani2017attention}, and In-Place TTT \citep{feng2026inplace} uses the final, down-projection matrix of this MLP as its fast weight. Let $z \in \mathbb{R}^{d_{ff}}$ be the gated activation of a transformer MLP and $W_0 \in \mathbb{R}^{d \times d_{ff}}$ its down-projection. In-Place TTT adds a fast weight $S$ of the same shape, built during the forward pass, and a learned scalar gate $g(h) = \sigma(w_g^\top h + b_g)$ computed from the layer input $h$,
+Every transformer block applies a position-wise feed-forward MLP after attention \citep{vaswani2017attention}, and In-Place TTT \citep{feng2026inplace} uses the final, down-projection matrix of this MLP as its fast weight. Let $z \in \mathbb{R}^{d_{ff}}$ be the gated activation of a transformer MLP and $W_{\mathrm{down}} \in \mathbb{R}^{d \times d_{ff}}$ its down-projection. In-Place TTT adds a fast weight $S$ of the same shape, built during the forward pass, and a learned scalar gate $g(h) = \sigma(w_g^\top h + b_g)$ computed from the layer input $h$,
 \begin{equation}
-  \mathrm{out} = W_0 z + g(h)\, \eta\, S z .
+  \mathrm{out} = W_{\mathrm{down}} z + g(h)\, \eta\, S z .
   \label{eq-out}
 \end{equation}
 The fast weight is written in chunks of $C$ tokens. For chunk $k$ the layer forms a target $V_k$ from a causal depthwise convolution of the normalised hidden states followed by a learned projection $W_{\mathrm{target}}$. $W_{\mathrm{target}}$ is zero-initialised, so every TTT layer is identical to the base MLP at the start of training. Chunk $k$ reads only the state accumulated from strictly earlier chunks, which keeps the layer causal. Figure~\ref{fig-arch} shows the layer.
 
 \begin{figure}[H]
   \centering
-  \begin{tikzpicture}[
-      node distance=7mm and 9mm,
-      box/.style={draw, rounded corners=2pt, minimum height=8mm, minimum width=22mm, align=center, font=\small},
-      fast/.style={box, fill=blue!8},
-      op/.style={draw, circle, inner sep=1pt, font=\small},
-      >={Stealth[length=2mm]}]
-    \node[box] (h) {hidden $h$};
-    \node[box, right=of h] (gu) {gate and up\\projections};
-    \node[box, right=of gu] (z) {activation $z$};
-    \node[box, right=of z] (w0) {$W_0 z$};
-    \node[fast, below=of z] (s) {fast weight $S$\\$\eta\, S z$};
-    \node[box, below=of h] (v) {target $V$\\conv, $W_{\mathrm{target}}$};
-    \node[box, below=of gu, yshift=-14mm] (g) {gate $g(h)$};
-    \node[op, right=of s, xshift=2mm] (mul) {$\times$};
-    \node[op, right=of w0, xshift=-2mm] (add) {$+$};
-    \node[box, right=of add] (out) {output};
-    \draw[->] (h) -- (gu);
-    \draw[->] (gu) -- (z);
-    \draw[->] (z) -- (w0);
-    \draw[->] (z) -- (s);
-    \draw[->] (h) -- (v);
-    \draw[->] (v) -- node[below, font=\scriptsize] {write per chunk} (s);
-    \draw[->] (h) |- (g);
-    \draw[->] (s) -- (mul);
-    \draw[->] (g) -| (mul);
-    \draw[->] (mul) |- (add);
-    \draw[->] (w0) -- (add);
-    \draw[->] (add) -- (out);
-  \end{tikzpicture}
-  \caption{An In-Place TTT layer. The fast weight $S$ is written from the target $V$ and the activation $z$ one chunk at a time, and its contribution is scaled by a learned gate before it is added to the frozen-architecture path $W_0 z$.}
+  \includegraphics[width=\linewidth]{figures/D1_gated_carry_layer.pdf}
+  \caption{A TTT layer with the gated carry. In-Place TTT consists of the pretrained path $W_{\mathrm{down}} z$ and the in-slice fast weight $S_{\mathrm{in}}$ (blue), which is written chunk by chunk from the target $V$ and the activation $z$ and read through the gate $g$. The gated carry of Section~\ref{sec-design-method} adds the carried state (orange), folded in at the end of each slice and read through its own clip, gate $g_c$ and scale $\alpha$. With $\alpha = 0$ at initialisation, the layer starts as the In-Place TTT layer.}
   \label{fig-arch}
 \end{figure}
 
@@ -342,21 +314,7 @@ and the next item starts from $S_{\mathrm{carried}}$ instead of from zero. This 
 
 \begin{figure}[H]
   \centering
-  \begin{tikzpicture}[
-      doc/.style={draw, rounded corners=2pt, minimum height=7mm, minimum width=20mm, font=\small},
-      >={Stealth[length=2mm]}]
-    \node[font=\small, anchor=east] at (-0.4,0) {reset (In-Place TTT)};
-    \foreach \i in {1,2,3} {
-      \node[doc] (a\i) at ({2.8*(\i-1)+1.2},0) {document \i};
-      \node[font=\scriptsize] at ({2.8*(\i-1)+1.2},-0.65) {$S$ starts at $0$};
-    }
-    \node[font=\small, anchor=east] at (-0.4,-2) {carried (this report)};
-    \foreach \i in {1,2,3} {
-      \node[doc, fill=blue!8] (b\i) at ({2.8*(\i-1)+1.2},-2) {document \i};
-    }
-    \draw[->, thick, blue!60!black] (b1) -- node[above, font=\scriptsize] {$S_{\mathrm{carried}}$} (b2);
-    \draw[->, thick, blue!60!black] (b2) -- node[above, font=\scriptsize] {$S_{\mathrm{carried}}$} (b3);
-  \end{tikzpicture}
+  \includegraphics[width=\linewidth]{figures/D3_reset_vs_carry.pdf}
   \caption{Resetting the fast weight at each document, as In-Place TTT does, against carrying it forward with an exponential moving average.}
   \label{fig-persist}
 \end{figure}
@@ -367,7 +325,7 @@ Two mechanisms keep the fast weights stable. A Frobenius norm clip rescales the 
 
 \subsection{Training objective and parameters}
 
-All models are trained with the standard next-token cross-entropy. LoRA adapters \citep{hu2022lora} are trained in every model, so that the TTT models and the control differ only in the TTT layers. The TTT models additionally train the down-projection $W_0$ of the TTT layers and the new modules (target projection, convolution and gate). Counted from the layer shapes of Qwen3-0.6B, this gives about 68.0 million trainable parameters for a TTT model (9.2 million LoRA, 44.0 million in the 14 down-projections, 14.8 million in the new modules) against about 10.1 million for the LoRA-only control. This difference matters for interpreting the results and is discussed in Sections~\ref{sec-compare} and~\ref{sec-limits}.
+All models are trained with the standard next-token cross-entropy. LoRA adapters \citep{hu2022lora} are trained in every model, so that the TTT models and the control differ only in the TTT layers. The TTT models additionally train the down-projection $W_{\mathrm{down}}$ of the TTT layers and the new modules (target projection, convolution and gate). Counted from the layer shapes of Qwen3-0.6B, this gives about 68.0 million trainable parameters for a TTT model (9.2 million LoRA, 44.0 million in the 14 down-projections, 14.8 million in the new modules) against about 10.1 million for the LoRA-only control. This difference matters for interpreting the results and is discussed in Sections~\ref{sec-compare} and~\ref{sec-limits}.
 
 All runs use LoRA of rank 16 with $\alpha = 32$ and dropout 0.05, a LoRA learning rate of $10^{-5}$, AdamW, 16 gradient accumulation steps, a warmup of 2 percent of steps, cosine decay over the full epoch of 1050 optimiser steps, and seed 42. TTT runs train their down-projections at $3 \times 10^{-5}$ and their new modules at $6 \times 10^{-2}$. Checkpoints at steps 200, 400 and 600 are evaluated, and one gated-carry run at seed 42 is trained to the end of the schedule, which the data ends at step 1049. Because the epoch length depends only on the data and the session strategy, all seed-42 runs share the same 1050-step schedule and data order. Seed 43 selects different documents, giving 1048 steps, and the probes of Section~\ref{sec-mixed} keep the documents and step count of their seed but group them into different sessions. Appendix~\ref{app-hparams} lists every setting.
 
@@ -378,7 +336,7 @@ Simply starting each item from the carried state, the ungated carry, leaves thre
 
 \paragraph{A separate carry path.} The carried state is read through its own term with its own clip, gate and scale,
 \begin{equation}
-  \mathrm{out} = W_0 z + g(h)\, \eta\, S_{\mathrm{in}} z + \alpha\, g_c(h)\, \eta\, \mathrm{clip}(S_{\mathrm{carried}})\, z ,
+  \mathrm{out} = W_{\mathrm{down}} z + g(h)\, \eta\, S_{\mathrm{in}} z + \alpha\, g_c(h)\, \eta\, \mathrm{clip}(S_{\mathrm{carried}})\, z ,
 \end{equation}
 where $S_{\mathrm{in}}$ is the state built inside the current slice, $g_c$ is a second gate and $\alpha$ is a learnable scalar initialised to zero. As with the zero-initialised factor of LoRA \citep{hu2022lora}, the layer is therefore exactly the In-Place TTT layer at initialisation, and the carried term enters only if training finds it useful.
 
@@ -411,7 +369,7 @@ Each document is cut into 8 equal slices and measured in four conditions (Table~
     \toprule
     Condition & LoRA & Fast-weight updates & Carried between slices \\
     \midrule
-    base & off & off, pretrained $W_0$ & no \\
+    base & off & off, pretrained $W_{\mathrm{down}}$ & no \\
     TTT off & on & off & no \\
     TTT, reset per slice & on & on & no \\
     TTT, carried & on & on & yes \\
@@ -421,7 +379,7 @@ Each document is cut into 8 equal slices and measured in four conditions (Table~
 
 Differences between conditions give the decomposition reported throughout.
 \begin{description}
-  \item[Training gain.] Base minus TTT off. Everything the slow weights learned, including LoRA and, for TTT models, the trained $W_0$.
+  \item[Training gain.] Base minus TTT off. Everything the slow weights learned, including LoRA and, for TTT models, the trained $W_{\mathrm{down}}$.
   \item[Within-document gain.] TTT off minus TTT reset per slice. What the fast weights learn inside a slice.
   \item[Between-slice gain.] TTT reset per slice minus TTT carried. What carrying state from earlier slices of the same document adds.
   \item[Matched gain.] The LoRA-only model minus the TTT model with its fast weights carried. The total advantage over the control.
@@ -446,7 +404,14 @@ The boundary suite compares two points, the same document and a different docume
   \item[Random article.] An article that neither mentions the target nor is mentioned by it.
   \item[Other source.] A held-out document from one of the other five SlimPajama sources.
 \end{description}
-Every prime has the same length and every condition scores exactly the same target tokens, so only the prime varies. Because relatedness is defined by title mentions, a related prime also tends to share more words with the target, and no control here separates relatedness in topic from word overlap. The same 200 cases, identical title for title, were measured on the gated carry and on the ungated Hebbian model, both at step 600. These are development cases, and Section~\ref{sec-confirmatory} repeats the suite on confirmatory ones.
+Every prime has the same length and every condition scores exactly the same target tokens, so only the prime varies (Figure~\ref{fig-protocol}). Because relatedness is defined by title mentions, a related prime also tends to share more words with the target, and no control here separates relatedness in topic from word overlap. The same 200 cases, identical title for title, were measured on the gated carry and on the ungated Hebbian model, both at step 600. These are development cases, and Section~\ref{sec-confirmatory} repeats the suite on confirmatory ones.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{figures/D2_protocol.pdf}
+  \caption{(a) The carry is trained only between the slices of one document, with the gradient kept through two consecutive slices. (b) Across documents it is tested by priming the carried state on one text and scoring the same target block as after a reset, so only the prime differs.}
+  \label{fig-protocol}
+\end{figure}
 
 \subsection{Confirmatory test set fixed in advance}
 \label{sec-confirmatory-method}
@@ -464,7 +429,7 @@ Perplexity within a document is token-weighted over its slices. A gap between tw
 
 \subsection{Sanity checks}
 
-Every evaluation runs with dropout disabled, and the base condition restores the pretrained $W_0$. Two checks confirm the evaluation. The LoRA-only model, which has no fast weights, gives a within-document and between-slice gain of exactly 0.000 at every step, and the base-model perplexities are identical across all LoRA-only evaluations. In-training evaluations, which use 30 documents and no intervals, are reported only to describe training dynamics.
+Every evaluation runs with dropout disabled, and the base condition restores the pretrained $W_{\mathrm{down}}$. Two checks confirm the evaluation. The LoRA-only model, which has no fast weights, gives a within-document and between-slice gain of exactly 0.000 at every step, and the base-model perplexities are identical across all LoRA-only evaluations. In-training evaluations, which use 30 documents and no intervals, are reported only to describe training dynamics.
 
 % ======================================================================
 % ======================================================================
@@ -536,7 +501,7 @@ Table~\ref{tab-design} gives the gains of the gated carry across training, again
 \begin{figure}[H]
   \centering
   \includegraphics[width=\linewidth]{figures/F15_carry_design_curve.pdf}
-  \caption{Carry gains of the gated carry across training, with 95 percent bootstrap bands. Hollow markers are in-training evaluations on 30 documents without intervals. The cross-document point at step 100 rests on 24 documents and the others on 100.}
+  \caption{Gains of the gated carry across training, with 95 percent bootstrap intervals, at seed 42 (filled, to step 1049) and seed 43 (open, to step 600). (a) Carried between slices of the same document, 106 documents; grey circles are in-training evaluations of the full-schedule run on 30 documents, without intervals. (b) Carried into another document of the same source, 100 documents.}
   \label{fig-design-curve}
 \end{figure}
 
@@ -547,7 +512,7 @@ Table~\ref{tab-design} gives the gains of the gated carry across training, again
 \begin{figure}[H]
   \centering
   \includegraphics[width=0.8\linewidth]{figures/F14_carry_design_by_slice.pdf}
-  \caption{Gain from carrying state from earlier slices of the same document, by slice, with 95 percent bootstrap bands.}
+  \caption{Gain from carrying state from earlier slices of the same document, by slice, for the ungated carry and the gated carry at seed 42, with 95 percent bootstrap bands.}
   \label{fig-design-slice}
 \end{figure}
 
@@ -590,7 +555,7 @@ The gated carry combines three components, the separate carry path (A), training
 \begin{figure}[H]
   \centering
   \includegraphics[width=\linewidth]{figures/F17_ablation.pdf}
-  \caption{Ablation of the gated carry at step 200, seed 42, with 95 percent bootstrap intervals.}
+  \caption{Ablation of the gated carry at step 200, at seeds 42 (filled) and 43 (open), with 95 percent bootstrap intervals. The ungated carry with gate bias $-2$ was trained at seed 42 only.}
   \label{fig-ablation}
 \end{figure}
 
@@ -598,7 +563,7 @@ The gated carry combines three components, the separate carry path (A), training
 
 \paragraph{Only the combination recovers the gain.} At both seeds only the full gated carry gives a large gain between slices, 0.099 and 0.104, and the largest lead over the control, 0.215 and 0.214. Every partial variant stays at or below 0.040. Their order is not stable across seeds. At seed 42 training through the carry alone gives the most (0.035) and the separate path 0.023, at seed 43 the closed gate alone gives 0.040, the separate path 0.034 and training through the carry 0.015. In-training evaluations of the partial variants also move by up to 0.05 between steps 50 and 200 within one run, so their ranking at step 200 is not informative, and the seed-42 reading that the two components are super-additive does not replicate. What replicates is that neither the separate path nor training through the carry recovers the gain on its own. A plausible account is that the separate path lets a carried state reach the output without being drowned by the current slice, and that training through the carry teaches the model what to write for a later slice to read, but the ablation does not establish this.
 
-\paragraph{The closed gate and the zero-initialised scale are needed for stable training.} Two further configurations could not be trained usefully. With the separate path but without the zero-initialised scale, and with the gate bias at $-2$, carrying state between slices raised perplexity from 16.3 to 31.5 at step 100, worse on every source. The clip bounds the carried state at $\tau = 20$, about 4.2 to 5.3 times the largest singular value of the pretrained down-projection, so a clipped state concentrated in few directions adds about half the strength of $W_0$ along them even through a gate at 12 percent. With the scale but the gate bias still at $-2$, the in-slice Hebbian fast weights, not the carry, raised perplexity to 4703 at step 50 and 1024 at step 100, against 16.6 and 16.2 with them off, before the model recovered by step 150. Starting the gate nearly closed removes this spike.
+\paragraph{The closed gate and the zero-initialised scale are needed for stable training.} Two further configurations could not be trained usefully. With the separate path but without the zero-initialised scale, and with the gate bias at $-2$, carrying state between slices raised perplexity from 16.3 to 31.5 at step 100, worse on every source. The clip bounds the carried state at $\tau = 20$, about 4.2 to 5.3 times the largest singular value of the pretrained down-projection, so a clipped state concentrated in few directions adds about half the strength of $W_{\mathrm{down}}$ along them even through a gate at 12 percent. With the scale but the gate bias still at $-2$, the in-slice Hebbian fast weights, not the carry, raised perplexity to 4703 at step 50 and 1024 at step 100, against 16.6 and 16.2 with them off, before the model recovered by step 150. Starting the gate nearly closed removes this spike.
 
 \paragraph{Cross-document carry is small in most variants.} At step 200 the variants carry a small effect into a different document, between 0.003 and 0.014, except the closed gate alone at seed 43, at 0.038. We draw no conclusion from that single value.
 
@@ -629,11 +594,11 @@ The gated carry combines three components, the separate carry path (A), training
 \begin{figure}[H]
   \centering
   \includegraphics[width=0.8\linewidth]{figures/F16_relatedness.pdf}
-  \caption{Gain from adapting on earlier text, by its relatedness to the target, on the same 200 development Wikipedia targets at step 600, with 95 percent bootstrap bands. The gated carry with two training seeds, the ungated Hebbian carry, and dynamic evaluation of the LoRA-only model tuned for the related condition and for the same-document condition (Appendix~\ref{app-dyneval}).}
+  \caption{Gain from the carried text against a reset carry, by its relatedness to the target, on the same 200 development Wikipedia targets, with 95 percent bootstrap intervals. The ungated Hebbian carry and the gated carry at seeds 42 and 43 are at step 600, the full-schedule gated carry at step 1049. Dynamic evaluation is reported in Appendix~\ref{app-dyneval}.}
   \label{fig-related}
 \end{figure}
 
-\paragraph{The carry's effect falls steadily with relatedness.} For the gated carry every step down the scale is significant (Table~\ref{tab-related}, Figure~\ref{fig-related}). A carry built from the same article lowers perplexity by 0.103, one built from an article the target mentions by 0.085, one built from an unrelated article by 0.051, and one built from a different source raises it by 0.067. The key contrast, a related article against an unrelated one, is $+0.034$ $[+0.024, +0.045]$, in favour of the related article on 70 percent of targets.
+\paragraph{The carry's effect falls steadily with relatedness.} For the gated carry every step down the scale is significant (Table~\ref{tab-related}, Figure~\ref{fig-related}, which also shows the full-schedule run of Section~\ref{sec-full}). A carry built from the same article lowers perplexity by 0.103, one built from an article the target mentions by 0.085, one built from an unrelated article by 0.051, and one built from a different source raises it by 0.067. The key contrast, a related article against an unrelated one, is $+0.034$ $[+0.024, +0.045]$, in favour of the related article on 70 percent of targets.
 
 \paragraph{The gradient requires the gated carry.} On the same cases the ungated Hebbian carry has no significant gain at any level, and only a small harm from other-source text.
 
@@ -772,7 +737,7 @@ The gated carry was trained once more at seed 42 to the end of its schedule, whe
 \begin{figure}[H]
   \centering
   \includegraphics[width=0.85\linewidth]{figures/F18_fresh_relatedness.pdf}
-  \caption{Gain from the carried text against a reset carry, on the 200 confirmatory Wikipedia cases at step 600, with 95 percent bootstrap intervals from 10{,}000 resamples. Filled markers are the gated carry trained within documents, open markers the seed-42 probe trained across documents. The in-context condition is omitted because its scale is about four times larger and it is not cleanly comparable.}
+  \caption{Gain from the carried text against a reset carry, on the 200 confirmatory Wikipedia cases, with 95 percent bootstrap intervals from 10{,}000 resamples. (a) The gated carry trained within documents, at seeds 42 and 43 at step 600 and at the end of the schedule. (b) The probes trained across documents, at step 600. The in-context condition is omitted because its scale is about four times larger and it is not cleanly comparable.}
   \label{fig-confirmatory}
 \end{figure}
 
@@ -866,7 +831,7 @@ Removing the reset alone, then, gains little with either update rule. The delta 
 \subsection{The saturated clip}
 \label{ch-why}
 
-\paragraph{The read-time clip is always active.} The clip binds whenever $\lVert \eta S \rVert_F > \tau$. In units of the pretrained down-projection, this is a state ratio $\lVert \eta S \rVert_F / \lVert W_0 \rVert_F$ above $\tau / \lVert W_0 \rVert_F = 0.43$, given a mean $\lVert W_0 \rVert_F$ of 46.6 over the TTT layers. Across every boundary, repeat, swap and main-evaluation measurement of the ungated models at steps 200, 400 and 600, the state ratio is above this threshold on 100 percent of measurements, by a factor of at least 255 for the Hebbian model and at least 1597 for the delta model (Table~\ref{tab-clip}, Figure~\ref{fig-dist}). For the gated carry at step 600, the carried state ratio has a median of about 8{,}000 for seed 42 and 15{,}000 for seed 43, and is above the threshold on every document by a factor of at least 6400.
+\paragraph{The read-time clip is always active.} The clip binds whenever $\lVert \eta S \rVert_F > \tau$. In units of the pretrained down-projection, this is a state ratio $\lVert \eta S \rVert_F / \lVert W_{\mathrm{down}} \rVert_F$ above $\tau / \lVert W_{\mathrm{down}} \rVert_F = 0.43$, given a mean $\lVert W_{\mathrm{down}} \rVert_F$ of 46.6 over the TTT layers. Across every boundary, repeat, swap and main-evaluation measurement of the ungated models at steps 200, 400 and 600, the state ratio is above this threshold on 100 percent of measurements, by a factor of at least 255 for the Hebbian model and at least 1597 for the delta model (Table~\ref{tab-clip}, Figure~\ref{fig-dist}). For the gated carry at step 600, the carried state ratio has a median of about 8{,}000 for seed 42 and 15{,}000 for seed 43, and is above the threshold on every document by a factor of at least 6400.
 
 \begin{table}[H]
   \centering
@@ -899,7 +864,7 @@ Removing the reset alone, then, gains little with either update rule. The delta 
 \begin{figure}[H]
   \centering
   \includegraphics[width=\linewidth]{figures/F3_repeat_mechanism.pdf}
-  \caption{Repeated reading of the same document by the ungated models at step 600. Left, the carried state relative to $\lVert W_0 \rVert_F$ on a log scale, with the clip threshold dashed. Right, the perplexity gain against the first reading.}
+  \caption{Repeated reading of the same document by the ungated models at step 600. Left, the carried state relative to $\lVert W_{\mathrm{down}} \rVert_F$ on a log scale, with the clip threshold dashed. Right, the perplexity gain against the first reading.}
   \label{fig-repeat}
 \end{figure}
 
