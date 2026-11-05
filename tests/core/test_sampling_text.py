@@ -107,6 +107,18 @@ def test_sampling_is_reproducible_under_the_same_generator_seed():
     assert first == second
 
 
+@pytest.mark.gpu
+def test_a_cpu_generator_samples_cuda_logits_regression_carry_demo():
+    on_cuda = sampling_text.next_token(
+        LOGITS.to("cuda"), temperature=1.0, top_p=0.95, top_k=20, generator=generator(11)
+    )
+    on_cpu = sampling_text.next_token(
+        LOGITS, temperature=1.0, top_p=0.95, top_k=20, generator=generator(11)
+    )
+
+    assert on_cuda == on_cpu
+
+
 def test_top_p_of_zero_forces_the_argmax_even_when_sampling():
     picked = sampling_text.next_token(
         _logits(1.0, 9.0, 2.0), temperature=1.0, top_p=0.0, generator=generator(3)

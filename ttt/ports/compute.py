@@ -36,4 +36,9 @@ class Compute(Protocol):
     ) -> float:
         """No graph. `lora=False` is `fresh`; tokens before `score_from` are context, unscored."""
 
+    def eval_token_losses(
+        self, token_ids: Sequence[int], *, score_from: int = 0
+    ) -> tuple[float, ...]:
+        """`eval_loss` per scored token: one per id from max(score_from, 1) on, mean = `eval_loss`."""
+
     def parameter_counts(self) -> Mapping[str, int]: ...

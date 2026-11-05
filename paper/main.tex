@@ -286,7 +286,7 @@ The fast weight is written in chunks of $C$ tokens. For chunk $k$ the layer form
 \begin{figure}[H]
   \centering
   \includegraphics[width=\linewidth]{figures/D1_gated_carry_layer.pdf}
-  \caption{A TTT layer with the gated carry. In-Place TTT consists of the pretrained path $W_{\mathrm{down}} z$ and the in-slice fast weight $S_{\mathrm{in}}$ (blue), which is written chunk by chunk from the target $V$ and the activation $z$ and read through the gate $g$. The gated carry of Section~\ref{sec-design-method} adds the carried state (orange), folded in at the end of each slice and read through its own clip, gate $g_c$ and scale $\alpha$. With $\alpha = 0$ at initialisation, the layer starts as the In-Place TTT layer.}
+  \caption{The gated carry layer. The pretrained path and the fast weight of the current slice are as in In-Place TTT; the state carried from earlier slices is added through its own clip, gate $g_c$ and scale $\alpha$, which starts at zero.}
   \label{fig-arch}
 \end{figure}
 
@@ -409,7 +409,7 @@ Every prime has the same length and every condition scores exactly the same targ
 \begin{figure}[H]
   \centering
   \includegraphics[width=\linewidth]{figures/D2_protocol.pdf}
-  \caption{(a) The carry is trained only between the slices of one document, with the gradient kept through two consecutive slices. (b) Across documents it is tested by priming the carried state on one text and scoring the same target block as after a reset, so only the prime differs.}
+  \caption{(a) The carry is trained within one document; the gradient joins each pair of slices. (b) It is tested across documents by scoring the same target after a primed and a reset carry.}
   \label{fig-protocol}
 \end{figure}
 
@@ -425,7 +425,7 @@ The main models are trained only within documents, so their use across documents
 
 \subsection{Statistics}
 
-Perplexity within a document is token-weighted over its slices. A gap between two conditions is the difference of their geometric-mean perplexities over documents, positive when the second condition has lower perplexity. We report 95 percent percentile bootstrap intervals from 1000 resamples of documents (10{,}000 for the confirmatory test set of Section~\ref{sec-confirmatory}), with both conditions resampled on the same indices, and the win rate, the fraction of documents on which the second condition is lower. A star marks an interval that excludes zero. Following \citet{meister2021beyond}, every result is reported as an effect size with its interval rather than as a significance test alone.
+Perplexity within a document is token-weighted over its slices. A gap between two conditions is the difference of their geometric-mean perplexities over documents, positive when the second condition has lower perplexity. We report 95 percent percentile bootstrap intervals from 1000 resamples of documents (10{,}000 for the confirmatory test set of Section~\ref{sec-confirmatory}), with both conditions resampled on the same indices, and the win rate, the fraction of documents on which the second condition is lower. The per-token analysis of Section~\ref{sec-position} was added to the plan after the preregistered run but before its own run, with its rules written in advance; its intervals resample together cases that share a related or random prime, and its two hypotheses are decided on Bonferroni-adjusted 97.5 percent intervals. A star marks an interval that excludes zero. Following \citet{meister2021beyond}, every result is reported as an effect size with its interval rather than as a significance test alone.
 
 \subsection{Sanity checks}
 
@@ -743,7 +743,7 @@ The gated carry was trained once more at seed 42 to the end of its schedule, whe
 
 \paragraph{The gradient replicates.} On the confirmatory cases the ordering is the same as on the development cases, in both seeds (Table~\ref{tab-confirmatory}, Figure~\ref{fig-confirmatory}). The same article helps most, then a related article, then a random one, and text of another source harms, and every step of the ordering has an interval that excludes zero. A related article lowers the target's perplexity by 0.086, about 0.5 percent. Related against random is $+0.031$ and $+0.050$, close to the development values of $+0.034$ and $+0.049$.
 
-\paragraph{Part of the transfer is specific to the document.} The generic carry helps by about 0.07, so much of the gain after a Wikipedia article is a generic effect of having read Wikipedia. A related article still beats the generic carry, by 0.015 and 0.018, with adjusted intervals that exclude zero in both seeds (Table~\ref{tab-confirmatory-headline}). By the preregistered rule this allows the claim that some transfer is specific to the document. It is small, below 0.1 percent of perplexity, and the larger part of the gain is the generic one. What is specific is the relation between the prime and the target, since the related article is a different document, and because relatedness is defined by title mentions this part may rest partly on shared words.
+\paragraph{Part of the transfer is specific to the document.} The generic carry helps by about 0.07, so much of the gain after a Wikipedia article is a generic effect of having read Wikipedia. A related article still beats the generic carry, by 0.015 and 0.018, with adjusted intervals that exclude zero in both seeds (Table~\ref{tab-confirmatory-headline}). By the preregistered rule this allows the claim that some transfer is specific to the document. It is small, below 0.1 percent of perplexity, and the larger part of the gain is the generic one. What is specific is the relation between the prime and the target, since the related article is a different document, and because relatedness is defined by title mentions this part may rest partly on shared words, although Section~\ref{sec-position} shows that it does not rest on copied tokens.
 
 \paragraph{A longer chain adds gain, not harm.} Carrying more random Wikipedia articles before the target helps slightly more, from 0.054 after one article to 0.071 after ten for seed 42, and ten against one is $+0.017$ $[+0.009, +0.025]$ and $+0.026$ $[+0.018, +0.034]$. Harm therefore does not grow with the number of earlier articles, at least for article openings of the same source. After ten articles the gain, 0.071 and 0.060, is close to that of the generic carry, 0.071 and 0.068. With a decay of 0.9 the carried state after many articles is close to an average over them, so a plausible reading, not tested further, is that a long chain converges to the generic carry. By the preregistered rule the difference from the boundary suite remains open.
 
@@ -752,6 +752,49 @@ The gated carry was trained once more at seed 42 to the end of its schedule, whe
 \paragraph{Attention on the prime is not cleanly comparable.} Placing the related article in attention lowers mean perplexity by 0.32, about four times the carry's gain, but it improves only 45 percent of targets. The carry has the lower perplexity on 57 and 58 percent of targets, and the mean difference between the two has an interval that includes zero. The per-target gains from attention, examined after the preregistered analysis, have a median of about $-0.14$ and a long upper tail reaching $+13.8$, so a related article in attention helps a few targets greatly and slightly harms most. That a related article in attention harms the typical target is surprising, and the condition differs from the others in more than the channel. It scores the target at positions 1024 to 2047 rather than from the start of the input, and the target's own fast weights are built on top of the prime. We therefore draw no conclusion from it beyond the preregistered one, that the mean difference between the carry and attention is not resolved.
 
 \paragraph{Within documents and against the control.} On the 73 confirmatory SlimPajama documents the carry between slices gives $+0.125$ and $+0.118$, about 1 percent of perplexity, and the lead over the matched LoRA-only model is $+0.257$ and $+0.233$, of which $+0.120$ and $+0.108$ remain with the fast weights switched off, consistent with the development results.
+
+\subsection{Where in the target the carry acts}
+\label{sec-position}
+
+The perplexities above average the gain over all 1024 target tokens. To locate it, the confirmatory cases were scored again for both seeds at step 600, keeping each condition's loss at every target position. Averaging these losses back per case reproduces every published perplexity to within $5 \times 10^{-7}$ in log space; the in-context condition differs only by the first target token, which is dropped from every condition so that all score positions 1 to 1023. Two hypotheses were fixed before the run. A1: at least 40 percent of the gain after the same document and after a related article falls on the first 32 tokens, with an adjusted lower bound of at least 25 percent. A2: on target tokens that occur in neither the related nor the random prime, related beats random, averaged over position bins weighted by their length, with an adjusted lower bound above zero.
+
+\paragraph{The carry acts at the opening of the target.} At seed 42, 55 percent of the gain after the same document and 56 percent after a related article fall on the first 32 tokens, with adjusted intervals of $[0.48, 0.63]$ and $[0.47, 0.66]$; at seed 43, 54 and 56 percent, $[0.49, 0.60]$ and $[0.49, 0.64]$. Over the first eight tokens the related article lowers the loss by 0.19 and 0.20 nats per token, after token 128 by 0.001 and 0.002 (Table~\ref{tab-position}, Figure~\ref{fig-token-position}). The harm after other-source text is front-loaded in the same way. A1 holds at both seeds.
+
+\paragraph{Attention acts throughout.} The related article in attention behaves in the opposite way. Only 9 to 10 percent of its gain falls on the first 32 tokens and 72 to 73 percent after token 128. Over the first eight tokens the carry gives 66 and 74 percent of the in-context gain at the two seeds, after token 128 only 5 and 7 percent. The carry is therefore a warm start for the opening of a new text, while attention on the prime keeps helping throughout, which also explains why the mean in-context gain is several times larger.
+
+\paragraph{The relatedness gain is not copying.} 41 percent of the target tokens occur in neither prime. On them a related article beats a random one by 0.0022 $[0.0011, 0.0033]$ and 0.0032 $[0.0021, 0.0044]$ nats per token at the two seeds, adjusted for position and with adjusted intervals, against 0.0013 and 0.0023 on tokens that occur in a prime. A2 holds at both seeds. Overlap of single tokens therefore does not explain the relatedness ordering, although topic and overlap of longer phrases are not separated. The run at step 1049 shows the same profile (Appendix~\ref{app-full}).
+
+\paragraph{The opening gain is mostly generic, but the specific part is there too.} A second added analysis, also fixed before its run, scored the generic carry per token. Over the first 31 tokens the generic carry gives 0.064 and 0.057 nats per token at the two seeds, 75 and 66 percent of the related article's 0.085 and 0.087. The related article's lead over the generic carry is 0.021 $[0.015, 0.028]$ and 0.030 $[0.021, 0.039]$ nats per token there, with intervals that exclude zero at both seeds, while after token 128 it is 0.0002 $[-0.0001, 0.0005]$ and 0.0001 $[-0.0002, 0.0004]$. Both the generic and the document-specific parts of the transfer therefore act on the opening of the target.
+
+\paragraph{On short texts the carry matters more.} Scored as texts of only their first 32 tokens, a related article lowers perplexity by 8.0 percent $[6.7, 9.2]$ and 8.4 percent $[7.3, 9.5]$, the target's own first block by 9.7 and 10.7 percent, the generic carry by 6.1 and 5.6 percent, a random article by 4.4 and 2.3 percent, and other-source text raises it by 8.4 and 6.5 percent. On 128 tokens the related article gives 2.9 and 2.7 percent, against about 0.5 percent on 1024. The in-context condition is not comparable on such short texts: it also scores the target's first token, which the other conditions do not, and the high loss of that token dominates a mean over 32 tokens. The plan required the loss on each cut text to match the per-token loss of the full text within $10^{-3}$ nats. It did not: the per-case differences are up to 0.03 nats on 32 tokens and 0.013 on 128. They average zero, are uncorrelated between conditions and shrink with length, as expected from bfloat16 arithmetic over inputs of different length, whereas two runs of the same length agree exactly. The short-text values are therefore reported with this caveat. A split by the loss under the reset carry was considered and rejected before the run, because grouping tokens by a reference loss and measuring the change from it produces the same pattern for any change.
+
+\begin{table}[H]
+  \centering
+  \caption{Mean gain per token over a reset carry, in nats, by position in the target, on the 200 confirmatory cases at step 600. Positive values mean lower loss.}
+  \label{tab-position}
+  \small
+  \resizebox{\linewidth}{!}{%
+  \begin{tabular}{lrrrrrrrr}
+    \toprule
+    & \multicolumn{4}{c}{Seed 42} & \multicolumn{4}{c}{Seed 43} \\
+    \cmidrule(lr){2-5} \cmidrule(lr){6-9}
+    Condition & 1--7 & 8--31 & 32--127 & 128--1023 & 1--7 & 8--31 & 32--127 & 128--1023 \\
+    \midrule
+    Same document & $+0.2113$ & $+0.0720$ & $+0.0162$ & $+0.0012$ & $+0.2356$ & $+0.0772$ & $+0.0132$ & $+0.0019$ \\
+    Related article & $+0.1856$ & $+0.0561$ & $+0.0120$ & $+0.0010$ & $+0.1996$ & $+0.0539$ & $+0.0072$ & $+0.0016$ \\
+    Random article & $+0.1157$ & $+0.0254$ & $+0.0088$ & $+0.0009$ & $+0.0673$ & $+0.0109$ & $+0.0045$ & $+0.0009$ \\
+    Other source & $-0.1132$ & $-0.0683$ & $-0.0146$ & $-0.0009$ & $-0.1004$ & $-0.0528$ & $-0.0086$ & $-0.0005$ \\
+    Related article in context & $+0.2795$ & $+0.0297$ & $+0.0528$ & $+0.0230$ & $+0.2705$ & $+0.0254$ & $+0.0534$ & $+0.0224$ \\
+    \bottomrule
+  \end{tabular}}
+\end{table}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{figures/F19_token_position.pdf}
+  \caption{Where in the target the carry acts, on the 200 confirmatory cases at step 600. (a) Mean gain per token over a reset carry, in bins of position on a log scale, at seed 42 with 95 percent bootstrap intervals over clusters of cases; seed 43 is alike (Table~\ref{tab-position}). (b) Cumulative share of the total gain up to each position, for the related article in the carry and in context, at both seeds.}
+  \label{fig-token-position}
+\end{figure}
 
 \subsection{Training the carry across documents}
 \label{sec-mixed}
@@ -1021,7 +1064,7 @@ Within the scope of these perplexity measurements, a carried fast weight helps a
 
 \paragraph{Runs without the clip.} The runs without the clip are short, 100 to 200 steps, and single-seed. They show that removing the clip does not help early in training, not what a long unclipped run would converge to.
 
-\paragraph{Gated carry.} The gated carry is replicated with two seeds, which is enough to show its results are not a chance result but not to report a spread, and it exists for the Hebbian rule only. Its ablation stops at step 200, at two seeds whose partial variants rank differently, while the relatedness results come from step 600, so which components the relatedness effects depend on is not tested. Its relatedness gradient is measured on Wikipedia only, with relatedness defined by title mentions, which includes word overlap, so the results do not separate relatedness in topic from shared words. The context comparison gives attention one previous slice, while the carry holds a decayed summary of all earlier slices, and the dynamic-evaluation baseline of Appendix~\ref{app-dyneval} uses a sparse form on the LoRA weights of a different model, the LoRA-only control. The in-context condition of Section~\ref{sec-confirmatory} reads the prime and the target as one input of 2048 tokens, so it also changes the position of the scored tokens, and its heavy-tailed gains were examined only after the preregistered analysis. The gap between the boundary and relatedness suites remains unexplained, since accumulation over a chain of Wikipedia articles does not reproduce it.
+\paragraph{Gated carry.} The gated carry is replicated with two seeds, which is enough to show its results are not a chance result but not to report a spread, and it exists for the Hebbian rule only. Its ablation stops at step 200, at two seeds whose partial variants rank differently, while the relatedness results come from step 600, so which components the relatedness effects depend on is not tested. Its relatedness gradient is measured on Wikipedia only, with relatedness defined by title mentions, which includes word overlap, so the results separate relatedness in topic from shared words only at the level of single tokens (Section~\ref{sec-position}). The context comparison gives attention one previous slice, while the carry holds a decayed summary of all earlier slices, and the dynamic-evaluation baseline of Appendix~\ref{app-dyneval} uses a sparse form on the LoRA weights of a different model, the LoRA-only control. The in-context condition of Section~\ref{sec-confirmatory} reads the prime and the target as one input of 2048 tokens, so it also changes the position of the scored tokens, and its heavy-tailed gains were examined only after the preregistered analysis. The gap between the boundary and relatedness suites remains unexplained, since accumulation over a chain of Wikipedia articles does not reproduce it.
 
 \paragraph{Development and confirmatory sets.} The gated carry, its gate bias of $-6$ and the choice of suites were all settled while looking at the same 106 SlimPajama documents and 200 Wikipedia cases. The relatedness results, the generic, in-context and chain conditions, and the pooled gains of the main evaluation are replicated on the preregistered confirmatory set (Section~\ref{sec-confirmatory}). The boundary, repeat, context and per-source results rest on the development set only. The confirmatory SlimPajama holdout has 73 documents from five sources and none from Book, because the reserved pool of long documents is small, so per-source results of the main evaluation could not be checked. The confirmatory Wikipedia cases were checked against the Wikipedia part of the training data by shared ten-word sequences, which removed one case, but a check on the decoded first 700 tokens of each training document cannot rule out every overlap. The confirmatory set tests the same model checkpoints, so it guards against selecting results on the development cases but not against design choices that suit Wikipedia in general.
 
@@ -1106,6 +1149,8 @@ Three recommendations follow from the results. A carried fast weight should be r
 
 \section{Full results}
 \label{app-full}
+
+\paragraph{Per-token analysis at other checkpoints.} Scored in the same way on the confirmatory cases, the gated carry at step 1049 puts 57 percent of its gain after the same document and 58 percent after a related article on the first 32 tokens, with adjusted intervals of $[0.51, 0.63]$ and $[0.50, 0.67]$, and a related article beats a random one on tokens absent from both primes by 0.0052 $[0.0035, 0.0068]$ nats per token. Over the first eight tokens its carry gives 95 percent of the in-context gain, after token 128 7 percent. On the development cases, where the analysis was first explored at step 1049, the shares are 52 and 44 percent and the advantage on novel tokens 0.0057 $[0.0042, 0.0073]$.
 
 \begin{table}[H]
   \centering

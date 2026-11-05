@@ -38,6 +38,7 @@ from ttt.app import (
     evidence,
     repeat_eval,
     swap_eval,
+    token_gain,
 )
 from ttt.core import report
 from ttt.core.metrics import ALL_SOURCES
@@ -56,11 +57,12 @@ SWAP = "swap"
 CONTEXT = "context"
 RELATEDNESS = "relatedness"
 DYNEVAL = "dyneval"
+TOKEN_GAIN = "token_gain"
 SUITES = (REGIMES, BOUNDARY, REPEAT, SWAP)
 # Opt-in: context costs a second, longer forward per slice; relatedness and dyneval download
 # Wikipedia, and dyneval takes gradient steps, so it runs on models without TTT layers too.
-KNOWN_SUITES = SUITES + (CONTEXT, RELATEDNESS, DYNEVAL)
-TTT_SUITES = (BOUNDARY, REPEAT, SWAP, CONTEXT, RELATEDNESS)
+KNOWN_SUITES = SUITES + (CONTEXT, RELATEDNESS, DYNEVAL, TOKEN_GAIN)
+TTT_SUITES = (BOUNDARY, REPEAT, SWAP, CONTEXT, RELATEDNESS, TOKEN_GAIN)
 
 RESULTS_DIR = "results"
 WIKIPEDIA = "RedPajamaWikipedia"
@@ -76,6 +78,7 @@ RAW_FILES = {
     "dyneval_self": relatedness_eval.RelatedRow,
     "dyneval_related": relatedness_eval.RelatedRow,
     "dyneval_tuning": dynamic_eval.TuneRow,
+    "token_gain": token_gain.TokenRow,
 }
 DEFAULT_N_BOOT = 1000
 BOOT_SEED = 0
@@ -103,6 +106,7 @@ class Plan:
     exclude_holdout_seed: int = -1
     overlap_seeds: str = ""
     cases_file: str = ""
+    target_tokens: int = 0
     # Sharding dyneval so a preemption costs one shard: a settings subset to tune,
     # fixed per-objective settings to measure instead of tuning, a slice of cases.
     dyneval_grid: str = ""
@@ -178,7 +182,7 @@ def run(
         rows["context"] = evidence.records(
             context_eval.measure(docs=eval_docs, n_slices=plan.n_slices, **ports)
         )
-    if RELATEDNESS in suites or DYNEVAL in suites:
+    if {RELATEDNESS, DYNEVAL, TOKEN_GAIN} & set(suites):
         announce("wikipedia cases ...")
         from ttt.experiments import _wiki_relatedness
 
@@ -202,11 +206,13 @@ def run(
         )
         # Selection is sequential, so the first n_related are the relatedness suite's cases.
         reported, tuning = cases[: plan.n_related], cases[plan.n_related :]
+        if plan.target_tokens:
+            reported = [dataclasses.replace(c, target=c.target[: plan.target_tokens]) for c in reported]
+        generic = None
+        if generic_blocks and {RELATEDNESS, TOKEN_GAIN} & set(suites):
+            announce(f"generic carry from {len(generic_blocks)} articles ...")
+            generic = _carry_mean(generic_blocks, engine)
         if RELATEDNESS in suites:
-            generic = None
-            if generic_blocks:
-                announce(f"generic carry from {len(generic_blocks)} articles ...")
-                generic = _carry_mean(generic_blocks, engine)
             announce("relatedness ...")
             rows["relatedness"] = evidence.records(
                 relatedness_eval.measure(
@@ -214,6 +220,11 @@ def run(
                     chain_lengths=chain_lengths, **ports,
                 )
             )
+        if TOKEN_GAIN in suites:
+            announce("token gain ...")
+            rows["token_gain"] = evidence.records(token_gain.measure(
+                cases=reported, generic=generic, in_context=plan.in_context, **ports
+            ))
         if DYNEVAL in suites:
             from ttt.experiments._dynamic_adapter import LoraAdapter
 
@@ -603,6 +614,7 @@ def main(
     exclude_holdout_seed: int = Plan.exclude_holdout_seed,
     overlap_seeds: str = Plan.overlap_seeds,
     cases_file: str = Plan.cases_file,
+    target_tokens: int = Plan.target_tokens,
     n_boot: int = DEFAULT_N_BOOT,
     out_dir: str = RESULTS_DIR,
     flags: str = "",
@@ -619,7 +631,7 @@ def main(
         wiki_first_shard=wiki_first_shard, wiki_case_seed=wiki_case_seed,
         unique_related=unique_related, n_generic=n_generic, in_context=in_context,
         chain_lengths=chain_lengths, exclude_holdout_seed=exclude_holdout_seed,
-        overlap_seeds=overlap_seeds, cases_file=cases_file,
+        overlap_seeds=overlap_seeds, cases_file=cases_file, target_tokens=target_tokens,
     )
     run_part, step = bundle_parts(checkpoint, resolved.train.run_name)
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")

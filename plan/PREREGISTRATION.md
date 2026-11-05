@@ -134,3 +134,63 @@ was not pushed.
    documents per seed).
 
 No other deviation: cases, arms, resamples (10,000, seed 0) and contrasts are as in §3–§6.
+
+## Addendum A: where in the target the carry acts (written 2026-11-03, before its results)
+
+An analysis added after the preregistration, prompted by an exploratory look at the development
+cases at gated-carry-1050/step_1049. Written while the runs below were in flight and before any of
+their output was read; its SHA-256 is logged in `plan/tier1/logs/addendum_a.sha256`.
+
+**Runs.** The `token_gain` suite with `--in-context` on the fresh cases (`evidence/cases/fresh.json`)
+for hebbian-carry-600 seeds 42 and 43 at step 600. gated-carry-1050/step_1049 is run the same way and
+reported descriptively only.
+
+**Measure.** Per-token gain g = loss(reset) − loss(arm), in nats, at target positions 1–1023 (the
+first target token is not scored in the reset arm, so it is dropped from every arm). Position bins:
+[1, 8), [8, 32), [32, 128), [128, 1024). Arms: same, related, random, other source, in context
+(related prime in attention, carry reset).
+
+**Intervals.** Percentile bootstrap, 10,000 resamples, seed 0, resampling clusters of cases: cases
+are joined when they share a related or a random prime (connected components). Two hypotheses, so
+Bonferroni-adjusted 97.5% intervals decide; 95% are reported alongside. Seeds never pooled.
+
+**A1, front-loading.** S32 = (summed mean gain over positions < 32) / (summed mean gain over all
+positions), for the same and the related arm. Holds at a seed if, for both arms, S32 ≥ 0.40 and the
+lower 97.5% bound ≥ 0.25.
+
+**A2, not copying.** Novel tokens: target tokens whose id occurs in neither the related nor the
+random prime of that case. D = Σ_b w_b · d_b, where d_b is the mean of loss(random) − loss(related)
+over novel tokens in bin b, and w_b is bin b's share of the 1,023 scored positions (7, 24, 96,
+896 / 1,023). Holds at a seed if the lower 97.5% bound of D is above 0.
+
+**A3, descriptive.** For each bin, the related carry's mean gain and the in-context mean gain,
+and their ratio. No threshold.
+
+**Reporting.** A claim goes into the report only if it holds at both seeds. A1 and A2 both hold:
+a figure (gain against position, log axis) and a paragraph. A2 only: one sentence and a table row.
+Neither: at most one line in Limitations. Results are reported whatever they are. No other splits
+of tokens are analysed (a split by reset loss was rejected as biased by construction).
+
+## Addendum B: what the opening gain is made of, and short targets (written 2026-11-03, before its results)
+
+Written before the runs below were launched. Same cases, checkpoints (hebbian-carry-600 seeds 42
+and 43, step 600), position bins and cluster bootstrap as Addendum A.
+
+**Runs.** (1) The `token_gain` suite with the generic carry and in-context arms. (2) The
+relatedness suite with generic and in-context arms on targets cut to their first 32 and first 128
+tokens (`--target-tokens`), no chains.
+
+**B1, a specific part at the opening.** Mean per-token gain of the related article minus that of
+the generic carry over target positions 1-31. Holds at a seed if its 95% lower bound is above 0.
+Reported with it, without a threshold: the generic carry's share of the related article's gain
+over positions 1-31, and the same contrast over positions 128-1023.
+
+**B2, short targets, a consistency check and a direct measurement.** The model is causal, so the
+per-case loss on a target cut to L tokens should equal the mean of the per-token losses at
+positions 1 to L-1 of the full target. Checked for every arm and case: agreement within 1e-3 nats
+passes. The relative perplexity gains of every arm on the cut targets are reported as measured,
+with 95% intervals over cases, and no threshold.
+
+**Reporting.** B1 goes into the text in one or two sentences whatever its result. B2's gains are
+reported as the measured short-text effect only if the consistency check passes; otherwise the
+mismatch is investigated before anything is reported.

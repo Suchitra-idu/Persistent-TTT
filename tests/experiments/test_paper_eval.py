@@ -214,3 +214,13 @@ def test_no_overlap_seeds_means_no_training_text_is_read(monkeypatch):
 def test_an_overlap_check_without_the_training_document_limit_is_an_error(monkeypatch):
     with pytest.raises(ValueError, match="limit_docs"):
         _shingle_run(monkeypatch, dataclasses.replace(PLAN, overlap_seeds="42"))
+
+
+def test_token_gain_is_an_opt_in_suite():
+    assert paper_eval_v1.Plan(suites=(paper_eval_v1.TOKEN_GAIN,)).suites == ("token_gain",)
+
+
+def test_token_gain_rows_survive_the_analysis():
+    row = {"arm": "reset", "doc_idx": 0, "target_title": "T", "losses": [1.0, 2.0]}
+
+    assert paper_eval_v1.analyse({"token_gain": [row]}).relatedness == ()

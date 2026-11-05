@@ -72,6 +72,15 @@ class ComputeConformance:
     def test_eval_loss_is_a_finite_float(self, compute):
         assert math.isfinite(compute.eval_loss(IDS))
 
+    def test_token_losses_cover_every_token_after_the_first(self, compute):
+        assert len(compute.eval_token_losses(IDS)) == len(IDS) - 1
+
+    def test_token_losses_skip_the_unscored_context(self, compute):
+        assert len(compute.eval_token_losses(IDS, score_from=5)) == len(IDS) - 5
+
+    def test_token_losses_are_finite(self, compute):
+        assert all(math.isfinite(x) for x in compute.eval_token_losses(IDS))
+
     def test_eval_loss_does_not_consume_a_pending_backward(self, compute):
         compute.loss(IDS)
         compute.eval_loss(IDS)
@@ -136,6 +145,16 @@ class TestTorchCompute(ComputeConformance):
         return TorchCompute(
             model, ttt_cfg=cfg, train_cfg=TrainConfig(), device="cpu"
         )
+
+    def test_the_mean_token_loss_is_the_eval_loss(self, compute):
+        losses = compute.eval_token_losses(IDS)
+
+        assert sum(losses) / len(losses) == pytest.approx(compute.eval_loss(IDS), rel=1e-5)
+
+    def test_the_mean_scored_token_loss_is_the_context_eval_loss(self, compute):
+        losses = compute.eval_token_losses(IDS, score_from=5)
+
+        assert sum(losses) / len(losses) == pytest.approx(compute.eval_loss(IDS, score_from=5), rel=1e-5)
 
     def test_the_loss_is_the_next_token_cross_entropy_of_those_tokens(self, compute):
         ids = torch.tensor([IDS])

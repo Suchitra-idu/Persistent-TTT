@@ -525,65 +525,89 @@ def _line(ax, points, colour=INK_2, lw=1.0):
     ax.plot([p[0] for p in points], [p[1] for p in points], color=colour, linewidth=lw, solid_capstyle="round")
 
 
+def _op(ax, xy, text, *, colour=INK_2, r=0.17, size=8.5):
+    import matplotlib.pyplot as plt
+
+    ax.add_patch(plt.Circle(xy, r, facecolor="white", edgecolor=colour, linewidth=0.9, zorder=3))
+    ax.text(*xy, text, ha="center", va="center", fontsize=size, color=INK, zorder=4)
+
+
+def _note(ax, xy, text, colour=INK_2, **kw):
+    ax.text(*xy, text, fontsize=7.5, color=colour, **{"ha": "center", "va": "center", **kw})
+
+
 def diagram_layer(out: Path) -> Path:
     plt = _plt()
-    fig, ax = _canvas(plt, WIDTH, 2.85)
-    rows = (2.4, 1.5, 0.6)
-    _box(ax, (0.7, rows[1]), 1.15, 0.42, "MLP activation $z$")
-    _box(ax, (3.0, rows[0]), 1.45, 0.42, r"$W_{\mathrm{down}}\,z$")
-    _box(ax, (3.0, rows[1]), 1.85, 0.42, r"$g(h)\,\eta\,S_{\mathrm{in}}\,z$", fill=BLUE_FILL, edge=BLUE)
-    _box(ax, (3.0, rows[2]), 2.6, 0.42, r"$\alpha\,g_c(h)\,\eta\,\mathrm{clip}(S_{\mathrm{carried}})\,z$",
-         fill=ORANGE_FILL, edge=ORANGE)
-    bus = 1.55
-    _line(ax, [(1.275, rows[1]), (bus, rows[1])])
-    _line(ax, [(bus, rows[0]), (bus, rows[2])])
-    for y, left in zip(rows, (2.275, 2.075, 1.7)):
-        _arrow(ax, (bus, y), (left, y))
-    plus = (5.2, rows[1])
-    ax.add_patch(plt.Circle(plus, 0.15, facecolor="white", edgecolor=INK_2, linewidth=0.9))
-    ax.text(*plus, "+", ha="center", va="center", fontsize=11, color=INK)
-    _line(ax, [(3.725, rows[0]), (plus[0], rows[0])])
-    _arrow(ax, (plus[0], rows[0]), (plus[0], rows[1] + 0.15))
-    _arrow(ax, (3.925, rows[1]), (plus[0] - 0.15, rows[1]))
-    _line(ax, [(4.3, rows[2]), (plus[0], rows[2])])
-    _arrow(ax, (plus[0], rows[2]), (plus[0], rows[1] - 0.15))
-    _box(ax, (5.95, rows[1]), 0.75, 0.42, "output")
-    _arrow(ax, (plus[0] + 0.15, rows[1]), (5.575, rows[1]))
-    _arrow(ax, (2.0, rows[1] - 0.21), (2.0, rows[2] + 0.21), colour=ORANGE, dashed=True)
-    ax.text(2.08, (rows[1] + rows[2]) / 2 + 0.02, "folded in at the end of each slice", fontsize=7.5, color=ORANGE, ha="left", va="center")
-    for y, text, colour in ((rows[0], "pretrained path", INK_2),
-                            (rows[1], "in-slice fast weight, written chunk by chunk", BLUE),
-                            (rows[2], "carried state, own clip, gate and zero-initialised scale", ORANGE)):
-        ax.text(3.0, y + (0.29 if y > rows[2] else -0.36), text, ha="center", fontsize=7.5, color=colour)
+    fig, ax = _canvas(plt, WIDTH, 3.25)
+    top, mid, low = 2.75, 1.85, 0.95
+    _box(ax, (0.45, mid), 0.7, 0.42, "$z$", size=10)
+    _note(ax, (0.45, mid - 0.36), "MLP activation")
+    bus = 1.0
+    _line(ax, [(0.8, mid), (bus, mid)])
+    _line(ax, [(bus, top), (bus, low)])
+    _box(ax, (1.85, top), 1.2, 0.42, r"$W_{\mathrm{down}}$")
+    _note(ax, (1.85, top + 0.33), "pretrained")
+    _box(ax, (1.85, mid), 1.2, 0.42, r"$S_{\mathrm{in}}$", fill=BLUE_FILL, edge=BLUE)
+    _note(ax, (1.85, mid + 0.33), "this slice, from 0", BLUE)
+    _box(ax, (1.85, low), 1.2, 0.42, r"$S_{\mathrm{carried}}$", fill=ORANGE_FILL, edge=ORANGE)
+    for y in (top, mid, low):
+        _arrow(ax, (bus, y), (1.25, y))
+    _note(ax, (1.85, low + 0.33), "earlier slices", ORANGE)
+    _op(ax, (3.2, mid), "$g$", colour=BLUE)
+    _note(ax, (3.2, mid + 0.33), "gate", BLUE)
+    _arrow(ax, (2.45, mid), (3.03, mid))
+    _box(ax, (2.95, low), 0.7, 0.36, "clip", edge=ORANGE, size=8)
+    _note(ax, (2.95, low - 0.33), "keeps direction", ORANGE)
+    _arrow(ax, (2.45, low), (2.6, low))
+    _op(ax, (3.75, low), "$g_c$", colour=ORANGE)
+    _note(ax, (3.75, low - 0.33), "own gate", ORANGE)
+    _arrow(ax, (3.3, low), (3.58, low))
+    _op(ax, (4.4, low), r"$\alpha$", colour=ORANGE)
+    _note(ax, (4.4, low - 0.33), "starts at 0", ORANGE)
+    _arrow(ax, (3.92, low), (4.23, low))
+    plus = (5.15, mid)
+    _op(ax, plus, "+", size=11)
+    _line(ax, [(2.45, top), (plus[0], top)])
+    _arrow(ax, (plus[0], top), (plus[0], mid + 0.17))
+    _arrow(ax, (3.37, mid), (plus[0] - 0.17, mid))
+    _line(ax, [(4.57, low), (plus[0], low)])
+    _arrow(ax, (plus[0], low), (plus[0], mid - 0.17))
+    _box(ax, (5.9, mid), 0.7, 0.42, "output", size=8.5)
+    _arrow(ax, (plus[0] + 0.17, mid), (5.55, mid))
+    _box(ax, (1.85, 0.18), 2.3, 0.3, r"end of each slice:  $S \leftarrow 0.9\,S + \Delta S_{\mathrm{item}}$",
+         fill="white", edge=ORANGE, size=7.5)
+    _arrow(ax, (1.85, 0.33), (1.85, low - 0.21), colour=ORANGE, dashed=True)
     return _save(fig, out, "D1_gated_carry_layer")
 
 
 def diagram_protocol(out: Path) -> Path:
     plt = _plt()
-    fig, ax = _canvas(plt, WIDTH, 3.0)
-    ax.text(0.02, 2.82, "(a) Training: one document, read in slices", fontsize=9, fontweight="bold", color=INK)
-    xs = (0.6, 1.95, 3.3, 4.65)
+    fig, ax = _canvas(plt, WIDTH, 3.35)
+    ax.text(0.02, 3.18, "(a) Training: one document per session", fontsize=9, fontweight="bold", color=INK)
+    xs = (0.75, 2.05, 3.35, 4.65)
+    y = 2.55
     for i, x in enumerate(xs):
-        _box(ax, (x, 2.3), 0.8, 0.4, f"slice {i + 1}", fill=BLUE_FILL, edge=BLUE)
+        _box(ax, (x, y), 0.85, 0.4, f"slice {i + 1}", fill=BLUE_FILL, edge=BLUE)
     for a, b in zip(xs, xs[1:]):
-        _arrow(ax, (a + 0.42, 2.3), (b - 0.42, 2.3), colour=ORANGE, lw=1.4)
-        ax.text((a + b) / 2, 2.4, "carry", ha="center", fontsize=7.5, color=ORANGE)
-    _arrow(ax, (3.3, 2.09), (1.95, 2.09), colour=INK_2, dashed=True, rad=-0.3)
-    ax.text(2.625, 1.72, "gradient kept through two slices", ha="center", fontsize=7.5, color=INK_2)
-    ax.text(5.15, 2.3, "reset at the end\nof the document", va="center", fontsize=7.5, color=INK_2)
-    ax.text(0.02, 1.32, "(b) Testing across documents", fontsize=9, fontweight="bold", color=INK)
-    _box(ax, (1.05, 0.85), 2.0, 0.5, "", fill=ORANGE_FILL, edge=ORANGE)
-    ax.text(1.05, 0.93, "prime, 1024 tokens", ha="center", va="center", fontsize=8, color=INK)
-    ax.text(1.05, 0.75, "own opening, related, random, ...", ha="center", va="center", fontsize=7,
-            color=INK_2, style="italic")
-    _box(ax, (1.05, 0.22), 2.0, 0.32, "no prime (reset)", size=8)
-    _box(ax, (3.55, 0.85), 1.55, 0.42, "target block, scored", fill=BLUE_FILL, edge=BLUE, size=8)
-    _box(ax, (3.55, 0.22), 1.55, 0.32, "same target block, scored", size=8)
-    _arrow(ax, (2.05, 0.85), (2.775, 0.85), colour=ORANGE, lw=1.4)
-    ax.text(2.41, 0.95, "carried state", ha="center", fontsize=7.5, color=ORANGE)
-    _arrow(ax, (2.05, 0.22), (2.775, 0.22))
-    _line(ax, [(4.4, 0.85), (4.55, 0.85), (4.55, 0.22), (4.4, 0.22)])
-    ax.text(4.65, 0.535, "gain = reset minus\ncarried perplexity", va="center", fontsize=7.5, color=INK)
+        _arrow(ax, (a + 0.45, y), (b - 0.45, y), colour=ORANGE, lw=1.4)
+    _note(ax, ((xs[0] + xs[1]) / 2, y + 0.13), "carry", ORANGE)
+    for a, b in ((xs[1], xs[0]), (xs[3], xs[2])):
+        _arrow(ax, (a - 0.1, y - 0.21), (b + 0.1, y - 0.21), dashed=True, rad=-0.45)
+    _note(ax, ((xs[0] + xs[1]) / 2, y - 0.62), "gradient")
+    _note(ax, ((xs[2] + xs[3]) / 2, y - 0.62), "gradient")
+    ax.text(5.2, y, "reset before the\nnext document", va="center", fontsize=7.5, color=INK_2)
+    ax.text(0.02, 1.55, "(b) Testing across documents", fontsize=9, fontweight="bold", color=INK)
+    r1, r2 = 1.12, 0.22
+    _box(ax, (0.95, r1), 1.6, 0.42, "prime, 1024 tokens", fill=ORANGE_FILL, edge=ORANGE, size=8)
+    _box(ax, (0.95, r2), 1.6, 0.36, "no prime", size=8)
+    _arrow(ax, (1.75, r1), (2.55, r1), colour=ORANGE, lw=1.4)
+    _note(ax, (2.15, r1 - 0.43), "folded into the carry,\nthen removed from attention", ORANGE)
+    _arrow(ax, (1.75, r2), (2.55, r2))
+    _note(ax, (2.15, r2 + 0.13), "carry reset")
+    _box(ax, (3.35, r1), 1.6, 0.42, "target, scored", fill=BLUE_FILL, edge=BLUE, size=8)
+    _box(ax, (3.35, r2), 1.6, 0.36, "same target, scored", size=8)
+    _line(ax, [(4.2, r1), (4.35, r1), (4.35, r2), (4.2, r2)])
+    ax.text(4.47, (r1 + r2) / 2, "gain = difference\nin perplexity", va="center", fontsize=7.5, color=INK)
     return _save(fig, out, "D2_protocol")
 
 
@@ -603,6 +627,81 @@ def diagram_reset(out: Path) -> Path:
     return _save(fig, out, "D3_reset_vs_carry")
 
 
+TOKEN_RUNS = ((GATED, "seed 42", "-"), (GATED_43, "seed 43", "--"))
+TOKEN_BUNDLE = "20261103-164544-tokengain-fresh"
+TOKEN_EDGES = (1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024)
+TOKEN_ARMS = (("self", "same document", NAVY, "o"), ("related", "related article", BLUE, "s"),
+              ("random", "random article", GRAY, "D"), ("other_source", "other source", ORANGE, "v"))
+
+
+def _token_gains(run: str):
+    from ttt.app import token_gain_analysis
+
+    rows = json.loads((RESULTS_DIR / run / "step_600" / TOKEN_BUNDLE / "raw" / "token_gain.json").read_text())
+    return token_gain_analysis.gains(rows)
+
+
+def _token_bands(g, cluster, n_boot: int = N_BOOT):
+    import numpy as np
+
+    from ttt.app.token_gain_analysis import profile
+
+    edges = TOKEN_EDGES
+    k = int(cluster.max()) + 1
+    rng = np.random.default_rng(0)
+    draws = []
+    for _ in range(n_boot):
+        pick = np.concatenate([np.flatnonzero(cluster == c) for c in rng.integers(0, k, k)])
+        draws.append(profile(g[pick], edges))
+    lo, hi = np.percentile(np.stack(draws), [2.5, 97.5], axis=0)
+    return profile(g, edges), lo, hi
+
+
+def token_position(out: Path) -> Path:
+    import numpy as np
+
+    from ttt.app.token_gain_analysis import clusters
+
+    plt = _plt()
+    titles = json.loads((RESULTS_DIR / "paper" / "inputs" / "fresh_case_titles.json").read_text())
+    fig, (a, b) = plt.subplots(1, 2, figsize=(WIDTH, 2.7), gridspec_kw={"width_ratios": [1.15, 1], "wspace": 0.3})
+    xs = np.sqrt(np.asarray(TOKEN_EDGES[:-1]) * np.asarray(TOKEN_EDGES[1:]))
+    order, g = _token_gains(GATED)
+    cluster = np.asarray(clusters([{"prime_titles": titles[d]} for d in order]))
+    for arm, label, colour, marker in TOKEN_ARMS:
+        point, lo, hi = _token_bands(g[arm], cluster)
+        a.fill_between(xs, lo, hi, color=colour, alpha=BAND, linewidth=0, zorder=2)
+        a.plot(xs, point, color=colour, marker=marker, markersize=4, label=f"carry: {label}", zorder=3)
+    a.set_xscale("log")
+    _axes(a)
+    _zero(a)
+    a.set_xlabel("Position in the target (tokens)")
+    a.set_ylabel("Gain per token over reset (nats)")
+    a.text(-0.02, 1.04, "(a)", transform=a.transAxes, fontweight="bold", ha="right")
+    for run, seed, style in TOKEN_RUNS:
+        _, gs = _token_gains(run)
+        for arm, colour in (("related", BLUE), ("in_context", AQUA)):
+            per_pos = gs[arm].mean(axis=0)
+            b.plot(np.arange(1, 1024), np.cumsum(per_pos) / per_pos.sum(), color=colour, linestyle=style,
+                   linewidth=1.4)
+        b.plot([], [], color=INK_2, linestyle=style, linewidth=1.2, label=seed)
+    b.axvline(32, color=ZERO, linewidth=0.8, linestyle=":", zorder=1)
+    b.set_xscale("log")
+    b.set_ylim(0, 1)
+    _axes(b)
+    b.set_xlabel("Position in the target (tokens)")
+    b.set_ylabel("Share of the gain so far")
+    b.text(-0.02, 1.04, "(b)", transform=b.transAxes, fontweight="bold", ha="right")
+    b.text(1.3, 0.52, "related article\nin the carry", color=BLUE, fontsize=8, va="bottom")
+    b.text(120, 0.03, "related article\nin context", color=AQUA, fontsize=8, va="bottom")
+    b.text(35, 0.93, "token 32", color=ZERO, fontsize=7.5)
+    b.legend(loc="upper left", fontsize=7.5)
+    handles, labels = a.get_legend_handles_labels()
+    fig.legend(handles, labels, loc="upper center", ncol=4, bbox_to_anchor=(0.5, 1.07), fontsize=7.5,
+               handlelength=1.6, columnspacing=1.0)
+    return _save(fig, out, "F19_token_position")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--out", type=Path, default=OUT)
@@ -611,7 +710,7 @@ def main() -> None:
     threshold = json.loads((RESULTS_DIR / "paper" / "manifest.json").read_text())["clip_threshold"]
     for make in (diagram_layer, diagram_protocol, diagram_reset, ungated_gains, ungated_by_slice, absolute_ppl,
                  chain_states, noclip_training, gates, gated_curve, gated_by_slice, dev_relatedness,
-                 conf_relatedness, ablation):
+                 conf_relatedness, ablation, token_position):
         print(make(args.out))
     print(repeat_mechanism(args.out, threshold))
     print(state_distribution(args.out, threshold))

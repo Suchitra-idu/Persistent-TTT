@@ -1,0 +1,31 @@
+Note that running a local entrypoint in detached mode only keeps the last triggered Modal function alive after the parent process has been killed or disconnected.
+✓ Initialized. View run at 
+https://modal.com/apps/vihanganoob123/main/ap-ZTTyUeUQc308upnJwxy14C
+✓ Created objects.
+├── ✓ Uploaded 
+│   /home/suchitra/MyStuff/Persistent-TTT/ttt/experiments/paper_eval_v1.py
+├── ✓ Uploaded PythonPackage:ttt
+└── ✓ Created Function paper_eval.
+
+[1ALoading weights:   0%|          | 0/311 [00:00<?, ?it/s]
+[1ALoading weights:   1%|          | 2/311 [00:00<00:32,  9.60it/s]
+[1ALoading weights:  20%|██        | 63/311 [00:00<00:00, 253.61it/s]
+[1ALoading weights:  48%|████▊     | 149/311 [00:00<00:00, 476.08it/s]
+[1ALoading weights:  77%|███████▋  | 239/311 [00:00<00:00, 616.32it/s]Loading weights: 100%|██████████| 311/311 [00:00<00:00, 532.70it/s]
+loading 'DKYoon/SlimPajama-6B'...
+  loaded 5,489,000 rows in 2.3s
+  labeled sources in 4.0s
+  RedPajamaBook: 6 of 20 held out
+  RedPajamaArXiv: 37 of 40 held out
+  RedPajamaBook: 6 of 40 held out
+  RedPajamaStackExchange: 25 of 40 held out
+  RedPajamaWikipedia: 31 of 40 held out
+  excluding 106 documents of holdout seed 0
+73 documents across 5 sources
+wikipedia cases ...
+  cases loaded from evidence/cases/fresh.json
+token gain ...
+bundle -> /home/suchitra/MyStuff/Persistent-TTT/results/hebbian-carry-600-s43/step_600/20261103-164544-tokengain-fresh
+[modal-client] 2026-11-03T16:48:37+0530 Timed out waiting for final app logs.
+✓ App completed. View run at 
+https://modal.com/apps/vihanganoob123/main/ap-ZTTyUeUQc308upnJwxy14C

@@ -1,0 +1,33 @@
+Note that running a local entrypoint in detached mode only keeps the last triggered Modal function alive after the parent process has been killed or disconnected.
+✓ Initialized. View run at 
+https://modal.com/apps/vihanganoob123/main/ap-06GCSAl46GWGDfTUvDGLsM
+✓ Created objects.
+├── ✓ Uploaded 
+│   /home/suchitra/MyStuff/Persistent-TTT/ttt/experiments/paper_eval_v1.py
+├── ✓ Uploaded PythonPackage:ttt
+└── ✓ Created Function paper_eval.
+
+[1ALoading weights:   0%|          | 0/311 [00:00<?, ?it/s]
+[1ALoading weights:   0%|          | 1/311 [00:00<00:44,  6.99it/s]
+[1ALoading weights:   1%|          | 2/311 [00:00<01:16,  4.06it/s]
+[1ALoading weights:  16%|█▌        | 50/311 [00:00<00:02, 124.49it/s]
+[1ALoading weights:  44%|████▎     | 136/311 [00:00<00:00, 318.78it/s]
+[1ALoading weights:  69%|██████▉   | 215/311 [00:00<00:00, 447.41it/s]
+[1ALoading weights:  88%|████████▊ | 274/311 [00:00<00:00, 467.46it/s]Loading weights: 100%|██████████| 311/311 [00:00<00:00, 326.49it/s]
+loading 'DKYoon/SlimPajama-6B'...
+  loaded 5,489,000 rows in 4.9s
+  labeled sources in 4.0s
+  RedPajamaBook: 6 of 20 held out
+  RedPajamaArXiv: 37 of 40 held out
+  RedPajamaBook: 6 of 40 held out
+  RedPajamaStackExchange: 25 of 40 held out
+  RedPajamaWikipedia: 31 of 40 held out
+  excluding 106 documents of holdout seed 0
+73 documents across 5 sources
+wikipedia cases ...
+  cases loaded from evidence/cases/fresh.json
+generic carry from 200 articles ...
+relatedness ...
+bundle -> /home/suchitra/MyStuff/Persistent-TTT/results/hebbian-carry-600/step_600/20261103-170929-short128-fresh
+✓ App completed. View run at 
+https://modal.com/apps/vihanganoob123/main/ap-06GCSAl46GWGDfTUvDGLsM

@@ -1,0 +1,32 @@
+Note that running a local entrypoint in detached mode only keeps the last triggered Modal function alive after the parent process has been killed or disconnected.
+✓ Initialized. View run at 
+https://modal.com/apps/vihanganoob123/main/ap-AGR2Al7ZetiwzlmQpnJN4q
+✓ Created objects.
+├── ✓ Uploaded 
+│   /home/suchitra/MyStuff/Persistent-TTT/ttt/experiments/paper_eval_v1.py
+├── ✓ Uploaded PythonPackage:ttt
+└── ✓ Created Function paper_eval.
+
+[1ALoading weights:   0%|          | 0/311 [00:00<?, ?it/s]
+[1ALoading weights:   1%|          | 2/311 [00:00<00:26, 11.62it/s]
+[1ALoading weights:  22%|██▏       | 67/311 [00:00<00:00, 300.84it/s]
+[1ALoading weights:  54%|█████▍    | 169/311 [00:00<00:00, 568.63it/s]
+[1ALoading weights:  89%|████████▊ | 276/311 [00:00<00:00, 743.91it/s]
+[1ALoading weights: 100%|██████████| 311/311 [00:00<00:00, 623.46it/s]
+loading 'DKYoon/SlimPajama-6B'...
+  loaded 5,489,000 rows in 3.2s
+  labeled sources in 3.7s
+  RedPajamaBook: 6 of 20 held out
+  RedPajamaArXiv: 37 of 40 held out
+  RedPajamaBook: 6 of 40 held out
+  RedPajamaStackExchange: 25 of 40 held out
+  RedPajamaWikipedia: 31 of 40 held out
+  excluding 106 documents of holdout seed 0
+73 documents across 5 sources
+wikipedia cases ...
+  cases loaded from evidence/cases/fresh.json
+generic carry from 200 articles ...
+relatedness ...
+bundle -> /home/suchitra/MyStuff/Persistent-TTT/results/hebbian-carry-600/step_600/20261103-170929-short32-fresh
+✓ App completed. View run at 
+https://modal.com/apps/vihanganoob123/main/ap-AGR2Al7ZetiwzlmQpnJN4q

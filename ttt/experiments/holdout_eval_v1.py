@@ -147,6 +147,13 @@ class _EvalCompute:
         with self._torch.no_grad(), weights_for(self.model, lora=lora):
             return float(self.model(input_ids=ids, labels=context_labels(ids, score_from)).loss)
 
+    def eval_token_losses(self, token_ids, *, score_from: int = 0) -> tuple[float, ...]:
+        from ttt.adapters.torch_compute import token_losses
+
+        ids = self._torch.tensor([list(token_ids)], device="cuda", dtype=self._torch.long)
+        with self._torch.no_grad():
+            return token_losses(self.model, ids, score_from)
+
 
 @app.local_entrypoint()
 def main(seeded: bool = True, force_source: str = "", flags: str = ""):

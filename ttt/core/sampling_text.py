@@ -61,6 +61,8 @@ def next_token(
     probs, indices = nucleus_filter(
         logits, temperature=temperature, top_p=top_p, top_k=top_k
     )
+    if generator is not None and probs.device != generator.device:
+        probs, indices = probs.to(generator.device), indices.to(generator.device)
     pick = torch.multinomial(probs, num_samples=1, generator=generator)
     return int(indices.gather(-1, pick)[0, 0].item())
 

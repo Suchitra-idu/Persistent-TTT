@@ -138,3 +138,24 @@ class TestTorchGeneration(GenerationConformance):
 
     def test_it_produces_a_row_per_vocabulary_entry(self, generation):
         assert generation.prefill(PROMPT).shape[1] == _builders.VOCAB
+
+
+class TestRecomputingTorchGeneration(GenerationConformance):
+    @pytest.fixture
+    def generation(self):
+        model, _ = _builders.tiny_model()
+        return TorchGeneration(model, device="cpu", recompute=True)
+
+    def test_it_keeps_no_kv_cache(self, generation):
+        generation.prefill(PROMPT)
+
+        generation.step(0)
+
+        assert generation._cache is None
+
+    def test_a_step_equals_a_prefill_of_the_extended_prefix(self, generation):
+        generation.prefill(PROMPT)
+        stepped = generation.step(3)
+        generation.reset_cache()
+
+        assert torch.equal(generation.prefill([*PROMPT, 3]), stepped)

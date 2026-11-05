@@ -107,11 +107,29 @@ class TorchCompute:
         finally:
             self.model.train(was_training)
 
+    @torch.no_grad()
+    def eval_token_losses(
+        self, token_ids: Sequence[int], *, score_from: int = 0
+    ) -> tuple[float, ...]:
+        was_training = self.model.training
+        self.model.eval()
+        try:
+            return token_losses(self.model, self._ids(token_ids), score_from)
+        finally:
+            self.model.train(was_training)
+
     def parameter_counts(self) -> Mapping[str, int]:
         return {
             name: sum(p.numel() for p in params)
             for name, params in self._groups.items()
         }
+
+
+def token_losses(model: torch.nn.Module, ids: torch.Tensor, score_from: int) -> tuple[float, ...]:
+    """fp32 cross-entropy per position, as Hugging Face's mean loss computes it."""
+    logits = model(input_ids=ids).logits[0, :-1].float()
+    losses = torch.nn.functional.cross_entropy(logits, ids[0, 1:], reduction="none")
+    return tuple(losses[max(score_from, 1) - 1 :].tolist())
 
 
 def context_labels(ids: torch.Tensor, score_from: int) -> torch.Tensor:
