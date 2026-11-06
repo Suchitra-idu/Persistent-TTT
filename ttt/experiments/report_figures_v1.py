@@ -664,7 +664,7 @@ def token_position(out: Path) -> Path:
 
     plt = _plt()
     titles = json.loads((RESULTS_DIR / "paper" / "inputs" / "fresh_case_titles.json").read_text())
-    fig, (a, b) = plt.subplots(1, 2, figsize=(WIDTH, 2.7), gridspec_kw={"width_ratios": [1.15, 1], "wspace": 0.3})
+    fig, a = plt.subplots(figsize=(WIDTH * 0.62, 2.7))
     xs = np.sqrt(np.asarray(TOKEN_EDGES[:-1]) * np.asarray(TOKEN_EDGES[1:]))
     order, g = _token_gains(GATED)
     cluster = np.asarray(clusters([{"prime_titles": titles[d]} for d in order]))
@@ -677,28 +677,7 @@ def token_position(out: Path) -> Path:
     _zero(a)
     a.set_xlabel("Position in the target (tokens)")
     a.set_ylabel("Gain per token over reset (nats)")
-    a.text(-0.02, 1.04, "(a)", transform=a.transAxes, fontweight="bold", ha="right")
-    for run, seed, style in TOKEN_RUNS:
-        _, gs = _token_gains(run)
-        for arm, colour in (("related", BLUE), ("in_context", AQUA)):
-            per_pos = gs[arm].mean(axis=0)
-            b.plot(np.arange(1, 1024), np.cumsum(per_pos) / per_pos.sum(), color=colour, linestyle=style,
-                   linewidth=1.4)
-        b.plot([], [], color=INK_2, linestyle=style, linewidth=1.2, label=seed)
-    b.axvline(32, color=ZERO, linewidth=0.8, linestyle=":", zorder=1)
-    b.set_xscale("log")
-    b.set_ylim(0, 1)
-    _axes(b)
-    b.set_xlabel("Position in the target (tokens)")
-    b.set_ylabel("Share of the gain so far")
-    b.text(-0.02, 1.04, "(b)", transform=b.transAxes, fontweight="bold", ha="right")
-    b.text(1.3, 0.52, "related article\nin the carry", color=BLUE, fontsize=8, va="bottom")
-    b.text(120, 0.03, "related article\nin context", color=AQUA, fontsize=8, va="bottom")
-    b.text(35, 0.93, "token 32", color=ZERO, fontsize=7.5)
-    b.legend(loc="upper left", fontsize=7.5)
-    handles, labels = a.get_legend_handles_labels()
-    fig.legend(handles, labels, loc="upper center", ncol=4, bbox_to_anchor=(0.5, 1.07), fontsize=7.5,
-               handlelength=1.6, columnspacing=1.0)
+    a.legend(loc="upper right", fontsize=7.5, handlelength=1.6)
     return _save(fig, out, "F19_token_position")
 
 
