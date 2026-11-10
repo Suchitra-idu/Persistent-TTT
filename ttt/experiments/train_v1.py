@@ -152,4 +152,7 @@ def train(invocation: str = "", **flags):
 
 @app.local_entrypoint()
 def main(flags: str = ""):
-    train.spawn(invocation=cli.invocation(), **cli.parse_flags(flags)).get()
+    parsed = cli.parse_flags(flags)
+    if not parsed.get("run_name"):
+        raise SystemExit("--flags needs run_name=...: checkpoints are written under it")
+    train.spawn(invocation=cli.invocation(), **parsed).get()

@@ -169,7 +169,7 @@ def measure(
     """`generic` is installed as the carry for its arm; `in_context` puts the
     related prime in the same forward pass, unscored, with the carry reset;
     `chain_lengths` score the target after that many of `case.chain` carried."""
-    fast_weights.set_mode(evolve=True, stream=False, session=True)
+    fast_weights.set_mode(evolve=True, session=True)
     rows: list[RelatedRow] = []
     for case in cases:
         fast_weights.reset_carry()

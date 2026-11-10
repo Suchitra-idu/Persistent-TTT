@@ -13,13 +13,12 @@ from typing import Sequence
 from ttt.core.report import CompositionRow
 from ttt.core.schedule import derive_slice_count, slice_doc
 from ttt.core.types import Session, WorkItem
-from ttt.extensions.strategies._registry import SESSION, register
+from ttt.extensions.strategies._registry import register
 
 
 @dataclass(frozen=True)
 class Hybrid:
     name: str = "hybrid"
-    carry_scope: str = SESSION
 
     carry_min_tokens: int = 2100
     slice_min_tokens: int = 1000

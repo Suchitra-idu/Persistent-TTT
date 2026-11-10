@@ -1,8 +1,8 @@
 """The single CLI surface: arguments in, frozen config out, once (D3).
 
-`resolve` takes None for "not given". `from_flags` takes the sentinels a Modal
-entrypoint can express — 0, "", -1 — and maps them onto None, so the mess stops
-at the one boundary that forces it.
+`resolve` takes None for "not given". `from_flags` maps the sentinels of its
+own named Modal arguments (0, -1) onto None; a value inside the flags string is
+always taken as given, zero included.
 """
 
 from __future__ import annotations
@@ -21,17 +21,15 @@ from ttt.extensions import datasets, strategies
 from ttt.extensions.strategies import Strategy
 
 UNSET_FLAG = -1
-DEFAULT_LIMIT_DOCS = 500
+DEFAULT_LIMIT_DOCS = 4000
+# Options that no longer exist but appear in recorded run commands, with the
+# only value those commands used.
+RETIRED = {"state_aware_gate": False}
 
 DEFAULT_MODEL_SIZE = "0.6B"
 ENV_DATASET = "TTT_DATASET"
 ENV_MODEL_SIZE = "TTT_MODEL_SIZE"
 ENV_BASE_MODEL = "TTT_BASE_MODEL"
-
-# Everlasting has ~10x fewer optimizer steps per epoch than a slicing strategy —
-# one whole-doc item per session, not many slices — so eval_every=100 fires too
-# rarely to see anything.
-EVERLASTING_EVAL_EVERY = 25
 
 def _settable(config_type, *, handled: frozenset[str]) -> tuple[str, ...]:
     """Every field the CLI may set. Derived, so a new config field is reachable
@@ -63,7 +61,7 @@ def _strategy_fields() -> tuple[str, ...]:
                 field.name
                 for strategy in strategies.STRATEGIES.values()
                 for field in dataclasses.fields(strategy)
-                if field.name not in ("name", "carry_scope")
+                if field.name != "name"
             }
         )
     )
@@ -112,11 +110,12 @@ def resolve(
     **overrides: Any,
 ) -> Resolved:
     """Unknown keys raise, naming the valid ones: a typo costs GPU-hours."""
+    overrides = _without_retired(overrides)
     _check_known(overrides)
     spec = datasets.get(dataset or datasets.DEFAULT)
     picked = strategies.get(strategy or TrainConfig().strategy)
     train = _train_config(
-        overrides, strategy=strategy, session_training=session_training, picked=picked
+        overrides, strategy=strategy, session_training=session_training
     )
 
     return Resolved(
@@ -139,8 +138,10 @@ def from_flags(
     limit_docs: int = 0,
     **flags: Any,
 ) -> Resolved:
-    """Maps a Modal entrypoint's 0 / "" / -1 sentinels onto None."""
-    given = resolve_mod.only_set({**flags, "num_epochs": num_epochs}, unset=(0, "", 0.0))
+    """Maps this function's own 0 / -1 sentinels onto None."""
+    given = dict(flags)
+    if num_epochs:
+        given["num_epochs"] = num_epochs
     if grad_accum:
         given["grad_accum_steps"] = grad_accum
     return resolve(
@@ -151,9 +152,8 @@ def from_flags(
 
 
 def _resolved_limit_docs(limit_docs: int) -> int | None:
-    """0 (not given) is the smoke-test-sized default — a launch never
-    silently trains on the full corpus. A negative value opts into that
-    explicitly."""
+    """0 (not given) is the paper's 4000 documents; a negative value opts into
+    the full corpus explicitly."""
     if limit_docs == 0:
         return DEFAULT_LIMIT_DOCS
     if limit_docs < 0:
@@ -166,15 +166,12 @@ def _train_config(
     *,
     strategy: str | None,
     session_training: bool | None,
-    picked: Strategy,
 ) -> TrainConfig:
     given = _taken(overrides, _TRAIN_FIELDS)
     if strategy:
         given["strategy"] = strategy
     if session_training is not None:
         given["session_training"] = session_training
-    if picked.carry_scope == strategies.SOURCE and "eval_every" not in given:
-        given["eval_every"] = EVERLASTING_EVAL_EVERY
     return resolve_mod.merge(TrainConfig(), given)
 
 
@@ -229,6 +226,14 @@ def _weights(
     return presets.get_preset(name) if name else None
 
 
+def _without_retired(overrides: Mapping[str, Any]) -> dict[str, Any]:
+    kept = dict(overrides)
+    for name, only in RETIRED.items():
+        if name in kept and _as_bool(name, kept.pop(name)) != only:
+            raise ValueError(f"{name} was removed; only {name}={str(only).lower()} is still accepted")
+    return kept
+
+
 def _check_known(overrides: Mapping[str, Any]) -> None:
     known = _TRAIN_FIELDS + _TTT_FIELDS + _strategy_fields()
     unknown = sorted(set(overrides) - set(known))
@@ -247,6 +252,18 @@ def _taken(overrides: Mapping[str, Any], fields: tuple[str, ...]) -> dict[str, A
 
 
 TRUTHY = ("1", "true", "yes", "on")
+FALSY = ("0", "false", "no", "off")
+
+
+def _as_bool(name: str, value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    text = str(value).strip().lower()
+    if text in TRUTHY:
+        return True
+    if text in FALSY:
+        return False
+    raise ValueError(f"{name}={value!r} is not a boolean; use one of {TRUTHY + FALSY}")
 
 
 def _flag_types() -> dict[str, type]:
@@ -284,8 +301,8 @@ def parse_flags(text: str) -> dict[str, Any]:
 
 def _flag_value(name: str, text: str) -> Any:
     kind = _FLAG_TYPES.get(name)
-    if kind is bool:
-        return text.lower() in TRUTHY
+    if kind is bool or name in RETIRED:
+        return _as_bool(name, text)
     if kind in (int, float):
         return kind(text)
     if kind is str:
@@ -334,4 +351,6 @@ def resume_path(resume_from: str, run_name: str) -> str:
     """`step_N` is this run's; `other_run/step_N` is another's. Empty is no resume."""
     if not resume_from:
         return ""
+    if "/" not in resume_from and not run_name:
+        raise ValueError(f"resume_from={resume_from!r} names no run; pass run/{resume_from} or set run_name")
     return resume_from if "/" in resume_from else f"{run_name}/{resume_from}"

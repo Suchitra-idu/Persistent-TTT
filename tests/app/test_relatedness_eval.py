@@ -186,7 +186,7 @@ def test_the_generic_arm_scores_the_target_with_the_generic_carry_installed():
     )
 
     assert rows[-1].arm == relatedness_eval.GENERIC
-    assert wiring.fast_weights.events[-3:-1] == ["reset_carry", "install(carry)"]
+    assert wiring.fast_weights.events[-3:-1] == ["reset_carry", "install"]
     assert wiring.compute.eval_forwards[-1] == TARGET
 
 
@@ -232,7 +232,7 @@ def test_scoring_the_target_mid_chain_does_not_feed_the_chain():
     )
 
     after_first = wiring.fast_weights.events[-7:]
-    assert after_first[:4] == ["advance_carry", "reset_carry", "install(carry)", "advance_carry"]
+    assert after_first[:4] == ["advance_carry", "reset_carry", "install", "advance_carry"]
 
 
 def test_a_chain_shorter_than_the_longest_length_is_an_error():

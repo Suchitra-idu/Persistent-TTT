@@ -155,7 +155,7 @@ class TestSeededPass:
         seed = {"alpha": _builders.carry()}
         _, one = measure(n_docs=1, n_slices=1, carries=seed)
         _, four = measure(n_docs=1, n_slices=4, carries=seed)
-        installs = [w.fast_weights.events.count("install(carry)") for w in (one, four)]
+        installs = [w.fast_weights.events.count("install") for w in (one, four)]
 
         assert installs[1] - installs[0] == 3
 
@@ -197,10 +197,10 @@ class TestSeededPass:
 class TestStateRestoration:
     def test_it_puts_back_the_carry_it_found(self):
         wiring = _builders.Wiring()
-        wiring.fast_weights.set_mode(evolve=True, stream=False, session=True)
+        wiring.fast_weights.set_mode(evolve=True, session=True)
         wiring.fast_weights.stage(8)
         wiring.fast_weights.advance_carry()
-        before = wiring.fast_weights.state_ratio(family="carry")
+        before = wiring.fast_weights.state_ratio()
 
         eval_loop.evaluate(
             docs=_builders.docs(2),
@@ -209,14 +209,14 @@ class TestStateRestoration:
             n_slices=SLICES,
         )
 
-        assert wiring.fast_weights.state_ratio(family="carry") == pytest.approx(before)
+        assert wiring.fast_weights.state_ratio() == pytest.approx(before)
 
     def test_it_restores_even_when_a_measurement_raises(self):
         wiring = _builders.Wiring()
-        wiring.fast_weights.set_mode(evolve=True, stream=False, session=True)
+        wiring.fast_weights.set_mode(evolve=True, session=True)
         wiring.fast_weights.stage(8)
         wiring.fast_weights.advance_carry()
-        before = wiring.fast_weights.state_ratio(family="carry")
+        before = wiring.fast_weights.state_ratio()
 
         with pytest.raises(ZeroDivisionError):
             eval_loop.evaluate(
@@ -226,7 +226,7 @@ class TestStateRestoration:
                 n_slices=SLICES,
             )
 
-        assert wiring.fast_weights.state_ratio(family="carry") == pytest.approx(before)
+        assert wiring.fast_weights.state_ratio() == pytest.approx(before)
 
     def test_it_leaves_the_fast_weight_thawed_for_the_training_loop(self):
         _, wiring = measure()

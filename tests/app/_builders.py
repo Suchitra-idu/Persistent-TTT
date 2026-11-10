@@ -8,7 +8,6 @@ from typing import Mapping, Sequence
 from ttt.adapters.fake_compute import FakeCompute
 from ttt.adapters.fake_data_source import FakeDataSource
 from ttt.adapters.fake_fast_weights import FakeFastWeights
-from ttt.adapters.fake_generation import FakeGeneration
 from ttt.adapters.fake_tokenizer import FakeTokenizer
 from ttt.adapters.in_memory_tracker import InMemoryTracker
 from ttt.adapters.list_table import ListTable
@@ -49,7 +48,7 @@ def config(**overrides) -> TrainConfig:
         eval_every=0,
         eval_n_docs_per_source=1,
         eval_min_tokens=1,
-        strategy="everlasting",
+        strategy="hybrid",
     )
     return TrainConfig(**{**defaults, **overrides})
 
@@ -98,16 +97,6 @@ class Wiring:
         )
         self.tracker = InMemoryTracker()
         self.rng = ScriptedRng()
-
-
-def chat_wiring(script: Sequence[int] = (7, 8, 9), **kwargs):
-    """A FakeGeneration whose tokens stage into the same FakeFastWeights a real
-    forward would, so the switch matrix moves real state."""
-    wiring = Wiring(**kwargs)
-    generation = FakeGeneration(
-        script, vocab_size=261, fast_weights=wiring.fast_weights
-    )
-    return wiring, generation, FakeTokenizer()
 
 
 def rows(sources: Sequence[str], *, length: int = 40) -> list[dict]:

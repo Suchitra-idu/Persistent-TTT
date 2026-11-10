@@ -4,22 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from ttt.extensions.strategies import (
-    EVERLASTING,
-    HYBRID,
-    MINILASTING,
-    MIXED,
-    SESSION,
-    SOURCE,
-    Hybrid,
-    Minilasting,
-    Mixed,
-)
+from ttt.extensions.strategies import HYBRID, MIXED, Hybrid, Mixed
 from tests.extensions import _builders
-
-
-def test_hybrid_carries_within_a_session_and_everlasting_across_sources():
-    assert (HYBRID.carry_scope, EVERLASTING.carry_scope) == (SESSION, SOURCE)
 
 
 def test_a_doc_below_the_carry_threshold_is_one_whole_item():
@@ -66,42 +52,6 @@ def test_hybrid_puts_exactly_one_doc_in_each_session():
     assert all(len(set(session.doc_indices)) == 1 for session in sessions)
 
 
-def test_everlasting_sessions_are_a_single_whole_doc():
-    lengths = _builders.doc_lengths(30, seed=8)
-    sources = _builders.sources_for(lengths, seed=9)
-
-    sessions = EVERLASTING.build(lengths, sources, _builders.FakeRng(5))
-
-    assert all(
-        len(session) == 1 and session.items[0].n_tokens == lengths[session.items[0].doc_idx]
-        for session in sessions
-    )
-
-
-def test_everlasting_shuffles_the_document_order():
-    lengths = _builders.doc_lengths(30, seed=8)
-    sources = _builders.sources_for(lengths, seed=9)
-
-    sessions = EVERLASTING.build(lengths, sources, _builders.FakeRng(5))
-
-    assert [s.items[0].doc_idx for s in sessions] != list(range(len(lengths)))
-
-
-def test_everlasting_counts_one_item_per_doc():
-    lengths = _builders.doc_lengths(30, seed=8)
-
-    assert EVERLASTING.count(lengths) == len(lengths)
-
-
-def test_everlasting_marks_every_doc_as_carrying():
-    lengths = _builders.doc_lengths(30, seed=8)
-    sources = _builders.sources_for(lengths, seed=9)
-
-    rows = EVERLASTING.compose(lengths, sources)
-
-    assert all(row.no_carry_docs == 0 for row in rows)
-
-
 def test_hybrid_splits_carrying_from_non_carrying_docs():
     lengths = [500, 500, HYBRID.carry_min_tokens * 3]
     sources = ["a", "a", "a"]
@@ -109,48 +59,6 @@ def test_hybrid_splits_carrying_from_non_carrying_docs():
     rows = HYBRID.compose(lengths, sources)
 
     assert (rows[0].no_carry_docs, rows[0].carry_docs) == (2, 1)
-
-
-def test_minilasting_carries_within_a_session_not_across_it():
-    assert MINILASTING.carry_scope == SESSION
-
-
-def test_minilasting_never_puts_two_sources_in_one_session():
-    lengths = _builders.doc_lengths(30, seed=8)
-    sources = _builders.sources_for(lengths, seed=9)
-
-    sessions = Minilasting(docs_per_session=3).build(lengths, sources, _builders.FakeRng(5))
-
-    by_doc = {i: source for i, source in enumerate(sources)}
-    assert all(
-        len({by_doc[doc_idx] for doc_idx in session.doc_indices}) == 1
-        for session in sessions
-    )
-
-
-def test_minilasting_caps_a_session_at_docs_per_session_documents():
-    lengths = _builders.doc_lengths(30, seed=8)
-    sources = _builders.sources_for(lengths, seed=9)
-
-    sessions = Minilasting(docs_per_session=3).build(lengths, sources, _builders.FakeRng(5))
-
-    assert all(len(set(session.doc_indices)) <= 3 for session in sessions)
-
-
-def test_a_wider_session_lets_more_documents_share_a_carry():
-    lengths = _builders.doc_lengths(30, seed=8)
-    sources = _builders.sources_for(lengths, seed=9)
-
-    narrow = Minilasting(docs_per_session=1).build(lengths, sources, _builders.FakeRng(5))
-    wide = Minilasting(docs_per_session=30).build(lengths, sources, _builders.FakeRng(5))
-
-    assert max(len(set(s.doc_indices)) for s in narrow) == 1
-    assert max(len(set(s.doc_indices)) for s in wide) > 1
-
-
-def test_a_docs_per_session_below_one_is_an_error():
-    with pytest.raises(ValueError, match="docs_per_session"):
-        Minilasting(docs_per_session=0)
 
 
 def _boundaries(sessions, sources):
@@ -168,10 +76,6 @@ def _boundaries(sessions, sources):
 
 MIX_LENGTHS = _builders.doc_lengths(600, seed=21)
 MIX_SOURCES = _builders.sources_for(MIX_LENGTHS, seed=22)
-
-
-def test_mixed_carries_within_a_session_not_across_it():
-    assert MIXED.carry_scope == SESSION
 
 
 def test_mixed_uses_every_document_exactly_once():

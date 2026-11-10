@@ -15,7 +15,7 @@ from ttt.app.data_pipeline import Doc
 from ttt.core import metrics, schedule
 from ttt.core.types import Carry
 from ttt.ports.compute import Compute
-from ttt.ports.fast_weights import CARRY, FastWeights
+from ttt.ports.fast_weights import FastWeights
 
 
 @dataclass(frozen=True)
@@ -52,7 +52,7 @@ def session_perplexity(
 ) -> tuple[ItemRow, ...]:
     """`force_source` installs that source's carrier whatever the doc is — the
     swap test: a source-specific benefit should degrade under a mismatch."""
-    fast_weights.set_mode(evolve=evolve, stream=False, session=True)
+    fast_weights.set_mode(evolve=evolve, session=True)
     seeds = carries or {}
 
     rows: list[ItemRow] = []
@@ -72,7 +72,7 @@ def session_perplexity(
                     start=start,
                     end=end,
                     ppl=metrics.perplexity(loss),
-                    state_ratio=fast_weights.state_ratio(family=CARRY),
+                    state_ratio=fast_weights.state_ratio(),
                     gate_mean=1.0 if gate_stats is None else gate_stats[0],
                 )
             )

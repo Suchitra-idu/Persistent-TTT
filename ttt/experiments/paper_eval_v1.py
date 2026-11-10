@@ -37,7 +37,6 @@ from ttt.app import (
     eval_loop,
     evidence,
     repeat_eval,
-    swap_eval,
     token_gain,
 )
 from ttt.core import report
@@ -53,16 +52,15 @@ image = modal_runtime.build_image()
 REGIMES = "regimes"
 BOUNDARY = "boundary"
 REPEAT = "repeat"
-SWAP = "swap"
 CONTEXT = "context"
 RELATEDNESS = "relatedness"
 DYNEVAL = "dyneval"
 TOKEN_GAIN = "token_gain"
-SUITES = (REGIMES, BOUNDARY, REPEAT, SWAP)
+SUITES = (REGIMES, BOUNDARY, REPEAT)
 # Opt-in: context costs a second, longer forward per slice; relatedness and dyneval download
 # Wikipedia, and dyneval takes gradient steps, so it runs on models without TTT layers too.
 KNOWN_SUITES = SUITES + (CONTEXT, RELATEDNESS, DYNEVAL, TOKEN_GAIN)
-TTT_SUITES = (BOUNDARY, REPEAT, SWAP, CONTEXT, RELATEDNESS, TOKEN_GAIN)
+TTT_SUITES = (BOUNDARY, REPEAT, CONTEXT, RELATEDNESS, TOKEN_GAIN)
 
 RESULTS_DIR = "results"
 WIKIPEDIA = "RedPajamaWikipedia"
@@ -72,7 +70,6 @@ RAW_FILES = {
     "regime_slices": SliceRow,
     "boundary": boundary_eval.ArmRow,
     "repeat": repeat_eval.RepeatItem,
-    "swap": swap_eval.SwapRow,
     "context": context_eval.ContextRow,
     "relatedness": relatedness_eval.RelatedRow,
     "dyneval_self": relatedness_eval.RelatedRow,
@@ -91,8 +88,6 @@ class Plan:
     n_slices: int = 8
     n_chain: int = 5
     n_repeats: int = 10
-    n_primes: int = 2
-    n_targets: int = 5
     n_related: int = 200
     n_tune: int = 40
     n_wiki_shards: int = 2
@@ -126,7 +121,6 @@ class Analysis:
     boundary: tuple[Estimate, ...] = ()
     repeat_curve: tuple[evidence.RepeatPoint, ...] = ()
     repeat_trend: tuple[Estimate, ...] = ()
-    swap: tuple[Estimate, ...] = ()
     context: tuple[Estimate, ...] = ()
     relatedness: tuple[Estimate, ...] = ()
     dyneval: tuple[Estimate, ...] = ()
@@ -145,7 +139,7 @@ def run(
     announce: Callable[[str], None] = print,
 ) -> dict[str, Any]:
     """Raw per-document rows per suite, plus what the holdout actually held."""
-    resolved = _with_docs(resolved, max(plan.n_docs, plan.n_chain, plan.n_targets + plan.n_primes))
+    resolved = _with_docs(resolved, max(plan.n_docs, plan.n_chain))
     by_source = _holdout_by_source(resolved, engine, source, plan, announce)
     eval_docs = tuple(d for s in sorted(by_source) for d in by_source[s][: plan.n_docs])
     announce(f"{len(eval_docs)} documents across {len(by_source)} sources")
@@ -247,13 +241,6 @@ def run(
                 rows[f"dyneval_{objective}"] = evidence.records(
                     dynamic_eval.measure(cases=measured, compute=engine.compute, adapter=adapter, setting=setting)
                 )
-    if SWAP in suites:
-        announce("swap ...")
-        rows["swap"] = evidence.records(
-            swap_eval.measure(
-                by_source=by_source, n_primes=plan.n_primes, n_targets=plan.n_targets, **ports
-            )
-        )
     return {
         "rows": rows,
         "suites": list(suites),
@@ -320,6 +307,7 @@ def _cached_cases(engine, plan, announce, build):
     path = f"{EVIDENCE_DIR}/cases/{plan.cases_file}.json" if plan.cases_file else ""
     if path and storage is not None and storage.exists(path):
         saved = evidence.load_json(storage, path)
+        _check_case_plan(saved.get("plan", {}), plan, path)
         announce(f"  cases loaded from {path}")
         return [_case_from(c) for c in saved["cases"]], [tuple(b) for b in saved["generic"]]
     cases, _, pools = build()
@@ -335,6 +323,21 @@ def _cached_cases(engine, plan, announce, build):
     return cases, list(pools.generic)
 
 
+CASE_SETTINGS = ("n_related", "n_tune", "n_wiki_shards", "wiki_first_shard", "wiki_case_seed",
+                 "unique_related", "n_generic", "overlap_seeds", "exclude_holdout_seed")
+
+
+def _check_case_plan(saved: Mapping[str, Any], plan: Plan, path: str) -> None:
+    """The settings that decide which articles become cases must match the saved file."""
+    current = dataclasses.asdict(plan)
+    changed = [k for k in CASE_SETTINGS if k in saved and saved[k] != current[k]]
+    if changed:
+        raise ValueError(
+            f"{path} was built with different case settings {changed}; "
+            "use another cases_file or the saved settings"
+        )
+
+
 def _case_from(saved: Mapping[str, Any]) -> relatedness_eval.Case:
     return relatedness_eval.Case(
         index=saved["index"],
@@ -348,7 +351,7 @@ def _case_from(saved: Mapping[str, Any]) -> relatedness_eval.Case:
 
 def _carry_mean(blocks, engine):
     fast_weights = engine.fast_weights
-    fast_weights.set_mode(evolve=True, stream=False, session=True)
+    fast_weights.set_mode(evolve=True, session=True)
     states = []
     for block in blocks:
         fast_weights.reset_carry()
@@ -381,7 +384,6 @@ def analyse(rows: Mapping[str, list], *, n_boot: int = DEFAULT_N_BOOT, seed: int
         boundary=boundary,
         repeat_curve=evidence.repeat_curve(typed.get("repeat", ()), **kw),
         repeat_trend=evidence.repeat_trend(typed.get("repeat", ()), **kw),
-        swap=evidence.swap_estimates(typed.get("swap", ()), **kw),
         context=context_eval.estimates(typed.get("context", ()), **kw),
         relatedness=relatedness_eval.estimates(typed.get("relatedness", ()), **kw),
         dyneval=tuple(
@@ -431,7 +433,6 @@ def render_bundle(
         "regime_gaps": analysis.regimes,
         "boundary_gaps": analysis.boundary,
         "repeat_trend": analysis.repeat_trend,
-        "swap": analysis.swap,
         "context_gaps": analysis.context,
         "relatedness": analysis.relatedness,
         "dyneval": analysis.dyneval,
@@ -503,8 +504,6 @@ def _figures(folder: Path, analysis: Analysis, announce) -> list[str]:
     if analysis.repeat_curve:
         made.append(figs.repeat_curves(analysis.repeat_curve, str(out / "repeat_curve.png")))
         made.append(figs.stability(analysis.repeat_curve, str(out / "stability.png")))
-    if any(e.measure.startswith("prime:") for e in analysis.swap):
-        made.append(figs.swap_heatmap(analysis.swap, str(out / "swap_matrix.png")))
     if analysis.correlates:
         made.append(figs.domain_scatter(analysis.fresh, analysis.regimes + analysis.boundary, analysis.correlates, str(out / "domain_correlates.png")))
     return [str(Path(p).relative_to(folder)) for p in made]
@@ -514,7 +513,7 @@ def summary(analysis: Analysis, figures) -> str:
     """The pooled headline per measure; per-source detail lives in tables/."""
     pooled = [
         e
-        for e in analysis.regimes + analysis.boundary + analysis.repeat_trend + analysis.swap + analysis.context + analysis.relatedness + analysis.dyneval
+        for e in analysis.regimes + analysis.boundary + analysis.repeat_trend + analysis.context + analysis.relatedness + analysis.dyneval
         if e.source == ALL_SOURCES
     ]
     lines = ["# Evidence bundle", "", "## Pooled estimates (95% paired bootstrap over documents)", ""]
@@ -573,14 +572,14 @@ def git_state() -> dict[str, Any]:
 @modal_runtime.caching
 def paper_eval(checkpoint: str, bundle: str, plan: dict, **flags) -> dict[str, Any]:
     from ttt.adapters.hf_data_source import HfDataSource
-    from ttt.experiments.holdout_eval_v1 import _EvalCompute
+    from ttt.adapters.torch_compute import EvalCompute
 
     resolved = cli.from_flags(**{**cli.env_defaults(), **flags, "resume_from": checkpoint})
     storage = modal_runtime.checkpoint_storage()
     engine = _runtime.build(
         resolved, storage=storage, root=modal_runtime.CKPT_MOUNT, trainable=False
     )
-    engine.compute = _EvalCompute(engine.model)
+    engine.compute = EvalCompute(engine.model)
     payload = run(resolved, engine=engine, source=HfDataSource(), plan=Plan(**plan))
     for name, items in payload["rows"].items():
         evidence.save_json(storage, f"{EVIDENCE_DIR}/{bundle}/raw/{name}.json", items)
@@ -596,8 +595,6 @@ def main(
     n_slices: int = Plan.n_slices,
     n_chain: int = Plan.n_chain,
     n_repeats: int = Plan.n_repeats,
-    n_primes: int = Plan.n_primes,
-    n_targets: int = Plan.n_targets,
     n_related: int = Plan.n_related,
     n_tune: int = Plan.n_tune,
     dyneval_grid: str = "",
@@ -626,7 +623,7 @@ def main(
     plan = Plan(
         suites=tuple(s.strip() for s in suites.split(",") if s.strip()),
         n_docs=n_docs, n_slices=n_slices, n_chain=n_chain, n_repeats=n_repeats,
-        n_primes=n_primes, n_targets=n_targets, n_related=n_related, n_tune=n_tune, n_wiki_shards=n_wiki_shards,
+        n_related=n_related, n_tune=n_tune, n_wiki_shards=n_wiki_shards,
         dyneval_grid=dyneval_grid, dyneval_fixed=dyneval_fixed, case_slice=case_slice,
         wiki_first_shard=wiki_first_shard, wiki_case_seed=wiki_case_seed,
         unique_related=unique_related, n_generic=n_generic, in_context=in_context,

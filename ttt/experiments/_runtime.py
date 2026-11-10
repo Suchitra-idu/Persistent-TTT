@@ -16,10 +16,8 @@ from ttt import cli
 from ttt.adapters import checkpoint_io
 from ttt.adapters.numpy_rng import NumpyRng
 from ttt.core.types import Carry
-from ttt.ports.clock import Clock
 from ttt.ports.compute import Compute
 from ttt.ports.fast_weights import FastWeights
-from ttt.ports.generation import Generation
 from ttt.ports.rng import Rng
 from ttt.ports.storage import Storage
 from ttt.ports.tokenizer import Tokenizer
@@ -38,10 +36,8 @@ class Engine:
     tokenizer: Tokenizer
     compute: Compute | None = None
     fast_weights: FastWeights | None = None
-    generation: Generation | None = None
     tracker: Tracker | None = None
     storage: Storage | None = None
-    clock: Clock | None = None
     model: Any = None
     root: str = ""
     save: Callable[..., None] = _no_save
@@ -74,11 +70,13 @@ def build(
     """
     from ttt.adapters.hf_tokenizer import HfTokenizer
     from ttt.adapters.model_builder import build_model
-    from ttt.adapters.system_clock import SystemClock
     from ttt.adapters.torch_compute import TorchCompute
     from ttt.adapters.torch_fast_weights import TorchFastWeights
-    from ttt.adapters.torch_generation import TorchGeneration
 
+    import torch
+
+    # LoRA's initialisation and dropout draw from torch's global RNG.
+    torch.manual_seed(resolved.train.seed)
     resume = _resume_dir(resolved)
     model, ttt_cfg = build_model(
         resolved.base_model,
@@ -101,9 +99,7 @@ def build(
             else None
         ),
         fast_weights=TorchFastWeights(model, ttt_cfg),
-        generation=TorchGeneration(model),
         storage=storage,
-        clock=SystemClock(),
         model=model,
         root=root,
     )

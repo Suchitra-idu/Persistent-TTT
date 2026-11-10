@@ -62,11 +62,11 @@ def run(
     # resolving the moment LoRA is attached.
     modules = list(iter_ttt_modules(model))
 
-    fast_weights.set_mode(evolve=False, stream=False, session=False)
+    fast_weights.set_mode(evolve=False, session=False)
     with torch.no_grad():
         off = model(input_ids=ids).logits
 
-    fast_weights.set_mode(evolve=True, stream=False, session=False)
+    fast_weights.set_mode(evolve=True, session=False)
     with torch.no_grad():
         at_init = model(input_ids=ids).logits
 

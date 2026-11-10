@@ -7,17 +7,11 @@ from typing import Protocol, Sequence, runtime_checkable
 from ttt.core.report import CompositionRow
 from ttt.core.types import Session
 
-SESSION = "session"
-SOURCE = "source"
-CARRY_SCOPES = (SESSION, SOURCE)
-
-
 @runtime_checkable
 class Strategy(Protocol):
-    """One epoch of sessions. `carry_scope` says what the carry outlives."""
+    """One epoch of sessions; the carry is reset between them."""
 
     name: str
-    carry_scope: str
 
     def build(
         self, doc_lengths: Sequence[int], sources: Sequence[str], rng
@@ -40,11 +34,6 @@ STRATEGIES: dict[str, Strategy] = {}
 
 
 def register(strategy: Strategy) -> Strategy:
-    if strategy.carry_scope not in CARRY_SCOPES:
-        raise ValueError(
-            f"strategy {strategy.name!r} has carry_scope "
-            f"{strategy.carry_scope!r}; expected one of {list(CARRY_SCOPES)}"
-        )
     if strategy.name in STRATEGIES:
         raise ValueError(
             f"strategy {strategy.name!r} is already registered; a name collision "

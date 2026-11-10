@@ -125,7 +125,7 @@ class TestFakeCompute(ComputeConformance):
         from ttt.adapters.fake_fast_weights import FakeFastWeights
 
         fast_weights = FakeFastWeights([1, 3])
-        fast_weights.set_mode(evolve=True, stream=False, session=True)
+        fast_weights.set_mode(evolve=True, session=True)
         compute = FakeCompute(fast_weights=fast_weights)
 
         compute.loss(IDS)

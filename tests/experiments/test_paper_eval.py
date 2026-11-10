@@ -11,7 +11,7 @@ from tests.experiments import _builders
 from ttt.experiments import compare_checkpoints_v1, paper_eval_v1
 from ttt.experiments.paper_eval_v1 import Plan
 
-PLAN = Plan(n_docs=3, n_slices=2, n_chain=3, n_repeats=3, n_primes=1, n_targets=2)
+PLAN = Plan(n_docs=3, n_slices=2, n_chain=3, n_repeats=3)
 
 
 def payload(plan=PLAN, resolution=None):
@@ -34,7 +34,7 @@ def bundle(tmp_path, name="a", plan=PLAN):
 
 
 def test_every_suite_writes_its_raw_rows():
-    assert set(payload()["rows"]) == {"regimes", "regime_slices", "boundary", "repeat", "swap"}
+    assert set(payload()["rows"]) == {"regimes", "regime_slices", "boundary", "repeat"}
 
 
 def test_the_layers_come_from_the_built_engine_not_the_requested_config():
@@ -69,7 +69,7 @@ def test_the_bundle_draws_every_figure(tmp_path):
 
     assert {p.name for p in (folder / "figures").iterdir()} == {
         "regime_gaps.png", "boundary_gaps.png", "repeat_curve.png",
-        "stability.png", "swap_matrix.png", "domain_correlates.png",
+        "stability.png", "domain_correlates.png",
     }
 
 

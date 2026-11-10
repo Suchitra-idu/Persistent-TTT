@@ -33,57 +33,23 @@ class TTTConfig:
     layer_indices: tuple[int, ...] | None = None
 
     chunk_size: int = 50
-    eta: float = 2
+    eta: float = 2.0
     normalize_delta_by_chunk: bool = True
     conv_kernel_size: int = 8
-
-    # "hebbian" is ttt_math.scan; "delta"/"delta_chunk" are error-corrected
-    # alternatives, O(N)- and O(N/chunk_size)-sequential respectively. See
-    # delta_scan's and chunked_delta_scan's docstrings.
     update_rule: str = "hebbian"
 
-    # Breaks chunk-causality under next-token prediction; a knowingly invalid
-    # ablation kept pending a research call (PLAN §9.2).
-    v_bidirectional: bool = False
-
     output_gate: bool = True
-    # -0.5 and +2.0 (less damped) were both tried and both hurt early
-    # training — an undertrained carry let through at higher weight is
-    # noise, not signal, this early. -2.0 is the value that's actually held up.
+    # Initialises both the main gate and the carry gate. The gated carry of the
+    # paper uses -6 with carry_gate and carry_backprop; these defaults are the
+    # ungated carry, which the recorded ungated runs relied on.
     output_gate_bias_init: float = -2.0
-
-    # Off by default. The gate normally reads only the current token; this
-    # adds a learned, zero-init scalar term on the incoming carry's magnitude
-    # (see mechanism.md#the-output-gate), so it can open further as the carry
-    # actually grows instead of treating an empty and a loaded carry alike.
-    # No effect if output_gate is False.
-    state_aware_gate: bool = False
 
     clip_enabled: bool = True
     clip_tau: float = 20.0
-    clip_at_inference_only: bool = False
-
-    # 1.0 = pure sum (unbounded), 0.0 = last item only. Was tried at 0.98 for
-    # RULER's long-range retention; reverted — over `everlasting`'s never-reset
-    # accumulation that's slow enough forgetting to let the carry diverge, not
-    # just retain a needle longer. Revisit with a cap on the stored carry
-    # itself, not just clip_tau's cap on its use, before trying this again.
     carried_decay: float = 0.9
-
-    # carried_decay's recurrence, one chunk at a time instead of one item at
-    # a time (see ttt_math.exclusive_decayed_cumsum). Defaults to 1.0, the
-    # prior unbounded-sum behaviour, so this is opt-in.
-    chunk_decay: float = 1.0
-
-    # delta/delta_chunk's truncated-BPTT window (see delta_scan's docstring);
-    # 1 starves the target projection of gradient entirely.
     truncate_every: int = 5
 
-    # Reads the carried state through its own clip and its own gate instead of
-    # folding it into the current item's sum, so the current item cannot drown it.
     carry_gate: bool = False
-    # Keeps the carry in the autograd graph across a session's items, so a later
-    # item's loss trains what an earlier item wrote. Cut at every optimizer step.
     carry_backprop: bool = False
 
     def __post_init__(self) -> None:
@@ -99,16 +65,13 @@ class TTTConfig:
             raise ValueError(
                 f"carried_decay must be in [0, 1], got {self.carried_decay}"
             )
-        if not 0.0 <= self.chunk_decay <= 1.0:
-            raise ValueError(f"chunk_decay must be in [0, 1], got {self.chunk_decay}")
         if self.truncate_every < 1:
             raise ValueError(
                 f"truncate_every must be >= 1, got {self.truncate_every}"
             )
-        if self.update_rule not in ("hebbian", "delta", "delta_chunk"):
+        if self.update_rule not in ("hebbian", "delta_chunk"):
             raise ValueError(
-                "update_rule must be 'hebbian', 'delta', or 'delta_chunk', got "
-                f"{self.update_rule!r}"
+                f"update_rule must be 'hebbian' or 'delta_chunk', got {self.update_rule!r}"
             )
         if self.carry_gate and self.update_rule != "hebbian":
             raise ValueError(
@@ -128,6 +91,5 @@ class TTTConfig:
 
     @property
     def effective_clip_tau(self) -> float | None:
-        """The tau for ttt_math.scan, or None. clip_at_inference_only is a
-        training-mode question only the mechanism can answer."""
+        """The tau for ttt_math.scan, or None."""
         return self.clip_tau if self.clip_enabled else None

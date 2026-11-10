@@ -51,4 +51,4 @@ def test_an_entrypoint_accepts_a_flags_string(module):
 
 
 def test_the_experiments_that_run_on_modal_were_actually_found():
-    assert len(MODULES) >= 6
+    assert {m.__name__.rsplit(".", 1)[-1] for m in MODULES} >= {"train_v1", "paper_eval_v1", "sanity_check_v1"}

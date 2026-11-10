@@ -43,7 +43,7 @@ def resolved():
     # every sampled step is still ramping and W_target has not moved off zero.
     return cli.resolve(
         dataset="fixture",
-        strategy="everlasting",
+        strategy="hybrid",
         num_epochs=1,
         grad_accum_steps=2,
         min_doc_tokens=64,

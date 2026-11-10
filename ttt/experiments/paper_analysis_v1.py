@@ -1,11 +1,11 @@
-"""The paper's cross-checkpoint tables and figures from paper_eval bundles. Local, no GPU.
+"""The paper's cross-checkpoint tables from paper_eval bundles. Local, no GPU.
 
     python -m ttt.experiments.paper_analysis_v1 --control lora-only-matched \\
         --run Hebbian=ttt-v1.1 --run Delta=ttt-v1.1-clean-deltachunk \\
         --steps 200,400,600 --w0-norms results/paper/inputs/w0_norms.json
 
 Each (run, step) reads its newest bundle under results/<run>/step_<n>/. Rewrites
-tables/, figures/, manifest.json and SUMMARY.md under --out and nothing else.
+tables/, manifest.json and SUMMARY.md under --out and nothing else.
 """
 
 from __future__ import annotations
@@ -26,7 +26,6 @@ from ttt.app import (
     paper_analysis,
     relatedness_eval,
     repeat_eval,
-    swap_eval,
 )
 from ttt.app.paper_analysis import VS_MATCHED, Saturation, StatePoint
 from ttt.core import report
@@ -42,13 +41,11 @@ OUT_DIR = RESULTS_DIR / "paper"
 TRAINING = "training"
 MAIN_MEASURES = (TRAINING, "within", "between_slices", "total", VS_MATCHED, "cross_doc", "cross_slice")
 PER_SOURCE_MEASURES = (VS_MATCHED, "within", "cross_doc")
-READABLE = {"within": "within document", VS_MATCHED: "vs. matched LoRA", "cross_doc": "cross-document"}
 ROW_TYPES = {
     "regimes": EvalRow,
     "regime_slices": SliceRow,
     "boundary": boundary_eval.ArmRow,
     "repeat": repeat_eval.RepeatItem,
-    "swap": swap_eval.SwapRow,
     "context": context_eval.ContextRow,
     "relatedness": relatedness_eval.RelatedRow,
     "dyneval_self": relatedness_eval.RelatedRow,
@@ -67,6 +64,12 @@ class Bundle:
         if not raw.is_file():
             return ()
         return evidence.rows_from(ROW_TYPES[name], json.loads(raw.read_text()))
+
+    def state_ratios(self, name: str) -> list[float]:
+        """Read straight from raw rows: the swap suite is retired, but two
+        step-600 bundles still hold its state ratios, which T6 counts."""
+        raw = self.path / "raw" / f"{name}.json"
+        return [row["state_ratio"] for row in json.loads(raw.read_text())] if raw.is_file() else []
 
     def manifest(self) -> dict[str, Any]:
         return json.loads((self.path / "manifest.json").read_text())
@@ -94,10 +97,25 @@ def is_development(bundle_dir: Path) -> bool:
     return not bundle_dir.name.endswith(FRESH_SUFFIX)
 
 
+PINS = OUT_DIR / "inputs" / "bundle_pins.json"
+
+
+def pinned(results: Path, run: str, step: int, needs: str) -> Path | None:
+    """The bundle the paper's numbers were made from, so a newer bundle at the
+    same step cannot silently change them. Applies to the real results only."""
+    if results.resolve() != RESULTS_DIR.resolve() or not PINS.is_file():
+        return None
+    stamp = json.loads(PINS.read_text()).get(f"{run}/step_{step}/{needs}")
+    return None if stamp is None else results / run / f"step_{step}" / stamp
+
+
 def newest_bundle(results: Path, run: str, step: int, needs: str = "regimes") -> Bundle:
-    """The newest development bundle at that step holding `needs`; a step can
-    carry bundles of different suites, and a newer one need not have the regimes."""
+    """The pinned bundle, else the newest development bundle at that step
+    holding `needs`; a step can carry bundles of different suites."""
     folder = results / run / f"step_{step}"
+    pin = pinned(results, run, step, needs)
+    if pin is not None:
+        return Bundle(run=run, step=step, path=pin)
     stamps = sorted(p for p in folder.glob(f"*/raw/{needs}.json") if is_development(p.parent.parent))
     if not stamps:
         raise FileNotFoundError(f"no paper_eval bundle with {needs} under {folder}")
@@ -159,10 +177,6 @@ def _mechanism(paper: Paper, label: str, bundle: Bundle, estimates, rng, n_boot:
     persistence = (
         tuple(e for e in estimates if e.measure in (evidence.CROSS_DOC, evidence.CROSS_SLICE))
         + evidence.repeat_trend(repeat_rows, rng=rng(), n_boot=n_boot)
-        + tuple(
-            e for e in evidence.swap_estimates(bundle.rows("swap"), rng=rng(), n_boot=n_boot)
-            if e.measure == evidence.SAME_VS_OTHER
-        )
     )
     paper.persistence += [(label, e) for e in persistence if e.source == ALL_SOURCES]
     paper.positions[label] = paper_analysis.position_estimates(
@@ -188,7 +202,7 @@ def _clip_tau(bundle: Bundle) -> float | None:
 
 
 def _state_ratios(bundle: Bundle) -> list[float]:
-    ratios = [r.state_ratio for name in ("boundary", "repeat", "swap") for r in bundle.rows(name)]
+    ratios = [r.state_ratio for name in ("boundary", "repeat") for r in bundle.rows(name)] + bundle.state_ratios("swap")
     return ratios + [r.state_ratio_final for r in bundle.rows("regimes") if r.regime == COLD_CARRY]
 
 
@@ -216,7 +230,6 @@ def write(paper: Paper, out: Path, *, inputs: Mapping[str, Any], announce: Calla
     ])
     _state_table(storage, "tables/T5_state_and_gate", paper.states)
     _saturation_table(storage, "tables/T6_clip_saturation", paper.saturation)
-    figures = _figures(paper, out, announce)
     evidence.save_json(storage, "manifest.json", {
         **inputs,
         "bundles": [
@@ -228,7 +241,7 @@ def write(paper: Paper, out: Path, *, inputs: Mapping[str, Any], announce: Calla
         "boot_seed": paper_eval_v1.BOOT_SEED,
         "git": paper_eval_v1.git_state(),
     })
-    storage.write_bytes("SUMMARY.md", _summary(paper, figures).encode())
+    storage.write_bytes("SUMMARY.md", _summary(paper).encode())
     announce(f"paper analysis -> {out}")
     return out
 
@@ -283,54 +296,13 @@ def _plain_table(storage, stem: str, headers: tuple[str, ...], rows) -> None:
     storage.write_bytes(f"{stem}.csv", ("\n".join(",".join(r) for r in (headers, *rows)) + "\n").encode())
 
 
-def _figures(paper: Paper, out: Path, announce) -> list[str]:
-    try:
-        from ttt.experiments import _paper_figures as figs
-    except ImportError:
-        announce("skipped figures: matplotlib not importable")
-        return []
-    folder = out / "figures"
-    folder.mkdir(parents=True, exist_ok=True)
-    made = []
-    series: dict[str, dict[int, dict[str, Estimate]]] = {}
-    for label, step, e in paper.main:
-        if e.source == ALL_SOURCES and label in paper.labels:
-            series.setdefault(label, {}).setdefault(step, {})[e.measure] = e
-    if series:
-        made.append(figs.gains_vs_step(series, (
-            (VS_MATCHED, "TTT run vs. matched LoRA-only"),
-            ("within", "Fast-weight updates within a document"),
-            ("cross_doc", "Carrying state across documents"),
-        ), str(folder / "F1_gains_vs_step.pdf")))
-    if paper.positions:
-        made.append(figs.by_position(paper.positions, (
-            ("within", "Within a slice"), ("between_slices", "Carried from earlier slices"),
-        ), str(folder / "F2_by_position.pdf")))
-    if paper.repeat:
-        made.append(figs.repeat_mechanism(paper.repeat, paper.clip_threshold,
-                                          str(folder / "F3_repeat_mechanism.pdf")))
-    if paper.per_source:
-        from ttt.experiments import _evidence_figures
-
-        for label in paper.labels:
-            made.append(_evidence_figures.forest(
-                [dataclasses.replace(e, measure=READABLE.get(e.measure, e.measure))
-                 for run, e in paper.per_source if run == label],
-                str(folder / f"F4_per_source_{label}.pdf"),
-                title=f"Per-source gains, {label}, step {max(p.step for p in paper.bundles)}",
-                xlabel="Δppl  (+ = lower perplexity)",
-            ))
-    return [str(Path(p).relative_to(out)) for p in made]
-
-
-def _summary(paper: Paper, figures: Sequence[str]) -> str:
+def _summary(paper: Paper) -> str:
     lines = ["# Paper analysis", "", "Regenerated by `ttt.experiments.paper_analysis_v1`; "
              "bundles and git state are in manifest.json.", "", "## Tables", ""]
     lines += [f"- [{name}](tables/{name}.md)" for name in (
         "T1_main_gaps", "T2_per_source", "T3_persistence", "T4_by_position",
         "T5_state_and_gate", "T6_clip_saturation",
     )]
-    lines += ["", "## Figures", ""] + [f"- [{f}]({f})" for f in figures]
     if paper.saturation:
         lines += ["", "## Clip saturation", ""] + [
             f"- {label} step {step}: {100 * s.fraction_clipped:.1f}% of {s.n_rows} rows above "

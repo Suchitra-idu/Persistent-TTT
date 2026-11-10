@@ -25,7 +25,6 @@ from ttt.core.types import (
     SliceRow,
 )
 from ttt.ports.compute import Compute
-from ttt.ports.fast_weights import CARRY as CARRY_FAMILY
 from ttt.ports.fast_weights import FastWeights
 
 # (regime, evolve, reset between slices, seeded, lora). `fresh` and
@@ -66,7 +65,7 @@ def evaluate(
     try:
         rows, slices = _measure_all(docs, compute, fast_weights, n_slices, carries or {})
     finally:
-        fast_weights.set_mode(evolve=True, stream=False, session=session_training)
+        fast_weights.set_mode(evolve=True, session=session_training)
         fast_weights.reset_carry()
         fast_weights.install(restore)
 
@@ -106,7 +105,7 @@ def _measure_all(
 def _measure(
     doc: Doc, *, compute, fast_weights, n_slices, evolve, reset_between, seed, lora
 ) -> tuple[PplRow, ...]:
-    fast_weights.set_mode(evolve=evolve, stream=False, session=True)
+    fast_weights.set_mode(evolve=evolve, session=True)
     _restart(fast_weights, seed)
 
     rows: list[PplRow] = []
@@ -117,7 +116,7 @@ def _measure(
             PplRow(
                 n_tokens=end - start,
                 ppl=metrics.perplexity(loss),
-                state_ratio=fast_weights.state_ratio(family=CARRY_FAMILY),
+                state_ratio=fast_weights.state_ratio(),
             )
         )
         if reset_between:

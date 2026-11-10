@@ -7,7 +7,7 @@ and decode round-trip exactly and a test can predict a token count.
 from __future__ import annotations
 
 import re
-from typing import Mapping, Sequence
+from typing import Sequence
 
 SPECIAL_TOKENS = (
     "<|endoftext|>",
@@ -23,21 +23,8 @@ _SPECIAL_RE = re.compile("|".join(re.escape(token) for token in SPECIAL_TOKENS))
 
 
 class FakeTokenizer:
-    def __init__(self, *, pad_token_id: int | None = None) -> None:
+    def __init__(self) -> None:
         self._ids = {token: i for i, token in enumerate(SPECIAL_TOKENS)}
-        self._pad_token_id = pad_token_id
-
-    @property
-    def eos_token_id(self) -> int:
-        return self._ids["<|endoftext|>"]
-
-    @property
-    def pad_token_id(self) -> int | None:
-        return self._pad_token_id
-
-    @property
-    def unk_token_id(self) -> int | None:
-        return None
 
     def encode(self, text: str, *, max_length: int | None = None) -> list[int]:
         ids: list[int] = []
@@ -69,27 +56,6 @@ class FakeTokenizer:
                 out.append(SPECIAL_TOKENS[token_id])
         out.append(_ids_to_text(pending))
         return "".join(out)
-
-    def token_id(self, token: str) -> int | None:
-        return self._ids.get(token)
-
-    def apply_chat_template(
-        self,
-        messages: Sequence[Mapping[str, str]],
-        *,
-        add_generation_prompt: bool = True,
-        enable_thinking: bool = True,
-    ) -> str:
-        parts = [
-            f"<|im_start|>{message['role']}\n{message['content']}<|im_end|>\n"
-            for message in messages
-        ]
-        if add_generation_prompt:
-            parts.append("<|im_start|>assistant\n")
-            if not enable_thinking:
-                parts.append("<think>\n\n</think>\n\n")
-        return "".join(parts)
-
 
 def _bytes_to_ids(text: str) -> list[int]:
     return [byte + BYTE_OFFSET for byte in text.encode("utf-8")]

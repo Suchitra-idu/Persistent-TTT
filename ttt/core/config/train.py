@@ -45,12 +45,6 @@ class TrainConfig:
     # carry is detached after every carry_window-th item of a session.
     carry_window: int = 2
 
-    # 0 = never freeze. From this optimizer step on, LoRA's rate is forced to
-    # 0 — its weights stop moving, so whatever residual loss remains stays
-    # available for `new`/`wdown` to keep correcting instead of LoRA capturing
-    # it first.
-    freeze_lora_after: int = 0
-
     strategy: str = DEFAULT_STRATEGY
 
     # False is the A1 ablation (every item starts from S_0 = 0), not a mode.
@@ -62,11 +56,7 @@ class TrainConfig:
     seed: int = 42
     log_every: int = 10
     save_every: int = 200
-    run_name: str = "ttt-v1.1"
-    # torch.autograd.set_detect_anomaly: a real slowdown, opt-in only, for
-    # pinpointing exactly which backward op first produces a non-finite
-    # gradient — not something to leave on for a real run.
-    debug_anomaly: bool = False
+    run_name: str = ""
     wandb_enabled: bool = True
     wandb_project: str = "inplace-ttt"
 
@@ -112,9 +102,5 @@ class TrainConfig:
             raise ValueError(f"eval_n_slices must be >= 1, got {self.eval_n_slices}")
         if self.carry_window < 1:
             raise ValueError(f"carry_window must be >= 1, got {self.carry_window}")
-        if self.freeze_lora_after < 0:
-            raise ValueError(
-                f"freeze_lora_after must be >= 0, got {self.freeze_lora_after}"
-            )
         if not self.strategy:
             raise ValueError("strategy must name a registered session strategy")

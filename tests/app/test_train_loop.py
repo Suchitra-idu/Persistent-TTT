@@ -6,7 +6,7 @@ import pytest
 
 from tests.app import _builders
 from ttt.app import train_loop
-from ttt.extensions.strategies import EVERLASTING, Hybrid, Mixed
+from ttt.extensions.strategies import HYBRID, Hybrid, Mixed
 from ttt.ports.tracker import MICRO_STEP, TRAIN_STEP, outside_budget
 
 NAN = float("nan")
@@ -26,7 +26,7 @@ def run(
     n_docs: int = 4,
     losses=(1.0,),
     total_norm=1.0,
-    strategy=EVERLASTING,
+    strategy=HYBRID,
     cfg=None,
     carries=None,
     checkpoint=None,
@@ -228,54 +228,12 @@ class TestCarryLifecycle:
     def test_a_session_scoped_strategy_installs_no_carrier(self):
         _, wiring = run(n_docs=4, strategy=SLICING_HYBRID)
 
-        assert "install(carry)" not in wiring.fast_weights.events
+        assert "install" not in wiring.fast_weights.events
 
     def test_a_session_scoped_strategy_snapshots_no_carrier(self):
         result, _ = run(n_docs=4, strategy=SLICING_HYBRID)
 
         assert result.carries == {}
-
-
-class TestEverlastingCarry:
-    def test_it_snapshots_a_carrier_per_source(self):
-        result, _ = run(n_docs=4)
-
-        assert set(result.carries) == set(_builders.SOURCES)
-
-    def test_a_source_seen_for_the_first_time_starts_from_zero(self):
-        _, wiring = run(n_docs=2)
-
-        assert wiring.fast_weights.events.count("install(carry)") == 0
-
-    def test_a_source_seen_again_starts_from_its_carrier(self):
-        _, wiring = run(n_docs=4)
-
-        assert wiring.fast_weights.events.count("install(carry)") == 2
-
-    def test_a_resumed_carrier_is_installed_on_the_first_session(self):
-        _, wiring = run(n_docs=2, carries={"alpha": _builders.carry()})
-        events = wiring.fast_weights.events
-
-        assert events[: events.index("advance_carry")][-2:] == [
-            "reset_carry",
-            "install(carry)",
-        ]
-
-    def test_the_carrier_is_installed_before_the_forward(self):
-        _, wiring = run(n_docs=2, carries={"alpha": _builders.carry()})
-        events = wiring.fast_weights.events
-
-        assert events.index("install(carry)") < events.index("advance_carry")
-
-    def test_it_counts_updates_per_source(self):
-        result, _ = run(n_docs=4)
-
-        assert result.n_updates == {"alpha": 2, "beta": 2}
-
-    def test_the_snapshot_is_taken_after_the_carry_advanced(self):
-        result, _ = run(n_docs=2)
-
-        assert not result.carries["alpha"].is_empty
 
 
 class TestLearningRate:
@@ -306,25 +264,6 @@ class TestLearningRate:
         _, wiring = run(n_docs=4, cfg=cfg)
 
         assert wiring.tracker.values_of("train/lr_lora")[0] == 0.0
-
-    def test_freeze_lora_after_zeroes_its_rate_from_that_step_on(self):
-        cfg = _builders.config(freeze_lora_after=1)
-        _, wiring = run(n_docs=4, cfg=cfg)
-
-        assert wiring.tracker.values_of("train/lr_lora") == pytest.approx([1e-5, 0.0])
-
-    def test_freeze_lora_after_leaves_the_other_groups_alone(self):
-        cfg = _builders.config(freeze_lora_after=1)
-        _, wiring = run(n_docs=4, cfg=cfg)
-
-        assert wiring.tracker.values_of("train/lr_new")[1] > 0.0
-        assert wiring.tracker.values_of("train/lr_wdown")[1] > 0.0
-
-    def test_zero_is_never_freeze(self):
-        _, wiring = run(n_docs=4, cfg=_builders.config(freeze_lora_after=0))
-
-        assert 0.0 not in wiring.tracker.values_of("train/lr_lora")
-
 
 class TestLogging:
     def test_nothing_outside_the_budget_is_logged(self):
@@ -391,19 +330,6 @@ class TestCheckpointing:
 
         assert [call["step"] for call in checkpoint.calls] == [result.steps]
 
-    def test_it_hands_over_the_live_carriers(self):
-        checkpoint = Recorder()
-        run(n_docs=4, checkpoint=checkpoint)
-
-        assert set(checkpoint.calls[-1]["carries"]) == set(_builders.SOURCES)
-
-    def test_it_hands_over_the_update_counts(self):
-        checkpoint = Recorder()
-        run(n_docs=4, checkpoint=checkpoint)
-
-        assert checkpoint.calls[-1]["n_updates"] == {"alpha": 2, "beta": 2}
-
-
 class TestInLoopEval:
     def test_it_fires_on_cadence(self):
         evaluate = Recorder()
@@ -422,12 +348,6 @@ class TestInLoopEval:
         _, wiring = run(n_docs=4, cfg=_builders.config(eval_every=2), evaluate=evaluate)
 
         assert {"eval/carry_ppl", TRAIN_STEP} <= set(wiring.tracker.records[-1])
-
-    def test_it_sees_the_carriers_trained_so_far(self):
-        evaluate = Recorder()
-        run(n_docs=4, cfg=_builders.config(eval_every=2), evaluate=evaluate)
-
-        assert set(evaluate.calls[-1]["carries"]) == set(_builders.SOURCES)
 
     def test_its_result_is_announced(self):
         lines = []
@@ -496,7 +416,7 @@ def test_an_empty_pool_trains_nothing():
     assert (result.steps, result.sessions) == (0, 0)
 
 
-@pytest.mark.parametrize("strategy", [EVERLASTING, SLICING_HYBRID])
+@pytest.mark.parametrize("strategy", [HYBRID, SLICING_HYBRID])
 def test_a_complete_run_stays_inside_the_logging_budget(strategy):
     cfg = _builders.config(num_epochs=2, save_every=1, eval_every=1, log_every=1)
     _, wiring = run(
@@ -518,7 +438,7 @@ def _budget_keys():
 
 def test_fast_weights_never_evolve_during_training_when_updates_are_off():
     def evaluate(**_):
-        wiring.fast_weights.set_mode(evolve=True, stream=False, session=True)
+        wiring.fast_weights.set_mode(evolve=True, session=True)
         return {}
 
     wiring = _builders.Wiring(losses=(1.0,), total_norm=1.0)
@@ -530,7 +450,7 @@ def test_fast_weights_never_evolve_during_training_when_updates_are_off():
         compute=wiring.compute,
         fast_weights=wiring.fast_weights,
         tracker=wiring.tracker,
-        strategy=EVERLASTING,
+        strategy=HYBRID,
         cfg=_builders.config(fast_weight_updates=False, eval_every=1),
         rng=wiring.rng,
         evaluate=evaluate,

@@ -90,67 +90,6 @@ def test_a_single_chunk_item_inside_a_session_still_stages_a_carry():
     assert module.carried is not None and module.carried.abs().sum() > 0
 
 
-def test_the_stream_path_matches_the_scan_path():
-    scan_module = scanning(w_target_scale=SCALE, conv_scale=CONV, clip_enabled=False)
-    stream_module = scanning(w_target_scale=SCALE, conv_scale=CONV, clip_enabled=False)
-    stream_module.stateful = True
-    h = _builders.hidden_states(LONG)
-
-    assert torch.allclose(scan_module(h), stream_module(h), atol=1e-5)
-
-
-def test_the_stream_path_matches_the_scan_path_across_call_boundaries():
-    scan_module = scanning(w_target_scale=SCALE, conv_scale=CONV, clip_enabled=False)
-    stream_module = scanning(w_target_scale=SCALE, conv_scale=CONV, clip_enabled=False)
-    stream_module.stateful = True
-    h = _builders.hidden_states(LONG)
-
-    streamed = torch.cat(
-        [stream_module(h[:, i : i + 2]) for i in range(0, LONG, 2)], dim=1
-    )
-
-    assert torch.allclose(scan_module(h), streamed, atol=1e-5)
-
-
-def test_the_conv_left_context_spans_a_call_boundary():
-    whole = scanning(w_target_scale=SCALE, conv_scale=CONV, clip_enabled=False)
-    split = scanning(w_target_scale=SCALE, conv_scale=CONV, clip_enabled=False)
-    whole.stateful = split.stateful = True
-    h = _builders.hidden_states(LONG)
-
-    piecewise = torch.cat([split(h[:, :2]), split(h[:, 2:])], dim=1)
-
-    assert torch.allclose(whole(h), piecewise, atol=1e-5)
-
-
-def test_a_freshly_built_delta_module_is_identity_to_the_base_mlp():
-    module = scanning(update_rule="delta")
-    h = _builders.hidden_states(LONG)
-
-    assert torch.allclose(module(h), base_mlp_out(module, h), atol=1e-6)
-
-
-def test_a_single_chunk_delta_item_still_evolves_within_itself():
-    """Where the hebbian path skips a lone chunk entirely (see
-    `test_a_single_chunk_item_outside_a_session_skips_the_scan`), delta's
-    per-token causality means it can't: token 1 already sees token 0's write."""
-    module = scanning(update_rule="delta", w_target_scale=SCALE)
-    h = _builders.hidden_states(CHUNK)
-
-    module(h)
-
-    assert module.gate_mean is not None
-
-
-def test_the_delta_rule_actually_contributes_something():
-    frozen = scanning(update_rule="delta", w_target_scale=SCALE)
-    evolving = scanning(update_rule="delta", w_target_scale=SCALE)
-    frozen.evolve = False
-    h = _builders.hidden_states(LONG)
-
-    assert not torch.allclose(evolving(h), frozen(h), atol=1e-6)
-
-
 def test_a_freshly_built_delta_chunk_module_is_identity_to_the_base_mlp():
     module = scanning(update_rule="delta_chunk")
     h = _builders.hidden_states(LONG)
@@ -201,21 +140,6 @@ def test_a_wider_truncation_window_lets_w_target_learn():
     assert module.w_target.grad.abs().sum() > 0
 
 
-def test_a_zero_decay_carry_keeps_only_the_last_items_delta():
-    first, second = _builders.hidden_states(LONG), _builders.hidden_states(LONG, seed=8)
-    both = scanning(w_target_scale=SCALE, carried_decay=0.0)
-    last_only = scanning(w_target_scale=SCALE, carried_decay=0.0)
-    both.session_mode = last_only.session_mode = True
-
-    for h in (first, second):
-        both(h)
-        both.advance_carry()
-    last_only(second)
-    last_only.advance_carry()
-
-    assert torch.allclose(both.carried, last_only.carried, atol=1e-6)
-
-
 def test_a_carry_decay_of_one_sums_every_items_delta():
     first, second = _builders.hidden_states(LONG), _builders.hidden_states(LONG, seed=8)
     both, only_first, only_second = (
@@ -256,57 +180,6 @@ def test_a_batch_size_change_mid_session_is_an_error():
         module(_builders.hidden_states(LONG, batch=2))
 
 
-def test_resetting_the_carry_leaves_the_stream_delta_alone():
-    module = scanning(w_target_scale=SCALE)
-    module.stateful = True
-    module(_builders.hidden_states(LONG))
-
-    module.reset_carry()
-
-    assert module.stream.delta is not None
-
-
-def test_resetting_the_stream_leaves_the_carry_alone():
-    module = scanning(w_target_scale=SCALE)
-    module.session_mode = True
-    module(_builders.hidden_states(LONG))
-    module.advance_carry()
-
-    module.reset_stream()
-
-    assert module.carried is not None
-
-
-def test_resetting_the_conv_context_leaves_the_stream_delta_alone():
-    module = scanning(w_target_scale=SCALE)
-    module.stateful = True
-    module(_builders.hidden_states(LONG))
-
-    module.reset_v_context()
-
-    assert module.stream.delta is not None and module._hidden_context is None
-
-
-def test_a_partially_filled_chunk_is_pending_rather_than_committed():
-    module = scanning(w_target_scale=SCALE)
-    module.stateful = True
-
-    module(_builders.hidden_states(CHUNK - 1))
-
-    assert module.stream.delta is None and module.stream.pending_tokens == CHUNK - 1
-
-
-def test_clipping_bounds_the_streamed_state():
-    tau = 1e-4
-    module = scanning(w_target_scale=SCALE, clip_enabled=True, clip_tau=tau)
-    module.stateful = True
-    module.eval()
-
-    module(_builders.hidden_states(LONG))
-
-    assert float((module.cfg.eta * module.stream.delta).norm()) <= tau * (1 + 1e-6)
-
-
 def test_the_gate_records_its_mean_and_spread():
     module = scanning(w_target_scale=SCALE)
 
@@ -329,58 +202,6 @@ def test_a_disabled_gate_leaves_the_ttt_term_unscaled():
     h = _builders.hidden_states(LONG)
 
     assert not torch.allclose(gated(h), ungated(h), atol=1e-6)
-
-
-def test_state_aware_gate_is_off_by_default():
-    module = scanning(w_target_scale=SCALE)
-
-    assert module.output_gate_state_scale is None
-
-
-def test_state_aware_gate_has_no_effect_without_output_gate():
-    module = scanning(w_target_scale=SCALE, output_gate=False, state_aware_gate=True)
-
-    assert module.output_gate_state_scale is None
-
-
-def test_a_freshly_built_state_aware_gate_module_is_identity_to_the_base_mlp():
-    module = scanning(state_aware_gate=True)
-    h = _builders.hidden_states(LONG)
-
-    assert torch.allclose(module(h), base_mlp_out(module, h), atol=1e-6)
-
-
-def test_state_aware_gate_is_a_noop_at_zero_init_even_with_a_carry_present():
-    with_carry = scanning(w_target_scale=SCALE, state_aware_gate=True)
-    with_carry.session_mode = True
-    with torch.no_grad():
-        with_carry.carried = torch.ones(1, 6, 8) * 5.0
-    without_carry = scanning(w_target_scale=SCALE, state_aware_gate=True)
-    without_carry.session_mode = True
-    h = _builders.hidden_states(LONG)
-
-    with_carry(h)
-    without_carry(h)
-
-    assert with_carry.gate_mean == without_carry.gate_mean
-
-
-def test_a_present_carry_shifts_the_gate_once_the_scale_is_trained():
-    with_carry = scanning(w_target_scale=SCALE, state_aware_gate=True)
-    with_carry.session_mode = True
-    with torch.no_grad():
-        with_carry.output_gate_state_scale.fill_(1.0)
-        with_carry.carried = torch.ones(1, 6, 8) * 5.0
-    without_carry = scanning(w_target_scale=SCALE, state_aware_gate=True)
-    without_carry.session_mode = True
-    with torch.no_grad():
-        without_carry.output_gate_state_scale.fill_(1.0)
-    h = _builders.hidden_states(LONG)
-
-    with_carry(h)
-    without_carry(h)
-
-    assert abs(with_carry.gate_mean - without_carry.gate_mean) > 1e-3
 
 
 def test_iter_ttt_modules_finds_every_patched_layer():
@@ -517,3 +338,18 @@ def test_carry_backprop_lets_a_later_item_train_an_earlier_write():
     through = _session_grads(use_checkpoint=False, carry_backprop=True)
 
     assert not all(torch.equal(a, b) for a, b in zip(detached, through))
+
+
+def test_a_zero_decay_carry_keeps_only_the_last_items_delta():
+    first, second = _builders.hidden_states(LONG), _builders.hidden_states(LONG, seed=8)
+    both = scanning(w_target_scale=SCALE, carried_decay=0.0)
+    last_only = scanning(w_target_scale=SCALE, carried_decay=0.0)
+    both.session_mode = last_only.session_mode = True
+
+    for h in (first, second):
+        both(h)
+        both.advance_carry()
+    last_only(second)
+    last_only.advance_carry()
+
+    assert torch.allclose(both.carried, last_only.carried, atol=1e-6)

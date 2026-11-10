@@ -6,7 +6,6 @@ from ttt import cli
 from ttt.core.config.train import TrainConfig
 from ttt.core.config.ttt import TTTConfig
 from ttt.extensions import datasets
-from ttt.extensions.strategies import SOURCE
 
 
 class TestDefaults:
@@ -57,10 +56,10 @@ class TestTrainOverrides:
 
 class TestStrategy:
     def test_a_named_strategy_is_selected(self):
-        assert cli.resolve(strategy="everlasting").strategy.name == "everlasting"
+        assert cli.resolve(strategy="mixed").strategy.name == "mixed"
 
     def test_the_name_lands_on_the_train_config_too(self):
-        assert cli.resolve(strategy="everlasting").train.strategy == "everlasting"
+        assert cli.resolve(strategy="mixed").train.strategy == "mixed"
 
     def test_an_unknown_strategy_is_rejected(self):
         with pytest.raises(KeyError, match="unknown strategy"):
@@ -88,8 +87,8 @@ class TestStrategy:
         ) == (5000, 1000, 3, 8)
 
     def test_a_knob_the_strategy_does_not_have_is_rejected(self):
-        with pytest.raises(ValueError, match="carry_min_tokens"):
-            cli.resolve(strategy="everlasting", carry_min_tokens=5000)
+        with pytest.raises(ValueError, match="docs_per_session"):
+            cli.resolve(strategy="hybrid", docs_per_session=3)
 
     def test_an_invalid_knob_combination_is_rejected_by_the_plugin(self):
         with pytest.raises(ValueError, match="carry_min_tokens"):
@@ -101,25 +100,6 @@ class TestStrategy:
         cli.resolve(strategy="hybrid", carry_min_tokens=5000)
 
         assert strategies.get("hybrid").carry_min_tokens == 2100
-
-
-class TestSourceScopedEvalCadence:
-    def test_a_source_scoped_strategy_evaluates_more_often(self):
-        resolved = cli.resolve(strategy="everlasting")
-
-        assert resolved.train.eval_every == cli.EVERLASTING_EVAL_EVERY
-
-    def test_that_only_applies_to_source_scoped_strategies(self):
-        assert cli.resolve(strategy="everlasting").strategy.carry_scope == SOURCE
-
-    def test_a_session_scoped_strategy_keeps_the_default_cadence(self):
-        assert cli.resolve(strategy="hybrid").train.eval_every == TrainConfig().eval_every
-
-    def test_an_explicit_cadence_wins(self):
-        assert cli.resolve(strategy="everlasting", eval_every=10).train.eval_every == 10
-
-    def test_an_explicit_zero_disables_eval_even_there(self):
-        assert cli.resolve(strategy="everlasting", eval_every=0).train.eval_every == 0
 
 
 class TestSourceWeights:
@@ -213,8 +193,19 @@ class TestFromFlags:
     def test_a_document_limit_is_taken(self):
         assert cli.from_flags(limit_docs=1000).limit_docs == 1000
 
-    def test_a_float_zero_means_unset(self):
-        assert cli.from_flags(eta=0.0).ttt.eta == TTTConfig().eta
+    def test_a_zero_in_the_flags_is_taken_as_given(self):
+        assert cli.from_flags(**cli.parse_flags("seed=0")).train.seed == 0
+
+    def test_a_misspelt_boolean_is_rejected(self):
+        with pytest.raises(ValueError, match="not a boolean"):
+            cli.parse_flags("carry_gate=ture")
+
+    def test_a_retired_option_is_accepted_at_its_recorded_value(self):
+        assert cli.from_flags(**cli.parse_flags("state_aware_gate=false")).ttt == TTTConfig()
+
+    def test_a_retired_option_at_any_other_value_is_rejected(self):
+        with pytest.raises(ValueError, match="state_aware_gate was removed"):
+            cli.from_flags(**cli.parse_flags("state_aware_gate=true"))
 
     def test_a_typo_is_still_rejected(self):
         with pytest.raises(ValueError, match="unknown option"):

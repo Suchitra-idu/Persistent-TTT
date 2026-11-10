@@ -11,7 +11,7 @@ import re
 from pathlib import Path
 
 DOCS_DIR = Path(__file__).resolve().parents[1] / "docs"
-REPO_ROOT = Path(__file__).resolve().parents[2]
+REPO_ROOT = Path(__file__).resolve().parents[1]
 BLOB = "https://github.com/Suchitra-idu/Our-TTT/blob/main"
 
 OUTBOUND_LINK = re.compile(r"\[([^\]]+)\]\((\.\./[^)]+)\)")

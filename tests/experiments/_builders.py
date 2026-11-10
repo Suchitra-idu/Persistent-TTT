@@ -8,10 +8,8 @@ from typing import Mapping, Sequence
 from tests.app import _builders as app_builders
 from ttt import cli
 from ttt.adapters.fake_compute import FakeCompute
-from ttt.adapters.fake_clock import FakeClock
 from ttt.adapters.fake_data_source import FakeDataSource
 from ttt.adapters.fake_fast_weights import FakeFastWeights
-from ttt.adapters.fake_generation import FakeGeneration
 from ttt.adapters.fake_tokenizer import FakeTokenizer
 from ttt.adapters.in_memory_storage import InMemoryStorage
 from ttt.adapters.in_memory_tracker import InMemoryTracker
@@ -29,7 +27,7 @@ def resolved(**overrides) -> cli.Resolved:
     """The fixture dataset and a tiny budget: everything else is the real default."""
     defaults = dict(
         dataset="fixture",
-        strategy="everlasting",
+        strategy="hybrid",
         num_epochs=1,
         grad_accum_steps=2,
         min_doc_tokens=8,
@@ -83,10 +81,8 @@ def engine(
         tokenizer=FakeTokenizer(),
         compute=FakeCompute(losses=losses, fast_weights=fast_weights),
         fast_weights=fast_weights,
-        generation=FakeGeneration(script, vocab_size=261, fast_weights=fast_weights),
         tracker=InMemoryTracker(),
         storage=InMemoryStorage(),
-        clock=FakeClock(),
         root="/ckpt",
         save=Saves(),
     )

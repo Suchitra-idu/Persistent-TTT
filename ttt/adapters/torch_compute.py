@@ -29,8 +29,6 @@ class TorchCompute:
         train_cfg: TrainConfig,
         device: str = "cuda",
     ) -> None:
-        if train_cfg.debug_anomaly:
-            torch.autograd.set_detect_anomaly(True)
         self.model = model
         self.device = device
         self._groups = _group_parameters(model, ttt_cfg)
@@ -123,6 +121,25 @@ class TorchCompute:
             name: sum(p.numel() for p in params)
             for name, params in self._groups.items()
         }
+
+
+class EvalCompute:
+    """`eval_loss` only: eval never steps, and building an optimizer over a
+    frozen model would fail on the empty parameter groups."""
+
+    def __init__(self, model: torch.nn.Module, device: str = "cuda") -> None:
+        self.model = model
+        self.device = device
+
+    def eval_loss(self, token_ids, *, lora: bool = True, score_from: int = 0) -> float:
+        ids = torch.tensor([list(token_ids)], device=self.device, dtype=torch.long)
+        with torch.no_grad(), weights_for(self.model, lora=lora):
+            return float(self.model(input_ids=ids, labels=context_labels(ids, score_from)).loss)
+
+    def eval_token_losses(self, token_ids, *, score_from: int = 0) -> tuple[float, ...]:
+        ids = torch.tensor([list(token_ids)], device=self.device, dtype=torch.long)
+        with torch.no_grad():
+            return token_losses(self.model, ids, score_from)
 
 
 def token_losses(model: torch.nn.Module, ids: torch.Tensor, score_from: int) -> tuple[float, ...]:

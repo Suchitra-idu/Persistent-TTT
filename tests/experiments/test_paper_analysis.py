@@ -80,16 +80,6 @@ def test_the_analysis_writes_every_table_and_a_summary(results, tmp_path):
     assert (out / "SUMMARY.md").is_file()
 
 
-def test_the_analysis_draws_every_figure(results, tmp_path):
-    pytest.importorskip("matplotlib")
-    out = run_analysis(results, tmp_path / "paper")
-
-    assert {p.name for p in (out / "figures").iterdir()} == {
-        "F1_gains_vs_step.pdf", "F2_by_position.pdf", "F3_repeat_mechanism.pdf",
-        "F4_per_source_rule.pdf",
-    }
-
-
 def test_the_manifest_records_every_bundle_read(results, tmp_path):
     out = run_analysis(results, tmp_path / "paper")
 

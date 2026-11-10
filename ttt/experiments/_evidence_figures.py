@@ -178,48 +178,6 @@ def stability(points: Sequence[RepeatPoint], path: str) -> str:
     return _save(fig, path)
 
 
-def swap_heatmap(estimates: Sequence[Estimate], path: str) -> str:
-    """Rows prime source, columns target source; diverging around zero, `*`
-    where the interval excludes zero."""
-    from matplotlib.colors import LinearSegmentedColormap, TwoSlopeNorm
-
-    plt = _pyplot()
-    cells = {
-        (e.measure.removeprefix("prime:"), e.source): e
-        for e in estimates
-        if e.measure.startswith("prime:")
-    }
-    primes = sorted({p for p, _ in cells})
-    targets = sorted({t for _, t in cells})
-    values = [
-        [cells[(p, t)].interval.point if (p, t) in cells else math.nan for t in targets]
-        for p in primes
-    ]
-    finite = [abs(v) for row in values for v in row if math.isfinite(v)]
-    bound = max(finite) if finite and max(finite) > 0 else 1.0
-    cmap = LinearSegmentedColormap.from_list("polarity", [HURTS, MIDPOINT, HELPS])
-    fig, ax = plt.subplots(figsize=(1.1 * len(targets) + 2.6, 0.8 * len(primes) + 1.6))
-    image = ax.imshow(values, cmap=cmap, norm=TwoSlopeNorm(0.0, -bound, bound), aspect="auto")
-    for i, p in enumerate(primes):
-        for j, t in enumerate(targets):
-            e = cells.get((p, t))
-            if e is None:
-                continue
-            mark = "*" if e.interval.excludes_zero else ""
-            ax.text(j, i, f"{e.interval.point:+.2f}{mark}", ha="center", va="center", fontsize=8, color=INK)
-    ax.set_xticks(range(len(targets)), targets, rotation=30, ha="right")
-    ax.set_yticks(range(len(primes)), primes)
-    ax.set_xlabel("target source (document read)")
-    ax.set_ylabel("prime source (carry built on)")
-    ax.tick_params(length=0)
-    for spine in ax.spines.values():
-        spine.set_visible(False)
-    fig.colorbar(image, ax=ax, label="Δppl vs unprimed  (+ = carry helps)", shrink=0.8)
-    ax.set_title("Carry built on one source, read on another", loc="left", fontweight="bold")
-    fig.tight_layout()
-    return _save(fig, path)
-
-
 def domain_scatter(
     fresh: Mapping[str, float],
     estimates: Sequence[Estimate],

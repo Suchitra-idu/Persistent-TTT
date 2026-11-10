@@ -7,7 +7,6 @@ from ttt.adapters.scripted_rng import ScriptedRng
 from ttt.app import evidence
 from ttt.app.boundary_eval import DOC_RESET, PERSIST, SLICE_RESET, ArmRow
 from ttt.app.repeat_eval import RepeatItem
-from ttt.app.swap_eval import UNPRIMED, SwapRow
 from ttt.core.metrics import ALL_SOURCES
 from ttt.core.types import COLD_CARRY, COLD_CARRY_OFF, FRESH, LORA_ONLY, EvalRow
 
@@ -44,17 +43,6 @@ def repeat_rows(ppls=(10.0, 9.0, 8.5), n_docs=2):
                    state_ratio=0.1 * (r + 1), gate_mean=0.4)
         for d in range(n_docs)
         for r, p in enumerate(ppls)
-    )
-
-
-def swap_rows():
-    def row(target, prime, ppl):
-        return SwapRow(target_source=target, prime_source=prime, doc_idx=0,
-                       n_tokens=10, ppl=ppl, state_ratio=0.0)
-
-    return (
-        row("alpha", UNPRIMED, 10.0), row("alpha", "alpha", 8.0), row("alpha", "beta", 9.0),
-        row("beta", UNPRIMED, 10.0), row("beta", "beta", 8.0), row("beta", "alpha", 9.0),
     )
 
 
@@ -146,18 +134,6 @@ def test_a_flat_curve_has_a_zero_trend():
 
 def test_a_single_replay_has_no_trend():
     assert evidence.repeat_trend(repeat_rows(ppls=(10.0, 9.0)), **kw()) == ()
-
-
-def test_swap_estimates_name_the_target_as_the_source():
-    estimates = evidence.swap_estimates(swap_rows(), **kw())
-
-    assert by(estimates, "prime:beta", "alpha").interval.point == pytest.approx(1.0)
-
-
-def test_same_source_priming_is_compared_with_the_other_sources():
-    estimates = evidence.swap_estimates(swap_rows(), **kw())
-
-    assert by(estimates, evidence.SAME_VS_OTHER).interval.point == pytest.approx(1.0)
 
 
 def test_domain_correlates_rank_sources_by_fresh_perplexity():

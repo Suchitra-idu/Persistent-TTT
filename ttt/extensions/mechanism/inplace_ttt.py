@@ -1,22 +1,12 @@
 """InPlaceTTTMLP — the gated-MLP replacement, over the core.ttt_math kernels.
 
-Two paths over one state family each: `_scan_forward` trains (chunked scan,
-carry across items via TBPTT), `_stream_forward` generates (apply-then-buffer,
-one chunk at a time). Assembly onto a real model is Ring 3's job.
-
-`cfg.update_rule` only branches `_scan_forward`; `_stream_forward` is always
-the hebbian stream kernels — generation-time delta-rule stays unimplemented.
-
-Reset ladder:
-    reset_stream()      stream delta + pending + conv left-context
-    reset_v_context()   conv left-context only, so the stream delta survives
-    reset_carry()       the session carry, independent of both
+The chunked scan carries state across items via TBPTT. Assembly onto a real
+model is Ring 3's job.
 """
 
 from __future__ import annotations
 
 import contextlib
-from dataclasses import dataclass, field
 
 import torch
 import torch.nn as nn
@@ -25,16 +15,6 @@ import torch.nn.functional as F
 from ttt.core import carry as carry_math
 from ttt.core import ttt_math
 from ttt.core.config.ttt import TTTConfig
-
-
-@dataclass
-class StreamState:
-    """The generation-path fast weight and its partially filled chunk."""
-
-    delta: torch.Tensor | None = None
-    pending_z: list = field(default_factory=list)
-    pending_v: list = field(default_factory=list)
-    pending_tokens: int = 0
 
 
 class InPlaceTTTMLP(nn.Module):
@@ -76,22 +56,12 @@ class InPlaceTTTMLP(nn.Module):
         if cfg.output_gate:
             self.output_gate = nn.Linear(hidden_size, 1, bias=True)
             with torch.no_grad():
-                # Zeroed rather than jittered: the gate has one output unit, so
-                # there is no symmetry to break, and construction stays free of
-                # the global RNG (D1).
+                # Zeroed rather than jittered: one output unit has no symmetry
+                # to break, and construction stays free of the global RNG (D1).
                 self.output_gate.weight.zero_()
                 self.output_gate.bias.fill_(cfg.output_gate_bias_init)
         else:
             self.output_gate = None
-
-        # Named so "output_gate" still matches it for checkpointing/optimizer
-        # grouping (naming.TTT_PARAM_MARKERS) without touching output_gate's
-        # own shape. Zero-init: starts as a no-op, same convention as w_target.
-        self.output_gate_state_scale = (
-            nn.Parameter(torch.zeros(1))
-            if cfg.output_gate and cfg.state_aware_gate
-            else None
-        )
 
         self.output_gate_carry = (
             nn.Linear(hidden_size, 1, bias=True) if cfg.carry_gate else None
@@ -112,24 +82,13 @@ class InPlaceTTTMLP(nn.Module):
         self.carry_gate_mean: float | None = None
 
         self.evolve = True
-        self.stateful = False
         self.session_mode = False
-
-        self.stream = StreamState()
-        self._hidden_context: torch.Tensor | None = None
 
         # Staged in forward, promoted by advance_carry after backward. Staging
         # is idempotent so gradient-checkpointing recompute is harmless.
         self.carried: torch.Tensor | None = None
         self._next_carried: torch.Tensor | None = None
         self.recomputing = False
-
-    def reset_stream(self) -> None:
-        self.stream = StreamState()
-        self._hidden_context = None
-
-    def reset_v_context(self) -> None:
-        self._hidden_context = None
 
     def reset_carry(self) -> None:
         self.carried = None
@@ -151,16 +110,9 @@ class InPlaceTTTMLP(nn.Module):
         z = self.act_fn(self.gate_proj(hidden_states)) * self.up_proj(hidden_states)
         if self.pretrained:
             return F.linear(z, self.pretrained_down, self.down_proj.bias)
-        if not self.evolve and not self.stateful:
+        if not self.evolve:
             return self.down_proj(z)
-        if self.stateful:
-            return self._stream_forward(z, hidden_states)
         return self._scan_forward(z, hidden_states)
-
-    def _clip_tau(self) -> float | None:
-        if self.cfg.clip_at_inference_only and self.training:
-            return None
-        return self.cfg.effective_clip_tau
 
     def _carried_for(self, batch: int) -> torch.Tensor | None:
         if not self.session_mode or self.carried is None:
@@ -172,71 +124,17 @@ class InPlaceTTTMLP(nn.Module):
             )
         return self.carried
 
-    def _targets(
-        self, source: torch.Tensor, left_context: torch.Tensor | None
-    ) -> torch.Tensor:
-        kernel = self.cfg.conv_kernel_size
-        streaming = left_context is not None
-        # Streaming forces causal padding: there are no future tokens yet.
-        if self.cfg.v_bidirectional and not streaming:
-            left_pad = kernel // 2
-            right_pad = kernel - 1 - left_pad
-        else:
-            left_pad, right_pad = kernel - 1, 0
+    def _targets(self, source: torch.Tensor) -> torch.Tensor:
+        x = F.pad(source.transpose(1, 2), (self.cfg.conv_kernel_size - 1, 0))
+        return self.target_conv(x).transpose(1, 2) @ self.w_target
 
-        x = source
-        if streaming:
-            x = torch.cat([left_context.to(source.dtype), source], dim=1)
-            left_pad = max(0, left_pad - left_context.shape[1])
-
-        x = x.transpose(1, 2)
-        if left_pad or right_pad:
-            x = F.pad(x, (left_pad, right_pad))
-        v = self.target_conv(x).transpose(1, 2)
-        if streaming:
-            v = v[:, -source.shape[1] :, :]
-        return v @ self.w_target
-
-    def _update_hidden_context(self, source: torch.Tensor) -> None:
-        width = self.cfg.conv_kernel_size - 1
-        if width <= 0:
-            return
-        joined = (
-            source
-            if self._hidden_context is None
-            else torch.cat([self._hidden_context, source], dim=1)
-        )
-        self._hidden_context = joined[:, -width:, :].detach()
-
-    def _state_feature(self, carried: torch.Tensor | None) -> torch.Tensor | None:
-        """||eta*carried||_F / ||W0||_F per batch element — same normalization
-        as carry.state_ratio — the signal a state-aware gate opens against."""
-        if carried is None or self.output_gate_state_scale is None:
-            return None
-        w0_norm = self.down_proj.weight.norm(p="fro")
-        state_norm = carried.detach().float().norm(p="fro", dim=(1, 2))
-        return self.cfg.eta * state_norm / w0_norm
-
-    def _gated(
-        self,
-        ttt_term: torch.Tensor,
-        hidden_states: torch.Tensor,
-        *,
-        state_feature: torch.Tensor | None = None,
-    ) -> torch.Tensor:
+    def _gated(self, ttt_term: torch.Tensor, hidden_states: torch.Tensor) -> torch.Tensor:
         if self.output_gate is None:
             return ttt_term
-        logit = self.output_gate(hidden_states)
-        if state_feature is not None:
-            scale = self.output_gate_state_scale.to(logit.dtype)
-            logit = logit + scale * state_feature.to(logit.dtype)[:, None, None]
-        gate = torch.sigmoid(logit)
-        # Under no_grad so eval and chat record them too (D14 turn diagnostics):
-        # a gate pinned near 0 means the TTT term cannot be reaching the output.
+        gate = torch.sigmoid(self.output_gate(hidden_states))
+        # A gate pinned near 0 means the TTT term cannot be reaching the output.
         with torch.no_grad():
             self.gate_mean = float(gate.mean())
-            # Population std: chat streams one token at a time, and the sample
-            # std of one element is nan.
             self.gate_std = float(gate.std(correction=0))
         return gate * ttt_term
 
@@ -247,32 +145,16 @@ class InPlaceTTTMLP(nn.Module):
         base_out = z @ self.down_proj.weight.T
         carried = self._carried_for(z.shape[0])
 
-        # One chunk with nothing carried in contributes nothing — but in a
-        # session its delta is still what the next item starts from. Holds
-        # for "hebbian" and "delta_chunk" (both freeze the whole first chunk
-        # at zero); not "delta", whose per-token causality means token 1 of a
-        # single chunk already sees token 0's write.
-        if (
-            self.cfg.update_rule != "delta"
-            and z.shape[1] <= self.cfg.chunk_size
-            and carried is None
-            and not self.session_mode
-        ):
+        # One chunk with nothing carried in contributes nothing (both rules
+        # freeze the first chunk at zero), but in a session its delta is still
+        # what the next item starts from.
+        if z.shape[1] <= self.cfg.chunk_size and carried is None and not self.session_mode:
             return base_out
 
-        v = self._targets(self.v_source_norm(hidden_states), left_context=None)
+        v = self._targets(self.v_source_norm(hidden_states))
         through_scan = None if self.cfg.carry_gate else carried
-        if self.cfg.update_rule == "delta":
-            ttt_out, item_delta = ttt_math.delta_scan(
-                z,
-                v,
-                eta=self.cfg.eta,
-                carried=through_scan,
-                clip_tau=self._clip_tau(),
-                decay=self.cfg.chunk_decay,
-                truncate_every=self.cfg.truncate_every,
-            )
-        elif self.cfg.update_rule == "delta_chunk":
+        tau = self.cfg.effective_clip_tau
+        if self.cfg.update_rule == "delta_chunk":
             ttt_out, item_delta = ttt_math.chunked_delta_scan(
                 z,
                 v,
@@ -280,8 +162,7 @@ class InPlaceTTTMLP(nn.Module):
                 eta=self.cfg.eta,
                 normalize_delta_by_chunk=self.cfg.normalize_delta_by_chunk,
                 carried=through_scan,
-                clip_tau=self._clip_tau(),
-                decay=self.cfg.chunk_decay,
+                clip_tau=tau,
                 truncate_every=self.cfg.truncate_every,
             )
         else:
@@ -292,8 +173,7 @@ class InPlaceTTTMLP(nn.Module):
                 eta=self.cfg.eta,
                 normalize_delta_by_chunk=self.cfg.normalize_delta_by_chunk,
                 carried=through_scan,
-                clip_tau=self._clip_tau(),
-                decay=self.cfg.chunk_decay,
+                clip_tau=tau,
             )
 
         if self.session_mode and not self.recomputing:
@@ -305,8 +185,7 @@ class InPlaceTTTMLP(nn.Module):
                 self.carried, delta, decay=self.cfg.carried_decay
             )
 
-        state_feature = self._state_feature(carried)
-        out = base_out + self._gated(ttt_out, hidden_states, state_feature=state_feature)
+        out = base_out + self._gated(ttt_out, hidden_states)
         if self.cfg.carry_gate and carried is not None:
             out = out + self._carried_term(z, carried, hidden_states)
         return out
@@ -315,7 +194,7 @@ class InPlaceTTTMLP(nn.Module):
         self, z: torch.Tensor, carried: torch.Tensor, hidden_states: torch.Tensor
     ) -> torch.Tensor:
         state = carried.to(z.dtype)
-        tau = self._clip_tau()
+        tau = self.cfg.effective_clip_tau
         if tau is not None:
             state = ttt_math.frobenius_clip(state.unsqueeze(1), eta=self.cfg.eta, tau=tau).squeeze(1)
         term = self.cfg.eta * torch.einsum("bnf,bdf->bnd", z, state)
@@ -323,66 +202,6 @@ class InPlaceTTTMLP(nn.Module):
         with torch.no_grad():
             self.carry_gate_mean = float(gate.mean())
         return self.output_gate_carry_scale.to(term.dtype) * gate * term
-
-    @torch.no_grad()
-    def _stream_forward(
-        self, z: torch.Tensor, hidden_states: torch.Tensor
-    ) -> torch.Tensor:
-        source = self.v_source_norm(hidden_states)
-        v = self._targets(source, left_context=self._hidden_context)
-        # Buffer the post-norm source so stream and scan see the same v.
-        self._update_hidden_context(source)
-
-        w0 = self.down_proj.weight
-        state = self.stream
-        chunk = self.cfg.chunk_size
-        n_tokens = z.shape[1]
-        outputs = []
-        pos = 0
-
-        while pos < n_tokens:
-            take = min(chunk - state.pending_tokens, n_tokens - pos)
-            z_part = z[:, pos : pos + take]
-            out = z_part @ w0.T
-            if state.delta is not None:
-                out = out + self._gated(
-                    ttt_math.stream_apply(z_part, state.delta, eta=self.cfg.eta),
-                    hidden_states[:, pos : pos + take],
-                )
-            outputs.append(out)
-
-            if self.evolve:
-                state.pending_z.append(z_part)
-                state.pending_v.append(v[:, pos : pos + take])
-                state.pending_tokens += take
-                if state.pending_tokens == chunk:
-                    self._commit_chunk()
-            pos += take
-
-        return torch.cat(outputs, dim=1)
-
-    def _commit_chunk(self) -> None:
-        state = self.stream
-        delta = ttt_math.stream_chunk_delta(
-            torch.cat(state.pending_v, dim=1).float(),
-            torch.cat(state.pending_z, dim=1).float(),
-            chunk_size=self.cfg.chunk_size,
-            normalize=self.cfg.normalize_delta_by_chunk,
-        )
-        total = (
-            delta
-            if state.delta is None
-            else self.cfg.chunk_decay * state.delta + delta
-        )
-        tau = self._clip_tau()
-        state.delta = (
-            total
-            if tau is None
-            else ttt_math.frobenius_clip(total, eta=self.cfg.eta, tau=tau)
-        )
-        state.pending_z.clear()
-        state.pending_v.clear()
-        state.pending_tokens = 0
 
 
 def iter_ttt_modules(model: nn.Module):

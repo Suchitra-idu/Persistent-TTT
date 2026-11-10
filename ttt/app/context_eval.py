@@ -44,7 +44,7 @@ def measure(
 ) -> tuple[ContextRow, ...]:
     """The first token of a slice is never scored: alone it has nothing to be
     predicted from, so the context arm skips it too and every arm scores the same tokens."""
-    fast_weights.set_mode(evolve=True, stream=False, session=True)
+    fast_weights.set_mode(evolve=True, session=True)
     rows: list[ContextRow] = []
     for doc in docs:
         bounds = schedule.equal_token_slices(doc.n_tokens, n_slices)

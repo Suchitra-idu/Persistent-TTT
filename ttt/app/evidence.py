@@ -16,7 +16,6 @@ from typing import Any, Iterable, Mapping, Sequence
 
 from ttt.app.boundary_eval import DOC_RESET, PERSIST, SLICE_RESET, ArmRow
 from ttt.app.repeat_eval import RepeatItem
-from ttt.app.swap_eval import UNPRIMED, SwapRow
 from ttt.core import metrics, stats
 from ttt.core.metrics import ALL_SOURCES
 from ttt.core.stats import Estimate, Interval
@@ -37,7 +36,6 @@ REGIME_GAPS = (
 CROSS_DOC = "cross_doc"
 CROSS_SLICE = "cross_slice"
 DOMAIN_MEASURES = ("within", CROSS_DOC, CROSS_SLICE)
-SAME_VS_OTHER = "same_vs_other_source"
 
 # Baseline checkpoint regime, candidate checkpoint regime. Positive = candidate wins.
 CHECKPOINT_GAPS = (
@@ -233,40 +231,6 @@ def repeat_trend(
         rng=rng,
         n_boot=n_boot,
     )
-
-
-def swap_estimates(
-    rows: Sequence[SwapRow], *, rng: Rng, n_boot: int
-) -> tuple[Estimate, ...]:
-    """Per (prime, target) against the unprimed target — an estimate's `source`
-    is the target — then same-source priming against the other sources' mean."""
-    cold = _swap_ppl(rows, lambda r: r.prime_source == UNPRIMED)
-    primes = sorted({r.prime_source for r in rows} - {UNPRIMED})
-    out: tuple[Estimate, ...] = ()
-    for prime in primes:
-        primed = _swap_ppl(rows, lambda r, p=prime: r.prime_source == p)
-        out += tuple(
-            e
-            for e in paired_estimates(
-                f"prime:{prime}", cold, primed, rng=rng, n_boot=n_boot
-            )
-            if e.source != ALL_SOURCES
-        )
-    same = _swap_ppl(rows, lambda r: r.prime_source == r.target_source)
-    other = _other_source_mean(rows)
-    return out + paired_estimates(SAME_VS_OTHER, other, same, rng=rng, n_boot=n_boot)
-
-
-def _swap_ppl(rows: Sequence[SwapRow], keep) -> dict[Key, float]:
-    return {(r.target_source, r.doc_idx): r.ppl for r in rows if keep(r)}
-
-
-def _other_source_mean(rows: Sequence[SwapRow]) -> dict[Key, float]:
-    grouped: dict[Key, list[float]] = defaultdict(list)
-    for r in rows:
-        if r.prime_source not in (UNPRIMED, r.target_source):
-            grouped[(r.target_source, r.doc_idx)].append(r.ppl)
-    return {key: metrics.geometric_mean_ppl(ppls) for key, ppls in grouped.items()}
 
 
 def fresh_by_source(rows: Sequence[EvalRow]) -> dict[str, float]:

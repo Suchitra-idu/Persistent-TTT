@@ -16,13 +16,12 @@ from typing import Sequence
 from ttt.core.report import CompositionRow
 from ttt.core.schedule import derive_slice_count, slice_doc
 from ttt.core.types import Session, WorkItem
-from ttt.extensions.strategies._registry import SESSION, register
+from ttt.extensions.strategies._registry import register
 
 
 @dataclass(frozen=True)
 class Mixed:
     name: str = "mixed"
-    carry_scope: str = SESSION
 
     docs_per_session: int = 5
     same_source_share: float = 0.5

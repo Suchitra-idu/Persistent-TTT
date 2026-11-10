@@ -277,7 +277,7 @@ Paired carry minus dyneval(tuned related), log-ppl %: related +0.32 / +0.31, ran
 (carry better), same document −0.67 / −0.60, other source −0.25 / −0.14 (dyneval better).
 
 Repeat suite (`T16`, bundles `.../step_600/20261026-1307*`): second reading vs first +0.006 * /
-+0.008 *, tenth vs second +0.000 / −0.001, state grows 3.4x. No accumulation.
++0.008 *, tenth vs second +0.000 / −0.001, state grows 6.5x over ten readings. No accumulation.
 
 ## 5. Sanity checks that hold
 

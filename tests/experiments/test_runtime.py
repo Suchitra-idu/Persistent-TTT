@@ -9,7 +9,7 @@ from tests.experiments import _builders
 from ttt import cli
 from ttt.adapters import checkpoint_io
 from ttt.adapters.in_memory_storage import InMemoryStorage
-from ttt.experiments import _runtime, plot_pilot, sanity_check_v1
+from ttt.experiments import _runtime, sanity_check_v1
 
 
 class _PeftShaped(torch.nn.Module):
@@ -192,56 +192,6 @@ class TestSanityCheck:
         )
 
         assert result.passed
-
-
-class TestPlotPilot:
-    def payload(self):
-        from ttt.experiments import compounding_pilot_v1
-
-        rows = compounding_pilot_v1.run(
-            _builders.resolved(),
-            engine=_builders.engine(),
-            source=_builders.data_source(),
-            announce=lambda _: None,
-        )
-        return json.loads(compounding_pilot_v1.payload(_builders.resolved(), rows))
-
-    def test_it_groups_by_regime(self):
-        assert set(plot_pilot.series(self.payload(), "nll")) == {"cold", "persist"}
-
-    def test_a_series_is_positions_against_values(self):
-        positions, values = plot_pilot.series(self.payload(), "nll")["cold"]
-
-        assert len(positions) == len(values) > 0
-
-    def test_positions_come_back_in_order(self):
-        positions, _ = plot_pilot.series(self.payload(), "nll")["persist"]
-
-        assert positions == sorted(positions)
-
-    def test_both_metrics_are_plottable(self):
-        assert plot_pilot.series(self.payload(), "ppl")["cold"][1]
-
-    def test_an_unknown_metric_is_rejected(self):
-        with pytest.raises(ValueError, match="metric must be one of"):
-            plot_pilot.series(self.payload(), "loss")
-
-    def test_the_title_names_the_source_when_there_is_one(self):
-        from ttt.experiments import compounding_pilot_v1
-
-        rows = compounding_pilot_v1.run(
-            _builders.resolved(),
-            engine=_builders.engine(),
-            source=_builders.data_source(),
-            pilot_source="FixtureCode",
-            announce=lambda _: None,
-        )
-        payload = json.loads(compounding_pilot_v1.payload(_builders.resolved(), rows))
-
-        assert "FixtureCode" in plot_pilot.title(payload)
-
-    def test_the_title_counts_sources_when_there_are_several(self):
-        assert "sources" in plot_pilot.title(self.payload())
 
 
 class TestCheckpointPaths:

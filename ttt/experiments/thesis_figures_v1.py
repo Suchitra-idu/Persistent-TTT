@@ -1,81 +1,42 @@
-"""Extra thesis figures from the same paper_eval bundles. Local, no GPU.
+"""Cross-run tables T7, T8 and T11 to T16 from the paper_eval bundles. Local, no GPU.
 
     python -m ttt.experiments.thesis_figures_v1
-
-Writes figures/F5..F12 under results/paper/ and the per-source numbers behind
-them as tables/T7_sources_by_step and tables/T8_domain_correlates.
 """
 
 from __future__ import annotations
 
-import json
 import math
-import re
 import statistics
 from collections import defaultdict
-from pathlib import Path
 
 from ttt.adapters.numpy_rng import NumpyRng
 from ttt.app import context_eval, evidence, paper_analysis, relatedness_eval
 from ttt.core.metrics import ALL_SOURCES, geometric_mean_ppl
 from ttt.core import stats
 from ttt.core.stats import ranks
-from ttt.core.types import COLD_CARRY, FRESH, LORA_ONLY
+from ttt.core.types import FRESH
 from ttt.experiments import paper_eval_v1
-from ttt.experiments._evidence_figures import (
-    GRID, INK, MUTED, SERIES, SURFACE, _chrome, _ordered_sources, _pyplot, _save,
-)
-from ttt.experiments.paper_analysis_v1 import RESULTS_DIR, Bundle, is_development, newest_bundle
+from ttt.experiments._evidence_figures import MUTED, SERIES
+from ttt.experiments.paper_analysis_v1 import RESULTS_DIR, Bundle, is_development, newest_bundle, pinned
 
 OUT = RESULTS_DIR / "paper"
 CONTROL = "lora-only-matched"
 RUNS = {"Hebbian": "ttt-v1.1", "Delta": "ttt-v1.1-clean-deltachunk"}
 STEPS = (200, 400, 600)
 CONTROL_COLOUR = "#1baf7a"
-MARKERS = {"LoRA-only": "^", "Hebbian": "o", "Delta": "s"}
-COLOURS = {"LoRA-only": CONTROL_COLOUR, "Hebbian": SERIES[0], "Delta": SERIES[1]}
-HEAT = ("#f0efec", "#cde2fb", "#86b6ef", "#3987e5", "#1c5cab", "#0d366b")
-NOCLIP_LOGS = OUT / "inputs" / "noclip_training"
-LOG_LINE = re.compile(r"step (\d+)/\d+ loss ([\d.]+) \|g\| lora ([\d.]+) wdown ([\d.]+) new ([\d.]+)")
 N_BOOT = paper_eval_v1.DEFAULT_N_BOOT
 
 
 def _rows(run: str, step: int, name: str):
-    """From the newest bundle at that step that measured `name`; a step can
-    hold several bundles, each with different suites."""
+    """From the pinned bundle, else the newest at that step that measured
+    `name`; a step can hold several bundles, each with different suites."""
+    pin = pinned(RESULTS_DIR, run, step, name)
+    if pin is not None:
+        return Bundle(run=run, step=step, path=pin).rows(name)
     for stamp in sorted((RESULTS_DIR / run / f"step_{step}").glob("*/raw"), reverse=True):
         if (stamp / f"{name}.json").is_file() and is_development(stamp.parent):
             return Bundle(run=run, step=step, path=stamp.parent).rows(name)
     return newest_bundle(RESULTS_DIR, run, step).rows(name)
-
-
-def _short(source: str) -> str:
-    return source.replace("RedPajama", "")
-
-
-def _title(fig, text: str) -> None:
-    """No in-figure title: the report's caption is the title."""
-
-
-def absolute_ppl(path: Path) -> str:
-    plt = _pyplot()
-    fig, ax = plt.subplots(figsize=(6.4, 3.8))
-    base = geometric_mean_ppl([r.ppl for r in _rows(CONTROL, STEPS[-1], "regimes") if r.regime == FRESH])
-    series = {"LoRA-only": (CONTROL, LORA_ONLY)} | {label: (run, COLD_CARRY) for label, run in RUNS.items()}
-    for label, (run, regime) in series.items():
-        values = [geometric_mean_ppl([r.ppl for r in _rows(run, s, "regimes") if r.regime == regime]) for s in STEPS]
-        ax.plot(STEPS, values, color=COLOURS[label], marker=MARKERS[label], markersize=6, linewidth=2, label=label)
-        ax.annotate(f"{values[-1]:.3f}", (STEPS[-1], values[-1]), xytext=(6, 0),
-                    textcoords="offset points", va="center", fontsize=8, color=INK)
-    ax.set_xlabel("training step")
-    ax.set_ylabel("geometric-mean perplexity")
-    ax.set_title(f"Base model {base:.3f}, off the scale above", loc="left", fontsize=9, color=MUTED)
-    ax.margins(x=0.18)
-    ax.legend(frameon=False, fontsize=8)
-    _chrome(ax)
-    _title(fig, "Held-out perplexity of each model (106 documents, lower is better)")
-    fig.tight_layout()
-    return _save(fig, str(path))
 
 
 def source_estimates():
@@ -92,42 +53,8 @@ def source_estimates():
     return out
 
 
-def source_heatmaps(estimates, path: Path) -> str:
-    """Relative gain in percent of the reference perplexity, so sources compare."""
-    plt = _pyplot()
-    panels = [(label, measure) for measure in ("within", paper_analysis.VS_MATCHED) for label in RUNS]
-    sources = [s for s in _ordered_sources(estimates[("Hebbian", "within", STEPS[0])]) if s != ALL_SOURCES]
-    fig, axes = plt.subplots(1, len(panels), figsize=(3.3 * len(panels), 3.6), squeeze=False)
-    for ax, (label, measure) in zip(axes[0], panels):
-        grid = [[100 * estimates[(label, measure, s)][src].relative for s in STEPS] for src in sources]
-        top = max(max(row) for row in grid)
-        ax.imshow(grid, cmap=_heat_map(), vmin=0, vmax=top, aspect="auto")
-        for i, row in enumerate(grid):
-            for j, value in enumerate(row):
-                star = "*" if estimates[(label, measure, STEPS[j])][sources[i]].interval.excludes_zero else ""
-                ax.text(j, i, f"{value:.2f}{star}", ha="center", va="center", fontsize=7,
-                        color=SURFACE if value > 0.6 * top else INK)
-        ax.set_xticks(range(len(STEPS)), [str(s) for s in STEPS])
-        ax.set_yticks(range(len(sources)), [_short(s) for s in sources] if ax is axes[0][0] else [])
-        ax.set_xlabel("training step")
-        name = "within document" if measure == "within" else "vs. matched LoRA"
-        ax.set_title(f"{label}, {name}", loc="left", fontsize=9)
-        for spine in ax.spines.values():
-            spine.set_visible(False)
-    _title(fig, "Relative gain per source in percent (* = 95% CI excludes zero)")
-    fig.tight_layout()
-    return _save(fig, str(path))
-
-
-def _heat_map():
-    from matplotlib.colors import LinearSegmentedColormap
-
-    return LinearSegmentedColormap.from_list("blue", HEAT)
-
-
-def domain_correlates(estimates, path: Path) -> tuple[str, list[tuple]]:
+def domain_correlates(estimates) -> list[tuple]:
     """Per-source relative within gain against the true base perplexity."""
-    plt = _pyplot()
     base_rows = _rows(CONTROL, STEPS[-1], "regimes")
     by_source = defaultdict(list)
     for r in base_rows:
@@ -135,37 +62,11 @@ def domain_correlates(estimates, path: Path) -> tuple[str, list[tuple]]:
             by_source[r.source].append(r.ppl)
     base = {s: geometric_mean_ppl(v) for s, v in by_source.items()}
     sources = sorted(base)
-    fig, ax = plt.subplots(figsize=(6.4, 3.8))
     table = []
     for label in RUNS:
         gains = [100 * estimates[(label, "within", STEPS[-1])][s].relative for s in sources]
-        rho = _spearman([base[s] for s in sources], gains)
-        table.append((label, len(sources), rho))
-        ax.scatter([base[s] for s in sources], gains, color=COLOURS[label], marker=MARKERS[label],
-                   s=40, label=f"{label}, Spearman ρ = {rho:+.2f}", zorder=3)
-        for s, g in zip(sources, gains):
-            ax.annotate(_short(s), (base[s], g), xytext=(5, 3), textcoords="offset points", fontsize=7, color=MUTED)
-    ax.set_xscale("log")
-    _plain_log_ticks(ax.xaxis, (5, 10, 20, 40))
-    ax.set_xlabel("base-model perplexity of the source (log)")
-    ax.set_ylabel("within-document gain, % of reference")
-    ax.legend(frameon=False, fontsize=8)
-    _chrome(ax)
-    _title(fig, "Does TTT help harder domains more? Step 600, six sources")
-    fig.tight_layout()
-    return _save(fig, str(path)), table
-
-
-def _plain_log_ticks(axis, ticks) -> None:
-    """Plain numbers on a log axis instead of powers of ten."""
-    from matplotlib.ticker import FuncFormatter, LogLocator, NullFormatter
-
-    if ticks is not None:
-        axis.set_ticks(ticks)
-    else:
-        axis.set_major_locator(LogLocator(base=10, subs=(1.0, 2.0, 5.0)))
-    axis.set_major_formatter(FuncFormatter(lambda v, _: f"{v:,.0f}"))
-    axis.set_minor_formatter(NullFormatter())
+        table.append((label, len(sources), _spearman([base[s] for s in sources], gains)))
+    return table
 
 
 def _spearman(x, y) -> float:
@@ -173,144 +74,6 @@ def _spearman(x, y) -> float:
     mx, my = statistics.fmean(rx), statistics.fmean(ry)
     cov = sum((a - mx) * (b - my) for a, b in zip(rx, ry))
     return cov / math.sqrt(sum((a - mx) ** 2 for a in rx) * sum((b - my) ** 2 for b in ry))
-
-
-def chain_states(path: Path) -> str:
-    plt = _pyplot()
-    fig, axes = plt.subplots(1, len(RUNS), figsize=(10, 3.6), squeeze=False)
-    arms = (("persist", "carried across documents"), ("doc_reset", "reset at each document"),
-            ("slice_reset", "reset at each slice"))
-    for ax, (label, run) in zip(axes[0], RUNS.items()):
-        rows = _rows(run, STEPS[-1], "boundary")
-        for index, (arm, name) in enumerate(arms):
-            positions = sorted({r.chain_position for r in rows})
-            medians = [statistics.median(r.state_ratio for r in rows if r.arm == arm and r.chain_position == p)
-                       for p in positions]
-            colour = (SERIES[1], SERIES[0], CONTROL_COLOUR)[index]
-            ax.plot([p + 1 for p in positions], medians, color=colour, marker="os^"[index],
-                    markersize=6, linewidth=2, label=name)
-        ax.set_yscale("log")
-        _plain_log_ticks(ax.yaxis, None)
-        ax.set_xticks([p + 1 for p in positions])
-        ax.set_xlabel("document position in the chain")
-        ax.set_ylabel("state ratio, median (log)")
-        ax.set_title(label, loc="left")
-        _chrome(ax)
-    handles, labels = axes[0][0].get_legend_handles_labels()
-    fig.legend(handles, labels, frameon=False, fontsize=8, ncol=3, loc="lower center")
-    _title(fig, "Carrying state makes it larger, not more useful (step 600, 6 chains of 5 documents, one per source)")
-    fig.tight_layout(rect=(0, 0.07, 1, 1))
-    return _save(fig, str(path))
-
-
-def state_distribution(threshold: float, path: Path) -> str:
-    plt = _pyplot()
-    fig, ax = plt.subplots(figsize=(6.4, 3.8))
-    for label, run in RUNS.items():
-        ratios = [r.state_ratio for name in ("boundary", "repeat", "swap") for r in _rows(run, STEPS[-1], name)]
-        ratios += [r.state_ratio_final for r in _rows(run, STEPS[-1], "regimes") if r.regime == COLD_CARRY]
-        logs = [math.log10(v) for v in ratios if v > 0]
-        ax.hist(logs, bins=40, color=COLOURS[label], alpha=0.55, label=f"{label}, {len(logs)} measurements")
-    ax.axvline(math.log10(threshold), color=INK, linewidth=1.5, linestyle="--")
-    ax.annotate(f"clip binds above {threshold:.2f}", (math.log10(threshold), 0), xytext=(6, 60),
-                textcoords="offset points", fontsize=8, color=INK)
-    ax.set_xlabel("state ratio ‖ηS‖ / ‖W₀‖, log10")
-    ax.set_ylabel("measurements")
-    ax.legend(frameon=False, fontsize=8)
-    _chrome(ax)
-    _title(fig, "Every measured state is far above the clip threshold (step 600)")
-    fig.tight_layout()
-    return _save(fig, str(path))
-
-
-def noclip_training(path: Path) -> str:
-    plt = _pyplot()
-    runs = {
-        "Hebbian, no clip": ("hebbian-noclip", SERIES[0], "o"),
-        "Delta, no clip": ("delta-noclip-probe", SERIES[1], "s"),
-    }
-    fig, (loss_ax, grad_ax) = plt.subplots(1, 2, figsize=(10, 3.6))
-    for label, (name, colour, marker) in runs.items():
-        points = [tuple(float(g) for g in LOG_LINE.search(line).groups())
-                  for line in (NOCLIP_LOGS / f"{name}.log").read_text().splitlines() if LOG_LINE.search(line)]
-        steps = [p[0] for p in points]
-        loss_ax.plot(steps, [p[1] for p in points], color=colour, marker=marker, markersize=4, linewidth=2, label=label)
-        grad_ax.plot(steps, [p[3] for p in points], color=colour, marker=marker, markersize=4, linewidth=2, label=label)
-    loss_ax.set_ylabel("training loss, window mean")
-    grad_ax.set_yscale("log")
-    grad_ax.axhline(10, color=INK, linewidth=1.2, linestyle="--")
-    grad_ax.annotate("gradient clip 10", (0, 10), xytext=(4, 4), textcoords="offset points", fontsize=8, color=INK)
-    grad_ax.set_ylabel("W₀ gradient norm (log)")
-    for ax in (loss_ax, grad_ax):
-        ax.set_xlabel("training step")
-        _chrome(ax)
-    loss_ax.legend(frameon=False, fontsize=8)
-    _title(fig, "Training without the read-time clip, same data order and settings")
-    fig.tight_layout()
-    return _save(fig, str(path))
-
-
-def gates(path: Path) -> str:
-    plt = _pyplot()
-    cases = (
-        ("Hebbian, clip, step 600", "ttt-v1.1", 600, SERIES[0]),
-        ("Delta, clip, step 600", "ttt-v1.1-clean-deltachunk", 600, SERIES[1]),
-        ("Delta, clip, step 100", "ttt-v1.1-clean-deltachunk", 100, SERIES[1]),
-        ("Delta, no clip, step 100", "delta-noclip", 100, MUTED),
-    )
-    fig, ax = plt.subplots(figsize=(6.4, 3.2))
-    names, values = [], []
-    for name, run, step, colour in cases:
-        median = statistics.median(r.gate_mean for r in _rows(run, step, "boundary"))
-        names.append(name)
-        values.append(median)
-        ax.barh(len(names) - 1, median, color=colour, height=0.6)
-        ax.annotate(f"{median:.3f}", (median, len(names) - 1), xytext=(4, 0),
-                    textcoords="offset points", va="center", fontsize=8, color=INK)
-    ax.set_yticks(range(len(names)), names)
-    ax.invert_yaxis()
-    ax.set_xlim(0, 1.05)
-    ax.set_xlabel("output gate, median over boundary-suite measurements")
-    _chrome(ax, grid_axis="x")
-    _title(fig, "The optimiser closes the gate when the fast weights are unusable")
-    fig.tight_layout()
-    return _save(fig, str(path))
-
-
-def swap_matrices(figures: Path) -> list[str]:
-    from ttt.experiments import _evidence_figures
-
-    made = []
-    for label, run in RUNS.items():
-        estimates = evidence.swap_estimates(_rows(run, STEPS[-1], "swap"), rng=NumpyRng(0), n_boot=N_BOOT)
-        made.append(_evidence_figures.swap_heatmap(estimates, str(figures / f"F9_swap_{label}.pdf")))
-    return made
-
-
-def swap_summary() -> list[str]:
-    """Primed against unprimed, split into same-source and other-source pairs."""
-    lines = ["run,pairs,n_pairs,mean_delta_ppl,significantly_worse,significantly_better,min_delta_ppl"]
-    for label, run in RUNS.items():
-        primed = [e for e in evidence.swap_estimates(_rows(run, STEPS[-1], "swap"), rng=NumpyRng(0), n_boot=N_BOOT)
-                  if e.measure.startswith("prime:")]
-        for name, keep in (("same_source", True), ("other_source", False)):
-            group = [e for e in primed if (e.measure.removeprefix("prime:") == e.source) == keep]
-            points = [e.interval.point for e in group]
-            worse = sum(e.interval.high < 0 for e in group)
-            better = sum(e.interval.low > 0 for e in group)
-            lines.append(f"{label},{name},{len(group)},{statistics.fmean(points):.6g},{worse},{better},{min(points):.6g}")
-    return lines
-
-
-def repeat_bounds() -> list[str]:
-    """Every later reading against the first, pooled over sources."""
-    lines = ["run,repeat,delta_ppl,ci_low,ci_high,excludes_zero"]
-    for label, run in RUNS.items():
-        for p in evidence.repeat_curve(_rows(run, STEPS[-1], "repeat"), rng=NumpyRng(0), n_boot=N_BOOT):
-            if p.source == ALL_SOURCES:
-                lines.append(f"{label},{p.repeat},{p.gap.point:.6g},{p.gap.low:.6g},{p.gap.high:.6g},"
-                             f"{int(p.gap.low > 0 or p.gap.high < 0)}")
-    return lines
 
 
 def write_tables(estimates, correlates) -> None:
@@ -325,8 +88,6 @@ def write_tables(estimates, correlates) -> None:
     (tables / "T7_sources_by_step.csv").write_text("\n".join(lines) + "\n")
     rows = ["run,n_sources,spearman_rho_within_vs_base_ppl"] + [f"{l},{n},{rho:.4f}" for l, n, rho in correlates]
     (tables / "T8_domain_correlates.csv").write_text("\n".join(rows) + "\n")
-    (tables / "T9_swap_summary.csv").write_text("\n".join(swap_summary()) + "\n")
-    (tables / "T10_repeat_curve.csv").write_text("\n".join(repeat_bounds()) + "\n")
 
 
 CARRY_DESIGN = "hebbian-carry-b"
@@ -338,12 +99,6 @@ CARRY_DESIGN_CASES = (
     ("gated carry, step 200", CARRY_DESIGN, 200),
     ("gated carry, step 400", CARRY_DESIGN_LONG, 400),
     ("gated carry, step 600", CARRY_DESIGN_LONG, 600),
-)
-CARRY_DESIGN_MEASURES = (
-    ("between_slices", "Carried from earlier slices\nof the same document"),
-    ("cross_slice", "Carried across slices,\nboundary suite"),
-    ("cross_doc", "Carried into a\ndifferent document"),
-    ("within", "Fast weights within\na slice"),
 )
 
 
@@ -365,87 +120,6 @@ def carry_design_estimates() -> dict[tuple[str, str], object]:
     return out
 
 
-def carry_design_figure(estimates, path: Path) -> str:
-    plt = _pyplot()
-    fig, axes = plt.subplots(1, len(CARRY_DESIGN_MEASURES), figsize=(13, 4.2), squeeze=False)
-    colours = [SERIES[0] if label.startswith("ungated") else SERIES[1] for label, _, _ in CARRY_DESIGN_CASES]
-    markers = "ososDv"
-    for ax, (measure, title) in zip(axes[0], CARRY_DESIGN_MEASURES):
-        for y, (label, _, _) in enumerate(CARRY_DESIGN_CASES):
-            e = estimates[(label, measure)]
-            i = e.interval
-            filled = i.excludes_zero
-            ax.hlines(y, i.low, i.high, color=colours[y], linewidth=2)
-            ax.plot(i.point, y, markers[y], markersize=7, markeredgewidth=2, markeredgecolor=colours[y],
-                    markerfacecolor=colours[y] if filled else SURFACE)
-        ax.axvline(0, color=MUTED, linewidth=1)
-        ax.set_yticks(range(len(CARRY_DESIGN_CASES)),
-                      [c[0] for c in CARRY_DESIGN_CASES] if ax is axes[0][0] else [])
-        ax.invert_yaxis()
-        ax.set_title(title, loc="left", fontsize=9)
-        ax.set_xlabel("Δppl  (+ = lower perplexity)")
-        _chrome(ax, grid_axis="x")
-    _title(fig, "The carry design against plain Hebbian (95% CI; filled = interval excludes zero)")
-    fig.tight_layout()
-    return _save(fig, str(path))
-
-
-def carry_design_by_position(path: Path) -> str:
-    plt = _pyplot()
-    fig, ax = plt.subplots(figsize=(6.4, 3.8))
-    cases = (("ungated carry, step 600", "ttt-v1.1", 600, SERIES[0], "o"),
-             ("gated carry, step 200", CARRY_DESIGN, 200, MUTED, "D"),
-             ("gated carry, step 600", CARRY_DESIGN_LONG, 600, SERIES[1], "v"))
-    for label, run, step, colour, marker in cases:
-        points = sorted((i, e.interval) for i, e in paper_analysis.position_estimates(
-            _rows(run, step, "regime_slices"), rng=NumpyRng(0), n_boot=N_BOOT) if e.measure == "between_slices")
-        xs = [i + 1 for i, _ in points]
-        ax.fill_between(xs, [g.low for _, g in points], [g.high for _, g in points], color=colour, alpha=0.18, linewidth=0)
-        ax.plot(xs, [g.point for _, g in points], color=colour, marker=marker, markersize=6, linewidth=2, label=label)
-    ax.axhline(0, color=MUTED, linewidth=1)
-    ax.set_xlabel("slice of the document")
-    ax.set_ylabel("Δppl, carried minus reset")
-    ax.legend(frameon=False, fontsize=8)
-    _chrome(ax)
-    _title(fig, "Carry from earlier slices of the same document, by slice")
-    fig.tight_layout()
-    return _save(fig, str(path))
-
-
-TRAINING_EVAL = re.compile(r"gap_between ([-\d.e+]+)")
-CURVE_LOG = OUT / "inputs" / "carry_design_training" / "4_carry_600.log"
-
-
-def carry_design_curve(estimates, path: Path) -> str:
-    """Full evaluations with 95% intervals, and the in-training evaluations of
-    the 600-step run (30 documents, no interval) as hollow markers."""
-    plt = _pyplot()
-    fig, (within_ax, across_ax) = plt.subplots(1, 2, figsize=(10, 3.6))
-    steps = [int(label.rsplit(" ", 1)[1]) for label, _, _ in CARRY_DESIGN_CASES if label.startswith("carry")]
-    labels = [label for label, _, _ in CARRY_DESIGN_CASES if label.startswith("carry")]
-    for ax, measure, title in ((within_ax, "between_slices", "Carried from earlier slices of the same document"),
-                               (across_ax, "cross_doc", "Carried into a different document")):
-        intervals = [estimates[(label, measure)].interval for label in labels]
-        ax.fill_between(steps, [i.low for i in intervals], [i.high for i in intervals],
-                        color=SERIES[1], alpha=0.18, linewidth=0)
-        ax.plot(steps, [i.point for i in intervals], color=SERIES[1], marker="o", markersize=6,
-                linewidth=2, label="gated carry, full evaluation")
-        ax.axhline(0, color=MUTED, linewidth=1)
-        ax.set_title(title, loc="left", fontsize=9)
-        ax.set_xlabel("training step")
-        ax.set_ylabel("Δppl  (+ = carry helps)")
-        _chrome(ax)
-    lines = CURVE_LOG.read_text().splitlines()
-    steps_seen = [int(m.group(1)) for line in lines if (m := re.match(r"\s*checkpoint saved: \S+/step_(\d+)", line))]
-    gaps = [float(m.group(1)) for line in lines if (m := TRAINING_EVAL.search(line))]
-    within_ax.plot(steps_seen[: len(gaps)], gaps, linestyle="none", marker="o", markersize=5,
-                   markerfacecolor=SURFACE, markeredgecolor=SERIES[1], label="in-training evaluation")
-    within_ax.legend(frameon=False, fontsize=8)
-    _title(fig, "Carry gains across training (carry design)")
-    fig.tight_layout()
-    return _save(fig, str(path))
-
-
 # (label, run, raw rows, colour, marker, line style); the two carry seeds share a colour.
 RELATEDNESS_CASES = (
     ("ungated carry", "ttt-v1.1", "relatedness", MUTED, "o", "-"),
@@ -453,12 +127,6 @@ RELATEDNESS_CASES = (
     ("gated carry, seed 43", "hebbian-carry-600-s43", "relatedness", SERIES[1], "D", "--"),
     ("dynamic evaluation, tuned for related", CONTROL, "dyneval_related", SERIES[0], "^", "-"),
     ("dynamic evaluation, tuned for same document", CONTROL, "dyneval_self", CONTROL_COLOUR, "v", "--"),
-)
-RELATEDNESS_LEVELS = (
-    ("gain_self", "same\ndocument"),
-    ("gain_related", "related\narticle"),
-    ("gain_random", "random\narticle"),
-    ("gain_other_source", "other\nsource"),
 )
 
 
@@ -469,76 +137,6 @@ def relatedness_estimates() -> dict[tuple[str, str], object]:
             if e.source == ALL_SOURCES:
                 out[(label, e.measure)] = e
     return out
-
-
-def relatedness_figure(estimates, path: Path) -> str:
-    plt = _pyplot()
-    fig, ax = plt.subplots(figsize=(7.6, 4.4))
-    xs = range(len(RELATEDNESS_LEVELS))
-    for label, _, _, colour, marker, style in RELATEDNESS_CASES:
-        intervals = [estimates[(label, m)].interval for m, _ in RELATEDNESS_LEVELS]
-        ax.fill_between(xs, [i.low for i in intervals], [i.high for i in intervals],
-                        color=colour, alpha=0.12, linewidth=0)
-        ax.plot(xs, [i.point for i in intervals], color=colour, marker=marker, markersize=7,
-                linewidth=2, linestyle=style, label=label)
-    ax.axhline(0, color=MUTED, linewidth=1)
-    ax.set_xticks(list(xs), [name for _, name in RELATEDNESS_LEVELS])
-    ax.set_xlabel("text the model adapted on, by relatedness to the target")
-    ax.set_ylabel("Δppl vs no adaptation  (+ = helps)")
-    ax.legend(frameon=False, fontsize=7, loc="lower left")
-    _chrome(ax)
-    _title(fig, "Adaptation by relatedness of the earlier text (200 Wikipedia targets, step 600)")
-    fig.tight_layout()
-    return _save(fig, str(path))
-
-
-FRESH_CASES = (
-    ("gated carry, seed 42", CARRY_DESIGN_LONG, SERIES[1], "s"),
-    ("gated carry, seed 43", "hebbian-carry-600-s43", SERIES[1], "D"),
-    ("trained across documents, seed 42", "mixed-carry-600", SERIES[0], "o"),
-)
-FRESH_LEVELS = (
-    ("gain_self", "same\ndocument"),
-    ("gain_related", "related\narticle"),
-    ("gain_generic", "generic\ncarry"),
-    ("gain_random", "random\narticle"),
-    ("gain_chain_10", "chain of\n10 articles"),
-    ("gain_other_source", "other\nsource"),
-)
-
-
-def fresh_relatedness(run: str) -> dict[str, tuple[float, float, float]]:
-    """Pooled (point, low, high) per measure from the run's preregistered fresh-pass bundle."""
-    (bundle,) = sorted(p for p in (RESULTS_DIR / run / "step_600").glob("*") if not is_development(p))[-1:]
-    lines = (bundle / "tables" / "relatedness.csv").read_text().splitlines()
-    out = {}
-    for line in lines[1:]:
-        measure, source, _, point, low, high, *_ = line.split(",")
-        if source == ALL_SOURCES:
-            out[measure] = (float(point), float(low), float(high))
-    return out
-
-
-def fresh_relatedness_figure(path: Path) -> str:
-    plt = _pyplot()
-    fig, ax = plt.subplots(figsize=(7.6, 4.4))
-    width = 0.22
-    for offset, (label, run, colour, marker) in zip((-width, 0.0, width), FRESH_CASES):
-        estimates = fresh_relatedness(run)
-        xs = [i + offset for i in range(len(FRESH_LEVELS))]
-        points = [estimates[m] for m, _ in FRESH_LEVELS]
-        ax.errorbar(xs, [p for p, _, _ in points],
-                    yerr=[[p - lo for p, lo, _ in points], [hi - p for p, _, hi in points]],
-                    fmt=marker, color=colour, markersize=6, capsize=2, linewidth=1.2, label=label,
-                    markerfacecolor="white" if "across" in label else colour)
-    ax.axhline(0, color=MUTED, linewidth=1)
-    ax.set_xticks(range(len(FRESH_LEVELS)), [name for _, name in FRESH_LEVELS])
-    ax.set_xlabel("text carried into the target")
-    ax.set_ylabel("Δppl vs reset carry  (+ = helps)")
-    ax.legend(frameon=False, fontsize=7, loc="lower left")
-    _chrome(ax)
-    fig.tight_layout()
-    return _save(fig, str(path))
 
 
 def carry_vs_dyneval() -> list[str]:
@@ -605,11 +203,6 @@ ABLATION_CASES = (
     ("trained through, no separate path (B+C)", "ablate-b-c"),
     ("gated carry (A+B+C)", CARRY_DESIGN),
 )
-ABLATION_MEASURES = (
-    ("between_slices", "Carried from earlier slices\nof the same document"),
-    ("cross_doc", "Carried into a\ndifferent document"),
-    ("vs_matched_lora", "Lead over\nmatched LoRA"),
-)
 
 
 def ablation_estimates() -> dict[tuple[str, str], object]:
@@ -626,27 +219,6 @@ def ablation_estimates() -> dict[tuple[str, str], object]:
             if e.source == ALL_SOURCES:
                 out[(label, e.measure)] = e
     return out
-
-
-def ablation_figure(estimates, path: Path) -> str:
-    plt = _pyplot()
-    fig, axes = plt.subplots(1, len(ABLATION_MEASURES), figsize=(12, 3.4), squeeze=False)
-    colours = (MUTED, SERIES[0], SERIES[0], SERIES[1])
-    for ax, (measure, title) in zip(axes[0], ABLATION_MEASURES):
-        for y, (label, _) in enumerate(ABLATION_CASES):
-            i = estimates[(label, measure)].interval
-            ax.hlines(y, i.low, i.high, color=colours[y], linewidth=2)
-            ax.plot(i.point, y, "o", markersize=7, color=colours[y])
-        ax.axvline(0, color=MUTED, linewidth=1)
-        ax.set_yticks(range(len(ABLATION_CASES)),
-                      [label for label, _ in ABLATION_CASES] if ax is axes[0][0] else [])
-        ax.invert_yaxis()
-        ax.set_title(title, loc="left", fontsize=9)
-        ax.set_xlabel("Δppl  (+ = lower perplexity)")
-        _chrome(ax, grid_axis="x")
-    _title(fig, "Ablation of the carry design at step 200 (95% CI)")
-    fig.tight_layout()
-    return _save(fig, str(path))
 
 
 SEEDS = (("seed 42", CARRY_DESIGN_LONG), ("seed 43", "hebbian-carry-600-s43"))
@@ -684,43 +256,19 @@ def carry_design_table(estimates) -> list[str]:
 
 
 def main() -> None:
-    figures = OUT / "figures"
-    figures.mkdir(parents=True, exist_ok=True)
-    threshold = json.loads((OUT / "manifest.json").read_text())["clip_threshold"]
     estimates = source_estimates()
-    made = [
-        absolute_ppl(figures / "F5_absolute_ppl.pdf"),
-        source_heatmaps(estimates, figures / "F6_source_heatmaps.pdf"),
-    ]
-    correlate_figure, correlates = domain_correlates(estimates, figures / "F7_domain_correlates.pdf")
-    made += [
-        correlate_figure,
-        chain_states(figures / "F8_chain_states.pdf"),
-        *swap_matrices(figures),
-        state_distribution(threshold, figures / "F10_state_distribution.pdf"),
-        noclip_training(figures / "F11_noclip_training.pdf"),
-        gates(figures / "F12_gates.pdf"),
-    ]
-    design = carry_design_estimates()
-    made += [
-        carry_design_figure(design, figures / "F13_carry_design.pdf"),
-        carry_design_by_position(figures / "F14_carry_design_by_slice.pdf"),
-        carry_design_curve(design, figures / "F15_carry_design_curve.pdf"),
-    ]
-    ablation = ablation_estimates()
-    made.append(ablation_figure(ablation, figures / "F17_ablation.pdf"))
-    (OUT / "tables" / "T13_ablation.csv").write_text("\n".join(carry_design_table(ablation)) + "\n")
-    (OUT / "tables" / "T14_seeds.csv").write_text("\n".join(carry_design_table(seed_estimates())) + "\n")
+    write_tables(estimates, domain_correlates(estimates))
+    tables = OUT / "tables"
+    (tables / "T11_carry_design.csv").write_text("\n".join(carry_design_table(carry_design_estimates())) + "\n")
     related = relatedness_estimates()
-    made.append(relatedness_figure(related, figures / "F16_relatedness.pdf"))
-    made.append(fresh_relatedness_figure(figures / "F18_fresh_relatedness.pdf"))
-    (OUT / "tables" / "T15_carry_vs_dyneval.csv").write_text("\n".join(carry_vs_dyneval()) + "\n")
-    (OUT / "tables" / "T16_repeat.csv").write_text("\n".join(repeat_summary()) + "\n")
-    (OUT / "tables" / "T12_relatedness.csv").write_text("\n".join(relatedness_table(related)) + "\n")
-    (OUT / "tables" / "T11_carry_design.csv").write_text("\n".join(carry_design_table(design)) + "\n")
-    write_tables(estimates, correlates)
-    for path in made:
-        print(path)
+    (tables / "T12_relatedness.csv").write_text("\n".join(relatedness_table(related)) + "\n")
+    (tables / "T13_ablation.csv").write_text("\n".join(carry_design_table(ablation_estimates())) + "\n")
+    (tables / "T14_seeds.csv").write_text("\n".join(carry_design_table(seed_estimates())) + "\n")
+    (tables / "T15_carry_vs_dyneval.csv").write_text("\n".join(carry_vs_dyneval()) + "\n")
+    (tables / "T16_repeat.csv").write_text("\n".join(repeat_summary()) + "\n")
+    for name in ("T7_sources_by_step", "T8_domain_correlates", "T11_carry_design", "T12_relatedness",
+                 "T13_ablation", "T14_seeds", "T15_carry_vs_dyneval", "T16_repeat"):
+        print(tables / f"{name}.csv")
 
 
 if __name__ == "__main__":

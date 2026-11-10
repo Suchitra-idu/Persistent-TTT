@@ -80,5 +80,5 @@ _guard:
 		echo "GUARD PASS: $(WHAT) is rejected"; \
 	fi
 
-.PHONY: check lint test test-gpu test-all docs docs-build install-dev guard \
+.PHONY: gpu-warm test-gpu-modal check lint test test-gpu test-all docs docs-build install-dev guard \
         guard-core guard-app _guard

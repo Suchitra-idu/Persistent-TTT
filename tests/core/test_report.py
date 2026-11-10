@@ -6,7 +6,6 @@ import pytest
 
 from tests.core import _builders as build
 from ttt.core import metrics, report
-from ttt.core.ruler_types import RulerResult
 from ttt.core.stats import Estimate, Interval
 from ttt.core.types import CARRY, COLD_CARRY, COLD_CARRY_OFF, FRESH, LORA_ONLY
 
@@ -252,40 +251,6 @@ def test_rendering_a_headers_only_table_does_not_crash():
     table = report.Table(headers=("a", "bb"), rows=(), aligns=(report.LEFT,) * 2)
 
     assert report.render(table) == "a  bb"
-
-
-def test_the_ruler_table_has_one_row_per_task_and_length():
-    results = [
-        RulerResult(task="niah_single", length_bucket=4096, regime=FRESH, score=0.5, n_new_tokens=1),
-        RulerResult(task="niah_single", length_bucket=4096, regime=COLD_CARRY, score=1.0, n_new_tokens=1),
-        RulerResult(task="vt", length_bucket=4096, regime=FRESH, score=0.0, n_new_tokens=1),
-    ]
-
-    table = report.ruler_table(results)
-
-    assert [row[0] for row in table.rows] == ["niah_single", "vt"]
-
-
-def test_the_ruler_table_averages_repeated_examples():
-    results = [
-        RulerResult(task="vt", length_bucket=4096, regime=FRESH, score=1.0, n_new_tokens=1),
-        RulerResult(task="vt", length_bucket=4096, regime=FRESH, score=0.0, n_new_tokens=1),
-    ]
-
-    table = report.ruler_table(results)
-
-    assert table.rows[0] == ("vt", "4096", "0.500")
-
-
-def test_the_ruler_table_marks_a_regime_a_task_was_not_run_under():
-    results = [
-        RulerResult(task="niah_single", length_bucket=4096, regime=FRESH, score=1.0, n_new_tokens=1),
-        RulerResult(task="vt", length_bucket=4096, regime=COLD_CARRY, score=1.0, n_new_tokens=1),
-    ]
-
-    table = report.ruler_table(results)
-
-    assert table.rows[0] == ("niah_single", "4096", "n/a", "1.000")
 
 
 def test_formatters_pin_their_precision():

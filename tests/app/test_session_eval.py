@@ -90,19 +90,19 @@ class TestEverlastingCarriers:
     def test_a_document_starts_from_its_own_source_carrier(self):
         _, wiring = measure(n_docs=2, carries={"alpha": _builders.carry()})
 
-        assert wiring.fast_weights.events.count("install(carry)") == 1
+        assert wiring.fast_weights.events.count("install") == 1
 
     def test_a_source_with_no_carrier_starts_cold(self):
         _, wiring = measure(n_docs=2, carries={})
 
-        assert wiring.fast_weights.events.count("install(carry)") == 0
+        assert wiring.fast_weights.events.count("install") == 0
 
     def test_a_forced_source_overrides_the_document_label(self):
         _, wiring = measure(
             n_docs=2, carries={"beta": _builders.carry()}, force_source="beta"
         )
 
-        assert wiring.fast_weights.events.count("install(carry)") == 2
+        assert wiring.fast_weights.events.count("install") == 2
 
     def test_a_carrier_lifts_the_state_the_first_slice_sees(self):
         seeded, _ = measure(n_docs=1, carries={"alpha": _builders.carry(value=5.0)})

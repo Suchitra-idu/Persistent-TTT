@@ -7,7 +7,7 @@ from collections import Counter, defaultdict
 import pytest
 
 from ttt.core.schedule import covers
-from ttt.extensions.strategies import CARRY_SCOPES, STRATEGIES, Strategy, get, register
+from ttt.extensions.strategies import STRATEGIES, Strategy, get, register
 from tests.extensions import _builders
 
 CASES = [pytest.param(s, id=name) for name, s in sorted(STRATEGIES.items())]
@@ -33,7 +33,7 @@ def spans_by_doc(sessions):
 
 
 def test_the_registry_has_every_surviving_strategy():
-    assert sorted(STRATEGIES) == ["everlasting", "hybrid", "minilasting", "mixed"]
+    assert sorted(STRATEGIES) == ["hybrid", "mixed"]
 
 
 @pytest.mark.parametrize("strategy", CASES)
@@ -44,11 +44,6 @@ def test_every_registered_strategy_satisfies_the_protocol(strategy):
 @pytest.mark.parametrize("strategy", CASES)
 def test_every_strategy_is_registered_under_its_own_name(strategy):
     assert get(strategy.name) is strategy
-
-
-@pytest.mark.parametrize("strategy", CASES)
-def test_carry_scope_is_a_known_scope(strategy):
-    assert strategy.carry_scope in CARRY_SCOPES
 
 
 @pytest.mark.parametrize("strategy", CASES)

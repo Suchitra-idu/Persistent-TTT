@@ -27,7 +27,6 @@ Current: 464 tests, ~6 seconds.
 | `app/` | orchestration on all-fake adapters | Catch loop bugs with no GPU |
 | `experiments/` | smoke + same-seed reproducibility | Schema and determinism |
 | `architecture/` | source scans | Boundaries you cannot run get crossed |
-| `parity/` | old vs new numerics (Phase 6) | Makes the rewrite safe to believe |
 | `gpu/` | marked `gpu`, run by hand | Too slow and expensive for CI |
 
 ## The architecture guards
@@ -81,4 +80,3 @@ ttt/extensions/<axis>/_registry.py  -> tests/extensions/test_<axis>_contract.py
 | `gpu` | Needs a real GPU. Manual, never in CI |
 | `integration` | Needs network, a download, or a live service |
 | `slow` | Over ~1s |
-| `parity` | Old vs new numeric equivalence |

@@ -106,7 +106,7 @@ def test_an_absent_carry_file_is_an_empty_seed(storage):
 def test_carries_round_trip_per_source(storage, model_and_cfg):
     model, cfg = model_and_cfg
     fast_weights = TorchFastWeights(model, cfg)
-    fast_weights.set_mode(evolve=True, stream=False, session=True)
+    fast_weights.set_mode(evolve=True, session=True)
     model(input_ids=torch.tensor([_builders.token_ids(12)]))
     fast_weights.advance_carry()
 
@@ -118,7 +118,7 @@ def test_carries_round_trip_per_source(storage, model_and_cfg):
     fast_weights.reset_carry()
     fast_weights.install(loaded["alpha"])
 
-    assert fast_weights.state_ratio(family="carry") > 0.0
+    assert fast_weights.state_ratio() > 0.0
 
 
 def test_carry_keys_stay_base_model_layer_indices(storage, model_and_cfg):

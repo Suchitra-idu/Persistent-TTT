@@ -1,7 +1,7 @@
 """The training loop: accumulate, clip, step, log, save, eval, carry.
 
-Reaches the world only through ports, so the whole loop — the carry lifecycle
-and the everlasting per-source carriers included — runs on fakes (D6).
+Reaches the world only through ports, so the whole loop, the carry lifecycle
+included, runs on fakes (D6).
 """
 
 from __future__ import annotations
@@ -14,9 +14,9 @@ from ttt.app.data_pipeline import Doc
 from ttt.core import lr_schedule, metrics
 from ttt.core.config.train import TrainConfig
 from ttt.core.types import Carry
-from ttt.extensions.strategies import SOURCE, Strategy
+from ttt.extensions.strategies import Strategy
 from ttt.ports.compute import LORA, NEW, WDOWN, Compute
-from ttt.ports.fast_weights import CARRY, FastWeights
+from ttt.ports.fast_weights import FastWeights
 from ttt.ports.tracker import MICRO_STEP, TRAIN_STEP, Tracker
 
 
@@ -73,7 +73,6 @@ def train(
     warmup = lr_schedule.warmup_steps(
         total_steps, cfg.warmup_ratio, cfg.warmup_min_steps
     )
-    per_source = strategy.carry_scope == SOURCE
     carried: dict[str, Carry] = dict(carries or {})
     n_updates: dict[str, int] = {}
 
@@ -89,7 +88,6 @@ def train(
             if step == total_steps:
                 break
             fast_weights.reset_carry()
-            _seed(fast_weights, carried, docs, session, per_source)
 
             last_item = session.items[-1]
             for position, item in enumerate(session.items):
@@ -120,17 +118,12 @@ def train(
                 if window_ends:
                     # Bounds how many items' graphs a carry_backprop session holds.
                     fast_weights.detach_carry()
-                if per_source:
-                    carried[doc.source] = fast_weights.snapshot()
-                    n_updates[doc.source] = n_updates.get(doc.source, 0) + 1
 
                 tracker.log(
                     {
                         MICRO_STEP: micro,
                         "micro/doc_loss": loss,
-                        "micro/state_ratio_mean": fast_weights.state_ratio(
-                            family=CARRY
-                        ),
+                        "micro/state_ratio_mean": fast_weights.state_ratio(),
                     }
                 )
 
@@ -194,18 +187,8 @@ def train(
 def _training_mode(fast_weights, cfg: TrainConfig) -> None:
     """Re-applied after every in-training eval, which leaves the fast weights evolving."""
     fast_weights.set_mode(
-        evolve=cfg.fast_weight_updates, stream=False, session=cfg.session_training
+        evolve=cfg.fast_weight_updates, session=cfg.session_training
     )
-
-
-def _seed(fast_weights, carried, docs, session, per_source: bool) -> None:
-    """The everlasting carrier for this session's source, if it has one. A
-    source seen for the first time starts from zero, as training did."""
-    if not per_source:
-        return
-    seed = carried.get(docs[session.items[0].doc_idx].source)
-    if seed is not None:
-        fast_weights.install(seed)
 
 
 def _learning_rates(
@@ -215,9 +198,8 @@ def _learning_rates(
     scale = lr_schedule.multiplier(
         step, num_warmup_steps=warmup, num_training_steps=total_steps
     )
-    frozen = cfg.freeze_lora_after and step >= cfg.freeze_lora_after
     return {
-        LORA: 0.0 if frozen else cfg.lr_lora * scale,
+        LORA: cfg.lr_lora * scale,
         WDOWN: cfg.lr_wdown * scale,
         NEW: cfg.lr_new_modules * scale,
     }

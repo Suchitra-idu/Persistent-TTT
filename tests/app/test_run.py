@@ -8,7 +8,7 @@ from tests.app import _builders
 from ttt.adapters.fake_tokenizer import FakeTokenizer
 from ttt.adapters.scripted_rng import ScriptedRng
 from ttt.app import data_pipeline, eval_loop, train_loop
-from ttt.extensions.strategies import EVERLASTING, STRATEGIES
+from ttt.extensions.strategies import HYBRID, STRATEGIES
 from ttt.ports.tracker import outside_budget
 
 CORPUS = ("alpha", "beta") * 8
@@ -71,7 +71,7 @@ class Run:
 @pytest.fixture(scope="module")
 def run():
     return Run(
-        strategy=EVERLASTING,
+        strategy=HYBRID,
         cfg=_builders.config(
             num_epochs=2,
             grad_accum_steps=2,
@@ -100,10 +100,6 @@ def test_every_document_was_visited_once_per_epoch(run):
     assert run.result.micro_steps == 12
 
 
-def test_a_carrier_was_trained_for_every_source(run):
-    assert set(run.result.carries) == set(_builders.SOURCES)
-
-
 def test_every_carrier_holds_a_delta_per_layer(run):
     assert all(
         carry.layer_indices == _builders.LAYERS
@@ -111,26 +107,12 @@ def test_every_carrier_holds_a_delta_per_layer(run):
     )
 
 
-def test_the_update_counts_cover_every_item(run):
-    assert sum(run.result.n_updates.values()) == run.result.micro_steps
-
-
 def test_checkpoints_landed_on_cadence_and_at_the_end(run):
     assert [step for step, _, _ in run.saves] == [2, 4, 6, 6]
 
 
-def test_a_checkpoint_carries_the_state_of_that_step(run):
-    assert set(run.saves[-1][1]) == set(_builders.SOURCES)
-
-
 def test_eval_fired_on_cadence(run):
     assert len(run.evals) == 3
-
-
-def test_eval_measured_the_holdout_under_every_regime(run):
-    from ttt.core.types import REGIMES
-
-    assert len(run.evals[-1].rows) == len(run.holdout.docs) * len(REGIMES)
 
 
 def test_the_zero_seed_trio_is_measured_for_every_document(run):
@@ -143,10 +125,6 @@ def test_the_zero_seed_trio_is_measured_for_every_document(run):
 
 def test_eval_reported_per_source_summaries(run):
     assert [s.source for s in run.evals[-1].summaries] == list(_builders.SOURCES)
-
-
-def test_the_seeded_pass_ran_once_carriers_existed(run):
-    assert "eval_seed/carry_ppl" in run.evals[-1].metrics
 
 
 def test_eval_left_the_training_carry_untouched(run):
@@ -179,7 +157,7 @@ def test_every_registered_strategy_completes_a_run(name):
 def test_the_same_seed_produces_the_same_run():
     cfg = _builders.config(num_epochs=1)
     losses = [
-        Run(strategy=EVERLASTING, cfg=cfg).wiring.tracker.values_of("train/loss")
+        Run(strategy=HYBRID, cfg=cfg).wiring.tracker.values_of("train/loss")
         for _ in range(2)
     ]
 

@@ -32,7 +32,7 @@ def measure(
     in_context: bool = False,
 ) -> tuple[TokenRow, ...]:
     """The in-context row drops the target's first token, so every row scores the same positions."""
-    fast_weights.set_mode(evolve=True, stream=False, session=True)
+    fast_weights.set_mode(evolve=True, session=True)
     rows: list[TokenRow] = []
     for case in cases:
         fast_weights.reset_carry()

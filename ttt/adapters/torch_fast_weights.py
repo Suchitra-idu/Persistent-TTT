@@ -14,7 +14,6 @@ from ttt.core import carry as carry_math
 from ttt.core.config.ttt import TTTConfig
 from ttt.core.types import Carry
 from ttt.extensions.mechanism import InPlaceTTTMLP, iter_ttt_modules
-from ttt.ports.fast_weights import CARRY, FAMILIES, STREAM
 
 _LAYER_RE = re.compile(r"layers\.(\d+)\.")
 
@@ -36,19 +35,10 @@ class TorchFastWeights:
     def layer_indices(self) -> tuple[int, ...]:
         return tuple(sorted(self._modules))
 
-    def set_mode(self, *, evolve: bool, stream: bool, session: bool) -> None:
+    def set_mode(self, *, evolve: bool, session: bool) -> None:
         for module in self._modules.values():
             module.evolve = evolve
-            module.stateful = stream
             module.session_mode = session
-
-    def reset_stream(self) -> None:
-        for module in self._modules.values():
-            module.reset_stream()
-
-    def reset_v_context(self) -> None:
-        for module in self._modules.values():
-            module.reset_v_context()
 
     def reset_carry(self) -> None:
         for module in self._modules.values():
@@ -71,8 +61,7 @@ class TorchFastWeights:
             deltas[index] = (staged.cpu() if to_cpu else staged).clone()
         return Carry(deltas=deltas)
 
-    def install(self, carry: Carry, *, family: str = CARRY) -> None:
-        _check_family(family)
+    def install(self, carry: Carry) -> None:
         unknown = sorted(set(carry.deltas) - set(self._modules))
         if unknown:
             raise KeyError(
@@ -87,34 +76,18 @@ class TorchFastWeights:
                     f"carry for layer {index} has shape {tuple(delta.shape)}, "
                     f"incompatible with W0 {tuple(target.shape)}"
                 )
-            state = delta.to(device=target.device).float()
-            if family == CARRY:
-                module.carried = state
-            else:
-                module.stream.delta = state
+            module.carried = delta.to(device=target.device).float()
 
-    def decay_stream(self, *, factor: float) -> None:
-        for module in self._modules.values():
-            if module.stream.delta is not None:
-                module.stream.delta = module.stream.delta * factor
-
-    def state_ratio(self, *, family: str) -> float:
-        _check_family(family)
+    def state_ratio(self) -> float:
         ratios = {
             index: carry_math.state_ratio(
-                _state_of(module, family),
+                _state_of(module),
                 float(module.down_proj.weight.detach().float().norm(p="fro")),
                 eta=self.cfg.eta,
             )
             for index, module in self._modules.items()
         }
         return carry_math.mean_state_ratio(ratios)
-
-    def stream_progress(self) -> tuple[int, int]:
-        if not self._modules:
-            return 0, self.cfg.chunk_size
-        first = self._modules[self.layer_indices[0]]
-        return first.stream.pending_tokens, self.cfg.chunk_size
 
     def gate_stats(self) -> tuple[float, float] | None:
         means = [
@@ -146,14 +119,6 @@ def _by_layer_index(model: torch.nn.Module) -> dict[int, InPlaceTTTMLP]:
     return found
 
 
-def _state_of(module: InPlaceTTTMLP, family: str) -> torch.Tensor | None:
+def _state_of(module: InPlaceTTTMLP) -> torch.Tensor | None:
     """Detached: under carry_backprop the carry is in the graph, and a metric must not extend it."""
-    state = module.carried if family == CARRY else module.stream.delta
-    return None if state is None else state.detach()
-
-
-def _check_family(family: str) -> None:
-    if family not in FAMILIES:
-        raise ValueError(
-            f"unknown state family {family!r}; expected {CARRY!r} or {STREAM!r}"
-        )
+    return None if module.carried is None else module.carried.detach()
