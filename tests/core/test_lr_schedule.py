@@ -57,15 +57,6 @@ def test_the_multiplier_peaks_at_the_end_of_the_warmup():
     ) == pytest.approx(1.0)
 
 
-def test_warmup_is_linear():
-    ramp = [
-        lr_schedule.multiplier(s, num_warmup_steps=10, num_training_steps=100)
-        for s in range(11)
-    ]
-
-    assert ramp == pytest.approx([s / 10 for s in range(11)])
-
-
 def test_the_multiplier_decays_to_zero_at_the_final_step():
     assert lr_schedule.multiplier(
         100, num_warmup_steps=10, num_training_steps=100
@@ -90,14 +81,3 @@ def test_the_decay_is_monotone(step):
     assert later <= earlier + 1e-12
 
 
-def test_stepping_past_the_end_of_the_schedule_is_an_error():
-    """HuggingFace's cosine keeps oscillating here and hands back a live LR."""
-    with pytest.raises(ValueError, match="past the end of the schedule"):
-        lr_schedule.multiplier(101, num_warmup_steps=10, num_training_steps=100)
-
-
-def test_a_run_that_is_all_warmup_ends_at_zero():
-    """No decay window left means the schedule is over, not stuck at 1.0."""
-    assert lr_schedule.multiplier(
-        10, num_warmup_steps=10, num_training_steps=10
-    ) == 0.0

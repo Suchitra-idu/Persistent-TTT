@@ -90,7 +90,6 @@ def _evaluator(resolved, engine, holdout_docs, announce):
             compute=engine.compute,
             fast_weights=engine.fast_weights,
             n_slices=resolved.train.eval_n_slices,
-            session_training=resolved.train.session_training,
         )
         announce(report.render(report.per_source_table(measured.summaries)))
         by_slice = sorted(

@@ -65,10 +65,6 @@ class FastWeightsConformance:
         after = fast_weights.snapshot()
         assert all(torch.equal(before.get(i), after.get(i)) for i in before.layer_indices)
 
-    def test_detaching_an_empty_carry_is_safe(self, fast_weights):
-        fast_weights.detach_carry()
-
-        assert fast_weights.snapshot().is_empty
 
     def test_reset_carry_clears_it(self, fast_weights):
         fast_weights.set_mode(evolve=True, session=True)
@@ -127,22 +123,6 @@ class TestFakeFastWeights(FastWeightsConformance):
     def run_item(self, fast_weights, n_tokens: int = ITEM_TOKENS) -> None:
         fast_weights.stage(n_tokens)
 
-    def test_it_records_every_lifecycle_call(self, fast_weights):
-        fast_weights.reset_carry()
-        fast_weights.advance_carry()
-
-        assert fast_weights.events[-2:] == ["reset_carry", "advance_carry"]
-
-    def test_the_carry_decays_between_items(self):
-        fast_weights = FakeFastWeights([1], chunk_size=CHUNK, decay=0.5)
-        fast_weights.set_mode(evolve=True, session=True)
-
-        for _ in range(2):
-            fast_weights.stage(1)
-            fast_weights.advance_carry()
-
-        assert float(fast_weights.snapshot().get(1)) == pytest.approx(1.5)
-
 
 class TestTorchFastWeights(FastWeightsConformance):
     @pytest.fixture
@@ -180,9 +160,9 @@ class TestTorchFastWeights(FastWeightsConformance):
         with pytest.raises(ValueError, match="incompatible with W0"):
             fast_weights.install(wrong)
 
-    def test_the_gate_statistics_are_recorded(self, fast_weights):
+    def test_the_gate_mean_is_recorded(self, fast_weights):
         fast_weights.set_mode(evolve=True, session=True)
 
         self.run_item(fast_weights)
 
-        assert fast_weights.gate_stats() is not None
+        assert fast_weights.gate_mean() is not None

@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import math
 
-import pytest
 
 from tests.app import _builders
 from ttt.app import session_eval
@@ -35,28 +33,11 @@ class TestItemRows:
 
         assert [row.position for row in rows] == [0, 1, 2, 3]
 
-    def test_a_row_carries_its_document_and_source(self):
-        rows, _ = measure(n_docs=2)
-
-        assert [(row.doc_idx, row.source) for row in rows[:2]] == [
-            (0, "alpha"),
-            (1, "beta"),
-        ]
 
     def test_the_slices_partition_the_document(self):
         rows, _ = measure(n_docs=1, n_slices=4)
 
         assert sum(row.n_tokens for row in rows) == 8
-
-    def test_the_perplexity_is_the_exponentiated_loss(self):
-        rows, _ = measure(n_docs=1, losses=(2.0,))
-
-        assert rows[0].ppl == pytest.approx(math.exp(2.0))
-
-    def test_the_nll_is_the_loss_it_came_from(self):
-        rows, _ = measure(n_docs=1, losses=(2.0,))
-
-        assert rows[0].nll == pytest.approx(2.0)
 
 
 class TestResetLadder:

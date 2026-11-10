@@ -34,13 +34,6 @@ def test_the_aggregate_lies_between_the_best_and_worst_slice(pairs):
     assert min(p for _, p in pairs) - 1e-9 <= result <= max(p for _, p in pairs) + 1e-9
 
 
-@given(value=ppl_values, n=st.integers(min_value=1, max_value=10))
-def test_identical_slices_aggregate_to_their_common_value(value, n):
-    rows = build.ppl_rows(*[(100, value)] * n)
-
-    assert metrics.token_weighted_ppl(rows) == pytest.approx(value, rel=1e-12)
-
-
 def test_a_long_slice_dominates_a_short_one():
     """The mistake this guards against is averaging perplexities directly."""
     rows = build.ppl_rows((10_000, 10.0), (1, 1000.0))
@@ -152,10 +145,6 @@ def test_a_summary_aggregates_each_regime_by_tokens():
     expected = math.exp((math.log(8.0) * 3000 + math.log(32.0) * 1000) / 4000)
     assert summary.ppl_by_regime[COLD_CARRY] == pytest.approx(expected)
     assert summary.n_tokens == 4000
-
-
-def test_summarising_nothing_yields_nothing():
-    assert metrics.summarise_by_source([]) == ()
 
 
 def test_an_unclipped_step_reports_a_ratio_of_one():

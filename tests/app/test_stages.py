@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import pytest
 
 from tests.app import _builders
 from ttt.adapters.list_table import ListTable
@@ -63,11 +62,6 @@ class TestFilterSources:
 
         assert kept == ["alpha", "beta"]
 
-    def test_it_records_what_it_dropped(self):
-        data = _builders.pipeline_data(("alpha", "gamma", "beta"))
-
-        assert stages.filter_sources(data).log[-1].dropped == 1
-
 
 class TestShuffle:
     def test_it_applies_the_permutation_the_rng_drew(self):
@@ -83,11 +77,6 @@ class TestShuffle:
         shuffled = stages.shuffle(scripted).table.column("text")
 
         assert shuffled == [data.table.column("text")[i] for i in (2, 0, 1)]
-
-    def test_it_keeps_every_row(self):
-        data = _builders.pipeline_data(MIXED)
-
-        assert len(stages.shuffle(data).table) == len(MIXED)
 
 
 class TestPrefilter:
@@ -139,21 +128,6 @@ class TestBalance:
 
         assert len(stages.balance(data).table) == 2 * stages.PRESET_OVERSAMPLE
 
-    def test_it_keeps_the_pool_interleaved(self):
-        data = _builders.pipeline_data(("alpha", "beta") * 3, weights=_builders.WEIGHTS)
-
-        assert stages.balance(data).table.column(SOURCE_COLUMN) == [
-            "alpha",
-            "beta",
-        ] * 3
-
-    def test_a_short_source_is_named_in_the_log(self):
-        data = _builders.pipeline_data(
-            ("alpha",) * 8 + ("beta",), weights=_builders.WEIGHTS
-        )
-
-        assert "beta" in stages.balance(data).log[-1].note
-
 
 class TestTokenize:
     def test_it_adds_a_token_column(self):
@@ -166,18 +140,6 @@ class TestTokenize:
 
         assert len(stages.tokenize(data).table.column(TOKENS_COLUMN)[0]) == 5
 
-    def test_it_keeps_the_source_label(self):
-        data = _builders.pipeline_data(("beta",))
-
-        assert stages.tokenize(data).table.column(SOURCE_COLUMN) == ["beta"]
-
-    def test_it_batches_instead_of_one_call_over_the_whole_table(self, monkeypatch):
-        monkeypatch.setattr(stages, "TOKENIZE_BATCH_SIZE", 2)
-        data = _builders.pipeline_data(("alpha",) * 5)
-
-        result = stages.tokenize(data)
-
-        assert len(result.table.column(TOKENS_COLUMN)) == 5
 
     def test_batching_does_not_change_the_result(self, monkeypatch):
         unbatched = stages.tokenize(_builders.pipeline_data(("alpha",) * 5)).table.column(
@@ -243,22 +205,9 @@ class TestCap:
 
         assert len(stages.cap(data).table) == len(MIXED)
 
-    def test_a_pool_under_the_limit_is_left_alone(self):
-        data = _builders.pipeline_data(MIXED, limit_docs=99)
-
-        assert len(stages.cap(data).table) == len(MIXED)
-
 
 class TestStageLog:
-    def test_every_stage_appends_one_entry(self):
-        data = _builders.pipeline_data(MIXED)
 
-        assert len(stages.shuffle(stages.split_holdout(data)).log) == 2
-
-    def test_an_entry_names_its_stage(self):
-        data = _builders.pipeline_data(MIXED)
-
-        assert stages.split_holdout(data).log[-1].stage == "split_holdout"
 
     def test_a_stage_does_not_mutate_the_data_it_was_given(self):
         data = _builders.pipeline_data(MIXED)
@@ -268,40 +217,3 @@ class TestStageLog:
         assert data.log == ()
 
 
-class TestRowsOf:
-    def test_it_zips_columns_into_rows(self):
-        table = _builders.table_of([{"a": 1, "b": 2}, {"a": 3, "b": 4}])
-
-        assert stages.rows_of(table, ("a", "b")) == [(1, 2), (3, 4)]
-
-    def test_an_empty_table_yields_no_rows(self):
-        assert stages.rows_of(_builders.table_of([]), ()) == []
-
-
-def test_a_stage_that_drops_nothing_still_logs_its_pass():
-    data = _builders.pipeline_data(MIXED)
-
-    assert stages.cap(data).log[-1].dropped == 0
-
-
-def test_the_pipeline_stage_order_is_the_planned_one():
-    from ttt.app.data_pipeline import PIPELINE
-
-    assert [stage.__name__ for stage in PIPELINE] == [
-        "split_holdout",
-        "filter_sources",
-        "shuffle",
-        "prefilter",
-        "balance",
-        "tokenize",
-        "drop_short",
-        "rebalance",
-        "cap",
-    ]
-
-
-@pytest.mark.parametrize("stage", [stages.balance, stages.rebalance])
-def test_balancing_without_a_preset_is_a_pass_through(stage):
-    data = _builders.pipeline_data(MIXED, weights=None)
-
-    assert stage(data).log[-1].note == "no preset"

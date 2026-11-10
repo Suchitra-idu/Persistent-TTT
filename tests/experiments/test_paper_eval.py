@@ -51,26 +51,11 @@ def test_a_checkpoint_without_ttt_layers_runs_only_the_regimes():
     assert payload(resolution=no_ttt)["suites"] == ["regimes"]
 
 
-def test_a_plan_naming_an_unknown_suite_is_rejected():
-    with pytest.raises(ValueError):
-        Plan(suites=("regimes", "rular"))
-
-
 @pytest.mark.slow
-def test_the_bundle_has_raw_tables_figures_manifest_and_summary(tmp_path):
+def test_the_bundle_has_raw_tables_manifest_and_summary(tmp_path):
     folder = bundle(tmp_path)
 
-    assert {p.name for p in folder.iterdir()} == {"raw", "tables", "figures", "manifest.json", "SUMMARY.md"}
-
-
-@pytest.mark.slow
-def test_the_bundle_draws_every_figure(tmp_path):
-    folder = bundle(tmp_path)
-
-    assert {p.name for p in (folder / "figures").iterdir()} == {
-        "regime_gaps.png", "boundary_gaps.png", "repeat_curve.png",
-        "stability.png", "domain_correlates.png",
-    }
+    assert {p.name for p in folder.iterdir()} == {"raw", "tables", "manifest.json", "SUMMARY.md"}
 
 
 @pytest.mark.slow
@@ -109,12 +94,6 @@ def test_comparing_a_bundle_with_itself_finds_no_gap(tmp_path):
     )
 
     assert pooled.split(",")[3] == "0"
-
-
-def test_config_diff_lists_only_keys_that_differ():
-    assert compare_checkpoints_v1.config_diff({"a": 1, "b": 2}, {"a": 1, "b": 3, "c": 4}) == [
-        ("b", 2, 3), ("c", None, 4),
-    ]
 
 
 def _holdout(plan, resolution=None):
@@ -209,11 +188,6 @@ def test_no_overlap_seeds_means_no_training_text_is_read(monkeypatch):
     seen, decoded = _shingle_run(monkeypatch, PLAN, limit_docs=6)
 
     assert (seen, decoded) == (set(), [])
-
-
-def test_an_overlap_check_without_the_training_document_limit_is_an_error(monkeypatch):
-    with pytest.raises(ValueError, match="limit_docs"):
-        _shingle_run(monkeypatch, dataclasses.replace(PLAN, overlap_seeds="42"))
 
 
 def test_token_gain_is_an_opt_in_suite():

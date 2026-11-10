@@ -35,7 +35,6 @@ REGIME_GAPS = (
 
 CROSS_DOC = "cross_doc"
 CROSS_SLICE = "cross_slice"
-DOMAIN_MEASURES = ("within", CROSS_DOC, CROSS_SLICE)
 
 # Baseline checkpoint regime, candidate checkpoint regime. Positive = candidate wins.
 CHECKPOINT_GAPS = (
@@ -63,13 +62,6 @@ class RepeatPoint:
     gap: Interval
     state_ratio: Band
     gate_mean: Band
-
-
-@dataclass(frozen=True)
-class Correlate:
-    measure: str
-    n_sources: int
-    rho: float
 
 
 def resamples(n: int, n_boot: int, rng: Rng) -> tuple[tuple[int, ...], ...]:
@@ -231,39 +223,6 @@ def repeat_trend(
         rng=rng,
         n_boot=n_boot,
     )
-
-
-def fresh_by_source(rows: Sequence[EvalRow]) -> dict[str, float]:
-    grouped: dict[str, list[float]] = defaultdict(list)
-    for row in rows:
-        if row.regime == FRESH:
-            grouped[row.source].append(row.ppl)
-    return {s: metrics.geometric_mean_ppl(p) for s, p in sorted(grouped.items())}
-
-
-def domain_correlates(
-    fresh: Mapping[str, float], estimates: Sequence[Estimate]
-) -> tuple[Correlate, ...]:
-    """Spearman over sources of each measure's *relative* gap against fresh
-    ppl — an absolute Δppl scales with the base ppl and correlates with it
-    trivially. With six sources this is a description, not a test."""
-    by_measure: dict[str, dict[str, float]] = defaultdict(dict)
-    for e in estimates:
-        if e.source != ALL_SOURCES and e.source in fresh and e.measure in DOMAIN_MEASURES:
-            by_measure[e.measure][e.source] = e.relative
-    out = []
-    for measure in sorted(by_measure):
-        sources = sorted(by_measure[measure])
-        out.append(
-            Correlate(
-                measure=measure,
-                n_sources=len(sources),
-                rho=stats.spearman(
-                    [fresh[s] for s in sources], [by_measure[measure][s] for s in sources]
-                ),
-            )
-        )
-    return tuple(out)
 
 
 def checkpoint_estimates(

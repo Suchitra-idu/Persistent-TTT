@@ -48,9 +48,7 @@ class Data:
     limit_docs: int | None = None
     weights: Mapping[str, int] | None = None
     log: tuple[StageLog, ...] = ()
-    # tokenize's only use: the run()-level per-stage line covers the rest,
-    # but tokenize is the one impure stage, real minutes of tokenizer work
-    # with nothing else to report progress within it.
+    # tokenize's progress lines; it is the one stage that runs for minutes.
     announce: Callable[[str], None] = lambda _: None
 
     @property
@@ -104,12 +102,8 @@ TOKENIZE_BATCH_SIZE = 2000
 
 
 def tokenize(data: Data) -> Data:
-    """The one impure stage. Sized by limit_docs and the over-fetch above.
-
-    Batched, not one `encode_batch` over the whole table: on the unrestricted
-    default dataset (slimpajama-6b, ~6M rows) a single call has no progress
-    signal and holds every document's ids in memory at once — indistinguishable
-    from a hang for as long as it runs."""
+    """The one impure stage. Batched, so a long run reports progress and never
+    holds every document's ids at once."""
     texts = data.table.column(data.spec.text_column)
     starts = range(0, len(texts), TOKENIZE_BATCH_SIZE)
     encoded: list[list[int]] = []

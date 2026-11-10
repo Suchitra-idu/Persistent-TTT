@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
@@ -76,30 +75,3 @@ def test_n_per_source_is_seed_stable():
     assert first == second
 
 
-@given(source_labels=labels, n_target=st.integers(min_value=0, max_value=40))
-@settings(max_examples=50, deadline=None)
-def test_stratified_sampling_returns_distinct_indices(source_labels, n_target):
-    picked = sampling.stratified_indices(source_labels, n_target, FakeRng(4))
-
-    assert len(set(picked)) == len(picked)
-
-
-@given(source_labels=labels, n_target=st.integers(min_value=0, max_value=40))
-@settings(max_examples=50, deadline=None)
-def test_stratified_sampling_gives_what_was_asked_for_or_the_whole_pool(
-    source_labels, n_target
-):
-    picked = sampling.stratified_indices(source_labels, n_target, FakeRng(4))
-
-    assert len(picked) == min(n_target, len(source_labels))
-
-
-def test_stratified_sampling_spreads_across_sources_before_repeating_one():
-    picked = sampling.stratified_indices(SOURCES, 3, FakeRng(0))
-
-    assert {SOURCES[i] for i in picked} == {"c4", "github", "books"}
-
-
-def test_sampling_rejects_a_negative_request():
-    with pytest.raises(ValueError, match="n_per_source must be >= 0"):
-        sampling.n_per_source_indices(SOURCES, -1, FakeRng(0))

@@ -59,49 +59,6 @@ def sequential_scan(
     return out, item_delta
 
 
-def sequential_delta_rule(
-    z: torch.Tensor,
-    v: torch.Tensor,
-    *,
-    eta: float,
-    carried: torch.Tensor | None = None,
-    clip_tau: float | None = None,
-    decay: float = 1.0,
-) -> tuple[torch.Tensor, torch.Tensor]:
-    """`ttt_math.delta_scan`'s oracle: one token at a time, single batch element.
-
-    Written with `@`/`torch.outer` rather than `delta_scan`'s einsums, so a
-    broadcasting bug in the batched kernel has an independent reference.
-    Unlike `sequential_scan`, the clip also bounds the accumulator itself —
-    see `ttt_math.delta_scan`'s docstring for why, and for `_adaptive_eta`,
-    reimplemented inline here rather than imported.
-    """
-    n_tokens, d_ff = z.shape
-    d_model = v.shape[1]
-    state = carried.to(z.dtype).clone() if carried is not None else torch.zeros(
-        (d_model, d_ff), dtype=z.dtype
-    )
-    item_delta = torch.zeros_like(state)
-    out = torch.zeros((n_tokens, d_model), dtype=z.dtype)
-
-    for t in range(n_tokens):
-        read_state = state
-        if clip_tau is not None:
-            norm = float((eta * state).norm(p="fro"))
-            read_state = state * min(1.0, clip_tau / max(norm, 1e-12))
-        eta_eff = eta / (1.0 + float(z[t].pow(2).sum()))
-        pred = eta_eff * (read_state @ z[t])
-        out[t] = pred
-        delta = torch.outer(v[t] - pred, z[t])
-        item_delta = item_delta + delta
-        state = decay * state + delta
-        if clip_tau is not None:
-            norm = float((eta * state).norm(p="fro"))
-            state = state * min(1.0, clip_tau / max(norm, 1e-12))
-
-    return out, item_delta
-
-
 def sequential_chunked_delta_rule(
     z: torch.Tensor,
     v: torch.Tensor,

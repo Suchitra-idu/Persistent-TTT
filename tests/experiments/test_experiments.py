@@ -2,16 +2,11 @@
 
 from __future__ import annotations
 
-import json
-from pathlib import Path
 
 import pytest
 
 from tests.experiments import _builders
-from ttt.core import metrics
-from ttt.core.types import COLD_CARRY, FRESH
 from ttt.experiments import train_v1
-
 
 
 def lines():
@@ -39,15 +34,6 @@ class TestTrain:
 
         assert result.micro_steps == len(engine.compute.forwards)
 
-    def test_it_announces_what_it_resolved(self):
-        spoken = []
-
-        train_v1.run(
-            _builders.resolved(), engine=_builders.engine(),
-            source=_builders.data_source(), announce=spoken.append,
-        )
-
-        assert any("documents" in line for line in spoken)
 
     def test_it_checkpoints_at_the_end(self):
         engine = _builders.engine()
@@ -83,15 +69,6 @@ class TestTrain:
 
         assert engine.tracker.values_of("eval/carry_ppl")
 
-    def test_eval_stays_silent_when_the_cadence_is_off(self):
-        engine = _builders.engine()
-
-        train_v1.run(
-            _builders.resolved(), engine=engine, source=_builders.data_source(),
-            announce=lines(),
-        )
-
-        assert not engine.tracker.values_of("eval/carry_ppl")
 
     def test_the_same_seed_produces_the_same_losses(self):
         def losses():

@@ -1,7 +1,6 @@
 """The corpus, from a DataSource to the token ranges a session works on.
 
-PIPELINE is the whole of what `load_token_dataset` used to do inline. The
-holdout half lives here too, since both halves must agree on the split.
+The holdout lives here too, since training and evaluation must agree on the split.
 """
 
 from __future__ import annotations
@@ -53,14 +52,6 @@ class Holdout:
     shortfalls: tuple[sampling.SourceShortfall, ...]
 
 
-def resolve_weights(
-    cfg: TrainConfig, spec: DatasetSpec
-) -> Mapping[str, int] | None:
-    """None means no balancing: an explicit "none" or a spec with no default."""
-    name = presets.resolve_preset_name(cfg.source_preset, spec.default_source_preset)
-    return presets.get_preset(name) if name else None
-
-
 def load(
     *,
     source: DataSource,
@@ -73,8 +64,7 @@ def load(
     pipeline: Sequence = PIPELINE,
     announce: Callable[[str], None] = lambda _: None,
 ) -> Data:
-    """`weights=None` resolves from cfg and spec; pass a mapping to override,
-    which is how --only-sources reaches the balancer as plain data (D5)."""
+    """`weights` are the source preset to balance to; None keeps the pool's own mix."""
     data = Data(
         table=source.load(spec),
         spec=spec,
@@ -82,7 +72,7 @@ def load(
         rng=rng,
         tokenizer=tokenizer,
         limit_docs=limit_docs,
-        weights=weights if weights is not None else resolve_weights(cfg, spec),
+        weights=weights,
         announce=announce,
     )
     return run(data, pipeline, announce=announce)
@@ -131,7 +121,7 @@ def holdout(
     pool = _long_enough(held, spec, cfg.eval_min_tokens)
 
     labels = pool.column(SOURCE_COLUMN)
-    picked, shortfalls = _pick(labels, cfg, rng)
+    picked, shortfalls = sampling.n_per_source_indices(labels, cfg.eval_n_docs_per_source, rng)
     return Holdout(
         docs=_encode(pool, spec, cfg, tokenizer, picked),
         shortfalls=tuple(shortfalls),
@@ -143,14 +133,6 @@ def _long_enough(table: Table, spec: DatasetSpec, min_tokens: int) -> Table:
     minimum = tokens.min_chars_for(min_tokens, tokens.HOLDOUT_CHARS_PER_TOKEN)
     filtered = table.filter(spec.text_column, lambda text: len(text) >= minimum)
     return filtered if len(filtered) else table
-
-
-def _pick(
-    labels: Sequence[str], cfg: TrainConfig, rng: Rng
-) -> tuple[list[int], list[sampling.SourceShortfall]]:
-    if cfg.eval_n_docs_per_source > 0:
-        return sampling.n_per_source_indices(labels, cfg.eval_n_docs_per_source, rng)
-    return sampling.stratified_indices(labels, cfg.eval_n_docs, rng), []
 
 
 def _encode(

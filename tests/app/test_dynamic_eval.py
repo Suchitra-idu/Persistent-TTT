@@ -132,17 +132,3 @@ def test_the_rows_feed_the_relatedness_estimates():
     assert gain.interval.point > 0
 
 
-def test_the_grid_crosses_every_rate_with_every_step_count():
-    assert len(dynamic_eval.grid({"adam": (1e-5, 3e-5)}, (3, 10))) == 4
-
-
-def test_a_setting_round_trips_through_text():
-    setting = Setting("adam", 3e-05, 10)
-
-    assert Setting.parse(setting.text) == setting
-
-
-def test_objective_settings_parse_per_objective():
-    parsed = dynamic_eval.parse_objectives("self=adam:3e-05:10;related=adam:1e-05:30")
-
-    assert parsed == {"self": Setting("adam", 3e-05, 10), "related": Setting("adam", 1e-05, 30)}

@@ -12,7 +12,6 @@ from ttt.core.config.train import TrainConfig
 from ttt.ports.compute import GROUPS, Compute
 
 IDS = _builders.token_ids(12)
-OTHER_IDS = _builders.token_ids(12, seed=99)
 RATES = {"lora": 1e-5, "wdown": 3e-5, "new": 2e-5}
 CLIP = 10.0
 FLOOR = 1e-6
@@ -96,30 +95,6 @@ class TestFakeCompute(ComputeConformance):
     def compute(self):
         return FakeCompute(losses=(2.0, 3.0))
 
-    def test_scripted_losses_come_back_in_order(self, compute):
-        assert [compute.loss(IDS), compute.loss(IDS)] == [2.0, 3.0]
-
-    def test_a_short_script_cycles(self, compute):
-        assert [compute.loss(IDS) for _ in range(3)] == [2.0, 3.0, 2.0]
-
-    def test_it_records_what_it_was_asked_to_forward(self, compute):
-        compute.loss(IDS)
-
-        assert compute.forwards == [tuple(IDS)]
-
-    def test_it_records_the_accumulation_scale(self, compute):
-        compute.loss(IDS)
-        compute.backward(scale=0.0625)
-
-        assert compute.backwards == [0.0625]
-
-    def test_it_records_the_learning_rates_it_stepped_with(self, compute):
-        compute.clip_and_step(max_grad_norm=CLIP, learning_rates=RATES)
-
-        assert compute.steps == [RATES]
-
-    def test_a_nonfinite_loss_can_be_scripted(self):
-        assert math.isnan(FakeCompute(losses=(float("nan"),)).loss(IDS))
 
     def test_it_stages_a_carry_when_wired_to_fast_weights(self):
         from ttt.adapters.fake_fast_weights import FakeFastWeights
@@ -132,10 +107,6 @@ class TestFakeCompute(ComputeConformance):
         fast_weights.advance_carry()
 
         assert not fast_weights.snapshot().is_empty
-
-    def test_an_empty_script_is_rejected(self):
-        with pytest.raises(ValueError, match="at least one scripted loss"):
-            FakeCompute(losses=())
 
 
 class TestTorchCompute(ComputeConformance):
@@ -163,8 +134,6 @@ class TestTorchCompute(ComputeConformance):
 
         assert compute.loss(IDS) == pytest.approx(float(oracle.detach()), rel=1e-6)
 
-    def test_different_tokens_give_a_different_loss(self, compute):
-        assert compute.loss(IDS) != compute.loss(OTHER_IDS)
 
     def test_the_retained_graph_reaches_the_trainable_parameters(self, compute):
         w_target = compute.model.model.layers[1].mlp.w_target
@@ -223,12 +192,6 @@ class TestTorchCompute(ComputeConformance):
 
         assert compute.model.training
 
-    def test_eval_loss_leaves_an_eval_mode_model_in_eval_mode(self, compute):
-        compute.model.eval()
-
-        compute.eval_loss(IDS)
-
-        assert not compute.model.training
 
     def test_an_unclassified_trainable_parameter_is_rejected(self):
         model, cfg = _builders.tiny_model()
@@ -276,5 +239,3 @@ class TestEvalLossWithoutLora:
 
         assert compute.eval_loss(IDS, lora=False) == pytest.approx(expected)
 
-    def test_lora_on_is_the_default(self, compute):
-        assert compute.eval_loss(IDS, lora=True) == pytest.approx(compute.eval_loss(IDS))

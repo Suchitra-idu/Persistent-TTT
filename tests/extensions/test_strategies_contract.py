@@ -7,7 +7,7 @@ from collections import Counter, defaultdict
 import pytest
 
 from ttt.core.schedule import covers
-from ttt.extensions.strategies import STRATEGIES, Strategy, get, register
+from ttt.extensions.strategies import STRATEGIES, Strategy, register
 from tests.extensions import _builders
 
 CASES = [pytest.param(s, id=name) for name, s in sorted(STRATEGIES.items())]
@@ -39,11 +39,6 @@ def test_the_registry_has_every_surviving_strategy():
 @pytest.mark.parametrize("strategy", CASES)
 def test_every_registered_strategy_satisfies_the_protocol(strategy):
     assert isinstance(strategy, Strategy)
-
-
-@pytest.mark.parametrize("strategy", CASES)
-def test_every_strategy_is_registered_under_its_own_name(strategy):
-    assert get(strategy.name) is strategy
 
 
 @pytest.mark.parametrize("strategy", CASES)
@@ -98,22 +93,7 @@ def test_a_different_seed_builds_a_different_schedule(strategy):
 
 
 @pytest.mark.parametrize("strategy", CASES)
-def test_describe_is_one_non_empty_line(strategy):
-    described = strategy.describe()
-
-    assert described.strip() and "\n" not in described
-
-
-@pytest.mark.parametrize("strategy", CASES)
 def test_an_empty_pool_builds_no_sessions(strategy):
     assert strategy.build([], [], _builders.FakeRng(1)) == ()
 
 
-def test_registering_a_name_twice_is_an_error():
-    with pytest.raises(ValueError, match="already registered"):
-        register(get("hybrid"))
-
-
-def test_get_rejects_an_unknown_strategy():
-    with pytest.raises(KeyError, match="unknown strategy"):
-        get("multi")

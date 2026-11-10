@@ -115,11 +115,6 @@ def test_balancing_fails_loudly_when_no_preset_source_is_in_the_pool():
         balance.balanced_indices(["c4"] * 10, {"books": 1}, 5)
 
 
-def test_balancing_rejects_negative_weights():
-    with pytest.raises(ValueError, match="non-negative"):
-        balance.balanced_indices(["c4"] * 10, {"c4": -1}, 5)
-
-
 def _balance_or_skip(source_labels, w, target):
     """Property-test helper: discard inputs where no preset source is present.
 

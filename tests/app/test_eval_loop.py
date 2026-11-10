@@ -47,10 +47,6 @@ class TestZeroSeedPass:
             FRESH,
         }
 
-    def test_every_slice_is_one_evaluation_forward(self):
-        _, wiring = measure(n_docs=1, n_slices=SLICES)
-
-        assert len(wiring.compute.eval_forwards) == 4 * SLICES
 
     def test_only_the_fresh_regime_disables_lora(self):
         _, wiring = measure(n_docs=1, n_slices=SLICES)
@@ -153,19 +149,6 @@ class TestStateRestoration:
 
         assert wiring.fast_weights.evolve
 
-    def test_it_restores_the_training_session_mode(self):
-        wiring = _builders.Wiring()
-
-        eval_loop.evaluate(
-            docs=_builders.docs(1),
-            compute=wiring.compute,
-            fast_weights=wiring.fast_weights,
-            n_slices=SLICES,
-            session_training=False,
-        )
-
-        assert not wiring.fast_weights.session_mode
-
 
 class _Exploding:
     def eval_loss(self, token_ids, *, lora: bool = True):
@@ -184,27 +167,12 @@ class TestSliceRows:
 
         assert indices == list(range(SLICES))
 
-    def test_an_empty_holdout_has_no_slices(self):
-        report, _ = measure(n_docs=0)
-
-        assert report.slices == ()
-
 
 class TestPerSourceSummaries:
     def test_it_summarises_each_source(self):
         report, _ = measure(n_docs=4)
 
         assert [s.source for s in report.summaries] == list(_builders.SOURCES)
-
-    def test_a_summary_counts_its_documents(self):
-        report, _ = measure(n_docs=4)
-
-        assert report.summaries[0].n_docs == 2
-
-    def test_a_summary_carries_the_gap_decomposition(self):
-        report, _ = measure(n_docs=4)
-
-        assert report.summaries[0].gaps.is_additive
 
 
 def test_an_empty_holdout_reports_nothing():

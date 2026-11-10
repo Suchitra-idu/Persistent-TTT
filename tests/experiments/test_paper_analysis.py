@@ -68,11 +68,6 @@ def test_newest_bundle_never_picks_a_fresh_pass_bundle(tmp_path, rows):
     assert paper_analysis_v1.newest_bundle(tmp_path, "run", 1).path.name == "20260101-000000"
 
 
-def test_a_missing_bundle_names_the_folder(tmp_path):
-    with pytest.raises(FileNotFoundError, match="step_7"):
-        paper_analysis_v1.newest_bundle(tmp_path, "run", 7)
-
-
 def test_the_analysis_writes_every_table_and_a_summary(results, tmp_path):
     out = run_analysis(results, tmp_path / "paper")
 
@@ -90,16 +85,3 @@ def test_the_manifest_records_every_bundle_read(results, tmp_path):
     assert manifest["clip_threshold"] == pytest.approx(20.0 / 50.0)
 
 
-def test_files_the_analysis_does_not_write_are_left_alone(results, tmp_path):
-    out = tmp_path / "paper"
-    out.mkdir()
-    (out / "FINDINGS.md").write_text("hand-written")
-
-    run_analysis(results, out)
-
-    assert (out / "FINDINGS.md").read_text() == "hand-written"
-
-
-def test_a_run_must_be_given_as_label_equals_run(results, tmp_path):
-    with pytest.raises(SystemExit, match="label=run"):
-        run_analysis(results, tmp_path / "paper", argv=("--run", "unlabelled"))

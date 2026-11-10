@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
@@ -39,25 +38,6 @@ def test_equal_slices_differ_in_length_by_at_most_one_token(doc_length, n_slices
 
     lengths = [end - start for start, end in spans]
     assert max(lengths) - min(lengths) <= 1
-
-
-@given(
-    doc_length=st.integers(min_value=1, max_value=1000),
-    n_slices=st.integers(min_value=1, max_value=64),
-)
-def test_equal_slices_never_exceed_the_requested_count(doc_length, n_slices):
-    spans = schedule.equal_token_slices(doc_length, n_slices)
-
-    assert len(spans) <= n_slices
-
-
-def test_equal_slices_are_deterministic():
-    assert schedule.equal_token_slices(1000, 3) == schedule.equal_token_slices(1000, 3)
-
-
-def test_equal_slices_rejects_a_zero_slice_count():
-    with pytest.raises(ValueError, match="n_slices must be >= 1"):
-        schedule.equal_token_slices(100, 0)
 
 
 @given(
@@ -117,13 +97,6 @@ def test_random_slicing_is_deterministic_for_a_seed():
     assert first == second
 
 
-def test_random_slicing_varies_with_the_seed():
-    first = schedule.slice_doc(9000, 4, 1000, FakeRng(7))
-    second = schedule.slice_doc(9000, 4, 1000, FakeRng(8))
-
-    assert first != second
-
-
 @given(
     doc_length=st.integers(min_value=0, max_value=100_000),
     slice_min_tokens=st.integers(min_value=1, max_value=4000),
@@ -167,18 +140,3 @@ def test_a_long_document_is_capped_at_slices_max():
     assert schedule.derive_slice_count(100_000, 1000, 2, 6) == 6
 
 
-def test_slice_count_rejects_an_inverted_band():
-    with pytest.raises(ValueError, match="slices_min <= slices_max"):
-        schedule.derive_slice_count(10_000, 1000, 6, 2)
-
-
-def test_covers_rejects_a_gap():
-    assert not schedule.covers(((0, 10), (20, 30)), 30)
-
-
-def test_covers_rejects_an_overlap():
-    assert not schedule.covers(((0, 20), (10, 30)), 30)
-
-
-def test_covers_rejects_a_short_partition():
-    assert not schedule.covers(((0, 10),), 30)

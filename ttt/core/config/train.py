@@ -1,9 +1,4 @@
-"""TrainConfig — outer-loop hyperparameters. Frozen (D3).
-
-No session-mode booleans (D4: one `strategy` name), no strategy knobs (spec §7:
-plugins own their config), no slice_*/session_papers_* (D11), no
-param_log_every (D12).
-"""
+"""TrainConfig — outer-loop hyperparameters. Frozen (D3). Strategy knobs live on the strategy (D4)."""
 
 from __future__ import annotations
 
@@ -17,15 +12,12 @@ class TrainConfig:
     max_seq_len: int = 16384
     min_doc_tokens: int = 2048
 
-    # Fixed at 1: the carry is per-stream.
+    # Fixed at 1: the carry is per stream.
     micro_batch_size: int = 1
     grad_accum_steps: int = 16
     num_epochs: int = 1
     # 0 = no cap. A cap, not a target: a run whose data ends first stops there.
     max_steps: int = 0
-
-    # "" falls back to the spec's default; "none" is the explicit opt-out.
-    source_preset: str = ""
 
     lr_lora: float = 1e-5
     lr_wdown: float = 3e-5
@@ -41,14 +33,11 @@ class TrainConfig:
     lora_alpha: int = 32
     lora_dropout: float = 0.05
 
-    # Items whose carry stays in the autograd graph under carry_backprop; the
-    # carry is detached after every carry_window-th item of a session.
+    # Items of a session the carry stays in the graph for, under carry_backprop.
     carry_window: int = 2
 
     strategy: str = DEFAULT_STRATEGY
 
-    # False is the A1 ablation (every item starts from S_0 = 0), not a mode.
-    session_training: bool = True
     # False trains the TTT architecture with its fast weights never written:
     # the parameter-matched control.
     fast_weight_updates: bool = True
@@ -61,10 +50,6 @@ class TrainConfig:
     wandb_project: str = "inplace-ttt"
 
     eval_every: int = 100
-    eval_n_docs: int = 3
-    # In-loop default; standalone eval commands (holdout_eval_v1/v2) raise
-    # this to 50 unless a flag overrides it — a checkpoint eval runs often and
-    # cheaply, a standalone one runs once and wants the tighter estimate.
     eval_n_docs_per_source: int = 5
     eval_n_slices: int = 8
     eval_min_tokens: int = 2048

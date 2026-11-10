@@ -53,15 +53,12 @@ class InPlaceTTTMLP(nn.Module):
         # Zero-init: at step 0 the layer is bit-exact identity to the base MLP.
         self.w_target = nn.Parameter(torch.zeros(hidden_size, hidden_size))
 
-        if cfg.output_gate:
-            self.output_gate = nn.Linear(hidden_size, 1, bias=True)
-            with torch.no_grad():
-                # Zeroed rather than jittered: one output unit has no symmetry
-                # to break, and construction stays free of the global RNG (D1).
-                self.output_gate.weight.zero_()
-                self.output_gate.bias.fill_(cfg.output_gate_bias_init)
-        else:
-            self.output_gate = None
+        self.output_gate = nn.Linear(hidden_size, 1, bias=True)
+        with torch.no_grad():
+            # Zeroed rather than jittered: one output unit has no symmetry
+            # to break, and construction stays free of the global RNG (D1).
+            self.output_gate.weight.zero_()
+            self.output_gate.bias.fill_(cfg.output_gate_bias_init)
 
         self.output_gate_carry = (
             nn.Linear(hidden_size, 1, bias=True) if cfg.carry_gate else None
@@ -78,8 +75,6 @@ class InPlaceTTTMLP(nn.Module):
         )
 
         self.gate_mean: float | None = None
-        self.gate_std: float | None = None
-        self.carry_gate_mean: float | None = None
 
         self.evolve = True
         self.session_mode = False
@@ -129,13 +124,10 @@ class InPlaceTTTMLP(nn.Module):
         return self.target_conv(x).transpose(1, 2) @ self.w_target
 
     def _gated(self, ttt_term: torch.Tensor, hidden_states: torch.Tensor) -> torch.Tensor:
-        if self.output_gate is None:
-            return ttt_term
         gate = torch.sigmoid(self.output_gate(hidden_states))
         # A gate pinned near 0 means the TTT term cannot be reaching the output.
         with torch.no_grad():
             self.gate_mean = float(gate.mean())
-            self.gate_std = float(gate.std(correction=0))
         return gate * ttt_term
 
     def _scan_forward(
@@ -199,8 +191,6 @@ class InPlaceTTTMLP(nn.Module):
             state = ttt_math.frobenius_clip(state.unsqueeze(1), eta=self.cfg.eta, tau=tau).squeeze(1)
         term = self.cfg.eta * torch.einsum("bnf,bdf->bnd", z, state)
         gate = torch.sigmoid(self.output_gate_carry(hidden_states))
-        with torch.no_grad():
-            self.carry_gate_mean = float(gate.mean())
         return self.output_gate_carry_scale.to(term.dtype) * gate * term
 
 

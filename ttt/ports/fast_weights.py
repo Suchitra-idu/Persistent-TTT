@@ -30,4 +30,5 @@ class FastWeights(Protocol):
     def state_ratio(self) -> float:
         """Mean ||eta*S||_F / ||W0||_F over layers. Zero when nothing is staged."""
 
-    def gate_stats(self) -> tuple[float, float] | None: ...
+    def gate_mean(self) -> float | None:
+        """The main gate's mean over TTT layers in the last forward; None before one."""

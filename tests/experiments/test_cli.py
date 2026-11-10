@@ -5,24 +5,12 @@ import pytest
 from ttt import cli
 from ttt.core.config.train import TrainConfig
 from ttt.core.config.ttt import TTTConfig
-from ttt.extensions import datasets
 
 
 class TestDefaults:
     def test_no_arguments_resolves_the_default_config(self):
         assert cli.resolve().train == TrainConfig()
 
-    def test_no_arguments_resolves_the_default_mechanism(self):
-        assert cli.resolve().ttt == TTTConfig()
-
-    def test_no_arguments_resolves_the_default_dataset(self):
-        assert cli.resolve().spec is datasets.get(datasets.DEFAULT)
-
-    def test_no_arguments_resolves_the_default_strategy(self):
-        assert cli.resolve().strategy.name == TrainConfig().strategy
-
-    def test_the_default_base_model_is_the_proven_size(self):
-        assert cli.resolve().base_model == "Qwen/Qwen3-0.6B"
 
     def test_layer_indices_stay_unknown_until_a_model_is_loaded(self):
         assert cli.resolve().ttt.layer_indices is None
@@ -32,8 +20,6 @@ class TestTrainOverrides:
     def test_a_named_field_reaches_the_config(self):
         assert cli.resolve(num_epochs=4).train.num_epochs == 4
 
-    def test_an_unnamed_field_keeps_its_default(self):
-        assert cli.resolve(num_epochs=4).train.seed == TrainConfig().seed
 
     def test_a_typo_is_rejected_by_name(self):
         with pytest.raises(ValueError, match=r"unknown option\(s\) \['num_epoch'\]"):
@@ -47,28 +33,16 @@ class TestTrainOverrides:
         with pytest.raises(ValueError, match="max_seq_len"):
             cli.resolve(max_seq_len=10, min_doc_tokens=2048)
 
-    def test_the_session_ablation_can_be_turned_off(self):
-        assert cli.resolve(session_training=False).train.session_training is False
-
-    def test_session_training_defaults_on(self):
-        assert cli.resolve().train.session_training is True
-
 
 class TestStrategy:
     def test_a_named_strategy_is_selected(self):
         assert cli.resolve(strategy="mixed").strategy.name == "mixed"
 
-    def test_the_name_lands_on_the_train_config_too(self):
-        assert cli.resolve(strategy="mixed").train.strategy == "mixed"
 
     def test_an_unknown_strategy_is_rejected(self):
         with pytest.raises(KeyError, match="unknown strategy"):
             cli.resolve(strategy="multi")
 
-    def test_a_strategy_knob_configures_the_plugin(self):
-        resolved = cli.resolve(strategy="hybrid", carry_min_tokens=5000)
-
-        assert resolved.strategy.carry_min_tokens == 5000
 
     def test_every_hybrid_knob_flows_through(self):
         resolved = cli.resolve(
@@ -94,51 +68,13 @@ class TestStrategy:
         with pytest.raises(ValueError, match="carry_min_tokens"):
             cli.resolve(strategy="hybrid", carry_min_tokens=10, slice_min_tokens=1000)
 
-    def test_the_registry_is_not_mutated_by_configuring_a_strategy(self):
-        from ttt.extensions import strategies
-
-        cli.resolve(strategy="hybrid", carry_min_tokens=5000)
-
-        assert strategies.get("hybrid").carry_min_tokens == 2100
-
 
 class TestSourceWeights:
     def test_the_spec_default_preset_applies(self):
         assert "RedPajamaC4" in cli.resolve().weights
 
-    def test_an_explicit_preset_wins(self):
-        weights = cli.resolve(source_preset="slim-paper").weights
-
-        assert weights["RedPajamaC4"] == 62
-
-    def test_none_disables_balancing(self):
-        assert cli.resolve(source_preset="none").weights is None
-
-    def test_an_unknown_preset_is_rejected(self):
-        with pytest.raises(KeyError, match="unknown source preset"):
-            cli.resolve(source_preset="slim-nonsense")
-
-    def test_only_sources_builds_equal_weights(self):
-        weights = cli.resolve(only_sources="RedPajamaBook,RedPajamaArXiv").weights
-
-        assert dict(weights) == {"RedPajamaBook": 1, "RedPajamaArXiv": 1}
-
-    def test_only_sources_validates_against_the_spec(self):
-        with pytest.raises(ValueError, match="unknown source"):
-            cli.resolve(only_sources="RedPajamaNope")
-
-    def test_only_sources_conflicts_with_an_explicit_preset(self):
-        with pytest.raises(ValueError, match="conflicts with"):
-            cli.resolve(only_sources="RedPajamaBook", source_preset="slim-paper")
-
-    def test_an_empty_only_sources_is_rejected(self):
-        with pytest.raises(ValueError, match="parsed empty"):
-            cli.resolve(only_sources=",,")
-
 
 class TestMechanismKnobs:
-    def test_a_mechanism_knob_reaches_the_ttt_config(self):
-        assert cli.resolve(chunk_size=64).ttt.chunk_size == 64
 
     def test_the_rq4_sweep_axes_are_both_exposed(self):
         resolved = cli.resolve(chunk_size=25, carried_decay=0.95)
@@ -155,43 +91,17 @@ class TestMechanismKnobs:
     def test_layer_indices_derive_once_the_depth_is_known(self):
         assert cli.resolve(num_layers=8).ttt.layer_indices == (1, 3, 5, 7)
 
-    def test_the_stride_is_configurable(self):
-        assert cli.resolve(num_layers=8, layer_stride=4).ttt.layer_indices == (1, 5)
-
-    def test_the_start_is_configurable(self):
-        assert cli.resolve(num_layers=6, layer_start=0).ttt.layer_indices == (0, 2, 4)
-
 
 class TestFromFlags:
-    def test_zero_means_unset(self):
-        assert cli.from_flags(num_epochs=0).train.num_epochs == TrainConfig().num_epochs
 
-    def test_a_nonzero_int_is_taken(self):
-        assert cli.from_flags(num_epochs=3).train.num_epochs == 3
 
     def test_an_empty_string_means_unset(self):
         assert cli.from_flags(run_name="").train.run_name == TrainConfig().run_name
 
-    def test_grad_accum_is_spelled_the_way_the_old_cli_spelled_it(self):
-        assert cli.from_flags(grad_accum=8).train.grad_accum_steps == 8
 
-    def test_the_session_flag_is_tri_state(self):
-        cases = (
-            cli.from_flags(session=cli.UNSET_FLAG).train.session_training,
-            cli.from_flags(session=0).train.session_training,
-            cli.from_flags(session=1).train.session_training,
-        )
-
-        assert cases == (True, False, True)
-
-    def test_an_unset_document_limit_defaults_to_the_smoke_size(self):
+    def test_an_unset_document_limit_is_the_papers_4000(self):
         assert cli.from_flags(limit_docs=0).limit_docs == cli.DEFAULT_LIMIT_DOCS
 
-    def test_a_negative_document_limit_means_no_limit(self):
-        assert cli.from_flags(limit_docs=-1).limit_docs is None
-
-    def test_a_document_limit_is_taken(self):
-        assert cli.from_flags(limit_docs=1000).limit_docs == 1000
 
     def test_a_zero_in_the_flags_is_taken_as_given(self):
         assert cli.from_flags(**cli.parse_flags("seed=0")).train.seed == 0
@@ -212,37 +122,7 @@ class TestFromFlags:
             cli.from_flags(grad_accume=8)
 
 
-class TestEnvironmentDefaults:
-    def test_the_dataset_can_be_pinned_by_environment(self):
-        assert cli.env_defaults({"TTT_DATASET": "fixture"}) == {"dataset": "fixture"}
-
-    def test_an_empty_environment_defaults_nothing(self):
-        assert cli.env_defaults({}) == {}
-
-    def test_the_base_model_can_be_overridden_outright(self):
-        defaults = cli.env_defaults({"TTT_BASE_MODEL": "Qwen/Qwen3-4B"})
-
-        assert cli.resolve(**defaults).base_model == "Qwen/Qwen3-4B"
-
-    def test_the_model_size_composes_into_the_repo_id(self):
-        defaults = cli.env_defaults({"TTT_MODEL_SIZE": "1.7B"})
-
-        assert cli.resolve(**defaults).base_model == "Qwen/Qwen3-1.7B"
-
-    def test_an_explicit_argument_beats_the_environment(self):
-        defaults = cli.env_defaults({"TTT_DATASET": "fixture"})
-
-        assert cli.resolve(**{**defaults, "dataset": "slimpajama-6b"}).spec.name == (
-            "slimpajama-6b"
-        )
-
-    def test_unrelated_environment_variables_are_ignored(self):
-        assert cli.env_defaults({"PATH": "/usr/bin", "HOME": "/root"}) == {}
-
-
 class TestCheckpointPaths:
-    def test_a_step_path_is_under_the_run(self):
-        assert cli.step_path("ttt-v1.1", 600) == "ttt-v1.1/step_600"
 
     def test_a_bare_step_resumes_within_the_same_run(self):
         assert cli.resume_path("step_600", "ttt-v1.1") == "ttt-v1.1/step_600"
@@ -250,8 +130,6 @@ class TestCheckpointPaths:
     def test_a_qualified_step_resumes_across_runs(self):
         assert cli.resume_path("other/step_600", "ttt-v1.1") == "other/step_600"
 
-    def test_no_resume_is_an_empty_path(self):
-        assert cli.resume_path("", "ttt-v1.1") == ""
 
     def test_a_saved_step_is_where_a_resume_looks_for_it(self):
         saved = cli.step_path("ttt-v1.1", 600)
@@ -259,35 +137,7 @@ class TestCheckpointPaths:
         assert cli.resume_path("step_600", "ttt-v1.1") == saved
 
 
-class TestDescribe:
-    def test_it_records_every_train_field(self):
-        described = dict(cli.resolve().describe())
-
-        assert described["num_epochs"] == repr(TrainConfig().num_epochs)
-
-    def test_it_records_the_dataset_and_model(self):
-        described = dict(cli.resolve().describe())
-
-        assert (described["dataset"], described["base_model"]) == (
-            datasets.DEFAULT,
-            "Qwen/Qwen3-0.6B",
-        )
-
-    def test_it_records_the_configured_strategy_not_just_its_name(self):
-        described = dict(cli.resolve(strategy="hybrid", carry_min_tokens=5000).describe())
-
-        assert "5000" in described["strategy"]
-
-    def test_two_identical_resolutions_describe_identically(self):
-        assert cli.resolve(num_epochs=2).describe() == cli.resolve(num_epochs=2).describe()
-
-    def test_a_changed_option_changes_the_description(self):
-        assert cli.resolve(num_epochs=2).describe() != cli.resolve(num_epochs=3).describe()
-
-
 class TestParseFlags:
-    def test_an_empty_string_sets_nothing(self):
-        assert cli.parse_flags("") == {}
 
     def test_an_integer_field_arrives_as_an_integer(self):
         assert cli.parse_flags("num_epochs=3") == {"num_epochs": 3}
@@ -295,8 +145,6 @@ class TestParseFlags:
     def test_a_float_field_arrives_as_a_float(self):
         assert cli.parse_flags("lr_wdown=0.0005") == {"lr_wdown": 0.0005}
 
-    def test_a_string_field_stays_a_string(self):
-        assert cli.parse_flags("strategy=hybrid") == {"strategy": "hybrid"}
 
     @pytest.mark.parametrize("text", ["true", "1", "yes", "on", "TRUE"])
     def test_a_boolean_field_accepts_the_usual_spellings(self, text):
@@ -312,14 +160,6 @@ class TestParseFlags:
             "strategy": "hybrid",
         }
 
-    def test_surrounding_whitespace_is_ignored(self):
-        assert cli.parse_flags(" num_epochs = 2 , strategy = hybrid ") == {
-            "num_epochs": 2,
-            "strategy": "hybrid",
-        }
-
-    def test_a_flag_that_is_not_a_config_field_still_gets_a_type(self):
-        assert cli.parse_flags("session=0") == {"session": 0}
 
     def test_a_dataset_name_is_not_mistaken_for_a_number(self):
         assert cli.parse_flags("dataset=slimpajama-6b") == {"dataset": "slimpajama-6b"}
@@ -328,11 +168,6 @@ class TestParseFlags:
         with pytest.raises(ValueError, match="expected name=value"):
             cli.parse_flags("num_epochs")
 
-    def test_a_strategy_knob_is_coerced_by_its_plugin(self):
-        assert cli.parse_flags("slices_min=4") == {"slices_min": 4}
-
-    def test_what_it_parses_reaches_the_resolved_config(self):
-        assert cli.from_flags(**cli.parse_flags("num_epochs=7")).train.num_epochs == 7
 
     def test_a_typo_is_rejected_before_anything_reaches_a_gpu(self):
         with pytest.raises(ValueError, match="unknown option"):

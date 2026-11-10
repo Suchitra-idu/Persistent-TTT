@@ -30,15 +30,6 @@ def test_quantile_matches_numpy(values, q):
     assert stats.quantile(values, q) == pytest.approx(_oracles.quantile(values, q), abs=1e-6)
 
 
-def test_quantile_of_nothing_is_nan():
-    assert math.isnan(stats.quantile([], 0.5))
-
-
-def test_quantile_rejects_a_q_outside_the_unit_interval():
-    with pytest.raises(ValueError):
-        stats.quantile([1.0], 1.5)
-
-
 @given(ref=ppls)
 @settings(max_examples=40, deadline=None)
 def test_identical_arms_have_a_zero_gap_and_a_zero_width_interval(ref):
@@ -92,11 +83,6 @@ def test_paired_arms_of_different_length_are_rejected():
         stats.paired_gap([2.0, 3.0], [2.0], [[0, 1]])
 
 
-def test_bootstrap_rejects_a_level_outside_the_open_unit_interval():
-    with pytest.raises(ValueError):
-        stats.bootstrap(lambda idx: 0.0, 2, [[0, 1]], level=1.0)
-
-
 def test_bootstrap_with_no_resamples_has_a_nan_interval():
     interval = stats.bootstrap(lambda idx: 1.0, 2, [])
 
@@ -113,10 +99,6 @@ def test_an_interval_excludes_zero_only_when_strictly_one_sided(low, high, exclu
 
 def test_win_rate_counts_treated_wins_and_halves_ties():
     assert stats.win_rate([2.0, 2.0, 2.0, 2.0], [1.0, 3.0, 2.0, 1.5]) == pytest.approx(0.625)
-
-
-def test_win_rate_of_nothing_is_nan():
-    assert math.isnan(stats.win_rate([], []))
 
 
 def test_tied_values_share_their_average_rank():

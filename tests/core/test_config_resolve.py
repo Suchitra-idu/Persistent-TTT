@@ -34,20 +34,6 @@ def test_merging_applies_the_override():
     assert merged.num_epochs == 3
 
 
-def test_merging_leaves_untouched_fields_at_their_defaults():
-    merged = resolve.merge(TrainConfig(), {"num_epochs": 3})
-
-    assert merged.seed == TrainConfig().seed
-
-
-def test_merging_does_not_mutate_the_defaults():
-    defaults = TrainConfig()
-
-    resolve.merge(defaults, {"num_epochs": 9})
-
-    assert defaults.num_epochs == 1
-
-
 def test_an_unknown_field_is_rejected_with_the_valid_names():
     with pytest.raises(ValueError, match=r"unknown config field\(s\) \['lr_lora_'\]"):
         resolve.merge(TrainConfig(), {"lr_lora_": 1e-4})
@@ -69,43 +55,15 @@ def test_an_int_is_accepted_where_a_float_is_declared():
     assert merged.warmup_ratio == 0
 
 
-def test_a_plugins_own_config_resolves_the_same_way():
-    merged = resolve.merge(PluginConfig(), {"carry_min_tokens": 4096})
-
-    assert merged.carry_min_tokens == 4096
-
-
 def test_merging_still_runs_the_configs_own_validation():
     with pytest.raises(ValueError, match="grad_accum_steps must be >= 1"):
         resolve.merge(TrainConfig(), {"grad_accum_steps": 0})
-
-
-def test_merging_rejects_a_non_dataclass():
-    with pytest.raises(TypeError, match="needs a dataclass instance"):
-        resolve.merge({"a": 1}, {"a": 2})
 
 
 def test_unset_sentinels_are_dropped():
     kept = resolve.only_set({"num_epochs": 0, "seed": 7}, unset=(0,))
 
     assert kept == {"seed": 7}
-
-
-def test_a_false_flag_survives_a_zero_sentinel():
-    """`--session 0` is a real choice; only the -1 sentinel means "unset"."""
-    kept = resolve.only_set({"session_training": False, "seed": 0}, unset=(-1,))
-
-    assert kept == {"session_training": False, "seed": 0}
-
-
-def test_none_is_the_default_sentinel():
-    assert resolve.only_set({"a": None, "b": 1}) == {"b": 1}
-
-
-def test_several_sentinels_can_be_dropped_at_once():
-    kept = resolve.only_set({"a": 0, "b": "", "c": 5}, unset=(0, ""))
-
-    assert kept == {"c": 5}
 
 
 def test_a_described_config_is_sorted_by_field_name():

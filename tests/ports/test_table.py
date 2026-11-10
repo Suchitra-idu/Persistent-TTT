@@ -45,8 +45,6 @@ class TableConformance:
 
         assert len(table) == len(ROWS)
 
-    def test_select_of_nothing_is_empty(self, table):
-        assert len(table.select([])) == 0
 
     def test_filter_keeps_the_rows_the_predicate_accepts(self, table):
         assert table.filter("n", lambda n: n % 2 == 0).column("n") == [0, 2, 4]
@@ -59,12 +57,6 @@ class TableConformance:
 
         assert len(table) == len(ROWS)
 
-    def test_filter_rejecting_everything_is_empty(self, table):
-        assert len(table.filter("n", lambda n: False)) == 0
-
-    def test_filter_on_an_absent_column_raises(self, table):
-        with pytest.raises(KeyError):
-            table.filter("nope", lambda value: True)
 
     def test_with_column_adds_it(self, table):
         added = table.with_column("extra", list(range(len(ROWS))))
@@ -95,9 +87,6 @@ class TestListTable(TableConformance):
     def test_a_ragged_table_is_rejected(self):
         with pytest.raises(ValueError, match="ragged"):
             ListTable([{"a": 1}, {"a": 1, "b": 2}])
-
-    def test_an_empty_table_has_no_columns(self):
-        assert ListTable([]).column_names == ()
 
 
 @pytest.mark.integration

@@ -1,11 +1,10 @@
-"""The paper's cross-checkpoint tables from paper_eval bundles. Local, no GPU.
+"""The cross-checkpoint tables T1-T6 from paper_eval bundles. Local, no GPU.
 
-    python -m ttt.experiments.paper_analysis_v1 --control lora-only-matched \\
-        --run Hebbian=ttt-v1.1 --run Delta=ttt-v1.1-clean-deltachunk \\
-        --steps 200,400,600 --w0-norms results/paper/inputs/w0_norms.json
+    python -m ttt.experiments.paper_analysis_v1
 
-Each (run, step) reads its newest bundle under results/<run>/step_<n>/. Rewrites
-tables/, manifest.json and SUMMARY.md under --out and nothing else.
+writes the paper's tables under results/paper/; `--control`, `--run label=run`
+and `--steps` analyse other runs. Rewrites tables/, manifest.json and SUMMARY.md
+under --out and nothing else.
 """
 
 from __future__ import annotations
@@ -321,20 +320,26 @@ def _labelled_runs(pairs: Sequence[str]) -> dict[str, str]:
     return runs
 
 
+PAPER_CONTROL = "lora-only-matched"
+PAPER_RUNS = ("Hebbian=ttt-v1.1", "Delta=ttt-v1.1-clean-deltachunk")
+PAPER_STEPS = "200,400,600"
+
+
 def main(argv: Sequence[str] | None = None) -> Path:
+    """With no arguments, the paper's tables T1-T6."""
     parser = argparse.ArgumentParser(prog="paper_analysis_v1")
-    parser.add_argument("--control", required=True)
-    parser.add_argument("--run", action="append", required=True, dest="runs")
-    parser.add_argument("--steps", required=True)
+    parser.add_argument("--control", default=PAPER_CONTROL)
+    parser.add_argument("--run", action="append", dest="runs")
+    parser.add_argument("--steps", default=PAPER_STEPS)
     parser.add_argument("--mechanism-step", type=int, default=0)
-    parser.add_argument("--w0-norms", required=True, type=Path)
+    parser.add_argument("--w0-norms", type=Path, default=OUT_DIR / "inputs" / "w0_norms.json")
     parser.add_argument("--results", type=Path, default=RESULTS_DIR)
     parser.add_argument("--out", type=Path, default=OUT_DIR)
     parser.add_argument("--n-boot", type=int, default=paper_eval_v1.DEFAULT_N_BOOT)
     args = parser.parse_args(argv)
 
     steps = [int(s) for s in args.steps.split(",") if s.strip()]
-    runs = _labelled_runs(args.runs)
+    runs = _labelled_runs(args.runs or PAPER_RUNS)
     norms = json.loads(args.w0_norms.read_text())["norms"]
     w0_norm = sum(norms.values()) / len(norms)
     paper = analyse(

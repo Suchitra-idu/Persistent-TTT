@@ -58,8 +58,7 @@ def compare(
             "config_diff": diff,
         },
     )
-    figures = _figure(folder, estimates, announce)
-    storage.write_bytes("SUMMARY.md", _summary(estimates, diff, unmatched, figures).encode())
+    storage.write_bytes("SUMMARY.md", _summary(estimates, diff, unmatched).encode())
     if unmatched:
         announce(f"warning: {unmatched} documents are in only one bundle; pairing is partial")
     unexpected = [row for row in diff if row[0] not in EXPECTED_DIFFERENCES]
@@ -88,24 +87,12 @@ def _label(manifest: Mapping[str, Any], folder: Path) -> str:
     return run_step.replace("/", "_")
 
 
-def _figure(folder: Path, estimates, announce) -> list[str]:
-    try:
-        from ttt.experiments import _evidence_figures as figs
-    except ImportError:
-        announce("skipped figures: matplotlib not importable")
-        return []
-    (folder / "figures").mkdir(parents=True, exist_ok=True)
-    figs.forest(estimates, str(folder / "figures/checkpoints.png"), title="Candidate vs baseline checkpoint")
-    return ["figures/checkpoints.png"]
-
-
-def _summary(estimates, diff, unmatched: int, figures) -> str:
+def _summary(estimates, diff, unmatched: int) -> str:
     from ttt.core import report
 
     lines = ["# Checkpoint comparison", "", "```", report.render(report.estimate_table(estimates)), "```", ""]
     lines += [f"Unmatched documents: {unmatched}", "", "## Config differences", ""]
     lines += [f"- `{key}`: `{a}` → `{b}`" for key, a, b in diff] or ["- none"]
-    lines += ["", "## Figures", ""] + [f"- [{f}]({f})" for f in figures]
     return "\n".join(lines) + "\n"
 
 

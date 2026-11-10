@@ -10,7 +10,6 @@ from ttt.adapters.fake_data_source import FakeDataSource
 from ttt.adapters.fake_fast_weights import FakeFastWeights
 from ttt.adapters.fake_tokenizer import FakeTokenizer
 from ttt.adapters.in_memory_tracker import InMemoryTracker
-from ttt.adapters.list_table import ListTable
 from ttt.adapters.scripted_rng import ScriptedRng
 from ttt.app.data_pipeline import Doc
 from ttt.app.stages import Data
@@ -124,10 +123,6 @@ def pipeline_data(
         limit_docs=limit_docs,
         weights=weights,
     )
-
-
-def table_of(rows_in: Sequence[Mapping]) -> ListTable:
-    return ListTable(list(rows_in))
 
 
 def data_source(source_labels: Sequence[str], *, length: int = 40) -> FakeDataSource:

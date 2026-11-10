@@ -1,8 +1,7 @@
 """The single CLI surface: arguments in, frozen config out, once (D3).
 
-`resolve` takes None for "not given". `from_flags` maps the sentinels of its
-own named Modal arguments (0, -1) onto None; a value inside the flags string is
-always taken as given, zero included.
+`resolve` takes None for "not given". In `from_flags` every value in the flags
+string is taken as given, zero included.
 """
 
 from __future__ import annotations
@@ -20,7 +19,6 @@ from ttt.core.config.ttt import TTTConfig, derive_layer_indices
 from ttt.extensions import datasets, strategies
 from ttt.extensions.strategies import Strategy
 
-UNSET_FLAG = -1
 DEFAULT_LIMIT_DOCS = 4000
 # Options that no longer exist but appear in recorded run commands, with the
 # only value those commands used.
@@ -41,12 +39,12 @@ def _settable(config_type, *, handled: frozenset[str]) -> tuple[str, ...]:
     )
 
 
-# strategy / session_training / source_preset arrive as named arguments because
+# strategy arrives as a named argument because
 # each resolves through a rule, not a copy. micro_batch_size is fixed at 1.
 _TRAIN_FIELDS = _settable(
     TrainConfig,
     handled=frozenset(
-        {"strategy", "session_training", "source_preset", "micro_batch_size"}
+        {"strategy", "micro_batch_size"}
     ),
 )
 
@@ -99,9 +97,6 @@ def resolve(
     strategy: str | None = None,
     base_model: str | None = None,
     model_size: str | None = None,
-    session_training: bool | None = None,
-    source_preset: str | None = None,
-    only_sources: str | None = None,
     limit_docs: int | None = None,
     resume_from: str = "",
     layer_stride: int | None = None,
@@ -114,9 +109,7 @@ def resolve(
     _check_known(overrides)
     spec = datasets.get(dataset or datasets.DEFAULT)
     picked = strategies.get(strategy or TrainConfig().strategy)
-    train = _train_config(
-        overrides, strategy=strategy, session_training=session_training
-    )
+    train = _train_config(overrides, strategy=strategy)
 
     return Resolved(
         train=train,
@@ -124,54 +117,25 @@ def resolve(
         spec=spec,
         strategy=_strategy(picked, overrides),
         base_model=base_model or f"Qwen/Qwen3-{model_size or DEFAULT_MODEL_SIZE}",
-        weights=_weights(train, spec, source_preset, only_sources),
+        weights=_weights(spec),
         limit_docs=limit_docs,
         resume_from=resume_from,
     )
 
 
-def from_flags(
-    *,
-    session: int = UNSET_FLAG,
-    num_epochs: int = 0,
-    grad_accum: int = 0,
-    limit_docs: int = 0,
-    **flags: Any,
-) -> Resolved:
-    """Maps this function's own 0 / -1 sentinels onto None."""
-    given = dict(flags)
-    if num_epochs:
-        given["num_epochs"] = num_epochs
-    if grad_accum:
-        given["grad_accum_steps"] = grad_accum
-    return resolve(
-        session_training=bool(session) if session in (0, 1) else None,
-        limit_docs=_resolved_limit_docs(limit_docs),
-        **given,
-    )
-
-
-def _resolved_limit_docs(limit_docs: int) -> int | None:
-    """0 (not given) is the paper's 4000 documents; a negative value opts into
-    the full corpus explicitly."""
-    if limit_docs == 0:
-        return DEFAULT_LIMIT_DOCS
-    if limit_docs < 0:
-        return None
-    return limit_docs
+def from_flags(*, limit_docs: int = 0, **flags: Any) -> Resolved:
+    """Every value in `flags` is taken as given. `limit_docs` unset is the paper's 4000."""
+    return resolve(limit_docs=limit_docs or DEFAULT_LIMIT_DOCS, **flags)
 
 
 def _train_config(
     overrides: Mapping[str, Any],
     *,
     strategy: str | None,
-    session_training: bool | None,
 ) -> TrainConfig:
     given = _taken(overrides, _TRAIN_FIELDS)
     if strategy:
         given["strategy"] = strategy
-    if session_training is not None:
-        given["session_training"] = session_training
     return resolve_mod.merge(TrainConfig(), given)
 
 
@@ -205,25 +169,8 @@ def _strategy(picked: Strategy, overrides: Mapping[str, Any]) -> Strategy:
     return resolve_mod.merge(picked, given)
 
 
-def _weights(
-    train: TrainConfig,
-    spec: DatasetSpec,
-    source_preset: str | None,
-    only_sources: str | None,
-) -> Mapping[str, int] | None:
-    if only_sources:
-        if source_preset:
-            raise ValueError(
-                "--only-sources conflicts with --source-preset; pass one"
-            )
-        _, weights = presets.only_sources_preset(
-            presets.parse_only_sources(only_sources), allowed=spec.include_sources
-        )
-        return weights
-    name = presets.resolve_preset_name(
-        source_preset or train.source_preset, spec.default_source_preset
-    )
-    return presets.get_preset(name) if name else None
+def _weights(spec: DatasetSpec) -> Mapping[str, int] | None:
+    return presets.get_preset(spec.default_source_preset) if spec.default_source_preset else None
 
 
 def _without_retired(overrides: Mapping[str, Any]) -> dict[str, Any]:

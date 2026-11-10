@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Mapping, Sequence
+from typing import Sequence
 
 from tests.app import _builders as app_builders
 from ttt import cli

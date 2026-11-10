@@ -1,7 +1,7 @@
 """Held-out perplexity under four regimes, and the gap decomposition over them.
 
 Snapshots the carry it found and puts it back, so firing this mid-training is a
-no-op against the loop that called it (PLAN §7 defect 3).
+no-op against the loop that called it.
 """
 
 from __future__ import annotations
@@ -48,7 +48,6 @@ def evaluate(
     compute: Compute,
     fast_weights: FastWeights,
     n_slices: int,
-    session_training: bool = True,
 ) -> EvalReport:
     if not docs:
         return EvalReport(rows=(), metrics={}, summaries=())
@@ -57,7 +56,7 @@ def evaluate(
     try:
         rows, slices = _measure_all(docs, compute, fast_weights, n_slices)
     finally:
-        fast_weights.set_mode(evolve=True, session=session_training)
+        fast_weights.set_mode(evolve=True, session=True)
         fast_weights.reset_carry()
         fast_weights.install(restore)
 

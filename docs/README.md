@@ -53,6 +53,7 @@ Run from the repository root.
 |---|---|
 | `make install-dev` | Install the package and its development dependencies into `.venv` |
 | `make check` | Import contracts and the fast tests: the gate before any change is done |
+| `make paper-numbers` | Every table and figure in the paper, from `results/` (`make tables`, `make figures`) |
 | `make test` | The fast tests only |
 | `make lint` | The import contracts only |
 | `make guard` | Proves the import contracts are live, by planting a forbidden import |

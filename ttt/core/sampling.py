@@ -52,36 +52,6 @@ def n_per_source_indices(
     return picked, shortfalls
 
 
-def stratified_indices(source_labels: Sequence[str], n_target: int, rng) -> list[int]:
-    """Round-robin per source to n_target, then top up randomly.
-
-    Unreachable at the default config, where n_per_source is the policy
-    (PLAN §9.5); kept because cutting it is a research decision.
-    """
-    if n_target < 0:
-        raise ValueError(f"n_target must be >= 0, got {n_target}")
-    by_source = _group_indices(source_labels)
-    for pool in by_source.values():
-        rng.shuffle(pool)
-
-    order = sorted(by_source)
-    picked: list[int] = []
-    while len(picked) < n_target and any(by_source[k] for k in order):
-        for key in order:
-            if not by_source[key]:
-                continue
-            picked.append(by_source[key].pop())
-            if len(picked) >= n_target:
-                break
-
-    if len(picked) < n_target:
-        taken = set(picked)
-        remaining = [i for i in range(len(source_labels)) if i not in taken]
-        rng.shuffle(remaining)
-        picked.extend(remaining[: n_target - len(picked)])
-    return picked
-
-
 def _group_indices(source_labels: Sequence[str]) -> dict[str, list[int]]:
     grouped: dict[str, list[int]] = defaultdict(list)
     for index, label in enumerate(source_labels):

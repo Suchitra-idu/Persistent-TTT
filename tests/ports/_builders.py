@@ -166,12 +166,6 @@ UNLABELLED_SPEC = DatasetSpec(
     source_meta_key="set_name",
 )
 
-CONSTANT_SPEC = DatasetSpec(
-    name="ports-constant",
-    source="_fixture",
-    constant_source="only",
-)
-
 
 def spec_rows(sources: Sequence[str], *, spec: DatasetSpec = FIXTURE_SPEC) -> list[dict]:
     return [

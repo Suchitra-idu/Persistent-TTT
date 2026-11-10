@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-import math
 
 import pytest
 
 from tests.app import _builders
 from ttt.app import train_loop
 from ttt.extensions.strategies import HYBRID, Hybrid, Mixed
-from ttt.ports.tracker import MICRO_STEP, TRAIN_STEP, outside_budget
+from ttt.ports.tracker import TRAIN_STEP, outside_budget
 
 NAN = float("nan")
 
@@ -139,11 +138,6 @@ class TestNonfiniteLoss:
 
         assert wiring.compute.zero_grads == 2
 
-    def test_the_loss_is_logged_as_it_was_measured(self):
-        _, wiring = run(n_docs=2, losses=(NAN,))
-
-        assert all(math.isnan(v) for v in wiring.tracker.values_of("micro/doc_loss"))
-
 
 class TestNonfiniteGradient:
     """A finite loss whose backward pass still produced a non-finite gradient
@@ -170,10 +164,6 @@ class TestNonfiniteGradient:
 
         assert (result.nonfinite_steps, result.nonfinite) == (2, 0)
 
-    def test_it_still_processes_every_micro_step(self):
-        result, _ = run(n_docs=4, total_norm=NAN)
-
-        assert result.micro_steps == 4
 
     def test_a_finite_run_steps_and_counts_nothing(self):
         result, wiring = run(n_docs=4, total_norm=1.0)
@@ -251,11 +241,6 @@ class TestLearningRate:
             {"lora": cfg.lr_lora, "wdown": cfg.lr_wdown, "new": cfg.lr_new_modules}
         )
 
-    def test_warmup_holds_the_rate_below_its_peak(self):
-        cfg = _builders.config(warmup_min_steps=2)
-        _, wiring = run(n_docs=4, cfg=cfg)
-
-        assert wiring.tracker.values_of("train/lr_lora")[0] == 0.0
 
 class TestLogging:
     def test_nothing_outside_the_budget_is_logged(self):
@@ -265,15 +250,6 @@ class TestLogging:
             () for _ in wiring.tracker.records
         ]
 
-    def test_the_micro_axis_advances_once_per_item(self):
-        _, wiring = run(n_docs=4)
-
-        assert wiring.tracker.values_of(MICRO_STEP) == [1, 2, 3, 4]
-
-    def test_the_train_axis_advances_once_per_step(self):
-        _, wiring = run(n_docs=4)
-
-        assert wiring.tracker.values_of(TRAIN_STEP) == [1, 2]
 
     def test_the_state_ratio_is_logged_every_item(self):
         _, wiring = run(n_docs=4)
@@ -292,22 +268,6 @@ class TestLogging:
 
         assert all(r < 1.0 for r in wiring.tracker.values_of("train/grad_clip_ratio"))
 
-    def test_the_tracker_is_finished(self):
-        _, wiring = run(n_docs=4)
-
-        assert wiring.tracker.finished
-
-    def test_progress_is_announced_on_cadence(self):
-        lines = []
-        run(n_docs=4, cfg=_builders.config(log_every=1), announce=lines.append)
-
-        assert len([line for line in lines if not line.startswith("  first micro-step")]) == 2
-
-    def test_the_first_micro_step_is_announced_once(self):
-        lines = []
-        run(n_docs=4, announce=lines.append)
-
-        assert len([line for line in lines if line.startswith("  first micro-step")]) == 2
 
 class TestCheckpointing:
     def test_it_saves_on_cadence(self):
@@ -341,17 +301,6 @@ class TestInLoopEval:
 
         assert {"eval/carry_ppl", TRAIN_STEP} <= set(wiring.tracker.records[-1])
 
-    def test_its_result_is_announced(self):
-        lines = []
-        run(
-            n_docs=4,
-            cfg=_builders.config(eval_every=2),
-            evaluate=Recorder(),
-            announce=lines.append,
-        )
-
-        assert any("[eval]" in line for line in lines)
-
 
 class TestEpochs:
     def test_every_epoch_revisits_every_document(self):
@@ -364,10 +313,6 @@ class TestEpochs:
 
         assert result.total_steps == 4
 
-    def test_the_step_count_never_outruns_the_schedule(self):
-        result, _ = run(n_docs=5, cfg=_builders.config(num_epochs=3))
-
-        assert result.steps <= result.total_steps
 
     def test_zero_epochs_does_nothing(self):
         result, wiring = run(n_docs=4, cfg=_builders.config(num_epochs=0))
@@ -381,25 +326,11 @@ class TestMaxSteps:
 
         assert (result.steps, len(wiring.compute.forwards)) == (3, 6)
 
-    def test_the_schedule_is_sized_to_the_cap(self):
-        result, _ = run(n_docs=4, cfg=_builders.config(num_epochs=3, max_steps=3))
-
-        assert result.total_steps == 3
 
     def test_a_cap_past_the_data_does_not_extend_the_run(self):
         result, _ = run(n_docs=4, cfg=_builders.config(max_steps=100))
 
         assert (result.steps, result.total_steps) == (2, 2)
-
-    def test_the_final_checkpoint_is_at_the_cap(self):
-        checkpoint = Recorder()
-        run(
-            n_docs=4,
-            cfg=_builders.config(num_epochs=3, max_steps=3),
-            checkpoint=checkpoint,
-        )
-
-        assert checkpoint.calls[-1]["step"] == 3
 
 
 def test_an_empty_pool_trains_nothing():

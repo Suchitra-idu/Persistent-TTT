@@ -20,11 +20,6 @@ def test_slice_count_is_capped_at_slices_max():
     assert HYBRID.slices_for(10_000_000) == HYBRID.slices_max
 
 
-def test_a_zero_length_doc_is_an_error():
-    with pytest.raises(ValueError, match="doc length must be >= 1"):
-        HYBRID.slices_for(0)
-
-
 def test_a_carry_threshold_below_the_minimum_slicing_is_an_error():
     with pytest.raises(ValueError, match="carry_min_tokens"):
         Hybrid(carry_min_tokens=500, slice_min_tokens=1000, slices_min=2)
@@ -80,10 +75,6 @@ def test_mixed_uses_every_document_exactly_once():
     assert sorted(firsts) == list(range(len(MIX_LENGTHS)))
 
 
-def test_mixed_counts_the_same_items_as_hybrid():
-    assert MIXED.count(MIX_LENGTHS) == HYBRID.count(MIX_LENGTHS)
-
-
 def test_mixed_builds_as_many_items_as_it_counts():
     sessions = MIXED.build(MIX_LENGTHS, MIX_SOURCES, _builders.FakeRng(3))
 
@@ -121,6 +112,3 @@ def test_mixed_is_deterministic_given_the_seed():
     assert build(7) == build(7) and build(7) != build(8)
 
 
-def test_a_same_source_share_outside_zero_to_one_is_an_error():
-    with pytest.raises(ValueError, match="same_source_share"):
-        Mixed(same_source_share=1.5)

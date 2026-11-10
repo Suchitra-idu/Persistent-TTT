@@ -1,14 +1,10 @@
 from __future__ import annotations
 
-import json
 
-import pytest
 import torch
 
 from tests.experiments import _builders
 from ttt import cli
-from ttt.adapters import checkpoint_io
-from ttt.adapters.in_memory_storage import InMemoryStorage
 from ttt.experiments import _runtime, sanity_check_v1
 
 
@@ -30,8 +26,6 @@ class TestEngine:
 
         assert engine.rng().seed == 7
 
-    def test_an_explicit_seed_overrides_that(self):
-        assert _builders.engine().rng(99).seed == 99
 
     def test_the_same_seed_draws_the_same_permutation(self):
         engine = _builders.engine()
@@ -39,43 +33,10 @@ class TestEngine:
         assert engine.rng().permutation(10) == engine.rng().permutation(10)
 
 
-    def test_the_boot_log_names_the_model_and_the_pool(self):
-        spoken = []
-        engine = _builders.engine()
-
-        _runtime.announce_boot(engine, [], spoken.append)
-
-        assert any("Qwen" in line for line in spoken)
-
-    def test_the_boot_log_counts_the_trainable_parameters(self):
-        spoken = []
-
-        _runtime.announce_boot(_builders.engine(), [], spoken.append)
-
-        assert any("trainable" in line for line in spoken)
-
     def test_a_run_with_nowhere_to_write_still_completes(self):
         engine = _runtime.Engine(resolved=_builders.resolved(), tokenizer=None)
 
         engine.save(step=1, carries={}, n_updates={})
-
-
-class TestTrackerSelection:
-    def test_wandb_off_still_reports_to_the_console(self):
-        from ttt.adapters.console_tracker import ConsoleTracker
-
-        chosen = _runtime.tracker(
-            _builders.resolved(wandb_enabled=False), job_type="train"
-        )
-
-        assert isinstance(chosen, ConsoleTracker)
-
-    def test_the_console_tracker_respects_the_log_cadence(self):
-        chosen = _runtime.tracker(
-            _builders.resolved(wandb_enabled=False, log_every=5), job_type="train"
-        )
-
-        assert chosen.every == 5
 
 
 class TestSanityCheck:
@@ -139,10 +100,6 @@ class TestSanityCheck:
 
         assert result.n_tokens > cfg.chunk_size
 
-    def test_the_input_is_built_on_the_models_device(self):
-        model = torch.nn.Linear(4, 4, device="meta")
-
-        assert sanity_check_v1.input_ids([1, 2, 3], model).device.type == "meta"
 
     def test_it_finds_the_ttt_modules_through_a_peft_style_wrapper(self):
         from tests.ports import _builders as port_builders

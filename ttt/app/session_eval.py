@@ -57,7 +57,7 @@ def session_perplexity(
         for start, end in schedule.equal_token_slices(doc.n_tokens, n_slices):
             loss = compute.eval_loss(doc.token_ids[start:end])
             fast_weights.advance_carry()
-            gate_stats = fast_weights.gate_stats()
+            gate_mean = fast_weights.gate_mean()
             rows.append(
                 ItemRow(
                     doc_idx=doc.index,
@@ -67,7 +67,7 @@ def session_perplexity(
                     end=end,
                     ppl=metrics.perplexity(loss),
                     state_ratio=fast_weights.state_ratio(),
-                    gate_mean=1.0 if gate_stats is None else gate_stats[0],
+                    gate_mean=1.0 if gate_mean is None else gate_mean,
                 )
             )
             position += 1

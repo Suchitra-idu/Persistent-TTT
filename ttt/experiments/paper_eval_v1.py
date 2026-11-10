@@ -6,7 +6,7 @@
 
 Pass the `--flags` the checkpoint was trained with; they are recorded in the
 manifest. A checkpoint with no TTT layers runs the regimes suite only. The bundle lands in `results/<run>/<step>/<stamp>/`, and its raw rows
-also on the checkpoint volume under `evidence/`. Rebuild tables and figures
+also on the checkpoint volume under `evidence/`. Rebuild the tables
 from a bundle's raw rows, no GPU:
 
     python -m ttt.experiments.paper_eval_v1 results/ttt-v1.1/step_600/<stamp>
@@ -126,8 +126,6 @@ class Analysis:
     dyneval: tuple[Estimate, ...] = ()
     dyneval_settings: Mapping[str, str] = field(default_factory=dict)
     carry_share: Interval | None = None
-    fresh: Mapping[str, float] = field(default_factory=dict)
-    correlates: tuple[evidence.Correlate, ...] = ()
 
 
 def run(
@@ -156,7 +154,7 @@ def run(
         announce("regimes ...")
         measured = eval_loop.evaluate(
             docs=eval_docs, n_slices=plan.n_slices,
-            session_training=resolved.train.session_training, **ports,
+            **ports,
         )
         rows["regimes"] = evidence.records(measured.rows)
         rows["regime_slices"] = evidence.records(measured.slices)
@@ -378,7 +376,6 @@ def analyse(rows: Mapping[str, list], *, n_boot: int = DEFAULT_N_BOOT, seed: int
     kw = dict(rng=rng, n_boot=n_boot)
     regimes = evidence.regime_estimates(typed.get("regimes", ()), **kw)
     boundary = evidence.boundary_estimates(typed.get("boundary", ()), **kw)
-    fresh = evidence.fresh_by_source(typed.get("regimes", ()))
     return Analysis(
         regimes=regimes,
         boundary=boundary,
@@ -399,8 +396,6 @@ def analyse(rows: Mapping[str, list], *, n_boot: int = DEFAULT_N_BOOT, seed: int
         carry_share=(
             context_eval.carry_share(typed["context"], **kw) if typed.get("context") else None
         ),
-        fresh=fresh,
-        correlates=evidence.domain_correlates(fresh, regimes + boundary),
     )
 
 
@@ -426,7 +421,7 @@ def render_bundle(
     n_boot: int = DEFAULT_N_BOOT,
     announce: Callable[[str], None] = print,
 ) -> Analysis:
-    """Tables and figures from raw rows; overwrites what a previous render wrote."""
+    """Tables from raw rows; overwrites what a previous render wrote."""
     analysis = analyse(rows, n_boot=n_boot)
     storage = LocalStorage(folder)
     tables = {
@@ -442,10 +437,7 @@ def render_bundle(
             write_estimates(storage, f"tables/{name}", estimates)
     if analysis.repeat_curve:
         storage.write_bytes("tables/repeat_curve.csv", _repeat_csv(analysis.repeat_curve).encode())
-    if analysis.correlates:
-        storage.write_bytes("tables/domain_correlates.csv", _correlates_csv(analysis).encode())
-    figures = _figures(folder, analysis, announce)
-    storage.write_bytes("SUMMARY.md", summary(analysis, figures).encode())
+    storage.write_bytes("SUMMARY.md", summary(analysis).encode())
     announce(f"bundle -> {folder}")
     return analysis
 
@@ -480,36 +472,7 @@ def _repeat_csv(points) -> str:
     return "\n".join(lines) + "\n"
 
 
-def _correlates_csv(analysis: Analysis) -> str:
-    lines = ["measure,n_sources,spearman_rho"]
-    lines += [f"{c.measure},{c.n_sources},{c.rho:.4f}" for c in analysis.correlates]
-    lines += ["", "source,fresh_ppl"]
-    lines += [f"{s},{p:.6g}" for s, p in analysis.fresh.items()]
-    return "\n".join(lines) + "\n"
-
-
-def _figures(folder: Path, analysis: Analysis, announce) -> list[str]:
-    try:
-        from ttt.experiments import _evidence_figures as figs
-    except ImportError:
-        announce("skipped figures: matplotlib not importable")
-        return []
-    out = folder / "figures"
-    out.mkdir(parents=True, exist_ok=True)
-    made = []
-    if analysis.regimes:
-        made.append(figs.forest(analysis.regimes, str(out / "regime_gaps.png"), title="Gap decomposition per source"))
-    if analysis.boundary:
-        made.append(figs.forest(analysis.boundary, str(out / "boundary_gaps.png"), title="Carry across document vs slice boundaries"))
-    if analysis.repeat_curve:
-        made.append(figs.repeat_curves(analysis.repeat_curve, str(out / "repeat_curve.png")))
-        made.append(figs.stability(analysis.repeat_curve, str(out / "stability.png")))
-    if analysis.correlates:
-        made.append(figs.domain_scatter(analysis.fresh, analysis.regimes + analysis.boundary, analysis.correlates, str(out / "domain_correlates.png")))
-    return [str(Path(p).relative_to(folder)) for p in made]
-
-
-def summary(analysis: Analysis, figures) -> str:
+def summary(analysis: Analysis) -> str:
     """The pooled headline per measure; per-source detail lives in tables/."""
     pooled = [
         e
@@ -532,11 +495,6 @@ def summary(analysis: Analysis, figures) -> str:
         lines += ["## Dynamic evaluation", "", "Settings chosen on the tuning cases:", ""]
         lines += [f"- tuned for {o}: {label}" for o, label in analysis.dyneval_settings.items()]
         lines.append("")
-    if analysis.correlates:
-        lines += ["## Domain correlates (Spearman vs fresh ppl)", ""]
-        lines += [f"- {c.measure}: ρ = {c.rho:+.2f} over {c.n_sources} sources" for c in analysis.correlates]
-        lines.append("")
-    lines += ["## Figures", ""] + [f"- [{f}]({f})" for f in figures]
     return "\n".join(lines) + "\n"
 
 
@@ -616,20 +574,16 @@ def main(
     out_dir: str = RESULTS_DIR,
     flags: str = "",
 ):
+    given = dict(locals())
     if not checkpoint:
         raise SystemExit("--checkpoint is required, e.g. --checkpoint ttt-v1.1/step_600")
     parsed = cli.parse_flags(flags)
     resolved = cli.from_flags(**{**cli.env_defaults(), **parsed})
-    plan = Plan(
-        suites=tuple(s.strip() for s in suites.split(",") if s.strip()),
-        n_docs=n_docs, n_slices=n_slices, n_chain=n_chain, n_repeats=n_repeats,
-        n_related=n_related, n_tune=n_tune, n_wiki_shards=n_wiki_shards,
-        dyneval_grid=dyneval_grid, dyneval_fixed=dyneval_fixed, case_slice=case_slice,
-        wiki_first_shard=wiki_first_shard, wiki_case_seed=wiki_case_seed,
-        unique_related=unique_related, n_generic=n_generic, in_context=in_context,
-        chain_lengths=chain_lengths, exclude_holdout_seed=exclude_holdout_seed,
-        overlap_seeds=overlap_seeds, cases_file=cases_file, target_tokens=target_tokens,
-    )
+    # Modal builds the CLI from the signature, so every Plan field is a parameter above.
+    plan = Plan(**{
+        **{f.name: given[f.name] for f in dataclasses.fields(Plan) if f.name != "suites"},
+        "suites": tuple(s.strip() for s in suites.split(",") if s.strip()),
+    })
     run_part, step = bundle_parts(checkpoint, resolved.train.run_name)
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     bundle = f"{run_part}/{step}/{stamp}{'-' + tag if tag else ''}"

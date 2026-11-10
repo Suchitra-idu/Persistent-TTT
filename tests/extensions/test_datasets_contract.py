@@ -13,11 +13,7 @@ from tests.extensions import _builders
 
 CASES = [pytest.param(spec, id=name) for name, spec in sorted(DATASETS.items())]
 
-MULTI_SOURCE_CASES = [
-    pytest.param(spec, id=name)
-    for name, spec in sorted(DATASETS.items())
-    if spec.constant_source is None
-]
+MULTI_SOURCE_CASES = CASES
 
 
 def test_the_registry_has_the_corpus_and_the_fixture():
@@ -26,11 +22,6 @@ def test_the_registry_has_the_corpus_and_the_fixture():
 
 def test_the_default_spec_is_registered():
     assert get(DEFAULT).name == DEFAULT
-
-
-@pytest.mark.parametrize("spec", CASES)
-def test_every_spec_is_registered_under_its_own_name(spec):
-    assert get(spec.name) is spec
 
 
 @pytest.mark.parametrize("spec", CASES)
@@ -82,11 +73,3 @@ def test_a_multi_source_spec_reads_a_json_string_meta_column(spec):
     assert spec.source_of({spec.source_meta_column: encoded}) == source
 
 
-def test_registering_a_name_twice_is_an_error():
-    with pytest.raises(ValueError, match="already registered"):
-        register(get(DEFAULT))
-
-
-def test_get_rejects_an_unknown_dataset():
-    with pytest.raises(KeyError, match="unknown dataset"):
-        get("arxiv")

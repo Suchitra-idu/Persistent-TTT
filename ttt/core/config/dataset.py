@@ -1,6 +1,6 @@
 """DatasetSpec — how to pull rows out of one corpus. Frozen (D3).
 
-Enforces D9: every row carries a source label, extracted or stamped. No
+Enforces D9: every row carries a source label, read from its metadata. No
 tokens_est_column — token counts are always estimated (`core.tokens`).
 """
 
@@ -18,19 +18,15 @@ class DatasetSpec:
     text_column: str = "text"
     source_meta_column: str | None = None
     source_meta_key: str | None = None
-    constant_source: str | None = None
     include_sources: tuple[str, ...] | None = None
     default_source_preset: str | None = None
     holdout_last_n: int = 5000
 
     def __post_init__(self) -> None:
-        extracts = bool(self.source_meta_column and self.source_meta_key)
-        stamps = bool(self.constant_source)
-        if extracts == stamps:
+        if not (self.source_meta_column and self.source_meta_key):
             raise ValueError(
-                f"dataset spec {self.name!r} must label every row exactly one "
-                "way: either source_meta_column + source_meta_key, or "
-                "constant_source (D9)"
+                f"dataset spec {self.name!r} must name source_meta_column and "
+                "source_meta_key, so every row has a source label (D9)"
             )
         if self.holdout_last_n < 0:
             raise ValueError(f"holdout_last_n must be >= 0, got {self.holdout_last_n}")
@@ -45,9 +41,6 @@ class DatasetSpec:
     def source_of(self, row: Mapping[str, Any]) -> str:
         """Never empty. Handles struct and JSON-string meta columns, because
         parquet shards and the Hub disagree about which they return."""
-        if self.constant_source is not None:
-            return self.constant_source
-
         value = row.get(self.source_meta_column)
         if isinstance(value, str):
             try:

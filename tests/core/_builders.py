@@ -6,7 +6,7 @@ import random
 
 import torch
 
-from ttt.core.types import EvalRow, PplRow, SliceRow, WorkItem
+from ttt.core.types import EvalRow, PplRow, WorkItem
 
 FP64 = torch.float64
 

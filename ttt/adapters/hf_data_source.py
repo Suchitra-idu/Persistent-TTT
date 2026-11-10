@@ -55,8 +55,6 @@ def source_labels(dataset, spec: DatasetSpec) -> list[str]:
     network-backed volume. Appending one array leaves the rest memory-mapped.
     Interned because a 6M-row corpus holds about six distinct labels.
     """
-    if spec.source_meta_column is None:
-        return [spec.constant_source] * len(dataset)
     labels: list[str] = []
     for chunk in dataset.data.column(spec.source_meta_column).chunks:
         labels.extend(

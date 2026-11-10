@@ -13,17 +13,14 @@ from ttt.adapters.numpy_rng import NumpyRng
 from ttt.app import context_eval, evidence, paper_analysis, relatedness_eval
 from ttt.core.metrics import ALL_SOURCES, geometric_mean_ppl
 from ttt.core import stats
-from ttt.core.stats import ranks
 from ttt.core.types import FRESH
 from ttt.experiments import paper_eval_v1
-from ttt.experiments._evidence_figures import MUTED, SERIES
 from ttt.experiments.paper_analysis_v1 import RESULTS_DIR, bundle_rows
 
 OUT = RESULTS_DIR / "paper"
 CONTROL = "lora-only-matched"
 RUNS = {"Hebbian": "ttt-v1.1", "Delta": "ttt-v1.1-clean-deltachunk"}
 STEPS = (200, 400, 600)
-CONTROL_COLOUR = "#1baf7a"
 N_BOOT = paper_eval_v1.DEFAULT_N_BOOT
 
 
@@ -56,15 +53,8 @@ def domain_correlates(estimates) -> list[tuple]:
     table = []
     for label in RUNS:
         gains = [100 * estimates[(label, "within", STEPS[-1])][s].relative for s in sources]
-        table.append((label, len(sources), _spearman([base[s] for s in sources], gains)))
+        table.append((label, len(sources), stats.spearman([base[s] for s in sources], gains)))
     return table
-
-
-def _spearman(x, y) -> float:
-    rx, ry = ranks(x), ranks(y)
-    mx, my = statistics.fmean(rx), statistics.fmean(ry)
-    cov = sum((a - mx) * (b - my) for a, b in zip(rx, ry))
-    return cov / math.sqrt(sum((a - mx) ** 2 for a in rx) * sum((b - my) ** 2 for b in ry))
 
 
 def write_tables(estimates, correlates) -> None:
@@ -111,19 +101,19 @@ def carry_design_estimates() -> dict[tuple[str, str], object]:
     return out
 
 
-# (label, run, raw rows, colour, marker, line style); the two carry seeds share a colour.
+# (label, run, raw rows)
 RELATEDNESS_CASES = (
-    ("ungated carry", "ttt-v1.1", "relatedness", MUTED, "o", "-"),
-    ("gated carry, seed 42", CARRY_DESIGN_LONG, "relatedness", SERIES[1], "s", "-"),
-    ("gated carry, seed 43", "hebbian-carry-600-s43", "relatedness", SERIES[1], "D", "--"),
-    ("dynamic evaluation, tuned for related", CONTROL, "dyneval_related", SERIES[0], "^", "-"),
-    ("dynamic evaluation, tuned for same document", CONTROL, "dyneval_self", CONTROL_COLOUR, "v", "--"),
+    ("ungated carry", "ttt-v1.1", "relatedness"),
+    ("gated carry, seed 42", CARRY_DESIGN_LONG, "relatedness"),
+    ("gated carry, seed 43", "hebbian-carry-600-s43", "relatedness"),
+    ("dynamic evaluation, tuned for related", CONTROL, "dyneval_related"),
+    ("dynamic evaluation, tuned for same document", CONTROL, "dyneval_self"),
 )
 
 
 def relatedness_estimates() -> dict[tuple[str, str], object]:
     out = {}
-    for label, run, raw, *_ in RELATEDNESS_CASES:
+    for label, run, raw in RELATEDNESS_CASES:
         for e in relatedness_eval.estimates(_rows(run, 600, raw), rng=NumpyRng(0), n_boot=N_BOOT):
             if e.source == ALL_SOURCES:
                 out[(label, e.measure)] = e

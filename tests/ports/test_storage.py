@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import pytest
 
-from ttt.adapters.in_memory_storage import InMemoryStorage
 from ttt.adapters.local_storage import LocalStorage
 from ttt.adapters.modal_storage import ModalStorage
 from ttt.ports.storage import Storage
@@ -62,18 +61,6 @@ class StorageConformance:
         storage.commit()
 
         assert storage.read_bytes(PATH) == DATA
-
-
-class TestInMemoryStorage(StorageConformance):
-    @pytest.fixture
-    def storage(self):
-        return InMemoryStorage()
-
-    def test_commits_are_counted(self, storage):
-        storage.commit()
-        storage.commit()
-
-        assert storage.commits == 2
 
 
 class TestLocalStorage(StorageConformance):

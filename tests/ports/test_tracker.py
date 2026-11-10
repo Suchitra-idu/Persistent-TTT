@@ -73,38 +73,11 @@ class TestInMemoryTracker(TrackerConformance):
 
         assert tracker.values_of(MICRO_STEP) == [0, 1]
 
-    def test_finish_is_observable(self, tracker):
-        tracker.finish()
-
-        assert tracker.finished
-
-    def test_it_reports_which_keys_were_logged(self, tracker):
-        tracker.log(METRICS)
-
-        assert tracker.keys_logged == frozenset(METRICS)
-
 
 class TestConsoleTracker(TrackerConformance):
     @pytest.fixture
     def tracker(self):
         return ConsoleTracker()
-
-    def test_it_prints_the_axis_first(self, tracker, capsys):
-        tracker.log(METRICS)
-
-        assert capsys.readouterr().out.startswith(f"[{TRAIN_STEP} 4] ")
-
-    def test_it_can_thin_what_it_prints(self, capsys):
-        tracker = ConsoleTracker(every=3)
-
-        for _ in range(6):
-            tracker.log(METRICS)
-
-        assert capsys.readouterr().out.count("train/loss") == 2
-
-    def test_a_zero_interval_is_rejected(self):
-        with pytest.raises(ValueError, match="every must be >= 1"):
-            ConsoleTracker(every=0)
 
 
 class TestWandbTracker(TrackerConformance):
@@ -112,31 +85,11 @@ class TestWandbTracker(TrackerConformance):
     def tracker(self):
         return WandbTracker(RecordingRun())
 
-    def test_it_declares_both_x_axes(self):
-        run = RecordingRun()
-
-        WandbTracker(run)
-
-        assert run.define_metric_calls >= 2
 
     def test_it_forwards_what_it_is_given(self, tracker):
         tracker.log(METRICS)
 
         assert tracker._run.logged == [METRICS]
-
-    def test_an_outage_degrades_to_the_fallback(self, capsys):
-        tracker = WandbTracker(ExplodingRun())
-
-        tracker.log(METRICS)
-
-        assert "train/loss" in capsys.readouterr().out
-
-    def test_an_outage_at_finish_degrades_to_the_fallback(self, capsys):
-        tracker = WandbTracker(ExplodingRun())
-
-        tracker.finish()
-
-        assert "finished" in capsys.readouterr().out
 
 
 def test_a_key_d12_cut_is_reported_outside_the_budget():

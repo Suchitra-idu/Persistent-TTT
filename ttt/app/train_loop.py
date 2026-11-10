@@ -82,11 +82,7 @@ def train(
                 window_ends = (position + 1) % cfg.carry_window == 0
                 doc = docs[item.doc_idx]
                 token_ids = doc.token_ids[item.start : item.end]
-                if micro == 0:
-                    announce(f"  first micro-step: {len(token_ids):,d} tokens, starting forward")
                 loss = compute.loss(token_ids)
-                if micro == 0:
-                    announce("  first micro-step: forward+backward-eligible loss returned")
                 micro += 1
                 total_tokens += len(token_ids)
 
@@ -171,7 +167,7 @@ def train(
 def _training_mode(fast_weights, cfg: TrainConfig) -> None:
     """Re-applied after every in-training eval, which leaves the fast weights evolving."""
     fast_weights.set_mode(
-        evolve=cfg.fast_weight_updates, session=cfg.session_training
+        evolve=cfg.fast_weight_updates, session=True
     )
 
 

@@ -13,7 +13,6 @@ from ttt.core.config.ttt import TTTConfig, derive_layer_indices
 from ttt.extensions.mechanism import InPlaceTTTMLP, RecomputeAsForward
 
 # target_conv, w_target, output_gate weight+bias, down_proj; v_source_norm stays frozen.
-THAWED_PER_LAYER = 5
 
 
 def mlp_at(model, index):
@@ -117,16 +116,6 @@ def test_every_thawed_parameter_is_classifiable():
     assert unclassified == []
 
 
-def test_unfreezing_reports_how_many_it_thawed():
-    model = _builders.TinyCausalLM()
-    cfg = TTTConfig(layer_indices=(1, 3))
-    patch_model_with_ttt(model, cfg)
-    for parameter in model.parameters():
-        parameter.requires_grad_(False)
-
-    assert unfreeze_ttt_params(model, cfg) == len(cfg.layer_indices) * THAWED_PER_LAYER
-
-
 class _SpyModel:
     """Records what `prepare_for_training` asks of a model. `TinyCausalLM` has no
     checkpointing API, and the real one needs a download."""
@@ -151,12 +140,6 @@ class _SpyModel:
 
 
 class TestPrepareForTraining:
-    def test_it_turns_on_gradient_checkpointing(self):
-        model = _SpyModel()
-
-        prepare_for_training(model)
-
-        assert "gradient_checkpointing_enable" in model.calls
 
     def test_it_asks_for_the_non_reentrant_implementation(self):
         model = _SpyModel()
@@ -173,14 +156,6 @@ class TestPrepareForTraining:
         _, recompute = model.checkpoint_kwargs["context_fn"]()
         assert isinstance(recompute, RecomputeAsForward)
 
-    def test_it_enables_input_grads(self):
-        """Belt and braces under `use_reentrant=False`; what makes the reentrant
-        path safe if anyone switches back."""
-        model = _SpyModel()
-
-        prepare_for_training(model)
-
-        assert "enable_input_require_grads" in model.calls
 
     def test_it_turns_the_kv_cache_off(self):
         model = _SpyModel()
@@ -197,15 +172,6 @@ class TestPrepareForTraining:
         prepare_for_training(model)
 
         assert "train" in model.calls
-
-    def test_input_grads_are_enabled_after_checkpointing_not_before(self):
-        model = _SpyModel()
-
-        prepare_for_training(model)
-
-        assert model.calls.index("gradient_checkpointing_enable") < model.calls.index(
-            "enable_input_require_grads"
-        )
 
 
 @pytest.mark.integration

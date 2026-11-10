@@ -38,7 +38,7 @@ ttt/
   app/          the data pipeline, the training loop, every evaluation suite
   cli.py        flags in, frozen configuration out
   experiments/  the entrypoints: train, evaluate, and the analysis scripts for the paper
-tests/          about 1,600 fast tests, mirroring ttt/
+tests/          about 1,200 fast tests (seconds on a CPU), mirroring ttt/
 results/        the result bundles of every run in the paper, and results/paper/ (tables, figures)
 Paper_TMLR/     the paper
 docs/           the documentation
@@ -80,8 +80,7 @@ modal run ttt/experiments/paper_eval_v1.py --checkpoint my-gated-carry/step_600 
 Regenerate the paper's tables and figures from `results/`, on a CPU:
 
 ```
-python -m ttt.experiments.cross_run_tables_v1
-python -m ttt.experiments.report_figures_v1
+make paper-numbers        # or: make tables, make figures
 ```
 
 The exact commands for every run in the paper, the meaning of each result

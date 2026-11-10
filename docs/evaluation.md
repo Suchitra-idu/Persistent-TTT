@@ -145,7 +145,6 @@ on the same cases, for the paper's "Training across documents".
 results/<run>/step_<n>/<stamp>[-<tag>]/
     raw/<suite>.json      one row per document (or case, token) and condition
     tables/*.csv, *.md    estimates with intervals, per source and pooled
-    figures/*.png         quick-look figures, not the paper's
     manifest.json         the command, the resolved config, the plan, git state
     SUMMARY.md            the pooled estimates
 ```

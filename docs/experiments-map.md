@@ -10,7 +10,7 @@ recorded result is never edited afterwards.
 | Name | Does |
 |---|---|
 | `parse_flags(text)` | `"carry_gate=true,seed=43"` → typed keyword arguments, each typed from its config field's default. A boolean must be one of `true/false/1/0/yes/no/on/off`. |
-| `from_flags(**flags)` | → `Resolved`. Every value in the flags string is taken as given, zero included. `limit_docs` unset means the paper's 4000; negative means the whole corpus. |
+| `from_flags(**flags)` | → `Resolved`. Every value in the flags string is taken as given, zero included. `limit_docs` unset means the paper's 4000. |
 | `resolve(...)` | Builds `TrainConfig`, `TTTConfig`, the `DatasetSpec` and the strategy. Unknown names raise and list the valid ones. |
 | `RETIRED` | Removed options still accepted at the one value the recorded commands used (`state_aware_gate=false`). |
 | `Resolved.describe()` | Every resolved setting, sorted; recorded in every manifest and W&B run. |
@@ -57,7 +57,6 @@ Helpers (leading underscore, imported by the entrypoints):
 |---|---|
 | [`_wiki_relatedness.py`](../ttt/experiments/_wiki_relatedness.py) | Loads English Wikipedia and builds the relatedness cases. |
 | [`_dynamic_adapter.py`](../ttt/experiments/_dynamic_adapter.py) | Steps and restores a loaded model's LoRA weights, for dynamic evaluation. |
-| [`_evidence_figures.py`](../ttt/experiments/_evidence_figures.py) | The quick-look PNG figures inside each bundle, and the shared plot style. |
 
 Which command produces which paper table or figure is in
 [reproducing.md](reproducing.md).

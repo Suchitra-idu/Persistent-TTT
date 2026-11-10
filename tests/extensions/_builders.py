@@ -45,8 +45,6 @@ def sources_for(lengths, *, seed: int, labels=("a", "b", "c")) -> list[str]:
 
 
 def labelled_row(spec: DatasetSpec, source: str) -> dict[str, Any]:
-    if spec.constant_source is not None:
-        return {spec.text_column: "x"}
     return {
         spec.text_column: "x",
         spec.source_meta_column: {spec.source_meta_key: source},
@@ -54,7 +52,7 @@ def labelled_row(spec: DatasetSpec, source: str) -> dict[str, Any]:
 
 
 def a_source_of(spec: DatasetSpec) -> str:
-    return spec.constant_source or spec.include_sources[0]
+    return spec.include_sources[0]
 
 
 def generator(seed: int) -> torch.Generator:

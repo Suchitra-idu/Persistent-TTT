@@ -92,5 +92,5 @@ class FakeFastWeights:
         }
         return carry_math.mean_state_ratio(ratios)
 
-    def gate_stats(self) -> tuple[float, float] | None:
-        return (0.5, 0.0)
+    def gate_mean(self) -> float | None:
+        return 0.5

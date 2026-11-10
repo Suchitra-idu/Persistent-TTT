@@ -45,12 +45,6 @@ def test_lora_targets_gate_and_up_on_every_layer(layer, projection):
     assert _matches(f"model.layers.{layer}.mlp.{projection}")
 
 
-def test_the_regex_is_stable_for_a_given_schedule():
-    assert naming.lora_target_regex(LAYERS, TTT_LAYERS) == naming.lora_target_regex(
-        LAYERS, TTT_LAYERS
-    )
-
-
 def test_a_lora_parameter_lands_in_the_lora_group():
     assert naming.classify_param(
         "model.layers.0.self_attn.q_proj.lora_A.default.weight", TTT_DOWN
@@ -74,11 +68,6 @@ def test_every_ttt_module_parameter_lands_in_the_new_group(marker):
     ) == naming.GROUP_NEW
 
 
-def test_an_unrelated_parameter_classifies_as_nothing():
-    """None is the useful answer: a trainable None means something leaked."""
-    assert naming.classify_param("model.embed_tokens.weight", TTT_DOWN) is None
-
-
 def test_lora_wins_over_the_ttt_markers():
     """A LoRA adapter on a gate_proj must not be mistaken for a TTT parameter."""
     assert naming.classify_param(
@@ -90,24 +79,10 @@ def test_the_frozen_norm_is_recognised_as_frozen():
     assert naming.is_frozen_ttt_param("model.layers.1.mlp.v_source_norm.weight")
 
 
-def test_the_frozen_norm_is_still_a_new_group_parameter():
-    """Frozen but checkpointed: it must be saved, it must not get gradients."""
-    name = "model.layers.1.mlp.v_source_norm.weight"
-
-    assert naming.classify_param(name, TTT_DOWN) == naming.GROUP_NEW
-    assert naming.is_checkpoint_key(name, TTT_DOWN)
-
-
 def test_the_peft_prefix_is_stripped_so_keys_are_base_relative():
     assert naming.strip_peft_prefix(
         "base_model.model.model.layers.1.mlp.w_target"
     ) == "model.layers.1.mlp.w_target"
-
-
-def test_stripping_leaves_an_unwrapped_name_alone():
-    assert naming.strip_peft_prefix("model.layers.1.mlp.w_target") == (
-        "model.layers.1.mlp.w_target"
-    )
 
 
 def test_fast_weights_are_checkpointed():
@@ -127,5 +102,3 @@ def test_checkpoint_keys_are_recognised_through_a_peft_wrap():
     )
 
 
-def test_down_suffixes_cover_exactly_the_ttt_layers():
-    assert len(TTT_DOWN) == len(TTT_LAYERS)

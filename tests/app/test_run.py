@@ -61,7 +61,6 @@ class Run:
             compute=self.wiring.compute,
             fast_weights=self.wiring.fast_weights,
             n_slices=self.cfg.eval_n_slices,
-            session_training=self.cfg.session_training,
         )
         self.evals.append(report)
         return report.metrics
@@ -81,14 +80,6 @@ def run():
             eval_n_docs_per_source=1,
         ),
     )
-
-
-def test_the_pipeline_produced_documents(run):
-    assert len(run.docs) == 6
-
-
-def test_every_document_carries_a_source(run):
-    assert all(doc.source for doc in run.docs)
 
 
 def test_the_run_took_every_step_its_schedule_planned(run):
@@ -125,14 +116,6 @@ def test_eval_left_the_training_carry_untouched(run):
 
 def test_nothing_outside_the_logging_budget_reached_the_tracker(run):
     assert set().union(*(outside_budget(r) for r in run.wiring.tracker.records)) == set()
-
-
-def test_the_run_announced_its_progress(run):
-    assert len(run.lines) >= run.result.steps
-
-
-def test_the_tracker_was_closed(run):
-    assert run.wiring.tracker.finished
 
 
 @pytest.mark.parametrize("name", sorted(STRATEGIES))

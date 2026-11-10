@@ -15,6 +15,18 @@ export NO_MKDOCS_2_WARNING := 1
 ## check: the gate. Dependency Rule + the fast test tier. Nothing merges red.
 check: lint test
 
+## tables: the paper's tables T1-T16 from the bundles in results/. CPU, no Modal.
+tables:
+	$(PYTHON) -m ttt.experiments.paper_analysis_v1
+	$(PYTHON) -m ttt.experiments.cross_run_tables_v1
+
+## figures: the paper's figures F15, F18, F19, into results/paper/report_figures/.
+figures:
+	$(PYTHON) -m ttt.experiments.report_figures_v1
+
+## paper-numbers: every table and figure the paper reports.
+paper-numbers: tables figures
+
 ## lint: the Dependency Rule, enforced (spec §9). A boundary violation is a failure.
 lint:
 	$(LINT_IMPORTS) --config .importlinter
@@ -80,5 +92,5 @@ _guard:
 		echo "GUARD PASS: $(WHAT) is rejected"; \
 	fi
 
-.PHONY: gpu-warm test-gpu-modal check lint test test-gpu test-all docs docs-build install-dev guard \
+.PHONY: tables figures paper-numbers gpu-warm test-gpu-modal check lint test test-gpu test-all docs docs-build install-dev guard \
         guard-core guard-app _guard

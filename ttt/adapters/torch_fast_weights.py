@@ -89,18 +89,9 @@ class TorchFastWeights:
         }
         return carry_math.mean_state_ratio(ratios)
 
-    def gate_stats(self) -> tuple[float, float] | None:
-        means = [
-            (m.gate_mean, m.gate_std)
-            for m in self._modules.values()
-            if m.gate_mean is not None
-        ]
-        if not means:
-            return None
-        return (
-            sum(mean for mean, _ in means) / len(means),
-            sum(std for _, std in means) / len(means),
-        )
+    def gate_mean(self) -> float | None:
+        means = [m.gate_mean for m in self._modules.values() if m.gate_mean is not None]
+        return sum(means) / len(means) if means else None
 
 
 def _by_layer_index(model: torch.nn.Module) -> dict[int, InPlaceTTTMLP]:

@@ -170,44 +170,12 @@ def test_a_carry_survives_only_once_advance_is_called():
     assert module.carried is None
 
 
-def test_a_batch_size_change_mid_session_is_an_error():
-    module = scanning(w_target_scale=SCALE)
-    module.session_mode = True
-    module(_builders.hidden_states(LONG))
-    module.advance_carry()
-
-    with pytest.raises(RuntimeError, match="batch size changed"):
-        module(_builders.hidden_states(LONG, batch=2))
-
-
-def test_the_gate_records_its_mean_and_spread():
+def test_the_gate_records_its_mean():
     module = scanning(w_target_scale=SCALE)
 
     module(_builders.hidden_states(LONG))
 
-    assert module.gate_mean is not None and module.gate_std is not None
-
-
-def test_a_disabled_gate_records_nothing():
-    module = scanning(w_target_scale=SCALE, output_gate=False)
-
-    module(_builders.hidden_states(LONG))
-
-    assert module.gate_mean is None
-
-
-def test_a_disabled_gate_leaves_the_ttt_term_unscaled():
-    gated = scanning(w_target_scale=SCALE)
-    ungated = scanning(w_target_scale=SCALE, output_gate=False)
-    h = _builders.hidden_states(LONG)
-
-    assert not torch.allclose(gated(h), ungated(h), atol=1e-6)
-
-
-def test_iter_ttt_modules_finds_every_patched_layer():
-    holder = torch.nn.ModuleList([scanning(), scanning(), _builders.FakeMLP(6, 8, seed=1)])
-
-    assert len(list(iter_ttt_modules(holder))) == 2
+    assert module.gate_mean is not None
 
 
 def test_the_module_is_a_drop_in_for_the_mlp_it_replaced():

@@ -101,11 +101,12 @@ Typical lines, for the gated carry at seed 42:
 
 ## Stage 3: the tables and figures
 
-Run from the repository root with the project's `.venv`:
+`make paper-numbers` runs the first three rows below (`make tables`, then
+`make figures`). Run from the repository root with the project's `.venv`:
 
 | Command | Writes | Paper |
 |---|---|---|
-| `python -m ttt.experiments.paper_analysis_v1 --control lora-only-matched --run Hebbian=ttt-v1.1 --run Delta=ttt-v1.1-clean-deltachunk --steps 200,400,600 --mechanism-step 600 --w0-norms results/paper/inputs/w0_norms.json` | `results/paper/tables/T1`–`T6` | ungated carries; T6 is the clip saturation |
+| `python -m ttt.experiments.paper_analysis_v1` | `results/paper/tables/T1`–`T6` | ungated carries; T6 is the clip saturation |
 | `python -m ttt.experiments.cross_run_tables_v1` | `T7`, `T8`, `T11`–`T16` | T11 and T14: gains of the gated carry by step and seed (main table); T13: ablation; T12 and T15: development relatedness and dynamic evaluation; T16: repeat suite; T7 and T8: per source and the domain correlation |
 | `python -m ttt.experiments.report_figures_v1` | `results/paper/report_figures/F15`, `F18`, `F19` | F15: training curve; F18: confirmatory relatedness; F19: gain per token position |
 | `python -m ttt.experiments.token_gain_analysis_v1 --cases fresh.json <tokengain bundle> ...` | `tables/addendum_a.json` in each bundle | where in the target the carry acts |

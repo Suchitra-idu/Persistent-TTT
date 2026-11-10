@@ -8,11 +8,7 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from tests.core import _builders as build
-from tests.core._oracles import (
-    sequential_chunked_delta_rule,
-    sequential_delta_rule,
-    sequential_scan,
-)
+from tests.core._oracles import sequential_chunked_delta_rule, sequential_scan
 from ttt.core import ttt_math
 
 ETA = 0.05

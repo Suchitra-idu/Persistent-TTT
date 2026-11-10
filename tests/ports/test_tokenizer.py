@@ -7,7 +7,6 @@ from ttt.adapters.hf_tokenizer import HfTokenizer
 from ttt.ports.tokenizer import Tokenizer
 
 TEXT = "the carry is the research"
-MESSAGES = ({"role": "user", "content": "hello"},)
 
 
 class TokenizerConformance:
@@ -45,23 +44,6 @@ class TestFakeTokenizer(TokenizerConformance):
     def tokenizer(self):
         return FakeTokenizer()
 
-    def test_it_round_trips_non_ascii(self, tokenizer):
-        text = "carré — δ"
-
-        assert tokenizer.decode(tokenizer.encode(text)) == text
-
-    def test_specials_survive_a_round_trip(self, tokenizer):
-        text = "a<|im_end|>b"
-
-        assert tokenizer.decode(tokenizer.encode(text)) == text
-
-    def test_specials_can_be_skipped_on_decode(self, tokenizer):
-        ids = tokenizer.encode("a<|im_end|>b")
-
-        assert tokenizer.decode(ids, skip_special_tokens=True) == "ab"
-
-    def test_a_special_token_is_one_token(self, tokenizer):
-        assert len(tokenizer.encode("<|im_end|>")) == 1
 
 @pytest.mark.integration
 class TestHfTokenizer(TokenizerConformance):

@@ -1,7 +1,7 @@
 """TTTConfig — the mechanism's hyperparameters. Frozen (D3).
 
 Changing chunk_size, eta, conv_kernel_size or normalize_delta_by_chunk
-invalidates a checkpoint. v_source and gate_reg_weight are cut (D11).
+invalidates a checkpoint.
 """
 
 from __future__ import annotations
@@ -38,7 +38,6 @@ class TTTConfig:
     conv_kernel_size: int = 8
     update_rule: str = "hebbian"
 
-    output_gate: bool = True
     # Initialises both the main gate and the carry gate. The gated carry of the
     # paper uses -6 with carry_gate and carry_backprop; these defaults are the
     # ungated carry, which the recorded ungated runs relied on.
@@ -79,8 +78,6 @@ class TTTConfig:
                 f"{self.update_rule!r}; the delta rules read the carry inside "
                 "their residual, which a separate path would bypass"
             )
-        if self.carry_gate and not self.output_gate:
-            raise ValueError("carry_gate needs output_gate=True; it is a second gate beside it")
         if self.layer_indices is not None:
             indices = tuple(self.layer_indices)
             if len(set(indices)) != len(indices):

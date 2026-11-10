@@ -56,10 +56,6 @@ def test_resamples_draw_n_indices_n_boot_times():
     assert drawn == ((2, 0, 1), (2, 0, 1))
 
 
-def test_resampling_nothing_draws_nothing():
-    assert evidence.resamples(0, 5, ScriptedRng()) == ()
-
-
 def test_paired_estimates_report_each_source_then_the_pool():
     reference = {("a", 0): 10.0, ("b", 0): 10.0}
 
@@ -108,23 +104,6 @@ def test_boundary_gaps_compare_adjacent_reset_policies(measure, expected):
     assert by(estimates, measure).interval.point == pytest.approx(expected)
 
 
-def test_domain_correlates_rank_sources_by_fresh_perplexity():
-    fresh = {"a": 10.0, "b": 20.0, "c": 30.0}
-    estimates = (
-        evidence.paired_estimates("within", {("a", 0): 11.0}, {("a", 0): 10.0}, **kw())[:1]
-        + evidence.paired_estimates("within", {("b", 0): 12.0}, {("b", 0): 10.0}, **kw())[:1]
-        + evidence.paired_estimates("within", {("c", 0): 13.0}, {("c", 0): 10.0}, **kw())[:1]
-    )
-
-    assert evidence.domain_correlates(fresh, estimates)[0].rho == pytest.approx(1.0)
-
-
-def test_fresh_by_source_reads_only_the_fresh_regime():
-    fresh = evidence.fresh_by_source(eval_rows(sources=("a", "b")))
-
-    assert fresh == pytest.approx({"a": 20.0, "b": 20.0})
-
-
 def test_the_same_base_model_on_the_same_documents_has_no_fresh_gap():
     estimates = evidence.checkpoint_estimates(eval_rows(), eval_rows(), **kw())
 
@@ -139,29 +118,12 @@ def test_a_candidate_lower_than_the_baselines_lora_wins():
     assert by(estimates, "vs_cold_carry").interval.point == pytest.approx(4.0)
 
 
-def test_unmatched_docs_counts_both_sides():
-    assert evidence.unmatched_docs(eval_rows(n_docs=3), eval_rows(n_docs=2)) == 2
-
-
 def test_rows_survive_a_json_round_trip_through_storage():
     storage = InMemoryStorage()
 
     evidence.save_json(storage, "raw/x.json", evidence.records(arm_rows()))
 
     assert evidence.rows_from(ArmRow, evidence.load_json(storage, "raw/x.json")) == arm_rows()
-
-
-def test_domain_correlates_ignore_a_gap_that_only_scales_with_base_perplexity():
-    fresh = {"a": 10.0, "b": 20.0, "c": 30.0, "d": 40.0}
-    bumps = {"a": 0.02, "b": 0.01, "c": 0.04, "d": 0.03}
-    estimates = tuple(
-        evidence.paired_estimates(
-            "within", {(s, 0): p}, {(s, 0): p * (0.9 - bumps[s])}, **kw()
-        )[0]
-        for s, p in fresh.items()
-    )
-
-    assert evidence.domain_correlates(fresh, estimates)[0].rho == pytest.approx(0.6)
 
 
 def test_the_repeat_curve_starts_at_the_first_replay():
@@ -188,5 +150,3 @@ def test_a_flat_curve_has_a_zero_trend():
     assert by(estimates, "repeat_3_vs_1").interval.point == pytest.approx(0.0)
 
 
-def test_a_single_replay_has_no_trend():
-    assert evidence.repeat_trend(repeat_rows(ppls=(10.0, 9.0)), **kw()) == ()

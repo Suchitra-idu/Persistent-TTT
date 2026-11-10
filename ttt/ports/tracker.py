@@ -1,7 +1,6 @@
 """Tracker — metric logging. Telemetry never crashes or stalls a run.
 
-The two x-axes survive D12's cut from 25 keys to 13: aggregates step on
-TRAIN_STEP, per-item signals on MICRO_STEP. `alert` does not survive.
+Aggregates step on TRAIN_STEP, per-item signals on MICRO_STEP.
 """
 
 from __future__ import annotations

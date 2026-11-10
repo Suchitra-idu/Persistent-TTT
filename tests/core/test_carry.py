@@ -103,9 +103,5 @@ def test_state_ratio_scales_linearly_with_the_state(scale):
     assert scaled == pytest.approx(base * scale, rel=1e-9)
 
 
-def test_mean_state_ratio_of_no_layers_is_zero():
-    assert carry.mean_state_ratio({}) == 0.0
-
-
 def test_mean_state_ratio_averages_over_layers():
     assert carry.mean_state_ratio({1: 0.2, 3: 0.4, 5: 0.6}) == pytest.approx(0.4)

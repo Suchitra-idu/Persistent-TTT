@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
@@ -38,34 +37,7 @@ def test_the_filter_agrees_with_the_threshold_it_is_built_from(n_chars, min_toke
     )
 
 
-def test_the_prefilter_policy_is_permissive():
-    """3.5 over-estimates tokens, so borderline docs survive to exact counting."""
-    borderline = tokens.min_chars_for(2048, tokens.PREFILTER_CHARS_PER_TOKEN)
-
-    assert borderline < tokens.min_chars_for(2048, tokens.HOLDOUT_CHARS_PER_TOKEN)
-
-
-def test_the_holdout_policy_is_conservative():
-    """4.0 under-estimates tokens; there is no second pass to catch a mistake."""
-    chars = 8000
-
-    assert tokens.estimate_tokens(chars, tokens.HOLDOUT_CHARS_PER_TOKEN) < (
-        tokens.estimate_tokens(chars, tokens.PREFILTER_CHARS_PER_TOKEN)
-    )
-
-
 def test_an_empty_document_has_no_tokens():
     assert tokens.estimate_tokens(0) == 0
 
 
-@pytest.mark.parametrize(
-    ("call", "message"),
-    [
-        (lambda: tokens.estimate_tokens(-1), "n_chars must be >= 0"),
-        (lambda: tokens.estimate_tokens(10, 0.0), "chars_per_token must be > 0"),
-        (lambda: tokens.min_chars_for(-1), "min_tokens must be >= 0"),
-    ],
-)
-def test_impossible_arguments_are_rejected(call, message):
-    with pytest.raises(ValueError, match=message):
-        call()

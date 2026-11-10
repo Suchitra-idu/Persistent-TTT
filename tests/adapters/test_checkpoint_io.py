@@ -6,8 +6,6 @@ import torch
 from tests.ports import _builders
 from ttt.adapters import checkpoint_io
 from ttt.adapters.in_memory_storage import InMemoryStorage
-from ttt.adapters.torch_fast_weights import TorchFastWeights
-from ttt.core.types import Carry
 
 PARAMS = "run/ckpt-100/" + checkpoint_io.TTT_PARAMS
 

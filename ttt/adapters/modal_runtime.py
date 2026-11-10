@@ -1,9 +1,4 @@
-"""The Modal runtime: image, volumes, secrets, and the decorators over them.
-
-Two dependencies the old image carried are gone (D11): bitsandbytes, and a
-flash-attn wheel pinned to torch2.8+cu12+cp311+cxx11abiTRUE — the most fragile
-line in the build. Attention is `sdpa` everywhere.
-"""
+"""The Modal runtime: image, volumes, secrets, and the decorators over them. Attention is `sdpa`."""
 
 from __future__ import annotations
 
@@ -29,7 +24,6 @@ REQUIREMENTS = (
     "datasets>=4.0",
     "accelerate>=1.0",
     "wandb>=0.21",
-    "matplotlib>=3.8",
 )
 
 # The env lives on the laptop `modal run` is invoked from, not on the Modal

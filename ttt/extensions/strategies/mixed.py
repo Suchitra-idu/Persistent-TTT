@@ -1,10 +1,8 @@
 """Multi-doc sessions that cross both same-source and other-source boundaries.
 
-Minilasting chains documents of one source. Mixed chains `docs_per_session`
-documents where each next document keeps the source with probability
-`same_source_share` and otherwise switches source, so the carry is trained on
-both kinds of boundary (PLAN.md Tier 1.5). Slicing matches hybrid exactly, so
-the LR schedule is the same length.
+Chains `docs_per_session` documents, each next one keeping the source with
+probability `same_source_share`, so the carry is trained on both kinds of
+boundary. Slicing matches hybrid exactly, so the LR schedule is the same length.
 """
 
 from __future__ import annotations

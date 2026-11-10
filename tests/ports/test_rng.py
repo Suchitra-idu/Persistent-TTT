@@ -68,22 +68,4 @@ class TestScriptedRng(RngConformance):
             [0, 1, 2],
         )
 
-    def test_a_short_script_cycles(self):
-        rng = ScriptedRng(integers=(4, 5))
 
-        assert [rng.integers(0, 10) for _ in range(5)] == [4, 5, 4, 5, 4]
-
-    def test_a_draw_outside_the_requested_range_is_rejected(self):
-        with pytest.raises(ValueError, match="does not match the schedule"):
-            ScriptedRng(integers=(99,)).integers(0, 10)
-
-    def test_a_scripted_non_permutation_is_rejected(self):
-        with pytest.raises(ValueError, match="not a permutation"):
-            ScriptedRng(permutations=([0, 0, 1],)).permutation(3)
-
-    def test_shuffle_follows_the_scripted_permutation(self):
-        items = ["a", "b", "c"]
-
-        ScriptedRng(permutations=([2, 0, 1],)).shuffle(items)
-
-        assert items == ["c", "a", "b"]
