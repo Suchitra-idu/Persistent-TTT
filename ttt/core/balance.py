@@ -86,8 +86,3 @@ def balanced_indices(
     return BalanceResult(indices=tuple(keep), quotas=tuple(quotas))
 
 
-def source_counts(source_labels: Sequence[str]) -> dict[str, int]:
-    counts: dict[str, int] = defaultdict(int)
-    for label in source_labels:
-        counts[label] += 1
-    return dict(counts)

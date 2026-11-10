@@ -1,4 +1,4 @@
-"""Held-out perplexity under six regimes, and the gap decomposition over them.
+"""Held-out perplexity under four regimes, and the gap decomposition over them.
 
 Snapshots the carry it found and puts it back, so firing this mid-training is a
 no-op against the loop that called it (PLAN §7 defect 3).
@@ -13,13 +13,10 @@ from ttt.app.data_pipeline import Doc
 from ttt.core import metrics, schedule
 from ttt.core.metrics import SourceSummary
 from ttt.core.types import (
-    CARRY,
-    CARRY_OFF,
     COLD_CARRY,
     COLD_CARRY_OFF,
     FRESH,
     LORA_ONLY,
-    Carry,
     EvalRow,
     PplRow,
     SliceRow,
@@ -27,17 +24,13 @@ from ttt.core.types import (
 from ttt.ports.compute import Compute
 from ttt.ports.fast_weights import FastWeights
 
-# (regime, evolve, reset between slices, seeded, lora). `fresh` and
-# `lora_only` have TTT off, so the seed cannot reach either — which is why the
-# seeded pass does not repeat them. `fresh` is the only regime with LoRA off:
-# every other regime, `lora_only` included, is the trained model as-is.
+# (regime, evolve, reset between slices, lora). `fresh` is the only regime with
+# LoRA off: every other regime, `lora_only` included, is the trained model as-is.
 PASSES = (
-    (COLD_CARRY, True, False, False, True),
-    (COLD_CARRY_OFF, True, True, False, True),
-    (LORA_ONLY, False, False, False, True),
-    (FRESH, False, False, False, False),
-    (CARRY, True, False, True, True),
-    (CARRY_OFF, True, True, True, True),
+    (COLD_CARRY, True, False, True),
+    (COLD_CARRY_OFF, True, True, True),
+    (LORA_ONLY, False, False, True),
+    (FRESH, False, False, False),
 )
 
 
@@ -55,7 +48,6 @@ def evaluate(
     compute: Compute,
     fast_weights: FastWeights,
     n_slices: int,
-    carries: Mapping[str, Carry] | None = None,
     session_training: bool = True,
 ) -> EvalReport:
     if not docs:
@@ -63,7 +55,7 @@ def evaluate(
 
     restore = fast_weights.snapshot()
     try:
-        rows, slices = _measure_all(docs, compute, fast_weights, n_slices, carries or {})
+        rows, slices = _measure_all(docs, compute, fast_weights, n_slices)
     finally:
         fast_weights.set_mode(evolve=True, session=session_training)
         fast_weights.reset_carry()
@@ -78,15 +70,12 @@ def evaluate(
 
 
 def _measure_all(
-    docs, compute, fast_weights, n_slices, carries
+    docs, compute, fast_weights, n_slices
 ) -> tuple[tuple[EvalRow, ...], tuple[SliceRow, ...]]:
     rows: list[EvalRow] = []
     slices: list[SliceRow] = []
     for doc in docs:
-        seed = carries.get(doc.source)
-        for regime, evolve, reset_between, seeded, lora in PASSES:
-            if seeded and seed is None:
-                continue
+        for regime, evolve, reset_between, lora in PASSES:
             measured = _measure(
                 doc,
                 compute=compute,
@@ -94,7 +83,6 @@ def _measure_all(
                 n_slices=n_slices,
                 evolve=evolve,
                 reset_between=reset_between,
-                seed=seed if seeded else None,
                 lora=lora,
             )
             rows.append(_row(doc, regime, measured))
@@ -103,10 +91,10 @@ def _measure_all(
 
 
 def _measure(
-    doc: Doc, *, compute, fast_weights, n_slices, evolve, reset_between, seed, lora
+    doc: Doc, *, compute, fast_weights, n_slices, evolve, reset_between, lora
 ) -> tuple[PplRow, ...]:
     fast_weights.set_mode(evolve=evolve, session=True)
-    _restart(fast_weights, seed)
+    fast_weights.reset_carry()
 
     rows: list[PplRow] = []
     for start, end in schedule.equal_token_slices(doc.n_tokens, n_slices):
@@ -120,14 +108,8 @@ def _measure(
             )
         )
         if reset_between:
-            _restart(fast_weights, seed)
+            fast_weights.reset_carry()
     return tuple(rows)
-
-
-def _restart(fast_weights, seed: Carry | None) -> None:
-    fast_weights.reset_carry()
-    if seed is not None:
-        fast_weights.install(seed)
 
 
 def _row(doc: Doc, regime: str, measured: Sequence[PplRow]) -> EvalRow:
@@ -179,7 +161,6 @@ def _aggregate(rows: Sequence[EvalRow]) -> dict[str, float]:
         "eval/gap_total": gaps.total,
         "eval/state_ratio_final": _mean_state_ratio(by_regime[COLD_CARRY]),
     }
-    measured.update(_seeded(by_regime))
     return measured
 
 
@@ -208,26 +189,6 @@ def carry_by_position(slices: Sequence[SliceRow]) -> dict[str, float]:
             sum(gains[i] for i in late) / third - sum(gains[i] for i in early) / third
         )
     return out
-
-
-def _seeded(by_regime: Mapping[str, list[EvalRow]]) -> dict[str, float]:
-    """Δseed compares the seeded docs against themselves cold, never against
-    the whole pool — the seeded subset is not a random sample of it."""
-    seeded = by_regime[CARRY]
-    if not seeded:
-        return {}
-    docs = {row.doc_idx for row in seeded}
-    carry = _mean(seeded)
-    return {
-        "eval_seed/carry_ppl": carry,
-        "eval_seed/carry_off_ppl": _mean(by_regime[CARRY_OFF]),
-        "eval_seed/gap_between": _mean(by_regime[CARRY_OFF]) - carry,
-        "eval_seed/gap_seed": _mean(
-            [row for row in by_regime[COLD_CARRY] if row.doc_idx in docs]
-        )
-        - carry,
-        "eval_seed/n_seeded_docs": float(len(seeded)),
-    }
 
 
 def _by_regime(rows: Sequence[EvalRow]) -> dict[str, list[EvalRow]]:

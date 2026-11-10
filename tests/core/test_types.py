@@ -6,7 +6,7 @@ import pytest
 import torch
 
 from tests.core import _builders as build
-from ttt.core.types import Carry, DocRef, EvalRow, PplRow, Session, SliceRow, WorkItem
+from ttt.core.types import Carry, EvalRow, PplRow, Session, SliceRow, WorkItem
 
 
 def test_a_work_item_knows_its_token_count():
@@ -40,16 +40,6 @@ def test_an_empty_session_is_rejected():
     """A session boundary with no work would reset the carry for nothing."""
     with pytest.raises(ValueError, match="at least one work item"):
         Session(items=())
-
-
-def test_a_document_without_a_source_label_is_rejected():
-    with pytest.raises(ValueError, match="empty source label"):
-        DocRef(index=0, source="", n_tokens=100)
-
-
-def test_a_document_with_negative_tokens_is_rejected():
-    with pytest.raises(ValueError, match="n_tokens must be >= 0"):
-        DocRef(index=0, source="c4", n_tokens=-1)
 
 
 def test_a_carry_is_keyed_by_base_model_layer_index():
@@ -100,7 +90,7 @@ def test_every_named_regime_is_accepted():
 
     rows = [build.eval_row(regime=regime) for regime in REGIMES]
 
-    assert len(rows) == 6
+    assert len(rows) == 4
 
 
 def _slice_row(**overrides) -> SliceRow:

@@ -38,44 +38,6 @@ class TestEngine:
 
         assert engine.rng().permutation(10) == engine.rng().permutation(10)
 
-    def test_a_run_with_no_checkpoint_carries_nothing(self):
-        engine = _runtime.Engine(
-            resolved=_builders.resolved(), tokenizer=None, storage=InMemoryStorage()
-        )
-
-        assert engine.carries() == ({}, {})
-
-    def test_a_resumed_run_reads_the_carriers_back(self):
-        storage = InMemoryStorage()
-        resolution = _builders.resolved(resume_from="step_4", run_name="run-a")
-        checkpoint_io.save_carries(
-            {"FixtureProse": _builders.carry()},
-            storage,
-            f"run-a/step_4/{checkpoint_io.CARRIES}",
-            n_updates={"FixtureProse": 12},
-        )
-        engine = _runtime.Engine(
-            resolved=resolution, tokenizer=None, storage=storage
-        )
-
-        carries, meta = engine.carries()
-
-        assert set(carries) == {"FixtureProse"} and meta["n_updates"] == (
-            {"FixtureProse": 12}
-        )
-
-    def test_a_missing_checkpoint_is_not_an_error(self):
-        resolution = _builders.resolved(resume_from="step_4", run_name="run-a")
-        engine = _runtime.Engine(
-            resolved=resolution, tokenizer=None, storage=InMemoryStorage()
-        )
-
-        assert engine.carries() == ({}, {})
-
-    def test_a_run_with_nowhere_to_write_still_completes(self):
-        engine = _runtime.Engine(resolved=_builders.resolved(), tokenizer=None)
-
-        engine.save(step=1, carries={}, n_updates={})
 
     def test_the_boot_log_names_the_model_and_the_pool(self):
         spoken = []
@@ -91,6 +53,11 @@ class TestEngine:
         _runtime.announce_boot(_builders.engine(), [], spoken.append)
 
         assert any("trainable" in line for line in spoken)
+
+    def test_a_run_with_nowhere_to_write_still_completes(self):
+        engine = _runtime.Engine(resolved=_builders.resolved(), tokenizer=None)
+
+        engine.save(step=1, carries={}, n_updates={})
 
 
 class TestTrackerSelection:

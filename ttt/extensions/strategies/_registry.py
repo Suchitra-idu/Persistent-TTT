@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import Protocol, Sequence, runtime_checkable
 
-from ttt.core.report import CompositionRow
 from ttt.core.types import Session
 
 @runtime_checkable
@@ -20,11 +19,6 @@ class Strategy(Protocol):
 
     def count(self, doc_lengths: Sequence[int]) -> int:
         """Total work items, without drawing cuts — this sizes the LR schedule."""
-
-    def compose(
-        self, doc_lengths: Sequence[int], sources: Sequence[str]
-    ) -> tuple[CompositionRow, ...]:
-        """Per-source split of carrying vs single-item docs, for the boot log."""
 
     def describe(self) -> str:
         """One line, for the boot log."""

@@ -52,16 +52,15 @@ class Run:
             announce=self.lines.append,
         )
 
-    def _save(self, *, step, carries, n_updates):
-        self.saves.append((step, dict(carries), dict(n_updates)))
+    def _save(self, *, step):
+        self.saves.append(step)
 
-    def _eval(self, *, step, carries):
+    def _eval(self, *, step):
         report = eval_loop.evaluate(
             docs=self.holdout.docs,
             compute=self.wiring.compute,
             fast_weights=self.wiring.fast_weights,
             n_slices=self.cfg.eval_n_slices,
-            carries=carries,
             session_training=self.cfg.session_training,
         )
         self.evals.append(report)
@@ -100,15 +99,8 @@ def test_every_document_was_visited_once_per_epoch(run):
     assert run.result.micro_steps == 12
 
 
-def test_every_carrier_holds_a_delta_per_layer(run):
-    assert all(
-        carry.layer_indices == _builders.LAYERS
-        for carry in run.result.carries.values()
-    )
-
-
 def test_checkpoints_landed_on_cadence_and_at_the_end(run):
-    assert [step for step, _, _ in run.saves] == [2, 4, 6, 6]
+    assert run.saves == [2, 4, 6, 6]
 
 
 def test_eval_fired_on_cadence(run):

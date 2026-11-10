@@ -7,8 +7,6 @@ import pytest
 from tests.app import _builders
 from ttt.app import eval_loop
 from ttt.core.types import (
-    CARRY,
-    CARRY_OFF,
     COLD_CARRY,
     COLD_CARRY_OFF,
     FRESH,
@@ -20,17 +18,15 @@ SLICES = 4
 
 # Cycle length coprime with the slice count, so each document lands on a
 # different offset and a subset mean is distinguishable from the pool mean.
-SHIFTING = (1.0, 0.95, 0.9, 0.85, 0.8)
 
 
-def measure(*, n_docs=2, n_slices=SLICES, losses=(1.0, 0.9, 0.8, 0.7), carries=None):
+def measure(*, n_docs=2, n_slices=SLICES, losses=(1.0, 0.9, 0.8, 0.7)):
     wiring = _builders.Wiring(losses=losses)
     report = eval_loop.evaluate(
         docs=_builders.docs(n_docs),
         compute=wiring.compute,
         fast_weights=wiring.fast_weights,
         n_slices=n_slices,
-        carries=carries,
     )
     return report, wiring
 
@@ -116,82 +112,6 @@ class TestZeroSeedPass:
         row = next(r for r in report.rows if r.regime == COLD_CARRY)
 
         assert row.n_tokens == 8
-
-
-class TestSeededPass:
-    def test_a_source_with_a_carrier_is_measured_seeded(self):
-        report, _ = measure(n_docs=2, carries={"alpha": _builders.carry()})
-
-        assert {CARRY, CARRY_OFF} <= {row.regime for row in report.rows}
-
-    def test_a_source_without_a_carrier_is_not(self):
-        report, _ = measure(n_docs=2, carries={"alpha": _builders.carry()})
-        seeded = {row.source for row in report.rows if row.regime == CARRY}
-
-        assert seeded == {"alpha"}
-
-    def test_it_reports_the_seeded_aggregates(self):
-        report, _ = measure(n_docs=2, carries={"alpha": _builders.carry()})
-
-        assert {
-            "eval_seed/carry_ppl",
-            "eval_seed/carry_off_ppl",
-            "eval_seed/gap_between",
-            "eval_seed/gap_seed",
-            "eval_seed/n_seeded_docs",
-        } <= set(report.metrics)
-
-    def test_it_counts_the_documents_it_could_seed(self):
-        report, _ = measure(n_docs=4, carries={"alpha": _builders.carry()})
-
-        assert report.metrics["eval_seed/n_seeded_docs"] == 2
-
-    def test_no_carrier_means_no_seeded_keys(self):
-        report, _ = measure(n_docs=2, carries={})
-
-        assert not any(key.startswith("eval_seed/") for key in report.metrics)
-
-    def test_the_seed_is_reinstalled_after_every_carry_off_reset(self):
-        seed = {"alpha": _builders.carry()}
-        _, one = measure(n_docs=1, n_slices=1, carries=seed)
-        _, four = measure(n_docs=1, n_slices=4, carries=seed)
-        installs = [w.fast_weights.events.count("install") for w in (one, four)]
-
-        assert installs[1] - installs[0] == 3
-
-    def test_the_seed_gap_compares_seeded_documents_against_themselves_cold(self):
-        from ttt.core.metrics import geometric_mean_ppl
-
-        report, _ = measure(n_docs=4, losses=SHIFTING, carries={"alpha": _builders.carry()})
-        seeded = {row.doc_idx for row in report.rows if row.regime == CARRY}
-        cold = geometric_mean_ppl(
-            [
-                row.ppl
-                for row in report.rows
-                if row.regime == COLD_CARRY and row.doc_idx in seeded
-            ]
-        )
-
-        assert report.metrics["eval_seed/gap_seed"] == pytest.approx(
-            cold - report.metrics["eval_seed/carry_ppl"]
-        )
-
-    def test_the_seed_gap_ignores_the_documents_it_could_not_seed(self):
-        from ttt.core.metrics import geometric_mean_ppl
-
-        report, _ = measure(n_docs=4, losses=SHIFTING, carries={"alpha": _builders.carry()})
-        whole_pool = geometric_mean_ppl(
-            [row.ppl for row in report.rows if row.regime == COLD_CARRY]
-        )
-
-        assert report.metrics["eval_seed/gap_seed"] != pytest.approx(
-            whole_pool - report.metrics["eval_seed/carry_ppl"]
-        )
-
-    def test_fresh_is_not_measured_twice(self):
-        report, _ = measure(n_docs=1, carries={"alpha": _builders.carry()})
-
-        assert len([r for r in report.rows if r.regime == FRESH]) == 1
 
 
 class TestStateRestoration:

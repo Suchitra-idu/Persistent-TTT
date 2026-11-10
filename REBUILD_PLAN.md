@@ -1,5 +1,11 @@
 # Rebuild Plan
 
+> **Historical.** This is the plan the rebuild followed, kept because the code
+> cites its decisions D1–D14. Parts it describes have since been removed
+> (chat and generation, RULER, the pilot, the `everlasting` and `minilasting`
+> strategies, the parity suite). For the code as it is, read
+> [`docs/README.md`](docs/README.md).
+
 Rebuilding the In-Place TTT research codebase under `RESEARCH_ARCHITECTURE.md`
 (the Research Hexagon). This document is the contract for the rebuild: what
 gets built, in what order, and how each phase is proven correct before the

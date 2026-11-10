@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from typing import MutableSequence, Sequence
 
-import torch
 
 
 class ScriptedRng:
@@ -63,8 +62,3 @@ class ScriptedRng:
     def random(self) -> float:
         drawn = self._next("randoms", self._randoms)
         return 0.0 if drawn is None else float(drawn)
-
-    def torch_generator(self, seed: int) -> torch.Generator:
-        generator = torch.Generator()
-        generator.manual_seed(int(seed))
-        return generator

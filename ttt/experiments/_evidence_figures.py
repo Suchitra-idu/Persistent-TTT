@@ -22,9 +22,6 @@ MUTED = "#898781"
 GRID = "#e1e0d9"
 BASELINE = "#c3c2b7"
 SERIES = ("#2a78d6", "#eb6834")
-HELPS = "#2a78d6"
-HURTS = "#e34948"
-MIDPOINT = "#f0efec"
 DPI = 200
 
 

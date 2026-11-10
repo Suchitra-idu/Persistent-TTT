@@ -14,9 +14,6 @@ class InMemoryTracker:
     def log(self, metrics: Mapping[str, float]) -> None:
         self.records.append(dict(metrics))
 
-    def log_image(self, key: str, path: str) -> None:
-        self.images.append((key, path))
-
     def finish(self) -> None:
         self.finished = True
 

@@ -1,157 +1,49 @@
-# Ring 4 map — the loops
+# Ring 4 — `ttt/app/`
 
-`ttt/app/` is orchestration and nothing else. It reaches the outside world only
-through Ring 2 protocols, so every module here runs against fakes with no GPU,
-no network and no disk — which is what the whole suite does, in milliseconds.
+The loops. Each module reaches the outside world only through the ports, so all
+of them run against the fake adapters in the tests, with no GPU, network or disk.
+Ring 4 may not import torch directly or any adapter (`.importlinter`;
+`make guard` plants such an import and expects the check to fail).
 
-Ring 4 may not import a framework at all, **torch included**. That is enforced
-(`.importlinter`, `app-stays-framework-free`) and `make guard` proves it by
-planting an `import torch` in `ttt/app/` and expecting the lint to reject it.
+## Data
 
-| File | Does | Talks to |
-|---|---|---|
-| `stages.py` | The nine pipeline stages, each `Data -> Data` | `Table`, `Tokenizer`, `Rng` |
-| `data_pipeline.py` | `PIPELINE`, the holdout split, `Doc` | `DataSource` + the above |
-| `train_loop.py` | Accumulate, clip, step, log, save, eval, carry | `Compute`, `FastWeights`, `Tracker` |
-| `eval_loop.py` | Six-regime held-out perplexity, gap decomposition | `Compute`, `FastWeights` |
-| `session_eval.py` | Per-item perplexity with the carry persisting | `Compute`, `FastWeights` |
-| `pilot.py` | Cold / persist / seeded compounding, over `session_eval` | — |
-| `boundary_eval.py` | persist / doc_reset / slice_reset arms over a same-source chain | `Compute`, `FastWeights` |
-| `repeat_eval.py` | One document replayed with an unreset carry | `Compute`, `FastWeights` |
-| `swap_eval.py` | Carry built on source A, read on a source-B document | `Compute`, `FastWeights` |
-| `evidence.py` | Paired document bootstrap over all of the above; JSON rows | `Rng`, `Storage` |
-| `generate.py` | The one token loop | `Generation` |
-| `chat.py` | Turn orchestration and the four D14 switches | `Generation`, `FastWeights`, `Tokenizer`, `Rng` |
+| File | Does |
+|---|---|
+| [`stages.py`](../ttt/app/stages.py) | The nine pipeline stages, each `Data -> Data`: `split_holdout`, `filter_sources`, `shuffle`, `prefilter`, `balance`, `tokenize`, `drop_short`, `rebalance`, `cap`. |
+| [`data_pipeline.py`](../ttt/app/data_pipeline.py) | `load` runs the stages; `documents` turns the table into `Doc`s; `holdout` draws the held-out documents per source (`eval_holdout_seed`, 20 per source in the paper's evaluations). |
 
----
+The training rows and the held-out rows are split first, by position (the last
+15,000 rows are held out), so no held-out document can reach training.
+`balance` over-fetches and `rebalance` re-applies the source ratios after
+tokenizing, because dropping short documents removes more of some sources than
+others.
 
-## The pipeline
+## Training
 
-`load_token_dataset` was 145 lines with two rebalance passes, an over-fetch
-multiplier, an `only_mode` branch and a char-count fallback all interleaved.
-It is now nine functions with one `Data -> Data` signature:
+| File | Does |
+|---|---|
+| [`train_loop.py`](../ttt/app/train_loop.py) | `train`: sessions from the strategy, one forward and backward per item, gradient accumulation, clipping, the optimizer step, the carry lifecycle (`reset_carry` per session, `advance_carry` per item, `detach_carry` per carry window and per step), logging, checkpoints, and in-training evaluation. Non-finite losses and gradients are skipped and counted, never stepped on. |
 
-```
-split_holdout → filter_sources → shuffle → prefilter → balance
-              → tokenize → drop_short → rebalance → cap
-```
+## Evaluation suites
 
-Three of the old branches are gone rather than moved:
+Each returns rows, one per document (or case) and condition; [evaluation.md](evaluation.md)
+says what each measures.
 
-- **`if "source" in ds.column_names`** — D9 makes the label universal, so
-  `filter_sources`, `balance` and `rebalance` have no `has_source` fallback.
-- **`if tokens_est_column`** — D9 makes the estimate universal, so `prefilter`
-  is single-branch over `core.tokens`.
-- **`only_mode`** — an `--only-sources` pick is a preset with equal weights, and
-  `core.balance` already drops sources a preset omits. `cap` is last in the list
-  anyway, so the "defer the limit" special case dissolves.
+| File | Suite |
+|---|---|
+| [`eval_loop.py`](../ttt/app/eval_loop.py) | `regimes`: the four regimes over 8 slices per document, and the gap decomposition. Restores the carry it found, so it is safe to call mid-training. |
+| [`session_eval.py`](../ttt/app/session_eval.py) | per-item perplexity with the carry persisting; the building block of the boundary and repeat suites |
+| [`boundary_eval.py`](../ttt/app/boundary_eval.py) | `boundary`: chains of same-source documents, carried or reset at the boundary |
+| [`repeat_eval.py`](../ttt/app/repeat_eval.py) | `repeat`: one document read ten times with an unreset carry |
+| [`context_eval.py`](../ttt/app/context_eval.py) | `context`: the carry against the previous slice in attention |
+| [`relatedness_eval.py`](../ttt/app/relatedness_eval.py) | `relatedness`: case selection (`pick`, `mentions`), the primed arms, the generic carry, the overlap check (`shingles`, `overlaps`), the contrasts and the preregistered headline |
+| [`token_gain.py`](../ttt/app/token_gain.py) | `token_gain`: per-token losses on the relatedness cases |
+| [`dynamic_eval.py`](../ttt/app/dynamic_eval.py) | `dyneval`: the dynamic-evaluation baseline, its grid and tuning |
 
-**Why two balancing passes.** `drop_short` is source-biased: Books survive it
-because they are long, C4 does not because it has many short documents. A mix
-balanced before tokenizing is not one after. So `balance` over-fetches by
-`PRESET_OVERSAMPLE`, and `rebalance` re-applies the exact ratios once the true
-token counts are known.
+## Statistics over the rows
 
-**Ratios are only exact under a limit.** With no `limit_docs`, both balancing
-passes target the pool size, and a majority source's quota is bounded only by
-what it has — so the mix moves toward the preset without reaching it. Set
-`limit_docs` when the ratio matters. This is the old behaviour, now visible in
-the stage log rather than buried in a print.
-
-**`Table.filter` exists for the prefilter.** `column()` materialises; SlimPajama-6B
-is millions of rows of text and would not fit. `filter(name, predicate)` is
-row-wise on both adapters (`dataset.filter` on the HF side), so the pass that
-shrinks the corpus never holds it. `tokenize` does read a column, by which point
-the over-fetch has bounded the pool.
-
----
-
-## The train loop
-
-Three decisions the old loop made implicitly, now explicit and tested:
-
-**A nonfinite loss does not defer the accumulation boundary.** The old code
-`continue`d before the boundary check, so a nonfinite landing on the last micro
-of a window rolled that window's gradients into the next one — a double-size
-step, and a step count that drifts out of sync with the LR schedule. The rebuilt
-loop still skips the backward, still advances the carry, still counts the micro,
-and still steps at the boundary with one micro's contribution missing.
-
-**A window with no finite loss at all does not step.** Otherwise AdamW would
-apply weight decay to every parameter on the strength of no gradient.
-
-**The rate logged is the rate used.** The old loop called `scheduler.step()`
-after `optimizer.step()` and logged `get_last_lr()`, which is the *next* step's
-rate. `_learning_rates` takes the count before the step, so `train/lr_*` is what
-the optimizer actually applied.
-
-Checkpointing and eval are injected callables, not imports: serialization needs
-torch and lives in `ttt/adapters/checkpoint_io.py`, which Ring 4 may not touch.
-Ring 5 supplies both.
-
----
-
-## Eval, and what the metric names mean
-
-The metric keys predate the regime vocabulary and disagree with it. Both are
-kept — the keys because a dashboard reads them, the regimes because
-`core.metrics` decomposes over them:
-
-| Metric key | Regime | Starts from | Between slices |
-|---|---|---|---|
-| `eval/carry_ppl` | `cold_carry` | zero | persists |
-| `eval/carry_off_ppl` | `cold_carry_off` | zero | reset |
-| `eval/fresh_ppl` | `fresh` | — (TTT off) | — |
-| `eval_seed/carry_ppl` | `carry` | the trained per-source carrier | persists |
-| `eval_seed/carry_off_ppl` | `carry_off` | the carrier, reinstalled | reset |
-
-`fresh` is not measured twice: with `evolve=False` the TTT branch is bypassed
-entirely, so a seed cannot reach it.
-
-`eval_seed/gap_seed` compares the seeded documents **against themselves cold**,
-never against the whole pool — the seeded subset is whichever sources happen to
-have a carrier, which is not a random sample of the holdout.
-
-Per-source numbers are the RQ3 deliverable and are *not* logged: D12 cut them
-from wandb, where they were ~40 keys of noise per eval. They come back as
-`EvalReport.summaries`, for the console table and the analysis records.
-
-**Eval restores what it found.** It snapshots the carry, runs, and reinstalls in
-a `finally` — so firing it mid-training is a no-op against the loop that called
-it. The old `run_holdout_eval` did this too and had no test; it has two now,
-including one that raises mid-measurement.
-
----
-
-## Chat: the switch matrix (D14)
-
-| Switch | Off | On |
-|---|---|---|
-| `within_turn` | fast weight frozen for the turn | chunk-scan updates as tokens stream |
-| `cross_turn` | state cleared at the turn boundary | delta survives, **decayed** |
-| `seed` | start from zero | install a named source's trained carrier |
-| `context` | `none` — TTT is the only memory | `full` — ordinary history, the control |
-
-All three D14 defects are fixed here, and each fix has a test that fails when
-the fix is reverted:
-
-1. **The seed could not reach chat.** Chat runs the stream path, which reads the
-   streaming delta; the trained carrier was written to the carry. One `Carry`
-   representation plus `install(carry, family=STREAM)` connects them.
-2. **Two incompatible key schemes.** Killed in Phase 3 — there is one `Carry`,
-   keyed by base-model layer index, and nothing enumeration-keyed to mix it with.
-3. **No decay at the turn boundary.** `decay_stream(factor=...)` applies the same
-   EMA training uses, so chat stops driving `state_ratio` into a regime the model
-   never saw. Passing `decay=1.0` reproduces the old unbounded sum, which is what
-   the defect looked like.
-
-Per-turn diagnostics answer "is the carry doing anything" rather than leaving it
-to be guessed: `state_ratio`, `pending_tokens / chunk_size` (a zero state ratio
-means either "frozen" or "chunk not full yet" — this disambiguates), the share of
-the state this turn added, and gate mean/std. A gate pinned near zero means the
-TTT term cannot be reaching the output, which is the first thing to check when
-two arms of an A/B read identically.
-
-`ab_turn` runs the same turn on two sessions. With an identical `sampling.seed`
-both arms draw the same tokens, so a difference attributes to the switches rather
-than to sampling noise.
+| File | Does |
+|---|---|
+| [`evidence.py`](../ttt/app/evidence.py) | Rows in, estimates out: the paired bootstrap over documents, the regime gaps (`REGIME_GAPS`), the boundary and repeat estimates, per-source summaries, JSON row I/O. |
+| [`paper_analysis.py`](../ttt/app/paper_analysis.py) | Cross-checkpoint estimates: rebasing on a control's `fresh` rows, the lead over a matched model, per-position estimates, clip saturation, state statistics. |
+| [`token_gain_analysis.py`](../ttt/app/token_gain_analysis.py) | The preregistered Addendum A: where in the target the gain falls, tokens in neither prime, the generic share, with cluster bootstrap over shared primes. |

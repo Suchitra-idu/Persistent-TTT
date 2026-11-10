@@ -20,9 +20,6 @@ class ConsoleTracker:
             return
         print(_line(metrics))
 
-    def log_image(self, key: str, path: str) -> None:
-        print(f"[image] {key} -> {path}")
-
     def finish(self) -> None:
         print("tracker finished")
 

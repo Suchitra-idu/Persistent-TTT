@@ -17,7 +17,6 @@ SPECIAL_TOKENS = (
     "</think>",
 )
 BYTE_OFFSET = len(SPECIAL_TOKENS)
-VOCAB_SIZE = BYTE_OFFSET + 256
 
 _SPECIAL_RE = re.compile("|".join(re.escape(token) for token in SPECIAL_TOKENS))
 

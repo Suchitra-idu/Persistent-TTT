@@ -26,14 +26,6 @@ def permutation(n: int, rng) -> list[int]:
     return list(rng.permutation(n))
 
 
-def uniform_indices(n_available: int, n_wanted: int, rng) -> list[int]:
-    if n_available < 0:
-        raise ValueError(f"n_available must be >= 0, got {n_available}")
-    pool = list(range(n_available))
-    rng.shuffle(pool)
-    return pool[: max(0, n_wanted)]
-
-
 def n_per_source_indices(
     source_labels: Sequence[str], n_per_source: int, rng
 ) -> tuple[list[int], list[SourceShortfall]]:

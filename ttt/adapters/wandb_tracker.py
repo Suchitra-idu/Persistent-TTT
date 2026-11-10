@@ -12,7 +12,7 @@ from typing import Mapping
 from ttt.adapters.console_tracker import ConsoleTracker
 from ttt.ports.tracker import MICRO_STEP, TRAIN_STEP
 
-_AGGREGATE_NAMESPACES = ("train/*", "grad/*", "eval/*", "eval_seed/*")
+_AGGREGATE_NAMESPACES = ("train/*", "grad/*", "eval/*")
 
 
 class WandbTracker:
@@ -46,15 +46,6 @@ class WandbTracker:
         except _wandb_errors() as exc:
             self._warn(exc)
             self._fallback.log(metrics)
-
-    def log_image(self, key: str, path: str) -> None:
-        try:
-            import wandb
-
-            self._run.log({key: wandb.Image(path)})
-        except _wandb_errors() as exc:
-            self._warn(exc)
-            self._fallback.log_image(key, path)
 
     def finish(self) -> None:
         try:

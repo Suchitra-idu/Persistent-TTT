@@ -649,9 +649,12 @@ def main(
     write_bundle(Path(out_dir) / bundle, payload, manifest, n_boot=n_boot)
 
 
-def rerender(folder: str, n_boot: int = DEFAULT_N_BOOT) -> Analysis:
+def rerender(folder: str, n_boot: int | None = None) -> Analysis:
+    """`n_boot` defaults to the bundle's own, so a re-render reproduces its intervals."""
     root = Path(folder)
     storage = LocalStorage(root)
+    if n_boot is None:
+        n_boot = evidence.load_json(storage, "manifest.json").get("n_boot") or DEFAULT_N_BOOT
     rows = {
         Path(path).stem: evidence.load_json(storage, path)
         for path in storage.listdir("raw")

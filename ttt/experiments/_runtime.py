@@ -9,13 +9,12 @@ one out of fakes and drive a whole experiment with no GPU.
 from __future__ import annotations
 
 import dataclasses
-from dataclasses import dataclass, field
-from typing import Any, Callable, Mapping
+from dataclasses import dataclass
+from typing import Any, Callable
 
 from ttt import cli
 from ttt.adapters import checkpoint_io
 from ttt.adapters.numpy_rng import NumpyRng
-from ttt.core.types import Carry
 from ttt.ports.compute import Compute
 from ttt.ports.fast_weights import FastWeights
 from ttt.ports.rng import Rng
@@ -44,15 +43,6 @@ class Engine:
 
     def rng(self, seed: int | None = None) -> Rng:
         return NumpyRng(self.resolved.train.seed if seed is None else seed)
-
-    def carries(self) -> tuple[dict[str, Carry], dict[str, Any]]:
-        """The trained per-source carriers to resume or seed from, or ({}, {})."""
-        resume = _resume_dir(self.resolved)
-        if not resume or self.storage is None:
-            return {}, {}
-        return checkpoint_io.load_carries(
-            self.storage, f"{resume}/{checkpoint_io.CARRIES}"
-        )
 
 
 def build(
@@ -108,22 +98,16 @@ def build(
 
 
 def _checkpointer(engine: Engine, announce: Callable[[str], None]) -> Callable[..., None]:
-    """Both artefacts, the adapter, then one commit — in that order, so a
+    """The TTT parameters, the adapter, then one commit — in that order, so a
     partially written step directory is never visible as a complete one."""
 
-    def save(*, step: int, carries: Mapping[str, Carry], n_updates: Mapping[str, int]):
+    def save(*, step: int):
         prefix = cli.step_path(engine.resolved.train.run_name, step)
         checkpoint_io.save_ttt_params(
             engine.model,
             engine.storage,
             f"{prefix}/{checkpoint_io.TTT_PARAMS}",
             layer_indices=engine.resolved.ttt.layer_indices or (),
-        )
-        checkpoint_io.save_carries(
-            carries,
-            engine.storage,
-            f"{prefix}/{checkpoint_io.CARRIES}",
-            n_updates=n_updates,
         )
         engine.model.save_pretrained(f"{engine.root}/{prefix}/{ADAPTER_DIR}")
         engine.storage.commit()

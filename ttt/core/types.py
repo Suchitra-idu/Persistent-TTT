@@ -1,7 +1,6 @@
 """Core vocabulary. Ports and plugins are defined in these, not framework types.
 
-`carry` means the session-persistent fast weight and nothing else; the
-streaming family is `stream_state` (PLAN §9.1).
+`carry` means the session-persistent fast weight and nothing else.
 """
 
 from __future__ import annotations
@@ -11,39 +10,15 @@ from typing import Mapping
 
 import torch
 
-# Regimes. A regime fixes whether the fast weight evolves within an item, what
-# it starts from, and whether LoRA is applied: fresh = the untouched base
-# model, nothing else; lora_only = LoRA on, TTT off — isolates the LoRA
-# contribution from the TTT one; cold_* = TTT starts from zero;
-# carry/carry_off = starts from the trained per-source seed; *_off = reset
-# between items. A zero-seed eval measures fresh, lora_only, and the cold_*
-# trio.
+# Regimes, the ways a held-out document is read: fresh = the untouched base
+# model; lora_only = the trained model with fast weights off; cold_carry_off =
+# fast weights on, reset at every slice; cold_carry = fast weights and the carry.
 FRESH = "fresh"
 LORA_ONLY = "lora_only"
 COLD_CARRY_OFF = "cold_carry_off"
 COLD_CARRY = "cold_carry"
-CARRY_OFF = "carry_off"
-CARRY = "carry"
 
-REGIMES = (FRESH, LORA_ONLY, COLD_CARRY_OFF, COLD_CARRY, CARRY_OFF, CARRY)
-
-
-@dataclass(frozen=True)
-class DocRef:
-    """One document in the pool. `source` is never empty (D9)."""
-
-    index: int
-    source: str
-    n_tokens: int
-
-    def __post_init__(self) -> None:
-        if self.n_tokens < 0:
-            raise ValueError(f"n_tokens must be >= 0, got {self.n_tokens}")
-        if not self.source:
-            raise ValueError(
-                f"doc {self.index} has an empty source label; every spec must "
-                "label every row (D9)"
-            )
+REGIMES = (FRESH, LORA_ONLY, COLD_CARRY_OFF, COLD_CARRY)
 
 
 @dataclass(frozen=True)
@@ -172,34 +147,6 @@ class SliceRow:
             )
         if self.slice_index < 0:
             raise ValueError(f"slice_index must be >= 0, got {self.slice_index}")
-        if self.ppl <= 0.0:
-            raise ValueError(f"ppl must be positive, got {self.ppl}")
-
-
-@dataclass(frozen=True)
-class RepeatRow:
-    """One regime, `repeat` replays into the same document. Only
-    `cold_carry` (and `carry`, if ever seeded) actually changes across
-    replays — `fresh`/`lora_only`/`cold_carry_off` reset or never evolve, so
-    a caller measures them once per doc and repeats the row rather than
-    recomputing an identical pass."""
-
-    doc_idx: int
-    source: str
-    regime: str
-    repeat: int
-    n_tokens: int
-    ppl: float
-    state_ratio: float = 0.0
-    gate_mean: float = 1.0
-
-    def __post_init__(self) -> None:
-        if self.regime not in REGIMES:
-            raise ValueError(
-                f"unknown regime {self.regime!r}; expected one of {list(REGIMES)}"
-            )
-        if self.repeat < 0:
-            raise ValueError(f"repeat must be >= 0, got {self.repeat}")
         if self.ppl <= 0.0:
             raise ValueError(f"ppl must be positive, got {self.ppl}")
 

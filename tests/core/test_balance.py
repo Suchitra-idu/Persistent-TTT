@@ -120,10 +120,6 @@ def test_balancing_rejects_negative_weights():
         balance.balanced_indices(["c4"] * 10, {"c4": -1}, 5)
 
 
-def test_source_counts_report_the_raw_mix():
-    assert balance.source_counts(["c4", "books", "c4"]) == {"c4": 2, "books": 1}
-
-
 def _balance_or_skip(source_labels, w, target):
     """Property-test helper: discard inputs where no preset source is present.
 

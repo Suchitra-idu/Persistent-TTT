@@ -1,57 +1,68 @@
-# Docs
+# Documentation
 
-Documentation for the rebuilt tree. The root `docs/` describes the old flat
-layout and is untouched until cutover (PLAN D13).
+This repository is the code behind the paper *Session-Persistent Test-Time
+Training for Language Models: Transfer and Interference of a Carried Fast Weight
+Across Documents* (`Paper_TMLR/main.tex`). It adds In-Place TTT layers to
+Qwen3-0.6B, carries their fast weight from one slice or document to the next
+through a gated path, trains that on SlimPajama-6B, and measures the effect in
+perplexity.
 
-Read as files, or run `make docs` from the repo root and open
-<http://127.0.0.1:8000>.
+Read the pages as files, or run `make docs` and open <http://127.0.0.1:8000>.
+
+## Pages
 
 | Page | Read it for |
 |---|---|
-| [mechanism.md](mechanism.md) | What In-Place TTT does, with the formulas |
-| [research.md](research.md) | The proposal's two components/Q1–Q2 mapped onto the code, what each required check maps to, the config knobs that matter for the write-up, and empirical findings |
-| [glossary.md](glossary.md) | Every term used in the code |
-| [core-map.md](core-map.md) | What is in each Ring 0 file |
-| [extensions-map.md](extensions-map.md) | The Ring 1 plugins and the TTT module |
-| [ports-map.md](ports-map.md) | The Ring 2 ports and their real/fake adapters |
-| [app-map.md](app-map.md) | The Ring 4 loops, the pipeline, and the D14 chat switches |
-| [experiments-map.md](experiments-map.md) | The CLI surface, the entrypoints, and the Modal runtime |
-| [testing.md](testing.md) | How to run and add tests |
+| [mechanism.md](mechanism.md) | The method: the TTT layer and the gated carry, equation by equation, with the code for each part |
+| [codebase.md](codebase.md) | How the code is organised, and how a training run, an evaluation and the paper's numbers flow through it |
+| [evaluation.md](evaluation.md) | Every evaluation suite: what it measures, how, and which paper section uses it |
+| [reproducing.md](reproducing.md) | Run names, the exact training and evaluation commands, and which script writes which table and figure |
+| [research.md](research.md) | Each finding in the paper, with the suite, runs and table it comes from |
+| [glossary.md](glossary.md) | Every term used in the code and the paper |
+| [core-map.md](core-map.md) | `ttt/core/`, file by file |
+| [extensions-map.md](extensions-map.md) | `ttt/extensions/`: the TTT layer, strategies, datasets |
+| [ports-map.md](ports-map.md) | `ttt/ports/` and `ttt/adapters/` |
+| [app-map.md](app-map.md) | `ttt/app/`: the data pipeline, the training loop, the suites |
+| [experiments-map.md](experiments-map.md) | `ttt/cli.py` and `ttt/experiments/`: the CLI and the entrypoints |
+| [testing.md](testing.md) | How the tests are organised and run |
 
-Elsewhere: [MIGRATION.md](../MIGRATION.md) for what moved and what was dropped,
-[ARCHITECTURE.md](../ARCHITECTURE.md) for the rings,
-[REBUILD_PLAN.md](../REBUILD_PLAN.md) for the rebuild decisions D1–D14,
-[tests/RULES.md](../tests/RULES.md) for the test doctrine.
+## Reading paths
 
-## Status
+**To understand the method:** [mechanism.md](mechanism.md), then
+[`ttt/core/ttt_math.py`](../ttt/core/ttt_math.py), [`ttt/core/carry.py`](../ttt/core/carry.py)
+and [`ttt/extensions/mechanism/inplace_ttt.py`](../ttt/extensions/mechanism/inplace_ttt.py)
+(together about 500 lines), then [`tests/core/test_ttt_math.py`](../tests/core/test_ttt_math.py)
+for what is guaranteed about them.
 
-All six phases done: enforcement, Ring 0, Ring 1's two registries plus the TTT
-module, Rings 2/3 (ten ports with a real and a fake adapter each), Ring 4's eight
-loop modules, Ring 5's CLI and entrypoints, and the OLD-vs-NEW parity suite.
-The `gpu` tier is written but has not been run — it needs a real H100.
+**To find your way around the code:** [codebase.md](codebase.md), then the map
+of the package you are in.
 
-Cutover is a separate call and is not done: see
-[MIGRATION.md](../MIGRATION.md).
+**To check a number in the paper:** [research.md](research.md) for which output
+it comes from, then [reproducing.md](reproducing.md) for the command.
+
+**To run something:** [reproducing.md](reproducing.md).
+
+**To change something:** the "Where to change what" table in
+[codebase.md](codebase.md#where-to-change-what), then [testing.md](testing.md).
 
 ## Commands
 
-Run from the repo root.
+Run from the repository root.
 
 | Command | Does |
 |---|---|
-| `make check` | The gate: import contracts + the fast test tier |
-| `make test` | Tests only, minus `gpu` / `integration` / `slow` |
-| `make lint` | Import contracts only |
-| `make guard` | Proves enforcement is live (plants a bad import) |
-| `make test-gpu` | The gated tier. Needs a real GPU; empty until Phase 6 |
-| `make docs` | Serve these pages with live reload |
-| `make docs-build` | Build to `site/`; `--strict`, so a broken link fails |
+| `make install-dev` | Install the package and its development dependencies into `.venv` |
+| `make check` | Import contracts and the fast tests: the gate before any change is done |
+| `make test` | The fast tests only |
+| `make lint` | The import contracts only |
+| `make guard` | Proves the import contracts are live, by planting a forbidden import |
+| `make test-gpu-modal` | The GPU tests, on a Modal H100 |
+| `make docs` / `make docs-build` | Serve or build these pages |
 
-## Reading order
+## Also
 
-1. [mechanism.md](mechanism.md) — the research idea.
-2. [`ttt/core/ttt_math.py`](../ttt/core/ttt_math.py) and
-   [`ttt/core/carry.py`](../ttt/core/carry.py) — that idea as ~130 lines.
-3. [`tests/core/test_ttt_math.py`](../tests/core/test_ttt_math.py) — what is
-   guaranteed about it.
-4. [ARCHITECTURE.md](../ARCHITECTURE.md) — where everything else will go.
+- [`ARCHITECTURE.md`](../ARCHITECTURE.md): the layer rules and how they are enforced.
+- [`REBUILD_PLAN.md`](../REBUILD_PLAN.md): the design decisions D1–D14 cited in the code.
+- [`tests/RULES.md`](../tests/RULES.md): the testing rules.
+- `plan/PREREGISTRATION.md`: the preregistered confirmatory evaluation.
+- `results/paper/FINDINGS.md`: working notes on the results, written during the study.

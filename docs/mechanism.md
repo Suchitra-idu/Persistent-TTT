@@ -1,268 +1,139 @@
-# The mechanism
+# The method, in code
 
-## The idea
+This page follows the paper's Method section and points at the code that
+implements each part. The paper is `Paper_TMLR/main.tex`; the code paths below
+are relative to the repository root.
 
-A normal MLP down-projection is fixed at inference:
+## Where the layer sits
 
-```
-out = z @ W0ᵀ
-```
+`InPlaceTTTMLP` ([`ttt/extensions/mechanism/inplace_ttt.py`](../ttt/extensions/mechanism/inplace_ttt.py))
+replaces the MLP of every TTT layer of Qwen3-0.6B. The layers are the 14
+odd-numbered ones, 1, 3, ..., 27, derived from the model depth by
+`derive_layer_indices` in [`ttt/core/config/ttt.py`](../ttt/core/config/ttt.py)
+(stride 2, start 1). `patch_model_with_ttt` in
+[`ttt/adapters/model_builder.py`](../ttt/adapters/model_builder.py) does the
+replacement, then LoRA is added on top.
 
-In-Place TTT adds a **fast weight** `S` that the model updates *while reading*,
-gated by a learned, per-token scalar:
-
-```
-out = z @ W0ᵀ + gate(h) · (η · z @ Sᵀ)
-```
-
-`S` starts at zero and is not trained by gradient descent — it is built during
-the forward pass, by one of three interchangeable **update rules**
-(`TTTConfig.update_rule`). The research question is whether keeping `S`
-across a whole session — instead of throwing it away — makes the model better
-at the text it is currently working on. See
-[research.md](research.md) for how that question is actually measured.
-
-## The update rules
-
-Tokens are processed in chunks of `C` (default 50). `Z` is the MLP's hidden
-activation — the pattern the state reads and writes with. `V =
-Conv1d(hidden_states) @ W_target` is a learned target — what the state is
-trying to reconstruct. `W_target` is zero-initialised, so at training step 0
-every TTT layer is bit-identical to the base MLP, regardless of rule.
-
-Both rules below build the same object, `S`, a `[d_model, d_ff]` matrix
-functioning as a second, temporary `down_proj`. They disagree on *how* `S`
-should change when a new `(z, v)` pair arrives, and that disagreement is the
-whole reason two rules exist.
-
-### `hebbian` (default) — `ttt_math.scan`
-
-Named for the classical rule it literally is: Hebb's "cells that fire
-together wire together," expressed as an outer product write with no error
-term at all:
+The layer keeps the pretrained `gate_proj`, `up_proj` and `down_proj`. With
+`z = act(gate_proj(h)) * up_proj(h)` the gated MLP activation and `h` the MLP
+input:
 
 ```
-ΔS_k = V_kᵀ Z_k / C_k
-S_k  = S_carried + Σ_{j<k} ΔS_j        (chunk k reads only strictly earlier chunks)
-out_k = Z_k W0ᵀ + η · Z_k S_kᵀ
+out = W_down z  +  g(h) * eta * S z                       (In-Place TTT term)
+              +  alpha * g_c(h) * eta * clip(S_carried) z  (gated carry only)
 ```
 
-An outer product `v ⊗ z` binds a target pattern to an activation pattern:
-it's a rank-1 (rank-`C` for a whole chunk) associative memory write. Reading
-it back with some new activation `z'` recovers a blend of every `v` ever
-written, each weighted by how much `z'` resembles the `z` it was written
-with (`z'·z_j`, via the same matmul that applies `S`). This is exactly the
-content-addressable memory model behind classical Hopfield networks and the
-"fast weight programmers" line of work (Schmidhuber, 1992) that linear
-attention is now understood to be an instance of — `S` is memory, `z` is the
-address, `v` is the value.
+## The fast weight inside one item
 
-Nothing in that write asks whether `S` already predicts `V` well. Every
-chunk's contribution is added at full strength regardless of whether it
-reinforces what's already stored or contradicts it — there is no mechanism
-that could even detect the difference, only accumulation. Bindings can
-superpose cleanly when their addresses (`z`'s) are close to orthogonal, or
-blur into each other when they overlap, the same interference a Hopfield
-memory shows well past its capacity. That's also exactly what makes
-`hebbian` embarrassingly **chunk-parallel**: chunk `k`'s own contribution
-`ΔS_k` needs nothing from any other chunk to compute — it only depends on
-that chunk's own `Z_k`, `V_k`. The whole document's deltas can be computed
-independently, all at once, and then combined causally with a single
-exclusive prefix-sum (`exclusive_cumsum`) — the same primitive that gives
-this function its name, `scan`. That exclusive sum is also the entire
-causality guarantee: chunk `k` is built only from chunks strictly before it,
-so a token is never predicted using a state that already saw it.
+An *item* is one slice of a document, or a whole short document. Inside it the
+fast weight `S` is written chunk by chunk, `C = 50` tokens per chunk.
 
-### `delta` / `delta_chunk` — `ttt_math.delta_scan` / `chunked_delta_scan`
+| Paper | Code |
+|---|---|
+| target `V_k`: causal depthwise convolution (kernel 8) over the RMS-normalised hidden states, then a zero-initialised projection `W_target` | `InPlaceTTTMLP._targets`, `target_conv`, `w_target`, `v_source_norm` |
+| Hebbian write `ΔS_k = (1/C) V_kᵀ Z_k` | `ttt_math.chunk_deltas` ([`ttt/core/ttt_math.py`](../ttt/core/ttt_math.py)) |
+| chunk `k` reads only earlier chunks | `ttt_math.exclusive_cumsum` |
+| clip `‖η S‖_F ≤ 20`, applied when the state is read, never fed back | `ttt_math.frobenius_clip` inside `ttt_math.scan` |
+| `η S z` added to the output | `ttt_math.apply_state` |
+| chunked delta rule, error from the chunk-start state | `ttt_math.chunked_delta_scan` (`update_rule=delta_chunk`) |
 
-The delta rule is the classical Widrow-Hoff / least-mean-squares update
-(1960): "delta" is literally the error term, `v − prediction`. Sun et al.
-2024's contribution was recognizing that this — not the Hebbian write above
-— is the update that makes a fast weight behave like a small model being
-*trained*, online, one step per token, during inference:
+Because `W_target` starts at zero, every target is zero at step 0, so the layer
+is exactly the base MLP before training. The main gate `g(h) = σ(w_gᵀh + b_g)`
+is `output_gate`; its weights start at zero and its bias at
+`output_gate_bias_init`, so it starts about `σ(b_g)` open. `_gated` applies it
+and records its mean and spread for logging.
 
-```
-pred_t = η̃(z_t) · (S_t @ z_t)          (η̃ = adaptive step, see below)
-δ_t    = (v_t − pred_t) ⊗ z_t          (the residual — this is the gradient)
-S_{t+1}= decay · S_t + δ_t
-```
+The chunked delta rule uses a normalised step `η / (1 + ‖z‖²)` for its
+prediction (`_adaptive_eta`), feeds the clip back into the running state, and
+detaches the state every `truncate_every` chunks. Only the ungated delta-rule
+run uses it.
 
-Read `S_t @ z_t` as `S`'s current prediction for what `v_t` should be, given
-`z_t`. `δ_t` is that prediction's error, turned back into an update the same
-way it always is in a one-layer linear model trained by gradient descent —
-because that's exactly what this is: `δ_t` is `-∇_S L(S_t)` for the per-token
-squared loss `L(S) = ‖v_t − S·z_t‖²`, up to the constant folded into `η`. The
-"inner loop" is a training loop; `S` is the parameter it's training.
+A single chunk with nothing carried in contributes nothing, because chunk 0
+reads an empty state. `_scan_forward` returns the base output directly in that
+case, unless a session is running, since the item's write is still needed for
+the next item.
 
-That framing is what explains the behaviour a pure accumulator can't have:
-**as `S` gets better at predicting the kind of tokens it keeps seeing, the
-residual shrinks, and so does the update.** A state that has found a good
-local fit for the current input distribution stops moving — not because
-something external stopped it, but because there's nothing left to correct.
-If the input changes character (a new topic, a document boundary), the
-residual reappears and `S` moves again to chase it. This is a converging
-dynamical system seeking a moving target, not a ledger that only ever grows.
+## The carry between items
 
-`delta_chunk` is not a cruder approximation of `delta` — it's the same
-relationship mini-batch gradient descent has to fully online, per-example
-gradient descent: the state is frozen for the length of one chunk, every
-token in that chunk computes its residual against that same chunk-start
-state, and the chunk's total write batches into a single matmul, the same
-parallel shape as `hebbian`'s. This is Sun et al.'s own "dual form" of the
-recurrence. What it costs against `delta`: some update quality (a chunk's
-later tokens are compared to an already-slightly-stale `S`, not the freshest
-possible one), traded for computing an entire chunk in parallel instead of
-token by token.
-
-The fundamental reason `delta`/`delta_chunk` can't be as parallel as
-`hebbian`, even in the chunked case: `hebbian`'s write needs nothing but its
-own chunk's `Z`, `V`. The delta rule's write needs the *state the chunk
-started from*, because the residual is measured against a prediction that
-state made — so chunk `k`'s delta cannot be computed until chunk `k−1`'s is
-known. `delta_chunk` is sequential across `N/chunk_size` chunks for exactly
-this reason; `delta` is sequential across all `N` tokens for the same
-reason, one level finer.
-
-Two things only `delta`/`delta_chunk` need, both consequences of being an
-actual gradient step rather than a fixed write: the adaptive step
-`η̃(z) = η / (1 + ‖z‖²)` (a fixed `η` tuned for `hebbian`, which has no
-notion of a stability bound, is nowhere near the delta rule's own
-step-size × curvature condition, `η·‖z‖² < ~2`, once `z` has outlier-scale
-dims — the same divergence condition ordinary gradient descent has), and
-`truncate_every` (below), needed because the recurrence's backward pass, not
-its forward value, can compound instability across steps.
-
-Code: [`ttt/core/ttt_math.py`](../ttt/core/ttt_math.py).
-
-## Truncated BPTT
-
-`delta`/`delta_chunk` only: the state is detached from the autograd graph
-every `truncate_every` steps (tokens for `delta`, chunks for `delta_chunk`),
-bounding how far backward can chain through repeated `frobenius_clip` calls.
-`truncate_every=1` starves `w_target` of gradient entirely — it only ever
-shapes a *later* chunk's read, never its own, so cutting the graph every
-step leaves it with no path to the loss at all. `5` is the default.
-
-## The output gate
+At the end of each item the layer adds the item's total update to a carried
+state, with earlier states decaying by 0.9:
 
 ```
-gate = sigmoid(W_gate · h + b_gate)
-out  = base_out + gate · ttt_out
+S_carried <- 0.9 * S_carried + ΔS_item
 ```
 
-`W_gate` is zero-initialised (one output unit, so the gate starts *uniform*
-across every token): `sigmoid(output_gate_bias_init)`, default `-2.0` →
-`≈0.12`. The TTT term starts almost entirely suppressed and has to earn its
-way open through training. `gate_mean`/`gate_std`, captured under `no_grad`
-every forward, are on `session_eval.ItemRow` — a gate pinned near zero means
-the TTT term cannot be reaching the output, whatever the carry itself is
-doing.
+This is `carry.advance` in [`ttt/core/carry.py`](../ttt/core/carry.py), called
+from `_scan_forward`. The new state is *staged* in forward
+(`_next_carried`) and *promoted* by `advance_carry()` after backward, so a
+gradient-checkpointing recompute cannot write it twice. It is kept in float32.
 
-### `state_aware_gate` — an opt-in second term
+Two ways to read the carried state, set by `carry_gate`:
+
+- **Ungated carry** (`carry_gate=False`): `S_carried` is added to the state the
+  scan starts from, so it is read through the same gate and clip as the
+  in-slice fast weight. This is In-Place TTT with the reset removed.
+- **Gated carry** (`carry_gate=True`): `S_carried` never enters the scan. It is
+  read by `_carried_term`: its own clip (`‖η clip(S)‖_F ≤ 20`), its own gate
+  `g_c = output_gate_carry`, and a scale `alpha = output_gate_carry_scale`
+  initialised to zero, so the carried term is exactly zero at the start.
+
+**Training through the carry** (`carry_backprop=True`) keeps `S_carried` in the
+autograd graph, so the loss on a later item also trains what an earlier item
+wrote. The training loop cuts the graph every `carry_window = 2` items and at
+every optimizer step (`detach_carry`). `RecomputeAsForward` makes gradient
+checkpointing replay a layer with the carry it actually read.
+
+The paper's gated carry is therefore:
 
 ```
-gate = sigmoid(W_gate · h + b_gate + state_scale · ||eta·S||_F / ||W0||_F)
+carry_gate=true, carry_backprop=true, output_gate_bias_init=-6
 ```
 
-Off by default (`TTTConfig.state_aware_gate = False`). The gate above reads
-only the current token — it treats an empty carry and a heavily-loaded one
-identically for the same `h`. `state_scale` is a second, zero-init learned
-scalar (`InPlaceTTTMLP.output_gate_state_scale`) on the incoming carry's own
-Frobenius norm (the same normalization as `carry.state_ratio`), so the gate
-can learn to open further as the carry actually grows instead of by a fixed
-amount regardless of it. Zero-init means it starts as an exact no-op, same
-convention as `w_target`; it only does anything once trained with the flag
-on. No effect if `output_gate` is `False`.
+The config defaults (`carry_gate=False`, `carry_backprop=False`, bias `-2`)
+are the ungated carry, because the recorded ungated runs relied on them.
 
-## Three levels of memory
+## Sessions and the reset
 
-| Level | Spans | Controlled by |
+A *session* is the list of items whose carry is kept. The carry is reset at
+every session boundary (`fast_weights.reset_carry()`). The strategy decides
+what a session is ([`ttt/extensions/strategies/`](../ttt/extensions/strategies/)):
+
+- `hybrid` (the default, used by every within-document model): one document per
+  session. A document shorter than 2100 tokens is one item; a longer one is cut
+  into 2 to 6 slices of at least 1000 tokens. So the carry is trained between
+  slices of one document.
+- `mixed` (the probe trained across documents): sessions of 5 documents, each
+  next document from the same source with probability 0.5, so the carry is
+  also trained across document boundaries.
+
+In-Place TTT's own behaviour, a reset at every document boundary, is what every
+evaluation compares the carry against.
+
+## The switches an evaluation uses
+
+`FastWeights.set_mode(evolve=..., session=...)` controls the layer:
+
+| Setting | Effect |
+|---|---|
+| `evolve=False` | the layer is `down_proj(z)`: trained weights, no fast weight |
+| `evolve=True, session=False` | fast weights inside an item, no carry |
+| `evolve=True, session=True` | fast weights and the carry |
+| `pretrained_mlps(model)` | the untouched pretrained `W_down`, no fast weight (the base model) |
+
+The parameter-matched control is trained with `fast_weight_updates=False`, which
+trains the same architecture with `evolve=False`: its TTT modules are never used,
+so only LoRA and the down-projections are trained.
+
+## What is trained
+
+`TorchCompute` ([`ttt/adapters/torch_compute.py`](../ttt/adapters/torch_compute.py))
+puts every trainable parameter into one of three groups, by name
+(`naming.classify_param` in [`ttt/core/naming.py`](../ttt/core/naming.py)):
+
+| Group | Parameters | Learning rate |
 |---|---|---|
-| Within-item scan | one slice of one document | `chunk_size`, `eta` |
-| Cross-item carry | one session | `carried_decay`, the strategy |
-| Per-source seed | the whole run | everlasting strategy, checkpointed |
+| `lora` | LoRA adapters, rank 16, on attention, `gate_proj` and `up_proj` everywhere, and on `down_proj` of the non-TTT layers only (`naming.lora_target_regex`) | `1e-5` |
+| `wdown` | the down-projections of the TTT layers | `3e-5` |
+| `new` | `target_conv`, `w_target`, the gates, `alpha` | `6e-2` |
 
-Each level is measured separately — see [regimes](#regimes).
-
-## The carry
-
-At an item boundary the item's total delta folds into the session carry:
-
-```
-S ← carried_decay · S + Σ_k ΔS_k
-```
-
-`carried_decay = 1.0` is a pure sum and grows without bound.
-`0.0` keeps only the last item. `0.9–0.95` bounds the magnitude while still
-averaging across items. A constant per-item delta converges to `1/(1-decay)`.
-
-Code: [`ttt/core/carry.py`](../ttt/core/carry.py), function `advance`.
-
-## Bounding it
-
-Two magnitude controls, easy to confuse:
-
-| Control | Applied to | Where |
-|---|---|---|
-| Frobenius clip | the state used for the forward, per chunk | `ttt_math.frobenius_clip` |
-| EMA decay | the state crossing an item boundary | `carry.advance` |
-
-The clip does **not** compound: it scales the state at apply time and is never
-fed back into the accumulation. The delta crossing an item boundary is
-unclipped — the decay is what bounds that.
-
-`state_ratio = ‖η·S‖_F / ‖W0‖_F` is the one number saying whether the fast
-weight is doing anything. Near zero: the TTT term is inert.
-
-## Regimes
-
-Six ways to run the same document. A regime fixes three switches: is LoRA on,
-does the fast weight evolve within an item, and what does it start from?
-
-| Regime | LoRA | Evolves | Starts from | Reset between items |
-|---|---|---|---|---|
-| `fresh` | no | no | — | — |
-| `lora_only` | yes | no | — | — |
-| `cold_carry_off` | yes | yes | zero | yes |
-| `cold_carry` | yes | yes | zero | no |
-| `carry_off` | yes | yes | trained seed | yes |
-| `carry` | yes | yes | trained seed | no |
-
-`fresh` is the only regime with LoRA off — every other regime, `lora_only`
-included, is otherwise the trained model as-is. A zero-seed eval measures
-`fresh`, `lora_only`, and the `cold_*` trio.
-
-## The result
-
-Differences between regimes decompose additively, so each one measures exactly
-one mechanism:
-
-```
-Δlora    = fresh          − lora_only         LoRA's own effect
-Δwithin  = lora_only      − cold_carry_off    within-item scan
-Δbetween = cold_carry_off − cold_carry        cross-item carry
-Δseed    = cold_carry     − carry             the trained per-source seed
-Δtotal   = fresh          − carry             = Δlora + Δwithin + Δbetween + Δseed
-```
-
-Positive means perplexity went down, i.e. the mechanism helped. A carry-scoped
-chained eval (`single_doc_eval_v1.run_chained`) reports a different, per-slice
-`Δbetween = carry_off.ppl − carry.ppl` — same name, a different question, at
-finer granularity. Don't conflate the two.
-
-Code: [`ttt/core/metrics.py`](../ttt/core/metrics.py), function
-`gap_decomposition`. Additivity is a property test, not a comment.
-
-## Two state families, not one
-
-The old code blurred these; the rebuild does not (PLAN §9.1).
-
-| | **carry** | **stream_state** |
-|---|---|---|
-| What | session-persistent fast weight | streaming buffer for generation |
-| Used by | training, every eval, the pilot | chat and free-text generation only |
-| Path | `scan` | `stream_chunk_delta` / `stream_apply` |
-
-They share no state. "The carry" always means the first. No function named
-`*_fast_weights` exists — that name straddled both and let two incompatible
-key schemes coexist (PLAN D14 defect 2).
+An unclassified trainable parameter is an error, never a silently untrained one.

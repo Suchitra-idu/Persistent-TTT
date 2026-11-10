@@ -1,6 +1,6 @@
 """Cross-run tables T7, T8 and T11 to T16 from the paper_eval bundles. Local, no GPU.
 
-    python -m ttt.experiments.thesis_figures_v1
+    python -m ttt.experiments.cross_run_tables_v1
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ from ttt.core.stats import ranks
 from ttt.core.types import FRESH
 from ttt.experiments import paper_eval_v1
 from ttt.experiments._evidence_figures import MUTED, SERIES
-from ttt.experiments.paper_analysis_v1 import RESULTS_DIR, Bundle, is_development, newest_bundle, pinned
+from ttt.experiments.paper_analysis_v1 import RESULTS_DIR, bundle_rows
 
 OUT = RESULTS_DIR / "paper"
 CONTROL = "lora-only-matched"
@@ -27,16 +27,7 @@ CONTROL_COLOUR = "#1baf7a"
 N_BOOT = paper_eval_v1.DEFAULT_N_BOOT
 
 
-def _rows(run: str, step: int, name: str):
-    """From the pinned bundle, else the newest at that step that measured
-    `name`; a step can hold several bundles, each with different suites."""
-    pin = pinned(RESULTS_DIR, run, step, name)
-    if pin is not None:
-        return Bundle(run=run, step=step, path=pin).rows(name)
-    for stamp in sorted((RESULTS_DIR / run / f"step_{step}").glob("*/raw"), reverse=True):
-        if (stamp / f"{name}.json").is_file() and is_development(stamp.parent):
-            return Bundle(run=run, step=step, path=stamp.parent).rows(name)
-    return newest_bundle(RESULTS_DIR, run, step).rows(name)
+_rows = bundle_rows
 
 
 def source_estimates():

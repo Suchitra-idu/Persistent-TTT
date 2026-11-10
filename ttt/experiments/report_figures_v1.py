@@ -14,7 +14,7 @@ from ttt.adapters.numpy_rng import NumpyRng
 from ttt.app import evidence, paper_analysis
 from ttt.core.metrics import ALL_SOURCES
 from ttt.experiments.paper_analysis_v1 import RESULTS_DIR
-from ttt.experiments.thesis_figures_v1 import _rows
+from ttt.experiments.paper_analysis_v1 import bundle_rows as _rows, pinned
 
 OUT = RESULTS_DIR / "paper" / "report_figures"
 N_BOOT = 1000
@@ -182,18 +182,9 @@ CONF_LEVELS = (("gain_self", "same\ndocument"), ("gain_related", "related\nartic
                ("gain_other_source", "other\nsource"))
 
 
-FRESH_BUNDLES = {
-    (GATED, 600): "20261102-112255-fresh",
-    (GATED_43, 600): "20261102-114532-fresh",
-    (GATED_FULL, FULL_STEP): "20261103-001617-fresh",
-    (ACROSS, 600): "20261102-115716-fresh",
-    (ACROSS_43, 600): "20261102-225743-fresh",
-}
-
-
 def _fresh(run: str, step: int) -> dict:
     """Pinned: a step also holds token-gain and short-text bundles of the same cases."""
-    bundle = RESULTS_DIR / run / f"step_{step}" / FRESH_BUNDLES[(run, step)]
+    bundle = pinned(RESULTS_DIR, run, step, "fresh")
     out = {}
     for line in (bundle / "tables" / "relatedness.csv").read_text().splitlines()[1:]:
         measure, source, _, point, low, high, *_ = line.split(",")
@@ -220,7 +211,6 @@ def conf_relatedness(out: Path) -> Path:
     return _save(fig, out, "F18_fresh_relatedness")
 
 
-TOKEN_BUNDLE = "20261103-164544-tokengain-fresh"
 TOKEN_EDGES = (1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024)
 TOKEN_ARMS = (("self", "same document", NAVY, "o"), ("related", "related article", BLUE, "s"),
               ("random", "random article", GRAY, "D"), ("other_source", "other source", ORANGE, "v"))
@@ -229,7 +219,7 @@ TOKEN_ARMS = (("self", "same document", NAVY, "o"), ("related", "related article
 def _token_gains(run: str):
     from ttt.app import token_gain_analysis
 
-    rows = json.loads((RESULTS_DIR / run / "step_600" / TOKEN_BUNDLE / "raw" / "token_gain.json").read_text())
+    rows = json.loads((pinned(RESULTS_DIR, run, 600, "token_gain") / "raw" / "token_gain.json").read_text())
     return token_gain_analysis.gains(rows)
 
 

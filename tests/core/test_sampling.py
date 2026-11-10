@@ -29,31 +29,6 @@ def test_a_permutation_is_seed_stable():
     assert sampling.permutation(50, FakeRng(3)) == sampling.permutation(50, FakeRng(3))
 
 
-@given(
-    n_available=st.integers(min_value=0, max_value=100),
-    n_wanted=st.integers(min_value=0, max_value=100),
-    seed=st.integers(0, 10_000),
-)
-def test_uniform_sampling_returns_distinct_in_range_indices(
-    n_available, n_wanted, seed
-):
-    picked = sampling.uniform_indices(n_available, n_wanted, FakeRng(seed))
-
-    assert len(set(picked)) == len(picked)
-    assert all(0 <= i < n_available for i in picked)
-
-
-@given(
-    n_available=st.integers(min_value=0, max_value=100),
-    n_wanted=st.integers(min_value=0, max_value=100),
-    seed=st.integers(0, 10_000),
-)
-def test_uniform_sampling_never_exceeds_the_pool(n_available, n_wanted, seed):
-    picked = sampling.uniform_indices(n_available, n_wanted, FakeRng(seed))
-
-    assert len(picked) == min(n_wanted, n_available)
-
-
 @given(source_labels=labels, n=st.integers(min_value=0, max_value=10))
 @settings(max_examples=50, deadline=None)
 def test_n_per_source_never_takes_more_than_n_from_any_source(source_labels, n):

@@ -10,7 +10,6 @@ from ttt.adapters.torch_fast_weights import TorchFastWeights
 from ttt.core.types import Carry
 
 PARAMS = "run/ckpt-100/" + checkpoint_io.TTT_PARAMS
-CARRIES = "run/ckpt-100/" + checkpoint_io.CARRIES
 
 
 @pytest.fixture
@@ -31,32 +30,6 @@ def test_it_saves_every_ttt_tensor_of_every_ttt_layer(storage, model_and_cfg):
     )
 
     assert saved == len(cfg.layer_indices) * len(_builders.TTT_TENSOR_SUFFIXES)
-
-
-def test_it_saves_the_fast_weight_alongside_the_new_modules(storage, model_and_cfg):
-    model, cfg = model_and_cfg
-    checkpoint_io.save_ttt_params(
-        model, storage, PARAMS, layer_indices=cfg.layer_indices
-    )
-    layer = cfg.layer_indices[0]
-
-    keys = checkpoint_io.keys_in(storage, PARAMS)
-
-    assert set(keys) >= {
-        f"model.layers.{layer}.mlp.{suffix}"
-        for suffix in _builders.TTT_TENSOR_SUFFIXES
-    }
-
-
-def test_it_saves_nothing_that_is_not_a_ttt_key(storage, model_and_cfg):
-    model, cfg = model_and_cfg
-    checkpoint_io.save_ttt_params(
-        model, storage, PARAMS, layer_indices=cfg.layer_indices
-    )
-
-    keys = checkpoint_io.keys_in(storage, PARAMS)
-
-    assert not any("lm_head" in key or "embed" in key for key in keys)
 
 
 def test_a_parameter_round_trips(storage, model_and_cfg):
@@ -99,53 +72,27 @@ def test_a_shape_change_is_reported_before_anything_is_copied(storage, model_and
     assert torch.equal(wider.model.layers[cfg.layer_indices[0]].mlp.w_target, original)
 
 
-def test_an_absent_carry_file_is_an_empty_seed(storage):
-    assert checkpoint_io.load_carries(storage, CARRIES) == ({}, {})
-
-
-def test_carries_round_trip_per_source(storage, model_and_cfg):
+def test_it_saves_the_fast_weight_alongside_the_new_modules(storage, model_and_cfg):
     model, cfg = model_and_cfg
-    fast_weights = TorchFastWeights(model, cfg)
-    fast_weights.set_mode(evolve=True, session=True)
-    model(input_ids=torch.tensor([_builders.token_ids(12)]))
-    fast_weights.advance_carry()
-
-    checkpoint_io.save_carries(
-        {"alpha": fast_weights.snapshot(to_cpu=True)}, storage, CARRIES
+    checkpoint_io.save_ttt_params(
+        model, storage, PARAMS, layer_indices=cfg.layer_indices
     )
-    loaded, _ = checkpoint_io.load_carries(storage, CARRIES)
+    layer = cfg.layer_indices[0]
 
-    fast_weights.reset_carry()
-    fast_weights.install(loaded["alpha"])
+    keys = checkpoint_io.keys_in(storage, PARAMS)
 
-    assert fast_weights.state_ratio() > 0.0
-
-
-def test_carry_keys_stay_base_model_layer_indices(storage, model_and_cfg):
-    _, cfg = model_and_cfg
-    carry = Carry(deltas={i: torch.ones(1, 1) for i in cfg.layer_indices})
-
-    checkpoint_io.save_carries({"alpha": carry}, storage, CARRIES)
-    loaded, _ = checkpoint_io.load_carries(storage, CARRIES)
-
-    assert loaded["alpha"].layer_indices == cfg.layer_indices
+    assert set(keys) >= {
+        f"model.layers.{layer}.mlp.{suffix}"
+        for suffix in _builders.TTT_TENSOR_SUFFIXES
+    }
 
 
-def test_update_counts_survive_the_round_trip(storage):
-    checkpoint_io.save_carries(
-        {"alpha": Carry.empty()}, storage, CARRIES, n_updates={"alpha": 7}
+def test_it_saves_nothing_that_is_not_a_ttt_key(storage, model_and_cfg):
+    model, cfg = model_and_cfg
+    checkpoint_io.save_ttt_params(
+        model, storage, PARAMS, layer_indices=cfg.layer_indices
     )
 
-    _, meta = checkpoint_io.load_carries(storage, CARRIES)
+    keys = checkpoint_io.keys_in(storage, PARAMS)
 
-    assert meta["n_updates"] == {"alpha": 7}
-
-
-def test_metadata_survives_the_round_trip(storage):
-    checkpoint_io.save_carries(
-        {}, storage, CARRIES, meta={"step": 400, "strategy": "everlasting"}
-    )
-
-    _, meta = checkpoint_io.load_carries(storage, CARRIES)
-
-    assert meta["strategy"] == "everlasting"
+    assert not any("lm_head" in key or "embed" in key for key in keys)

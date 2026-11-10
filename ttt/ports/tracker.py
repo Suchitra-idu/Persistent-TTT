@@ -36,11 +36,6 @@ BUDGET = frozenset(
         "eval/state_ratio_final",
         *(f"eval/carry_gain_slice_{index}" for index in range(1, 16)),
         "eval/carry_gain_trend",
-        "eval_seed/carry_ppl",
-        "eval_seed/carry_off_ppl",
-        "eval_seed/gap_between",
-        "eval_seed/gap_seed",
-        "eval_seed/n_seeded_docs",
     }
 )
 
@@ -49,10 +44,6 @@ BUDGET = frozenset(
 class Tracker(Protocol):
     def log(self, metrics: Mapping[str, float]) -> None:
         """Must not raise: a telemetry outage is not a training failure."""
-
-    def log_image(self, key: str, path: str) -> None:
-        """A pre-rendered image file under a key. Same never-raises contract
-        as `log` — a path is a plain string so this port stays framework-free."""
 
     def finish(self) -> None: ...
 

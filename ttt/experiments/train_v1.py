@@ -64,7 +64,6 @@ def run(
         )
     on_data_ready()
 
-    carries, _ = engine.carries()
     return train_loop.train(
         docs=docs,
         compute=engine.compute,
@@ -73,7 +72,6 @@ def run(
         strategy=resolved.strategy,
         cfg=resolved.train,
         rng=engine.rng(),
-        carries=carries,
         checkpoint=engine.save,
         evaluate=_evaluator(resolved, engine, holdout.docs, announce),
         announce=announce,
@@ -86,13 +84,12 @@ def _evaluator(resolved, engine, holdout_docs, announce):
     if not holdout_docs:
         return None
 
-    def evaluate(*, step: int, carries):
+    def evaluate(*, step: int):
         measured = eval_loop.evaluate(
             docs=holdout_docs,
             compute=engine.compute,
             fast_weights=engine.fast_weights,
             n_slices=resolved.train.eval_n_slices,
-            carries=carries,
             session_training=resolved.train.session_training,
         )
         announce(report.render(report.per_source_table(measured.summaries)))

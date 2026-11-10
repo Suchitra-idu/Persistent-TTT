@@ -44,15 +44,6 @@ class RngConformance:
 
         assert all(0.0 <= value < 1.0 for value in drawn)
 
-    def test_the_torch_generator_is_reproducible_per_seed(self, rng):
-        import torch
-
-        first = torch.rand(4, generator=rng.torch_generator(11))
-        second = torch.rand(4, generator=rng.torch_generator(11))
-
-        assert torch.equal(first, second)
-
-
 class TestNumpyRng(RngConformance):
     @pytest.fixture
     def rng(self):

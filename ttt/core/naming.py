@@ -14,7 +14,6 @@ TTT_FROZEN_MARKERS = ("v_source_norm",)
 GROUP_LORA = "lora"
 GROUP_WDOWN = "wdown"
 GROUP_NEW = "new"
-PARAM_GROUPS = (GROUP_LORA, GROUP_WDOWN, GROUP_NEW)
 
 
 def strip_peft_prefix(name: str) -> str:

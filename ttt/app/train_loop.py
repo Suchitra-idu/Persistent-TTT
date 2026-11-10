@@ -13,7 +13,6 @@ from typing import Callable, Mapping, Protocol, Sequence
 from ttt.app.data_pipeline import Doc
 from ttt.core import lr_schedule, metrics
 from ttt.core.config.train import TrainConfig
-from ttt.core.types import Carry
 from ttt.extensions.strategies import Strategy
 from ttt.ports.compute import LORA, NEW, WDOWN, Compute
 from ttt.ports.fast_weights import FastWeights
@@ -29,24 +28,14 @@ class TrainResult:
     nonfinite_steps: int
     total_tokens: int
     total_steps: int
-    carries: Mapping[str, Carry]
-    n_updates: Mapping[str, int]
 
 
 class Checkpointer(Protocol):
-    def __call__(
-        self,
-        *,
-        step: int,
-        carries: Mapping[str, Carry],
-        n_updates: Mapping[str, int],
-    ) -> None: ...
+    def __call__(self, *, step: int) -> None: ...
 
 
 class Evaluator(Protocol):
-    def __call__(
-        self, *, step: int, carries: Mapping[str, Carry]
-    ) -> Mapping[str, float]: ...
+    def __call__(self, *, step: int) -> Mapping[str, float]: ...
 
 
 def train(
@@ -58,7 +47,6 @@ def train(
     strategy: Strategy,
     cfg: TrainConfig,
     rng,
-    carries: Mapping[str, Carry] | None = None,
     checkpoint: Checkpointer | None = None,
     evaluate: Evaluator | None = None,
     announce: Callable[[str], None] = lambda _: None,
@@ -73,8 +61,6 @@ def train(
     warmup = lr_schedule.warmup_steps(
         total_steps, cfg.warmup_ratio, cfg.warmup_min_steps
     )
-    carried: dict[str, Carry] = dict(carries or {})
-    n_updates: dict[str, int] = {}
 
     _training_mode(fast_weights, cfg)
     step = micro = sessions = nonfinite = nonfinite_steps = total_tokens = 0
@@ -162,14 +148,14 @@ def train(
                     announce(_progress(step, total_steps, window_loss, cfg, stats))
                     window_loss = 0.0
                 if checkpoint is not None and step % cfg.save_every == 0:
-                    checkpoint(step=step, carries=carried, n_updates=n_updates)
+                    checkpoint(step=step)
                 if evaluate is not None and cfg.eval_every > 0:
-                    _maybe_eval(step, cfg, evaluate, tracker, announce, carried)
+                    _maybe_eval(step, cfg, evaluate, tracker, announce)
                     _training_mode(fast_weights, cfg)
             sessions += 1
 
     if checkpoint is not None:
-        checkpoint(step=step, carries=carried, n_updates=n_updates)
+        checkpoint(step=step)
     tracker.finish()
     return TrainResult(
         steps=step,
@@ -179,8 +165,6 @@ def train(
         nonfinite_steps=nonfinite_steps,
         total_tokens=total_tokens,
         total_steps=total_steps,
-        carries=carried,
-        n_updates=n_updates,
     )
 
 
@@ -221,10 +205,10 @@ def _step_metrics(step, step_loss, rates, stats, cfg) -> dict[str, float]:
     }
 
 
-def _maybe_eval(step, cfg, evaluate, tracker, announce, carried) -> None:
+def _maybe_eval(step, cfg, evaluate, tracker, announce) -> None:
     if step % cfg.eval_every:
         return
-    measured = evaluate(step=step, carries=carried)
+    measured = evaluate(step=step)
     tracker.log({TRAIN_STEP: step, **measured})
     announce(_eval_line(measured))
 

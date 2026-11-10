@@ -9,11 +9,10 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import Mapping, Sequence
+from typing import Sequence
 
 from ttt.app.data_pipeline import Doc
 from ttt.core import metrics, schedule
-from ttt.core.types import Carry
 from ttt.ports.compute import Compute
 from ttt.ports.fast_weights import FastWeights
 
@@ -47,19 +46,14 @@ def session_perplexity(
     evolve: bool = True,
     reset_between_items: bool = False,
     reset_between_docs: bool = True,
-    carries: Mapping[str, Carry] | None = None,
-    force_source: str = "",
 ) -> tuple[ItemRow, ...]:
-    """`force_source` installs that source's carrier whatever the doc is — the
-    swap test: a source-specific benefit should degrade under a mismatch."""
     fast_weights.set_mode(evolve=evolve, session=True)
-    seeds = carries or {}
 
     rows: list[ItemRow] = []
     position = 0
     for index, doc in enumerate(docs):
         if index == 0 or reset_between_docs:
-            _restart(fast_weights, seeds, force_source or doc.source)
+            fast_weights.reset_carry()
         for start, end in schedule.equal_token_slices(doc.n_tokens, n_slices):
             loss = compute.eval_loss(doc.token_ids[start:end])
             fast_weights.advance_carry()
@@ -78,12 +72,5 @@ def session_perplexity(
             )
             position += 1
             if reset_between_items:
-                _restart(fast_weights, seeds, force_source or doc.source)
+                fast_weights.reset_carry()
     return tuple(rows)
-
-
-def _restart(fast_weights, seeds: Mapping[str, Carry], source: str) -> None:
-    fast_weights.reset_carry()
-    seed = seeds.get(source)
-    if seed is not None:
-        fast_weights.install(seed)

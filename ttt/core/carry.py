@@ -21,15 +21,6 @@ def advance(
     return decay * carried + item_delta
 
 
-def steady_state_scale(decay: float) -> float:
-    """1/(1-decay): what a constant per-item delta converges to under `advance`."""
-    if not 0.0 <= decay < 1.0:
-        raise ValueError(
-            f"a steady state exists only for decay in [0, 1), got {decay}"
-        )
-    return 1.0 / (1.0 - decay)
-
-
 def state_ratio(state: torch.Tensor | None, w0_norm: float, *, eta: float) -> float:
     """||eta*S||_F / ||W0||_F for one layer. No state means zero."""
     if w0_norm <= 0.0:

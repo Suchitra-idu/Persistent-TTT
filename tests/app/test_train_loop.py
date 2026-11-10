@@ -28,7 +28,6 @@ def run(
     total_norm=1.0,
     strategy=HYBRID,
     cfg=None,
-    carries=None,
     checkpoint=None,
     evaluate=None,
     announce=None,
@@ -43,7 +42,6 @@ def run(
         strategy=strategy,
         cfg=cfg or _builders.config(),
         rng=wiring.rng,
-        carries=carries,
         checkpoint=checkpoint,
         evaluate=evaluate,
         announce=announce or (lambda _: None),
@@ -229,12 +227,6 @@ class TestCarryLifecycle:
         _, wiring = run(n_docs=4, strategy=SLICING_HYBRID)
 
         assert "install" not in wiring.fast_weights.events
-
-    def test_a_session_scoped_strategy_snapshots_no_carrier(self):
-        result, _ = run(n_docs=4, strategy=SLICING_HYBRID)
-
-        assert result.carries == {}
-
 
 class TestLearningRate:
     def test_it_follows_the_warmup_cosine(self):

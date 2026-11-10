@@ -16,7 +16,7 @@ CASES = [pytest.param(spec, id=name) for name, spec in sorted(DATASETS.items())]
 MULTI_SOURCE_CASES = [
     pytest.param(spec, id=name)
     for name, spec in sorted(DATASETS.items())
-    if spec.is_multi_source
+    if spec.constant_source is None
 ]
 
 

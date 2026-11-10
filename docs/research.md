@@ -1,244 +1,35 @@
-# Research reference
+# From the paper's findings to the code
 
-[mechanism.md](mechanism.md) is the mechanism as it exists. This page is the
-research built on top of it: the proposal's components mapped onto the code,
-what each required check maps to in the eval scripts, the config knobs that
-actually matter for the write-up, and what running it has actually found.
-Reflects the latest proposal revision — two components, two research
-questions, dropping an earlier draft's third, meta-learned-init component and
-third research question. **Note:** the repo's `proposal.md` file itself still
-holds that earlier draft as of this writing; this page follows the revision
-given directly, not the checked-in file.
+The paper (`Paper_TMLR/main.tex`) asks two questions:
 
-**Current research path: `hebbian` only.** `delta`/`delta_chunk` were
-explored in depth and the code stays in the repo, working and tested, but
-the active line of research no longer uses them — nothing here should be
-read as a recommendation to run them. `TTTConfig`'s hebbian-relevant defaults
-(`clip_tau=20.0`, `carried_decay=0.9`, `output_gate_bias_init=-2.0`) are
-pinned to match the last git commit exactly. `carried_decay` above `0.9` is
-untested and likely unsafe at the current `clip_tau` — `hebbian` has no
-error-correction of its own, so nothing bounds its growth except these two
-config values.
+- **Q1.** How much does carrying the fast weight contribute to language modelling?
+- **Q2.** Which domains benefit most?
 
-## The two components
+Every answer is a perplexity difference on held-out text. This page lists each
+finding with the suite that measures it ([evaluation.md](evaluation.md)), the
+runs it compares ([reproducing.md](reproducing.md#run-names-and-what-they-are))
+and the table or figure it comes from.
 
-| Component | Answers | Lives in |
-|---|---|---|
-| Within-document adaptation | baseline, no persistence | `chunk_size`, `eta`, one item |
-| Cross-document persistence | Q1, and Q2 broken out per source | the carry, `carry_scope`, `carried_decay` |
+| Finding | Suite and measure | Runs | Output |
+|---|---|---|---|
+| The gated carry lowers perplexity on the continuation of a document by about 1% | `regimes`, `between_slices` | `hebbian-carry-600`, `-s43`, `gated-carry-1050`; confirmatory `-fresh` bundles | T11, T14; F15 |
+| Removing the reset alone gains little | `regimes` and `boundary` | `ttt-v1.1`, `ttt-v1.1-clean-deltachunk` | T1, T3, T11 |
+| Only the full design recovers the gain between slices | `regimes`, `boundary` at step 200 | `ablate-*`, `hebbian-carry-b` | T13 |
+| Across documents the effect follows relatedness | `relatedness` | gated carry, development and `-fresh` | T12; F18; `tables/relatedness.csv` of the `-fresh` bundles |
+| A small part of the transfer is document-specific (related against the generic carry) | `relatedness`, `HEADLINE` contrasts | `-fresh` bundles | `tables/relatedness.csv` |
+| The gain sits at the start of the target | `token_gain`, Addendum A | `-tokengain-fresh`, `-tokengain-generic-fresh` | `addendum_a.json`; F19 |
+| Training across documents removes the harm after other-source text | `relatedness`, `regimes` | `mixed-carry-600`, `-s43` against the gated carry | `mixed_probe_v1` |
+| Most of the lead over LoRA-only comes from training the down-projections | `regimes`, compared across checkpoints | `lora-only-matched`, `pmatched-control-600`, gated carry | T1; `results/compare/` |
+| Dynamic evaluation as a baseline | `dyneval` | `lora-only-matched` | T12, T15 |
+| Attention is a far stronger channel when the text is available | `context` | gated carry | the bundles' `context_gaps` tables |
+| The carried state's size barely reaches the output | `boundary`, `repeat` state ratios | ungated and gated runs | T6, T16 |
+| Domains (Q2) | `regimes` and `boundary`, per source | gated carry | T7, T8 and the bundles' per-source tables |
 
-Meta-learned per-source initialisation (an earlier draft's third component)
-is **not part of the current proposal at all** — not de-emphasized, not a
-secondary check, simply out of scope. The `everlasting` strategy and the
-`Δseed` metric exist in code as leftover infrastructure from that earlier
-draft; nothing below depends on them, and the source-mismatch check further
-down uses only a plain accumulated carry (e.g. from `repeat_carry_eval_v1`),
-not a trained per-source seed.
+## What the evidence can and cannot support
 
-## Research questions → instrument
-
-| Q | Question | Instrument |
-|---|---|---|
-| Q1 | How much does carry contribute to language model improvement? | `Δwithin`, `Δbetween`, aggregated with a confidence interval — see Methodology |
-| Q2 | What kind of domains perform best with session-persistent TTT? | per-source `Δwithin` / `Δbetween`, ranked, against a domain-level correlate |
-
-Formulas: [mechanism.md#the-result](mechanism.md#the-result).
-
-## Methodology — what each required check maps to
-
-The proposal's evaluation section describes several checks beyond "measure
-perplexity once." Each one maps to existing code; none of them are new
-mechanism work, only eval runs and analysis.
-
-| Check | Why it's required | Maps to |
-|---|---|---|
-| Reset-baseline comparison | Isolates the gain attributable to persistence from within-document adaptation alone | `single_doc_eval_v1`'s `carry` vs `carry_off` (or `run_chained`'s per-slice `Δbetween`) |
-| Repeat-and-track | Does perplexity change shape over a session — rising then levelling off, constant from the first repeat, or something else? Don't presuppose which | `repeat_carry_eval_v1` / `compounding_pilot_v1` — track `Δppl` per repeat, not just a final number |
-| **Stability check** | A carry that grows without bound would make any perplexity gain misleading, not real — required *before* trusting the gain, not optional polish | `state_ratio` across the full repeat sequence — report it as a figure alongside the perplexity trend |
-| **Source-mismatch swap test** | Confirms a gain is source-specific rather than incidental to any nonzero perturbation | `force_source` in `session_eval.session_perplexity` — evaluate a source-A carry against a source-B document. Any accumulated carry works; no trained seed is needed or used |
-| `Δlora`, within the combined model | How much of the trained LoRA+TTT model's own improvement is LoRA's, holding that model's weights fixed | `lora_only` regime (`evolve=False`) — a decomposition of one trained checkpoint, not a comparison between two |
-| **Architectural ablation, matched budget** | The comparison that actually answers "does adding TTT help" — a *separate* model with no TTT layers patched in at all, trained at the same LoRA rank/lr and the same step budget, then compared directly. Not the same question `Δlora` answers | Two independent training runs (`update_rule` irrelevant to the no-TTT run since it has no TTT layers), same `lora_r`/`lr_lora`/step count, final perplexity compared directly |
-| **Rank-equivalence sweep** | A calibrated size for the combined model's total improvement: find the pure-LoRA (no TTT) rank whose own total improvement matches what LoRA+TTT achieves. Already known to be below the matched rank (that one wins outright) — the sweep finds where they cross. A number, not an explanation | Two or three more no-TTT training runs at lower `lora_r`, same step budget/data, compared to the LoRA+TTT model's total improvement |
-| Domain correlate (Q2) | A ranking alone is a table; a correlation against something already measured is a stronger Q2 answer | Per-source `Δwithin`/`Δbetween` vs. that source's own `fresh`-regime perplexity — report as a correlation, not a causal claim |
-| RULER probes | Supplementary held-out signal, not a benchmark match | `ruler_eval_v1` |
-
-None of the above changes the mechanism or its config — it's the analysis
-that turns "we ran it and got some numbers" into a result that answers Q1 or
-Q2 defensibly. Statistical rigor matters here: aggregate `Δwithin`/`Δbetween`
-across every held-out document with a bootstrap 95% CI, not a single
-document's numbers — a small effect that's statistically distinguishable
-from zero and a small effect that isn't are different, both honest,
-findings, and only the CI tells you which one you have.
-
-## `update_rule` — hebbian only, and why that has real consequences
-
-The full mechanism and math for all three rules —
-[mechanism.md#the-update-rules](mechanism.md#the-update-rules) — is the
-detailed reference; this section is only the research framing on top of it.
-
-`TTTConfig.update_rule` defaults to `"hebbian"`, and that's the whole active
-research path now. The consequence worth being explicit about: `hebbian` is
-a pure outer-product accumulator with no error-correction (see
-[mechanism.md](mechanism.md#the-update-rules)) — nothing in its own math
-bounds its growth. `delta`/`delta_chunk` (not in use) have that boundedness
-built in via error-correction; `hebbian` doesn't, so external bounding
-(`clip_tau`, `carried_decay`) is load-bearing in a way it never had to be for
-the rule this investigation isn't using — see Open questions.
-
-## The output gate
-
-`out = base_out + sigmoid(W_gate·h + b_gate) · ttt_out`. `W_gate` is
-zero-initialised, so the gate starts *uniform*: `sigmoid(output_gate_bias_init)`.
-Current default `-2.0` → `≈0.12` at step 0 — the TTT term starts almost
-entirely suppressed and has to earn its way open.
-
-`gate_mean` / `gate_std`, captured under `no_grad` every forward, are on
-`session_eval.ItemRow` and every chained-eval table's `gate` column. A gate
-pinned near zero means the TTT term cannot be reaching the output, whatever
-the carry's own state is doing — check this before concluding the carry is
-inert.
-
-**`state_aware_gate`** (off by default) is the one candidate mechanism change
-this investigation has actually tried, motivated directly by that check:
-`hebbian`'s carry magnitude (`state_ratio`) grows under repeated exposure to
-the same document without a corresponding perplexity gain — and since the
-gate is the sole determinant of how much of that growing state ever reaches
-the output, it's the natural first place to check. It adds a second,
-zero-init learned scalar so the gate can open further as the carry's own norm
-grows, instead of reading only the current token — see
-[mechanism.md#the-output-gate](mechanism.md#the-output-gate) for the exact
-form.
-
-**Result, trained (~100 steps, checked with `gate_report_v1`):**
-`output_gate_state_scale` converged to a *negative* value on every one of the
-14 patched layers (roughly `-0.05` to `-0.10`), while the base
-`sigmoid(bias)` stayed near its `≈0.12` init — the base gate barely moved.
-`state_feature` (the incoming carry's unnormalized `state_ratio`) reaches
-into the hundreds of thousands within ~20 repeats, so a negative scale of
-that size drives the gate's logit deeply negative and saturates it near 0
-almost immediately as the carry grows. This is exactly what the
-`repeat_carry_eval_v1` runs independently showed (`gate ≈ 0.000` from a few
-repeats on): given a lever to condition how much of the carry reaches the
-output on the carry's own size, training consistently learned to close the
-gate *further* as the carry grows — on every layer, independently — not
-open it. A specific, model-driven result against the carry compounding into
-something worth trusting more of over time, not an inconclusive one.
-
-Two caveats on that result: it's a short run — the sign is consistent
-across all 14 layers, which is a real signal, but more training could
-sharpen or shift the magnitude further. And `state_feature` itself is
-unnormalized — it swings from the thousands into the millions, well outside
-the scale anything else in the architecture is built to receive — so part
-of what's being learned may be "large raw numbers here are destabilizing"
-as much as "large carries are unreliable content." This run doesn't
-separate those two.
-
-### No-gate ablation (`output_gate=False`)
-
-A one-off test, not part of the standing checklist: remove the gate
-entirely (`_gated` becomes a no-op — `ttt_out` reaches the output
-unconditionally, at full strength, from step 0), even under aggressive
-clipping (`clip_tau` tried as low as `5.0`). Result: `cold_carry_off` — no
-cross-document persistence at all, carry reset before every document —
-degrades to perplexities in the thousands to tens of thousands on every
-source, while `lora_only`/`fresh` (which bypass the TTT path entirely via
-`evolve=False`) stay normal.
-
-Because `cold_carry_off` fails just as badly as `cold_carry`, this is not a
-carry-accumulation blowup. `ttt_math.scan`'s `frobenius_clip` re-clips the
-applied state to `tau` at every single forward pass, regardless of how large
-the underlying accumulation is — verified directly from the code, not
-inferred — so magnitude isn't what's escaping. What breaks is the
-*within-document* TTT contribution alone, applied unconditionally across
-roughly half the model's layers (`derive_layer_indices`, stride 2), with no
-learned mechanism to suppress it when it isn't helping. `clip_tau` bounds
-size; only the gate ever provided selectivity — whether to trust this
-contribution at all — and the two aren't substitutes: shrinking `clip_tau`
-further cannot recover what removing the gate lost.
-
-## `minilasting` — the third strategy
-
-Not in [extensions-map.md](extensions-map.md)'s table yet. `carry_scope =
-"session"`, but a session is `docs_per_session` (default 5) documents of
-*one* source, round-robin picked across sources, chained and sliced like
-`hybrid`, then reset. The middle ground between `hybrid` (dies every doc) and
-`everlasting` (never dies): carry outlives one document but not the epoch —
-"a user leaving it on for a session of use, not forever."
-
-## Config reference — research-relevant knobs
-
-| Field | Default | Note |
-|---|---|---|
-| `update_rule` | `"hebbian"` | the sole active research path; `delta`/`delta_chunk` exist in code but are not in use |
-| `output_gate_bias_init` | `-2.0` | `-0.5` and `+2.0` (less damped) both tried, both hurt early training |
-| `carried_decay` | `0.9` | applies every item, not just cross-session. Steady state `1/(1-decay) = 10×`. **Untested and likely unsafe above this value at the current `clip_tau`** |
-| `clip_tau` | `20.0` | matches the last git commit exactly, by decision — never retuned for `hebbian`'s own growth rate |
-| `truncate_every` | `5` | `delta`/`delta_chunk`-only, not consulted by `hebbian` at all |
-| `state_aware_gate` | `False` | opt-in; lets the gate see the carry's own norm, not just the current token. Trained result: the learned scale went *negative* on every layer — see The output gate |
-| `eval_n_docs_per_source` | `5` | caps the holdout pool *before* any downstream eval script's own doc-count flag sees it — see Pitfalls |
-
-## Where this stands right now
-
-Plainly, as observed, with no explanation attached — the causal "why" is not
-established and doesn't belong here until it is:
-
-- LoRA alone outperforms LoRA+TTT for general model improvement — including
-  at matched LoRA rank with no TTT layers patched in at all.
-- The carry's own magnitude (`state_ratio`) does grow under repeated exposure
-  to the same document — but the perplexity gain does not track it: it stays
-  flat from the first repeat, not rising as the carry grows.
-- RULER shows no meaningful improvement, and sometimes a slight regression.
-- Given a lever to condition the output gate on the carry's own size
-  (`state_aware_gate`), training consistently learned to close the gate
-  *further* as the carry grows — on every patched layer, independently. See
-  The output gate below for the numbers.
-
-For context, not as an excuse: In-Place TTT (Feng et al., 2026), the
-architecture this work extends, reports only small RULER movement itself
-(sometimes none), and does not compare against a LoRA baseline at all. The
-gap this research actually fills is the cross-document carry itself —
-whether persisting the fast weight past a document boundary does anything —
-which no prior work, including In-Place TTT, has implemented or measured.
-That the carry does not demonstrate a growing, learning-from-context
-property is itself a direct, reportable answer to Q1, not a shortfall in the
-study.
-
-## Pitfalls found and fixed
-
-Worth a footnote in the methodology section — each was a real, silent source
-of wrong numbers, not a hypothetical.
-
-- **Single-source default.** Early eval scripts measured only the first
-  source in pool order (in practice, always ArXiv), not a sample across all
-  configured sources. Fixed by explicit per-source grouping everywhere.
-- **`n_docs` silently capped below what was asked.** A chained eval's own
-  `--n-docs` flag controls how many documents to *chain*; `eval_n_docs_per_source`
-  separately caps how many even enter the holdout pool, upstream, silently.
-  Asking for 15 delivered 5 with no error. Fixed by raising the pool cap to
-  match what was requested, and surfacing `Holdout.shortfalls` (existing,
-  previously discarded) so a source that genuinely can't supply enough says
-  so.
-- **Chaining across sources instead of within one.** An early multi-document
-  chained eval round-robinned documents across *different* sources into one
-  continuous carry session — a shape `carry_scope=SOURCE` never produces in
-  production, since each source's carrier is kept strictly separate. Fixed to
-  chain multiple documents of one source per session.
-- **Eval-time hyperparameter swaps are confounded by what the checkpoint was
-  trained under.** Swapping e.g. `carried_decay` at eval time against a
-  checkpoint trained under a different value tests a state-magnitude
-  distribution the model's weights never saw. A negative result there
-  doesn't falsify the hyperparameter, only that the checkpoint doesn't
-  generalize to it — any change meant to affect the mechanism's own
-  dynamics needs a matching training run, not just a different eval flag.
-
-## Open questions
-
-- **How should `hebbian` actually be bounded, if `carried_decay` needs to go
-  above `0.9`?** The current default (`clip_tau=20.0`) was never
-  derived from `hebbian`'s own growth rate — it's simply the value that's
-  been in the config. A properly derived ceiling — characterizing
-  `hebbian`'s actual per-step growth empirically before picking one — is
-  still open. Until then, treat `carried_decay > 0.9` as untested.
-- Does the carry's flat, non-growing behavior under repeats hold across many
-  documents and sources, or is it specific to the ones tested so far? Needs
-  the statistical treatment in Methodology, not a single-document read.
+Every measurement is perplexity, which supports claims of stream and domain
+adaptation, not of memory or recall. The intervals are over documents, not over
+training runs. The preregistered contrasts are the four in
+`relatedness_eval.HEADLINE`, at a Bonferroni-adjusted 98.75%; everything outside
+them is reported without adjustment. The preregistration and its deviations are
+in `plan/PREREGISTRATION.md`.

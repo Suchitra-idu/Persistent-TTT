@@ -39,14 +39,6 @@ class TestTrain:
 
         assert result.micro_steps == len(engine.compute.forwards)
 
-    def test_it_trains_a_carrier_per_source(self):
-        result = train_v1.run(
-            _builders.resolved(), engine=_builders.engine(),
-            source=_builders.data_source(), announce=lines(),
-        )
-
-        assert set(result.carries) <= set(_builders.SOURCES)
-
     def test_it_announces_what_it_resolved(self):
         spoken = []
 

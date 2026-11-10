@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import MutableSequence
 
 import numpy as np
-import torch
 
 
 class NumpyRng:
@@ -24,8 +23,3 @@ class NumpyRng:
 
     def random(self) -> float:
         return float(self._rng.random())
-
-    def torch_generator(self, seed: int) -> torch.Generator:
-        generator = torch.Generator()
-        generator.manual_seed(int(seed))
-        return generator

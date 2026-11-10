@@ -1,7 +1,7 @@
 # Architecture
 
-This tree implements **the Research Hexagon** — the specification lives one
-directory up, in [`../RESEARCH_ARCHITECTURE.md`](../RESEARCH_ARCHITECTURE.md).
+This tree implements **the Research Hexagon**, specified in
+[`RESEARCH_ARCHITECTURE.md`](RESEARCH_ARCHITECTURE.md) at the repository root.
 Read that for *why*. This file is the map: where things go, and what stops
 them going anywhere else.
 
@@ -97,7 +97,7 @@ scan banning `os.environ`, wall-clock reads, `torch.cuda`, `torch.manual_seed`,
 and string literals are excluded, so *naming* an idiom in a docstring is not a
 violation. It also asserts the structural half of the test doctrine (every
 port has a conformance suite, every registry has a contract suite) and the
-comment budget from [`/CLAUDE.md`](../CLAUDE.md): documentation lines may not
+comment budget from [`CLAUDE.md`](CLAUDE.md): documentation lines may not
 exceed half a file's code lines.
 
 `make guard` proves the enforcement is live: it plants a banned import in each
@@ -114,23 +114,25 @@ reject each, and cleans up.
   Makefile           check / lint / test / test-gpu / guard
   .importlinter      the enforced Dependency Rule
   ARCHITECTURE.md    this file
-  REBUILD_PLAN.md    the rebuild contract (phases, decisions D1-D14)
-  MIGRATION.md       what moved where, what was dropped, what proves it
+  REBUILD_PLAN.md    the rebuild contract (phases, decisions D1-D14); historical
+  docs/              the documentation; start at docs/README.md
 
   ttt/
     cli.py           Ring 5 — the single source of CLI args
-    core/            types, config (frozen), ttt_math, carry, schedule, tokens,
-                     sampling, balance, metrics, naming, sampling_text, report
+    core/            types, config (frozen), ttt_math, carry, schedule, lr_schedule,
+                     tokens, sampling, balance, stats, metrics, naming, report
       config/        TTTConfig, TrainConfig, DatasetSpec, presets, resolve
     extensions/
       datasets/      one DatasetSpec per corpus, behind DATASETS
       strategies/    one session regime per file, behind STRATEGIES
       mechanism/     InPlaceTTTMLP over the core kernels
     ports/           Compute, FastWeights, Tracker, Storage, Table,
-                     DataSource, Tokenizer, Clock, Rng
+                     DataSource, Tokenizer, Rng
     adapters/        torch_* / wandb_* / modal_* / hf_*  +  their fakes
-    app/             data_pipeline, stages, train_loop, eval_loop,
-                     session_eval, pilot, chat, generate
+    app/             data_pipeline, stages, train_loop, the evaluation suites
+                     (eval_loop, session_eval, boundary_eval, repeat_eval,
+                     context_eval, relatedness_eval, token_gain, dynamic_eval),
+                     evidence, paper_analysis, token_gain_analysis
     experiments/     *_v1.py — append-only; _runtime.py is the composition root
 
   tests/             mirrors the rings; see tests/RULES.md
@@ -154,50 +156,20 @@ architecture.
 
 ## Status
 
-Built side by side with the original flat modules in the parent directory
-(REBUILD_PLAN.md D8); nothing there is touched until the parity suite in Phase 6 is
-green, and retiring it is a separate explicit call.
+The rebuild is complete and the old flat modules it replaced are gone. Ring 0
+holds the kernels, the carry, statistics and the frozen configs; Ring 1 the TTT
+layer and the `strategies` (`hybrid`, `mixed`) and `datasets` registries; Rings
+2/3 eight ports, each with a real and a fake adapter; Ring 4 the data pipeline,
+the training loop and the evaluation suites; Ring 5 the CLI and the entrypoints
+(`train_v1`, `paper_eval_v1`, `sanity_check_v1` on Modal, and the local
+analysis scripts). What each file does is in [`docs/`](docs/README.md).
 
-**All six phases complete.** Ring 0 is built and property-tested, Ring 1 holds the
-`strategies` and `datasets` registries and the TTT module, Rings 2/3 hold ten
-ports with at least one real and one fake adapter each, and Ring 4 holds the
-eight loop modules — pipeline, train, eval, session eval, pilot, generate, chat
-— tested end to end against fakes. Ring 5 holds `cli.py` and one append-only
-file per entrypoint, with the Modal runtime and storage adapters Phase 3
-deferred, and `tests/parity/` holds the OLD-vs-NEW suite Phase 6 required.
-See [`MIGRATION.md`](MIGRATION.md) for what moved, what was dropped, and the
-four steps that remain before cutover.
+One file in `ttt/core/` is not in REBUILD_PLAN §2's list: `lr_schedule.py`.
+Ring 4 may not import a framework, so the warmup+cosine math that used to come
+from `transformers.get_cosine_schedule_with_warmup` lives in Ring 0. It
+reproduces HuggingFace's curve exactly inside `[0, num_training_steps]` and
+raises past the end, where HuggingFace silently oscillates back up.
 
-Phase 4 added three port methods, each because Ring 4 could not be written
-without it: `FastWeights.install(carry, family=...)` and
-`FastWeights.decay_stream(factor=...)` are D14 defects 1 and 3, and
-`Table.filter(name, predicate)` is what keeps the prefilter stage from
-materialising a corpus larger than memory. All three are in every adapter's
-conformance suite.
-
-Phase 4 is also the first time `app-stays-framework-free` had a Ring 4 to check.
-It now sets `allow_indirect_imports = True`: D1 puts torch in Ring 0, and Ring 4
-reads core types and port protocols defined in it. A direct `import torch` in
-`ttt/app/` is still rejected, which `make guard` proves alongside the
-`core -> transformers` guard it already ran.
-
-`tests/parity/` opened early, with the Phase 2 schedule parity that PLAN §5
-requires of this phase. It is marked `parity` and runs by default; the numeric
-suite that fills it out is still Phase 6.
-
-Two deviations from PLAN §2's Ring 2/3 list, both recorded in
-[`docs/ports-map.md`](docs/ports-map.md): there are **ten** ports rather than
-nine — `generation` is separate from `compute` for the reason D6 separates
-`compute` from `fast_weights` — and `modal_storage` / `modal_runtime` are
-deferred to Phase 5, where PLAN §5 already puts the rest of the Modal surface.
-`local_storage` is Storage's real adapter until then.
-
-`tests/adapters/` holds the two Ring 3 framework seams that answer to no port,
-`model_builder` and `checkpoint_io`.
-
-One file in `ttt/core/` is not in PLAN §2's list: `lr_schedule.py`. The old
-loop got its schedule from `transformers.get_cosine_schedule_with_warmup`, and
-Ring 4 may not import a framework, so the warmup+cosine math has to live in
-Ring 0. It reproduces HuggingFace's curve exactly inside
-`[0, num_training_steps]` and raises past the end, where HuggingFace silently
-oscillates back up.
+`app-stays-framework-free` sets `allow_indirect_imports = True`: D1 puts torch
+in Ring 0, and Ring 4 reads core types and port protocols defined in it. A
+direct `import torch` in `ttt/app/` is still rejected, which `make guard` proves.

@@ -41,16 +41,7 @@ OUT_DIR = RESULTS_DIR / "paper"
 TRAINING = "training"
 MAIN_MEASURES = (TRAINING, "within", "between_slices", "total", VS_MATCHED, "cross_doc", "cross_slice")
 PER_SOURCE_MEASURES = (VS_MATCHED, "within", "cross_doc")
-ROW_TYPES = {
-    "regimes": EvalRow,
-    "regime_slices": SliceRow,
-    "boundary": boundary_eval.ArmRow,
-    "repeat": repeat_eval.RepeatItem,
-    "context": context_eval.ContextRow,
-    "relatedness": relatedness_eval.RelatedRow,
-    "dyneval_self": relatedness_eval.RelatedRow,
-    "dyneval_related": relatedness_eval.RelatedRow,
-}
+ROW_TYPES = paper_eval_v1.RAW_FILES
 
 
 @dataclass(frozen=True)
@@ -107,6 +98,14 @@ def pinned(results: Path, run: str, step: int, needs: str) -> Path | None:
         return None
     stamp = json.loads(PINS.read_text()).get(f"{run}/step_{step}/{needs}")
     return None if stamp is None else results / run / f"step_{step}" / stamp
+
+
+def bundle_rows(run: str, step: int, name: str) -> tuple:
+    """`name`'s rows from the bundle `newest_bundle` picks, or () if no bundle has them."""
+    try:
+        return newest_bundle(RESULTS_DIR, run, step, needs=name).rows(name)
+    except FileNotFoundError:
+        return ()
 
 
 def newest_bundle(results: Path, run: str, step: int, needs: str = "regimes") -> Bundle:

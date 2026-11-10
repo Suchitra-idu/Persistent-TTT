@@ -60,9 +60,7 @@ class Saves:
     calls: list[dict] = field(default_factory=list)
 
     def __call__(self, **kwargs) -> None:
-        self.calls.append(
-            {**kwargs, "carries": dict(kwargs["carries"]), "n_updates": dict(kwargs["n_updates"])}
-        )
+        self.calls.append(kwargs)
 
 
 def engine(
@@ -70,7 +68,6 @@ def engine(
     *,
     losses: Sequence[float] = (1.4, 1.2, 1.0),
     script: Sequence[int] = (7, 8, 9),
-    carries: Mapping[str, Carry] | None = None,
 ) -> Engine:
     resolution = resolution or resolved()
     fast_weights = FakeFastWeights(
@@ -86,7 +83,6 @@ def engine(
         root="/ckpt",
         save=Saves(),
     )
-    built.carries = lambda: (dict(carries or {}), {})
     return built
 
 

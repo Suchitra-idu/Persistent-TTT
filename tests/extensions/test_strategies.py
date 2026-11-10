@@ -52,15 +52,6 @@ def test_hybrid_puts_exactly_one_doc_in_each_session():
     assert all(len(set(session.doc_indices)) == 1 for session in sessions)
 
 
-def test_hybrid_splits_carrying_from_non_carrying_docs():
-    lengths = [500, 500, HYBRID.carry_min_tokens * 3]
-    sources = ["a", "a", "a"]
-
-    rows = HYBRID.compose(lengths, sources)
-
-    assert (rows[0].no_carry_docs, rows[0].carry_docs) == (2, 1)
-
-
 def _boundaries(sessions, sources):
     """(same-source, switched) counts over consecutive documents in a session."""
     same = switched = 0

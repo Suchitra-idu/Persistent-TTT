@@ -9,11 +9,10 @@ the LR schedule is the same length.
 
 from __future__ import annotations
 
-from collections import Counter, deque
+from collections import deque
 from dataclasses import dataclass
 from typing import Sequence
 
-from ttt.core.report import CompositionRow
 from ttt.core.schedule import derive_slice_count, slice_doc
 from ttt.core.types import Session, WorkItem
 from ttt.extensions.strategies._registry import register
@@ -136,29 +135,6 @@ class Mixed:
 
     def count(self, doc_lengths: Sequence[int]) -> int:
         return sum(self.slices_for(int(length)) for length in doc_lengths)
-
-    def compose(
-        self, doc_lengths: Sequence[int], sources: Sequence[str]
-    ) -> tuple[CompositionRow, ...]:
-        """Which document opens a session is only known after `build`, so the
-        no-carry split is the expected one, `1 / docs_per_session` per source."""
-        docs: Counter[str] = Counter()
-        items: Counter[str] = Counter()
-        for length, source in zip(doc_lengths, sources, strict=True):
-            docs[source] += 1
-            items[source] += self.slices_for(int(length))
-        rows = []
-        for source in sorted(items):
-            no_carry = round(docs[source] / self.docs_per_session)
-            rows.append(
-                CompositionRow(
-                    source=source,
-                    no_carry_docs=no_carry,
-                    carry_docs=docs[source] - no_carry,
-                    items=items[source],
-                )
-            )
-        return tuple(rows)
 
     def describe(self) -> str:
         return (

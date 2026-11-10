@@ -6,11 +6,9 @@ teach carry across a TBPTT boundary.
 
 from __future__ import annotations
 
-from collections import Counter
 from dataclasses import dataclass
 from typing import Sequence
 
-from ttt.core.report import CompositionRow
 from ttt.core.schedule import derive_slice_count, slice_doc
 from ttt.core.types import Session, WorkItem
 from ttt.extensions.strategies._registry import register
@@ -68,26 +66,6 @@ class Hybrid:
 
     def count(self, doc_lengths: Sequence[int]) -> int:
         return sum(self.slices_for(int(length)) for length in doc_lengths)
-
-    def compose(
-        self, doc_lengths: Sequence[int], sources: Sequence[str]
-    ) -> tuple[CompositionRow, ...]:
-        no_carry: Counter[str] = Counter()
-        carry: Counter[str] = Counter()
-        items: Counter[str] = Counter()
-        for length, source in zip(doc_lengths, sources, strict=True):
-            k = self.slices_for(int(length))
-            (no_carry if k == 1 else carry)[source] += 1
-            items[source] += k
-        return tuple(
-            CompositionRow(
-                source=source,
-                no_carry_docs=no_carry[source],
-                carry_docs=carry[source],
-                items=items[source],
-            )
-            for source in sorted(items)
-        )
 
     def describe(self) -> str:
         return (

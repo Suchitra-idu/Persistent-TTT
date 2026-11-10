@@ -42,10 +42,6 @@ class DatasetSpec:
                     "use None to keep every source"
                 )
 
-    @property
-    def is_multi_source(self) -> bool:
-        return self.constant_source is None
-
     def source_of(self, row: Mapping[str, Any]) -> str:
         """Never empty. Handles struct and JSON-string meta columns, because
         parquet shards and the Hub disagree about which they return."""

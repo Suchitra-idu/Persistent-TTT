@@ -11,7 +11,6 @@ from ttt.app.relatedness_eval import IN_CONTEXT, OTHER_SOURCE, RANDOM, RELATED, 
 
 BINS = ((1, 8), (8, 32), (32, 128), (128, 1024))
 ARMS = (SELF, RELATED, RANDOM, OTHER_SOURCE, IN_CONTEXT)
-FRONT = 32
 S32_POINT, S32_FLOOR = 0.40, 0.25
 
 

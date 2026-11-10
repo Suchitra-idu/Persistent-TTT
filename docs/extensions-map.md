@@ -1,88 +1,44 @@
-# Ring 1 map
+# Ring 1 — `ttt/extensions/`
 
-The science that varies. Plugins behind registries; a new plugin is a new file
-plus one line in the package `__init__`. May import `torch`, never
-`transformers` / `peft` / `datasets` / `modal` / `wandb`.
+The parts of the method that a study varies. Two of them are registries (adding
+a strategy or a dataset is adding a file); the TTT layer has one implementation,
+so it is a module (D5).
 
-## Strategies
+## The TTT layer — `mechanism/`
 
-A strategy turns doc lengths into one epoch of `Session`s.
+[`inplace_ttt.py`](../ttt/extensions/mechanism/inplace_ttt.py):
 
-| File | Is |
+| Name | Does |
 |---|---|
-| [_registry.py](../ttt/extensions/strategies/_registry.py) | The `Strategy` protocol, `STRATEGIES`, `register`, `get` |
-| [hybrid.py](../ttt/extensions/strategies/hybrid.py) | Training on SlimPajama |
-| [everlasting.py](../ttt/extensions/strategies/everlasting.py) | Producing the per-source seeds |
-| [minilasting.py](../ttt/extensions/strategies/minilasting.py) | A carry that outlives one document but not the epoch |
+| `InPlaceTTTMLP` | The MLP replacement. Holds the pretrained projections, the target network (`v_source_norm`, `target_conv`, `w_target`), the main gate, and, with `carry_gate`, the carry gate and the scale `alpha`. `_scan_forward` is the whole forward; `_carried_term` is the gated carry's read. |
+| `reset_carry`, `advance_carry`, `detach_carry` | The carry lifecycle the training loop drives through the `FastWeights` port. |
+| `RecomputeAsForward`, `checkpoint_context_fn` | Make gradient checkpointing recompute a layer with the carry it actually read. |
+| `pretrained_mlps(model)` | A context in which every TTT layer is the untouched base MLP (the `fresh` regime). |
+| `iter_ttt_modules(model)` | Every TTT layer in a model. |
 
-| | hybrid | everlasting | minilasting |
-|---|---|---|---|
-| session | one doc | one doc | `docs_per_session` docs, one source |
-| items per doc | 1 if short, else 2–6 slices | always 1, the whole doc | same length gate as hybrid, per doc |
-| `carry_scope` | `"session"` — dies at the doc boundary | `"source"` — outlives the epoch | `"session"` — dies at the group boundary |
-| what it teaches | using a non-zero `S_0` | what a good `S_0` *is* | compounding across several docs, bounded |
+How the layer implements the paper is in [mechanism.md](mechanism.md).
 
-Hybrid's length gate is the point: docs under `carry_min_tokens` (2100) become
-single-item sessions, so the model keeps seeing the `S_0 = 0` case instead of
-only ever starting warm. `minilasting` reuses the same gate per document, but
-groups `docs_per_session` documents of one source (round-robin across
-sources) into a session before resetting — see
-[research.md](research.md#minilasting-the-third-strategy).
+## Session strategies — `strategies/`
 
-Four methods, all pure:
+A strategy turns the training documents into sessions. The carry is reset
+between sessions.
 
-| Method | Returns |
-|---|---|
-| `build(doc_lengths, sources, rng)` | the epoch's sessions; same seed, same schedule |
-| `count(doc_lengths)` | total work items, without drawing cuts — this sizes the LR schedule |
-| `compose(doc_lengths, sources)` | `CompositionRow`s for the boot log |
-| `describe()` | one line |
-
-`count` has to agree with `build` without running it, because the LR schedule
-is sized before the first session exists. The contract suite asserts that.
-
-## Datasets
-
-| File | Is |
-|---|---|
-| [_registry.py](../ttt/extensions/datasets/_registry.py) | `DATASETS`, `register`, `get`, `DEFAULT` |
-| [slimpajama_6b.py](../ttt/extensions/datasets/slimpajama_6b.py) | The corpus. 6 sources, CommonCrawl excluded |
-| [fixture.py](../ttt/extensions/datasets/fixture.py) | 3 synthetic sources. Tests never download |
-
-The spec type is core's `DatasetSpec`, not a separate protocol — pure data
-needs no seam (D5). The registry's job is the name and the D9 guarantee: every
-row carries a `source`, checked as a contract instead of at container start.
-
-## Mechanism
-
-[inplace_ttt.py](../ttt/extensions/mechanism/inplace_ttt.py) — `InPlaceTTTMLP`,
-the gated-MLP replacement. It holds no math: every kernel comes from
-[`core.ttt_math`](../ttt/core/ttt_math.py) and [`core.carry`](../ttt/core/carry.py).
-Patching it onto a real Qwen3 is Ring 3's job.
-
-Two forward paths over two state families:
-
-| | `_scan_forward` (training) | `_stream_forward` (generation) |
+| Name | File | Sessions |
 |---|---|---|
-| sees | the whole item at once | tokens as they arrive |
-| state | `carried`, advanced per item | `stream.delta`, committed per chunk |
-| causality | exclusive cumsum | apply, *then* buffer |
-| accumulation | EMA at `carried_decay` | pure sum, bounded by the clip |
+| `hybrid` (default) | [`hybrid.py`](../ttt/extensions/strategies/hybrid.py) | one document each; shorter than `carry_min_tokens=2100` tokens it is one item, otherwise 2–6 slices of at least 1000 tokens |
+| `mixed` | [`mixed.py`](../ttt/extensions/strategies/mixed.py) | `docs_per_session=5` documents, the next from the same source with probability `same_source_share=0.5`; documents sliced as in `hybrid` |
 
-They agree numerically — `tests/extensions/test_inplace_ttt.py` asserts the
-stream reproduces the scan, including across call boundaries, which is what
-keeps the conv's left-context stitching honest.
+The protocol and registry are in [`_registry.py`](../ttt/extensions/strategies/_registry.py):
+`build` (the epoch's sessions, deterministic given the rng), `count` (items, to
+size the learning-rate schedule) and `describe` (one line for the boot log).
+A strategy's fields are flags: `cli` exposes every field of every registered
+strategy and rejects a field the chosen strategy does not have.
 
-Three resets, three state families:
+## Datasets — `datasets/`
 
-| Call | Clears | Keeps |
+| Name | File | Is |
 |---|---|---|
-| `reset_stream()` | stream delta, pending chunk, conv context | the carry |
-| `reset_v_context()` | conv context only | stream delta, the carry |
-| `reset_carry()` | the carry | everything streaming |
+| `slimpajama-6b` (default) | [`slimpajama_6b.py`](../ttt/extensions/datasets/slimpajama_6b.py) | DKYoon/SlimPajama-6B without CommonCrawl, six sources |
+| `fixture` | [`fixture.py`](../ttt/extensions/datasets/fixture.py) | a tiny synthetic multi-source corpus for tests |
 
-## Testing
-
-One contract suite per registry, parametrized over `REGISTRY.values()`, so a
-new plugin is tested the moment it registers. Enforced by
-`tests/architecture/test_suite_completeness.py`. See [testing.md](testing.md).
+Select one with the `TTT_DATASET` environment variable or `dataset=` in the flags.

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import MutableSequence, Protocol, Sequence, runtime_checkable
 
-import torch
 
 
 @runtime_checkable
@@ -17,10 +16,6 @@ class Rng(Protocol):
     def shuffle(self, items: MutableSequence) -> None: ...
 
     def random(self) -> float: ...
-
-    def torch_generator(self, seed: int) -> torch.Generator:
-        """Token sampling is reproducible without Ring 4 importing torch (D14)."""
-
 
 def is_permutation(values: Sequence[int], n: int) -> bool:
     return sorted(values) == list(range(n))

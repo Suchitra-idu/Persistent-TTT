@@ -7,13 +7,14 @@ The doctrine is [tests/RULES.md](../tests/RULES.md). This is how to run it.
 ```
 make check     # import contracts + the fast tier. The gate.
 make test      # tests only
-make test-gpu  # the gated tier (needs a GPU; empty until Phase 6)
+make test-gpu  # the GPU tier, on a real GPU
+make test-gpu-modal  # the GPU tier, run on a Modal H100
 ```
 
 `pytest` with no arguments deselects `gpu`, `integration` and `slow`. Override
 with an explicit `-m`.
 
-Current: 464 tests, ~6 seconds.
+The fast tier is about 1,600 tests and runs in under a minute on a laptop CPU.
 
 ## Layout
 
@@ -28,6 +29,8 @@ Current: 464 tests, ~6 seconds.
 | `experiments/` | smoke + same-seed reproducibility | Schema and determinism |
 | `architecture/` | source scans | Boundaries you cannot run get crossed |
 | `gpu/` | marked `gpu`, run by hand | Too slow and expensive for CI |
+
+The `experiments/` tests run the real entrypoints (`train_v1.run`, `paper_eval_v1.run`) end to end on fake adapters, so a change to the wiring is caught without a GPU.
 
 ## The architecture guards
 
@@ -52,7 +55,7 @@ import, expects rejection, and cleans up.
 - Arrange, act, assert — with a blank line between.
 - No branching or logic in the body. Loops belong in a parametrize.
 - Builders over literals: [`tests/core/_builders.py`](../tests/core/_builders.py).
-- Inject rng and clock. `random.Random(seed)` and `torch.Generator()`, never
+- Inject the rng. `random.Random(seed)` and `torch.Generator()`, never
   `torch.manual_seed`.
 - In a hypothesis test use `assume()` to discard a bad example. `pytest.skip`
   aborts the whole property at the first one — that silently unran five tests

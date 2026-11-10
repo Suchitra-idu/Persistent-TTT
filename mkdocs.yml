@@ -1,5 +1,5 @@
-site_name: In-Place TTT (rebuild)
-site_description: Session-persistent test-time training, rebuilt under the Research Hexagon
+site_name: Session-persistent TTT
+site_description: Code and documentation for the gated carry
 site_url: ""
 
 docs_dir: docs
@@ -65,12 +65,16 @@ validation:
 
 nav:
   - Home: README.md
-  - Mechanism: mechanism.md
-  - Research reference: research.md
+  - Method: mechanism.md
+  - How the code fits together: codebase.md
+  - Evaluation suites: evaluation.md
+  - Reproducing the paper: reproducing.md
+  - From findings to code: research.md
   - Glossary: glossary.md
-  - Ring 0 map: core-map.md
-  - Ring 1 map: extensions-map.md
-  - Ring 2/3 map: ports-map.md
-  - Ring 4 map: app-map.md
-  - Ring 5 map: experiments-map.md
+  - Maps:
+      - ttt/core: core-map.md
+      - ttt/extensions: extensions-map.md
+      - ttt/ports and ttt/adapters: ports-map.md
+      - ttt/app: app-map.md
+      - ttt/cli.py and ttt/experiments: experiments-map.md
   - Testing: testing.md

@@ -6,7 +6,7 @@ import random
 
 import torch
 
-from ttt.core.types import DocRef, EvalRow, PplRow, RepeatRow, SliceRow, WorkItem
+from ttt.core.types import EvalRow, PplRow, SliceRow, WorkItem
 
 FP64 = torch.float64
 
@@ -57,53 +57,6 @@ def eval_row(
         ppl=ppl,
         state_ratio_final=state_ratio_final,
     )
-
-
-def slice_row(
-    *,
-    doc_idx: int = 0,
-    source: str = "RedPajamaC4",
-    regime: str = "cold_carry",
-    slice_index: int = 0,
-    n_tokens: int = 1000,
-    ppl: float = 10.0,
-) -> SliceRow:
-    return SliceRow(
-        doc_idx=doc_idx,
-        source=source,
-        regime=regime,
-        slice_index=slice_index,
-        n_tokens=n_tokens,
-        ppl=ppl,
-    )
-
-
-def repeat_row(
-    *,
-    doc_idx: int = 0,
-    source: str = "RedPajamaC4",
-    regime: str = "cold_carry",
-    repeat: int = 0,
-    n_tokens: int = 1000,
-    ppl: float = 10.0,
-    state_ratio: float = 0.0,
-) -> RepeatRow:
-    return RepeatRow(
-        doc_idx=doc_idx,
-        source=source,
-        regime=regime,
-        repeat=repeat,
-        n_tokens=n_tokens,
-        ppl=ppl,
-        state_ratio=state_ratio,
-    )
-
-
-def doc_refs(*specs: tuple[str, int]) -> list[DocRef]:
-    return [
-        DocRef(index=i, source=source, n_tokens=n)
-        for i, (source, n) in enumerate(specs)
-    ]
 
 
 def work_items(*spans: tuple[int, int, int]) -> list[WorkItem]:

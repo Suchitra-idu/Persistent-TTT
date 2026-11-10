@@ -74,28 +74,6 @@ def test_the_first_item_starts_the_carry_regardless_of_decay():
     assert torch.allclose(carry.advance(None, delta, decay=0.5), delta, atol=TOL)
 
 
-@given(decay=st.floats(min_value=0.0, max_value=0.95))
-@settings(max_examples=20, deadline=None)
-def test_a_repeated_delta_converges_to_the_steady_state_scale(decay):
-    # Capped at 0.95 — the top of the configured range — so 500 items is
-    # deep enough for the truncated tail (decay**500) to be far below the
-    # tolerance. At decay -> 1 convergence is arbitrarily slow, which is the
-    # whole point of `steady_state_scale` rejecting 1.0.
-    delta = torch.ones((2, 2), dtype=torch.float64)
-
-    carried = None
-    for _ in range(500):
-        carried = carry.advance(carried, delta, decay=decay)
-
-    expected = carry.steady_state_scale(decay)
-    assert float(carried[0, 0]) == pytest.approx(expected, rel=1e-6)
-
-
-def test_a_pure_sum_has_no_steady_state():
-    with pytest.raises(ValueError, match="decay in"):
-        carry.steady_state_scale(1.0)
-
-
 @pytest.mark.parametrize("decay", [-0.1, 1.5, 2.0])
 def test_advance_rejects_a_decay_outside_the_unit_interval(decay):
     with pytest.raises(ValueError, match=r"carried_decay must be in \[0, 1\]"):

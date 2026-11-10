@@ -11,7 +11,7 @@ from hypothesis import strategies as st
 from tests.core import _builders as build
 from tests.core._oracles import token_weighted_ppl as oracle_ppl
 from ttt.core import metrics
-from ttt.core.types import CARRY, COLD_CARRY, COLD_CARRY_OFF, FRESH, LORA_ONLY
+from ttt.core.types import COLD_CARRY, COLD_CARRY_OFF, FRESH, LORA_ONLY
 
 ppl_values = st.floats(min_value=1.01, max_value=1e4, allow_nan=False)
 token_counts = st.integers(min_value=1, max_value=20_000)
@@ -70,18 +70,14 @@ def test_the_document_aggregate_weights_documents_equally():
     lora_only=ppl_values,
     cold_carry_off=ppl_values,
     cold_carry=ppl_values,
-    carry=ppl_values,
 )
 @settings(max_examples=100, deadline=None)
-def test_six_mode_gaps_decompose_additively(
-    fresh, lora_only, cold_carry_off, cold_carry, carry
-):
+def test_the_gaps_decompose_additively(fresh, lora_only, cold_carry_off, cold_carry):
     gaps = metrics.gap_decomposition(
         fresh=fresh,
         lora_only=lora_only,
         cold_carry_off=cold_carry_off,
         cold_carry=cold_carry,
-        carry=carry,
     )
 
     assert gaps.is_additive
@@ -99,28 +95,6 @@ def test_four_mode_gaps_decompose_additively(fresh, lora_only, cold_carry_off, c
     assert gaps.is_additive
 
 
-def test_a_zero_seed_eval_reports_no_seed_benefit():
-    gaps = metrics.gap_decomposition(
-        fresh=20.0, lora_only=19.0, cold_carry_off=18.0, cold_carry=16.0
-    )
-
-    assert gaps.seed == 0.0
-
-
-def test_each_gap_measures_exactly_one_mechanism():
-    gaps = metrics.gap_decomposition(
-        fresh=20.0, lora_only=19.0, cold_carry_off=18.0, cold_carry=16.0, carry=15.0
-    )
-
-    assert (gaps.lora, gaps.within, gaps.between, gaps.seed, gaps.total) == (
-        1.0,
-        1.0,
-        2.0,
-        1.0,
-        5.0,
-    )
-
-
 def test_a_mechanism_that_hurts_shows_a_negative_gap():
     gaps = metrics.gap_decomposition(
         fresh=20.0, lora_only=19.0, cold_carry_off=22.0, cold_carry=16.0
@@ -129,11 +103,7 @@ def test_a_mechanism_that_hurts_shows_a_negative_gap():
     assert gaps.within < 0.0 and gaps.is_additive
 
 
-def test_the_seed_gap_is_positive_when_the_trained_carrier_helps():
-    assert metrics.seed_gap(cold_carry=16.0, seeded_carry=15.0) == pytest.approx(1.0)
-
-
-def _five_regime_rows(source: str, doc_idx: int, base: float):
+def _regime_rows(source: str, doc_idx: int, base: float):
     return [
         build.eval_row(doc_idx=doc_idx, source=source, regime=FRESH, ppl=base),
         build.eval_row(
@@ -145,12 +115,11 @@ def _five_regime_rows(source: str, doc_idx: int, base: float):
         build.eval_row(
             doc_idx=doc_idx, source=source, regime=COLD_CARRY, ppl=base - 2
         ),
-        build.eval_row(doc_idx=doc_idx, source=source, regime=CARRY, ppl=base - 3),
     ]
 
 
 def test_summaries_are_one_row_per_source_in_sorted_order():
-    rows = _five_regime_rows("github", 0, 20.0) + _five_regime_rows("c4", 1, 30.0)
+    rows = _regime_rows("github", 0, 20.0) + _regime_rows("c4", 1, 30.0)
 
     summaries = metrics.summarise_by_source(rows)
 
@@ -158,7 +127,7 @@ def test_summaries_are_one_row_per_source_in_sorted_order():
 
 
 def test_a_summary_counts_distinct_documents():
-    rows = _five_regime_rows("c4", 0, 20.0) + _five_regime_rows("c4", 1, 22.0)
+    rows = _regime_rows("c4", 0, 20.0) + _regime_rows("c4", 1, 22.0)
 
     (summary,) = metrics.summarise_by_source(rows)
 
@@ -166,10 +135,10 @@ def test_a_summary_counts_distinct_documents():
 
 
 def test_a_summary_decomposes_that_sources_gaps():
-    (summary,) = metrics.summarise_by_source(_five_regime_rows("c4", 0, 20.0))
+    (summary,) = metrics.summarise_by_source(_regime_rows("c4", 0, 20.0))
 
     assert summary.gaps.is_additive
-    assert summary.gaps.total == pytest.approx(3.0)
+    assert summary.gaps.total == pytest.approx(2.0)
 
 
 def test_a_summary_aggregates_each_regime_by_tokens():
@@ -187,46 +156,6 @@ def test_a_summary_aggregates_each_regime_by_tokens():
 
 def test_summarising_nothing_yields_nothing():
     assert metrics.summarise_by_source([]) == ()
-
-
-def _five_regime_slices(slice_index: int, base: float):
-    return [
-        build.slice_row(slice_index=slice_index, regime=FRESH, ppl=base),
-        build.slice_row(slice_index=slice_index, regime=LORA_ONLY, ppl=base - 0.5),
-        build.slice_row(slice_index=slice_index, regime=COLD_CARRY_OFF, ppl=base - 1),
-        build.slice_row(slice_index=slice_index, regime=COLD_CARRY, ppl=base - 2),
-        build.slice_row(slice_index=slice_index, regime=CARRY, ppl=base - 3),
-    ]
-
-
-def test_slice_summaries_are_one_row_per_index_in_ascending_order():
-    slices = _five_regime_slices(2, 20.0) + _five_regime_slices(0, 30.0)
-
-    summaries = metrics.summarise_by_slice_index(slices)
-
-    assert [s.slice_index for s in summaries] == [0, 2]
-
-
-def test_a_slice_summary_decomposes_that_slices_gaps():
-    (summary,) = metrics.summarise_by_slice_index(_five_regime_slices(0, 20.0))
-
-    assert summary.gaps.is_additive
-    assert summary.gaps.total == pytest.approx(3.0)
-
-
-def test_a_slice_summary_counts_distinct_documents():
-    slices = [
-        build.slice_row(doc_idx=0, slice_index=0, regime=COLD_CARRY),
-        build.slice_row(doc_idx=1, slice_index=0, regime=COLD_CARRY),
-    ]
-
-    (summary,) = metrics.summarise_by_slice_index(slices)
-
-    assert summary.n_docs == 2
-
-
-def test_summarising_no_slices_yields_nothing():
-    assert metrics.summarise_by_slice_index([]) == ()
 
 
 def test_an_unclipped_step_reports_a_ratio_of_one():
@@ -254,91 +183,9 @@ def test_a_nonfinite_loss_stays_nonfinite():
     assert math.isnan(metrics.perplexity(float("nan")))
 
 
-def _replays(source: str, *ppls: float, doc_idx: int = 0) -> list:
-    return [
-        build.repeat_row(doc_idx=doc_idx, source=source, repeat=index, ppl=value)
-        for index, value in enumerate(ppls)
-    ]
+def test_each_gap_measures_exactly_one_mechanism():
+    gaps = metrics.gap_decomposition(
+        fresh=20.0, lora_only=19.0, cold_carry_off=18.0, cold_carry=16.0
+    )
 
-
-def test_repeat_summaries_cover_every_source_and_an_all_rollup():
-    rows = _replays("c4", 10.0, 8.0) + _replays("book", 20.0, 16.0)
-
-    summaries = metrics.summarise_by_repeat(rows)
-
-    assert {s.source for s in summaries} == {"c4", "book", metrics.ALL_SOURCES}
-
-
-def test_cold_carry_ppl_is_tracked_per_repeat():
-    rows = _replays("c4", 10.0, 8.0, 5.0)
-
-    by_repeat = {
-        s.repeat: s for s in metrics.summarise_by_repeat(rows) if s.source == "c4"
-    }
-
-    assert by_repeat[0].ppl_by_regime[COLD_CARRY] == pytest.approx(10.0)
-    assert by_repeat[2].ppl_by_regime[COLD_CARRY] == pytest.approx(5.0)
-
-
-def test_the_all_rollup_aggregates_every_source_at_that_repeat():
-    rows = _replays("c4", 10.0, 8.0, doc_idx=0) + _replays("book", 10.0, 8.0, doc_idx=1)
-
-    (rollup,) = [
-        s
-        for s in metrics.summarise_by_repeat(rows)
-        if s.source == metrics.ALL_SOURCES and s.repeat == 0
-    ]
-
-    assert rollup.n_docs == 2
-    assert rollup.ppl_by_regime[COLD_CARRY] == pytest.approx(10.0)
-
-
-def test_a_repeats_reference_regimes_stay_flat_across_the_replay():
-    """fresh/lora_only/cold_carry_off are measured once and repeated —
-    unlike cold_carry, they must not vary by repeat index."""
-    rows = [
-        build.repeat_row(source="c4", regime=FRESH, repeat=r, ppl=20.0)
-        for r in range(3)
-    ] + _replays("c4", 10.0, 8.0, 5.0)
-
-    by_repeat = {
-        s.repeat: s for s in metrics.summarise_by_repeat(rows) if s.source == "c4"
-    }
-
-    values = {s.ppl_by_regime[FRESH] for s in by_repeat.values()}
-    assert len(values) == 1
-    assert values.pop() == pytest.approx(20.0)
-
-
-def test_the_between_gap_grows_as_cold_carry_improves():
-    rows = [
-        build.repeat_row(source="c4", regime=COLD_CARRY_OFF, repeat=r, ppl=20.0)
-        for r in range(2)
-    ] + _replays("c4", 20.0, 12.0)
-
-    by_repeat = {
-        s.repeat: s for s in metrics.summarise_by_repeat(rows) if s.source == "c4"
-    }
-
-    assert by_repeat[0].gaps.between == pytest.approx(0.0)
-    assert by_repeat[1].gaps.between == pytest.approx(8.0)
-
-
-def test_state_ratio_is_averaged_over_cold_carry_rows_only():
-    rows = [
-        build.repeat_row(source="c4", regime=FRESH, repeat=0, state_ratio=99.0),
-        build.repeat_row(source="c4", regime=COLD_CARRY, repeat=0, state_ratio=0.2),
-        build.repeat_row(
-            source="c4", regime=COLD_CARRY, repeat=0, doc_idx=1, state_ratio=0.4,
-        ),
-    ]
-
-    (summary,) = [
-        s for s in metrics.summarise_by_repeat(rows) if s.source == "c4"
-    ]
-
-    assert summary.state_ratio == pytest.approx(0.3)
-
-
-def test_summarising_no_repeats_yields_nothing():
-    assert metrics.summarise_by_repeat([]) == ()
+    assert (gaps.lora, gaps.within, gaps.between, gaps.total) == (1.0, 1.0, 2.0, 4.0)

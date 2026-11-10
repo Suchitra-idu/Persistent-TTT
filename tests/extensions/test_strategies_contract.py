@@ -105,33 +105,6 @@ def test_describe_is_one_non_empty_line(strategy):
 
 
 @pytest.mark.parametrize("strategy", CASES)
-def test_compose_accounts_for_every_doc_exactly_once(strategy):
-    rows = strategy.compose(LENGTHS, SOURCES)
-
-    assert sum(row.no_carry_docs + row.carry_docs for row in rows) == len(LENGTHS)
-
-
-@pytest.mark.parametrize("strategy", CASES)
-def test_compose_reports_the_same_item_total_as_count(strategy):
-    rows = strategy.compose(LENGTHS, SOURCES)
-
-    assert sum(row.items for row in rows) == strategy.count(LENGTHS)
-
-
-@pytest.mark.parametrize("strategy", CASES)
-def test_compose_reports_every_source_present_in_the_pool(strategy):
-    rows = strategy.compose(LENGTHS, SOURCES)
-
-    assert sorted(row.source for row in rows) == sorted(set(SOURCES))
-
-
-@pytest.mark.parametrize("strategy", CASES)
-def test_compose_rejects_a_source_list_of_the_wrong_length(strategy):
-    with pytest.raises(ValueError):
-        strategy.compose(LENGTHS, SOURCES[:-1])
-
-
-@pytest.mark.parametrize("strategy", CASES)
 def test_an_empty_pool_builds_no_sessions(strategy):
     assert strategy.build([], [], _builders.FakeRng(1)) == ()
 

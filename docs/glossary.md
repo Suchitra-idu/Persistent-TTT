@@ -1,78 +1,73 @@
 # Glossary
 
-## The mechanism
+## The method
 
 | Term | Means |
 |---|---|
-| **fast weight** `S` | A weight the model updates during the forward pass, not by gradient descent |
-| **carry** | The fast weight persisted across items in a session. Always this, never the streaming buffer |
-| **stream_state** | The separate buffer used by generation and chat |
-| **chunk** | `chunk_size` tokens (default 50); one fast-weight update |
-| **η (eta)** | Inner-loop learning rate of the fast weight (default `2`) |
-| **η̃ (adaptive eta)** | `η/(1+‖z‖²)` — `delta`/`delta_chunk`-only normalized-LMS step size, keeping the delta rule's own stability bound satisfied regardless of `z`'s scale |
-| **W0 / W_down** | The `down_proj` weight the fast weight adds to |
-| **W_target** | Learned projection producing the update target `V`. Zero-init, so TTT starts as identity |
-| **update_rule** | Which inner-loop update builds `S`: `hebbian` (default, no error term), `delta`, `delta_chunk` (both online gradient descent) — see [mechanism.md](mechanism.md#the-update-rules) |
-| **output gate** | Learned per-token sigmoid gating how much of the TTT term reaches the output. Zero-init weight, so it starts uniform at `sigmoid(output_gate_bias_init)` |
-| **gate_mean / gate_std** | The gate's value, captured every forward under `no_grad` |
-| **carried_decay** | EMA factor when an item's delta folds into the carry. Applies every item, not just cross-session |
-| **state ratio** | `‖η·S‖_F / ‖W0‖_F` — the carry's magnitude relative to the base weight |
-| **clip / tau** | Frobenius bound on `‖η·S‖_F` at apply time |
-| **TBPTT / truncate_every** | `delta`/`delta_chunk`-only: the state detaches from the autograd graph every `truncate_every` steps, bounding the backward chain through the clip |
+| **fast weight** `S` | A weight the model writes during the forward pass, from the text it reads, not by gradient descent |
+| **In-Place TTT term** | `g(h) η S_in z`: the fast weight written inside the current item, read through the main gate |
+| **carry**, `S_carried` | The fast weight kept from earlier items of a session: `S_carried <- 0.9 S_carried + ΔS_item` |
+| **ungated carry** | `carry_gate=false`: the carry is added to the state the scan starts from. In-Place TTT with the reset removed |
+| **gated carry** | `carry_gate=true`: the carry is read through its own clip, gate `g_c` and zero-initialised scale `α`, beside the In-Place TTT term. The paper's method also sets `carry_backprop=true` and gate bias `-6` |
+| **training through the carry** | `carry_backprop=true`: the carry stays in the autograd graph for `carry_window=2` items, so a later item's loss trains an earlier item's write |
+| **chunk** | `chunk_size=50` tokens; one fast-weight write. A chunk reads only earlier chunks |
+| **η** | the fixed fast-weight step size, 2 |
+| **target `V`** | what the fast weight is trained to produce: a causal depthwise convolution (kernel 8) over the normalised hidden states, then `W_target`, initialised to zero |
+| **W0 / W_down** | the `down_proj` weight of a TTT layer |
+| **update rule** | `hebbian` (default; `ΔS = VᵀZ/C`) or `delta_chunk` (`ΔS = (V − V̂)ᵀZ/C`, error from the chunk-start state) |
+| **main gate `g`** | `output_gate`: a per-token sigmoid on the In-Place TTT term, weights zero, bias `output_gate_bias_init` |
+| **carry gate `g_c`, scale `α`** | `output_gate_carry`, `output_gate_carry_scale`: the gated carry's read |
+| **clip, τ** | rescaling a state so `‖ηS‖_F ≤ 20`, keeping its direction |
+| **state ratio** | `‖ηS‖_F / ‖W0‖_F`, the carry's size relative to the base weight |
+| **carried_decay** | 0.9, the factor on the carry each time an item is added |
 
-## Scheduling
+## Training
 
 | Term | Means |
 |---|---|
-| **doc** | One document. (Was "paper" — arxiv-era vocabulary, renamed in D10) |
-| **work item** | A contiguous token range of one doc: one forward, one backward |
-| **session** | The carry's lifetime — the items it spans before being reset |
-| **slice** | A work item cut out of a longer doc |
-| **strategy** | The plugin deciding how docs become sessions. `hybrid`, `everlasting`, or `minilasting` |
-| **carry scope** | `session` (reset at each boundary) or `source` (per-source carriers persist) |
-| **epoch** | One pass over the document pool |
+| **doc** | one document |
+| **item** | a contiguous token range of one document: one forward and one backward |
+| **slice** | an item cut out of a longer document |
+| **session** | the items over which the carry is kept; it is reset between sessions |
+| **strategy** | how documents become sessions: `hybrid` (one document per session) or `mixed` (five documents, crossing boundaries) |
+| **parameter groups** | `lora`, `wdown`, `new`, each with its own learning rate |
+| **step** | one optimizer step, after `grad_accum_steps=16` items |
 
 ## Data
 
 | Term | Means |
 |---|---|
-| **source** | The domain label on every row: `RedPajamaC4`, `RedPajamaBook`, … Never empty (D9) |
-| **preset** | Per-source weights for rebalancing the training mix. Unnormalised; only ratios matter |
-| **holdout** | The newest `holdout_last_n` rows, reserved for eval. Never trained on |
-| **prefilter** | Dropping short docs by estimated tokens, before tokenizing |
-| **drop_short** | Dropping short docs by exact token count, after tokenizing |
+| **source** | the domain of a document: `RedPajamaArXiv`, `RedPajamaBook`, `RedPajamaC4`, `RedPajamaGithub`, `RedPajamaStackExchange`, `RedPajamaWikipedia` |
+| **preset** | per-source mixing weights; `slim-research` is the paper's |
+| **holdout** | the last 15,000 rows of the dataset, never trained on |
+| **development holdout** | 20 held-out documents per source (6 for Book), holdout seed 0 |
+| **confirmatory holdout** | 73 new held-out documents, holdout seed 1 excluding seed 0's documents |
 
-## Measurement
+## Evaluation
 
 | Term | Means |
 |---|---|
-| **regime** | One of the six ways to run a doc — see [mechanism.md](mechanism.md#regimes) |
-| **ppl** | Perplexity, `exp(mean token loss)`. Lower is better |
-| **token-weighted** | Combining perplexities in log space weighted by token count. The only correct way |
-| **Δlora** | LoRA's own effect, TTT silent |
-| **Δwithin** | Gain from the within-item chunk scan |
-| **Δbetween** | Gain from carrying across items |
-| **Δseed** | Gain from starting at the trained per-source carrier |
-| **Δtotal** | `Δlora + Δwithin + Δbetween + Δseed` |
+| **regime** | a way of reading a held-out document: `fresh`, `lora_only`, `cold_carry_off`, `cold_carry` ([evaluation.md](evaluation.md)) |
+| **between-slice gain** | `cold_carry_off` → `cold_carry`: what the carry adds within a document |
+| **cross-document gain** | `doc_reset` → `persist` in the boundary suite |
+| **suite** | one kind of measurement in `paper_eval_v1`: `regimes`, `boundary`, `repeat`, `context`, `relatedness`, `token_gain`, `dyneval` |
+| **case** | in the relatedness suite, one target article and its primes |
+| **prime** | the text the carry reads before the target: `self`, `related`, `random`, `other_source`, `generic`, `chain_k` |
+| **bundle** | one folder of results for one checkpoint and pass: raw rows, tables, manifest |
+| **fresh pass, `-fresh`** | the preregistered confirmatory evaluation |
+| **pins** | `results/paper/inputs/bundle_pins.json`: which bundle each table reads |
+| **ppl** | perplexity, `exp(mean token loss)`; lower is better |
+| **gain** | a drop in perplexity, positive when the second condition is lower |
 
 ## Architecture
 
 | Term | Means |
 |---|---|
-| **ring** | One of the six layers. Imports point inward only |
-| **port** | An interface to something costly or impure (GPU, disk, network, clock, rng) |
-| **adapter** | An implementation of a port. Every port has a real one and a fake one |
-| **fake** | A working stand-in that passes the same conformance suite as the real adapter |
-| **registry** | Name → plugin lookup for an axis that varies (datasets, strategies) |
-| **contract suite** | One test parametrized over a registry; a new plugin auto-enrols |
-| **conformance suite** | One test class per port that every adapter must pass |
-| **oracle** | A slow, obviously-correct reimplementation used to check a fast one |
-| **property test** | Asserts an invariant over random inputs, rather than one example |
-
-## Configuration
-
-| Term | Means |
-|---|---|
-| **resolved config** | The frozen object produced once, in Ring 5, from defaults + CLI + env |
-| **D1–D14** | Rebuild decisions in [REBUILD_PLAN.md](../REBUILD_PLAN.md) §1. Cited in code by number |
-| **RQ / SO / A1–A4** | Research questions, sub-objectives and ablations from the proposal |
+| **ring** | one of the six layers of `ttt/`; imports point inward ([codebase.md](codebase.md)) |
+| **port** | an interface to something costly or nondeterministic |
+| **adapter** | an implementation of a port; each port has a real one and a fake one |
+| **conformance suite** | the tests every adapter of a port must pass |
+| **registry** | name → plugin, for strategies and datasets |
+| **contract suite** | the tests every registered plugin must pass |
+| **oracle** | a slow, obviously correct reimplementation that a fast kernel is checked against |
+| **D1–D14** | the design decisions in [REBUILD_PLAN.md](../REBUILD_PLAN.md), cited in code by number |

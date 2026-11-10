@@ -108,34 +108,6 @@ def test_boundary_gaps_compare_adjacent_reset_policies(measure, expected):
     assert by(estimates, measure).interval.point == pytest.approx(expected)
 
 
-def test_the_repeat_curve_starts_at_the_first_replay():
-    points = evidence.repeat_curve(repeat_rows(), **kw())
-
-    assert sorted({p.repeat for p in points}) == [1, 2]
-
-
-def test_the_repeat_curve_measures_against_the_cold_pass():
-    points = evidence.repeat_curve(repeat_rows(ppls=(10.0, 9.0, 8.5)), **kw())
-
-    assert [p.gap.point for p in points if p.source == ALL_SOURCES] == pytest.approx([1.0, 1.5])
-
-
-def test_the_repeat_curve_carries_the_state_median_across_documents():
-    points = evidence.repeat_curve(repeat_rows(), **kw())
-
-    assert points[0].state_ratio.median == pytest.approx(0.2)
-
-
-def test_a_flat_curve_has_a_zero_trend():
-    estimates = evidence.repeat_trend(repeat_rows(ppls=(10.0, 9.0, 9.0, 9.0)), **kw())
-
-    assert by(estimates, "repeat_3_vs_1").interval.point == pytest.approx(0.0)
-
-
-def test_a_single_replay_has_no_trend():
-    assert evidence.repeat_trend(repeat_rows(ppls=(10.0, 9.0)), **kw()) == ()
-
-
 def test_domain_correlates_rank_sources_by_fresh_perplexity():
     fresh = {"a": 10.0, "b": 20.0, "c": 30.0}
     estimates = (
@@ -190,3 +162,31 @@ def test_domain_correlates_ignore_a_gap_that_only_scales_with_base_perplexity():
     )
 
     assert evidence.domain_correlates(fresh, estimates)[0].rho == pytest.approx(0.6)
+
+
+def test_the_repeat_curve_starts_at_the_first_replay():
+    points = evidence.repeat_curve(repeat_rows(), **kw())
+
+    assert sorted({p.repeat for p in points}) == [1, 2]
+
+
+def test_the_repeat_curve_measures_against_the_cold_pass():
+    points = evidence.repeat_curve(repeat_rows(ppls=(10.0, 9.0, 8.5)), **kw())
+
+    assert [p.gap.point for p in points if p.source == ALL_SOURCES] == pytest.approx([1.0, 1.5])
+
+
+def test_the_repeat_curve_carries_the_state_median_across_documents():
+    points = evidence.repeat_curve(repeat_rows(), **kw())
+
+    assert points[0].state_ratio.median == pytest.approx(0.2)
+
+
+def test_a_flat_curve_has_a_zero_trend():
+    estimates = evidence.repeat_trend(repeat_rows(ppls=(10.0, 9.0, 9.0, 9.0)), **kw())
+
+    assert by(estimates, "repeat_3_vs_1").interval.point == pytest.approx(0.0)
+
+
+def test_a_single_replay_has_no_trend():
+    assert evidence.repeat_trend(repeat_rows(ppls=(10.0, 9.0)), **kw()) == ()
