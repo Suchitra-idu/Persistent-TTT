@@ -13,12 +13,13 @@ from pathlib import Path
 from ttt.adapters.numpy_rng import NumpyRng
 from ttt.app import evidence, paper_analysis
 from ttt.core.metrics import ALL_SOURCES
-from ttt.experiments.paper_analysis_v1 import RESULTS_DIR
-from ttt.experiments.paper_analysis_v1 import bundle_rows as _rows, pinned
+from ttt.experiments import paper_eval_v1
+from ttt.experiments.paper_analysis_v1 import PAPER_CONTROL as CONTROL
+from ttt.experiments.paper_analysis_v1 import RESULTS_DIR, pinned
+from ttt.experiments.paper_analysis_v1 import bundle_rows as _rows
 
 OUT = RESULTS_DIR / "paper" / "report_figures"
-N_BOOT = 1000
-CONTROL = "lora-only-matched"
+N_BOOT = paper_eval_v1.DEFAULT_N_BOOT
 GATED_200 = "hebbian-carry-b"
 GATED = "hebbian-carry-600"
 GATED_43 = "hebbian-carry-600-s43"

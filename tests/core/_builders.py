@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import random
 
 import torch
 
@@ -63,26 +62,3 @@ def work_items(*spans: tuple[int, int, int]) -> list[WorkItem]:
     return [WorkItem(doc_idx=d, start=s, end=e) for d, s, e in spans]
 
 
-class FakeRng:
-    """The Rng port's shape, backed by a private `random.Random`.
-
-    The real adapter and its conformance suite arrive in Phase 3.
-    """
-
-    def __init__(self, seed: int) -> None:
-        self._rng = random.Random(seed)
-
-    def random(self) -> float:
-        return self._rng.random()
-
-    def integers(self, low: int, high: int) -> int:
-        """Half-open [low, high), like numpy's."""
-        return self._rng.randrange(low, high)
-
-    def shuffle(self, items: list) -> None:
-        self._rng.shuffle(items)
-
-    def permutation(self, n: int) -> list[int]:
-        order = list(range(n))
-        self._rng.shuffle(order)
-        return order

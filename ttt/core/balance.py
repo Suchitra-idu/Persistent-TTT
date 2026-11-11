@@ -44,8 +44,7 @@ def balanced_indices(
 ) -> BalanceResult:
     """Pick indices so per-source counts follow `weights`, aiming at target_total.
 
-    Weights are unnormalised; sources absent from them are dropped, which is
-    how --only-sources is expressed as data. The result can be smaller than
+    Weights are unnormalised; sources absent from them are dropped. The result can be smaller than
     target_total but never larger than the pool, and stays in pool order so
     domains remain interleaved.
     """

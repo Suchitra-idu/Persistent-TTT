@@ -15,16 +15,13 @@ from ttt.core.metrics import ALL_SOURCES, geometric_mean_ppl
 from ttt.core import stats
 from ttt.core.types import FRESH
 from ttt.experiments import paper_eval_v1
-from ttt.experiments.paper_analysis_v1 import RESULTS_DIR, bundle_rows
+from ttt.experiments.paper_analysis_v1 import OUT_DIR as OUT
+from ttt.experiments.paper_analysis_v1 import PAPER_CONTROL as CONTROL
+from ttt.experiments.paper_analysis_v1 import bundle_rows as _rows
 
-OUT = RESULTS_DIR / "paper"
-CONTROL = "lora-only-matched"
 RUNS = {"Hebbian": "ttt-v1.1", "Delta": "ttt-v1.1-clean-deltachunk"}
 STEPS = (200, 400, 600)
 N_BOOT = paper_eval_v1.DEFAULT_N_BOOT
-
-
-_rows = bundle_rows
 
 
 def source_estimates():
@@ -169,15 +166,6 @@ def repeat_summary() -> list[str]:
     return lines
 
 
-def relatedness_table(estimates) -> list[str]:
-    lines = ["model,measure,n_docs,delta_ppl,ci_low,ci_high,excludes_zero,win_rate"]
-    for (label, measure), e in sorted(estimates.items()):
-        i = e.interval
-        lines.append(f"\"{label}\",{measure},{e.n_docs},{i.point:.6g},{i.low:.6g},{i.high:.6g},"
-                     f"{int(i.excludes_zero)},{e.win_rate:.4f}")
-    return lines
-
-
 ABLATION_CASES = (
     ("closed gate only, no carry path (C)", "ablate-c-only"),
     ("separate path, not trained through (A+C)", "ablate-a-c"),
@@ -227,8 +215,8 @@ def seed_estimates() -> dict[tuple[str, str], object]:
     return out
 
 
-def carry_design_table(estimates) -> list[str]:
-    lines = ["case,measure,n_docs,delta_ppl,ci_low,ci_high,excludes_zero,win_rate"]
+def carry_design_table(estimates, first: str = "case") -> list[str]:
+    lines = [f"{first},measure,n_docs,delta_ppl,ci_low,ci_high,excludes_zero,win_rate"]
     for (label, measure), e in sorted(estimates.items()):
         i = e.interval
         lines.append(f"\"{label}\",{measure},{e.n_docs},{i.point:.6g},{i.low:.6g},{i.high:.6g},"
@@ -242,7 +230,7 @@ def main() -> None:
     tables = OUT / "tables"
     (tables / "T11_carry_design.csv").write_text("\n".join(carry_design_table(carry_design_estimates())) + "\n")
     related = relatedness_estimates()
-    (tables / "T12_relatedness.csv").write_text("\n".join(relatedness_table(related)) + "\n")
+    (tables / "T12_relatedness.csv").write_text("\n".join(carry_design_table(related, "model")) + "\n")
     (tables / "T13_ablation.csv").write_text("\n".join(carry_design_table(ablation_estimates())) + "\n")
     (tables / "T14_seeds.csv").write_text("\n".join(carry_design_table(seed_estimates())) + "\n")
     (tables / "T15_carry_vs_dyneval.csv").write_text("\n".join(carry_vs_dyneval()) + "\n")

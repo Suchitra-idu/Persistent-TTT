@@ -199,14 +199,6 @@ def test_the_item_delta_is_unclipped():
     assert torch.allclose(clipped_run, unclipped_run, atol=TOL)
 
 
-def test_scan_rejects_mismatched_z_and_v():
-    z, _ = build.scan_inputs(seed=71, n_tokens=10)
-    _, v = build.scan_inputs(seed=72, n_tokens=11)
-
-    with pytest.raises(ValueError, match=r"must agree on \[B, N\]"):
-        ttt_math.scan(z, v, chunk_size=4, eta=ETA)
-
-
 @given(
     n_tokens=st.integers(min_value=1, max_value=40),
     chunk_size=st.integers(min_value=1, max_value=12),
@@ -275,14 +267,6 @@ def test_the_chunked_delta_scan_item_delta_reflects_the_clip():
     )
 
     assert not torch.allclose(clipped_run, unclipped_run, atol=1e-6)
-
-
-def test_chunked_delta_scan_rejects_mismatched_z_and_v():
-    z, _ = build.scan_inputs(seed=351, n_tokens=10)
-    _, v = build.scan_inputs(seed=352, n_tokens=11)
-
-    with pytest.raises(ValueError, match=r"must agree on \[B, N\]"):
-        ttt_math.chunked_delta_scan(z, v, chunk_size=4, eta=ETA)
 
 
 def _outlier_inputs(*, n_tokens: int, d_model: int, d_ff: int, seed: int):

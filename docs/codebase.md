@@ -104,6 +104,6 @@ elsewhere; `make check` rejects it.
 
 ## Tests
 
-`make check` runs the import contracts and the fast tests (about 1,200, a few
+`make check` runs the import contracts and the fast tests (about 750, a few
 seconds). `make test-gpu` runs the GPU tier on a real GPU. See
 [testing.md](testing.md).

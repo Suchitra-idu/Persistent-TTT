@@ -1,9 +1,7 @@
 """The composition root: resolved config in, wired ports out.
 
-Not an experiment — this is the infrastructure the `*_v1.py` files compose over,
-and the only file here that may change. An `Engine` is a bag of ports plus the
-two things only a real model can do: persist itself, and be resumed. Tests build
-one out of fakes and drive a whole experiment with no GPU.
+An `Engine` is the ports plus the model and a checkpointer. Tests build one out
+of fakes and drive a whole experiment with no GPU.
 """
 
 from __future__ import annotations
@@ -121,12 +119,7 @@ def _resume_dir(resolved: cli.Resolved) -> str:
 
 
 def tracker(resolved: cli.Resolved, *, job_type: str, invocation: str = "") -> Tracker:
-    """Console when wandb is off, so a run without telemetry still reports.
-
-    `invocation` is the exact command line that launched the run (`cli.invocation()`,
-    read locally and threaded in — see its docstring), stored in the wandb
-    run's config for provenance.
-    """
+    """W&B, or the console when it is off. `invocation` is stored in the W&B config."""
     from ttt.adapters.console_tracker import ConsoleTracker
 
     if not resolved.train.wandb_enabled:

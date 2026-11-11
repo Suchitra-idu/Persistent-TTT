@@ -38,7 +38,7 @@ ttt/
   app/          the data pipeline, the training loop, every evaluation suite
   cli.py        flags in, frozen configuration out
   experiments/  the entrypoints: train, evaluate, and the analysis scripts for the paper
-tests/          about 1,200 fast tests (seconds on a CPU), mirroring ttt/
+tests/          about 750 fast tests (seconds on a CPU), mirroring ttt/
 results/        the result bundles of every run in the paper, and results/paper/ (tables, figures)
 Paper_TMLR/     the paper
 docs/           the documentation

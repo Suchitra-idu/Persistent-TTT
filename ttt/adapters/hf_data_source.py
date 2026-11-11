@@ -13,11 +13,7 @@ from ttt.ports.table import SOURCE_COLUMN
 
 
 class HfDataSource:
-    """`load` is called twice per run — the training pool, then `holdout`'s own
-    pool — on the same spec; caching per instance turns the second call from a
-    full re-load-and-relabel of the raw corpus into a dict lookup. Scoped to
-    the instance (not module-level) so it dies with the entrypoint that made
-    it, not leak across separate Modal invocations."""
+    """Caches per instance: a run loads the same spec twice, for training and the holdout."""
 
     def __init__(self) -> None:
         self._cache: dict[DatasetSpec, HfTable] = {}
@@ -30,10 +26,7 @@ class HfDataSource:
         t0 = time.time()
         dataset = _load(spec)
         print(f"  loaded {len(dataset):,d} rows in {time.time() - t0:.1f}s")
-        missing = spec.source_meta_column and (
-            spec.source_meta_column not in dataset.column_names
-        )
-        if missing:
+        if spec.source_meta_column not in dataset.column_names:
             raise ValueError(
                 f"dataset {spec.source!r} has no {spec.source_meta_column!r} "
                 f"column to read a source label from (columns: "
@@ -48,13 +41,8 @@ class HfDataSource:
 
 
 def source_labels(dataset, spec: DatasetSpec) -> list[str]:
-    """The `source` column's values, read a chunk at a time.
-
-    Deliberately not `dataset.map`: that rewrites every column of every row to
-    append one string, which on SlimPajama-6B is tens of GB of writes to a
-    network-backed volume. Appending one array leaves the rest memory-mapped.
-    Interned because a 6M-row corpus holds about six distinct labels.
-    """
+    """Read a chunk at a time and appended as one column: `dataset.map` would
+    rewrite every row, tens of GB on SlimPajama-6B."""
     labels: list[str] = []
     for chunk in dataset.data.column(spec.source_meta_column).chunks:
         labels.extend(

@@ -9,6 +9,7 @@ import pytest
 from ttt.core.schedule import covers
 from ttt.extensions.strategies import STRATEGIES, Strategy, register
 from tests.extensions import _builders
+from ttt.adapters.numpy_rng import NumpyRng
 
 CASES = [pytest.param(s, id=name) for name, s in sorted(STRATEGIES.items())]
 
@@ -21,7 +22,7 @@ SOURCES = _builders.sources_for(LENGTHS, seed=12)
 
 
 def build(strategy, seed):
-    return strategy.build(LENGTHS, SOURCES, _builders.FakeRng(seed))
+    return strategy.build(LENGTHS, SOURCES, NumpyRng(seed))
 
 
 def spans_by_doc(sessions):
@@ -94,6 +95,6 @@ def test_a_different_seed_builds_a_different_schedule(strategy):
 
 @pytest.mark.parametrize("strategy", CASES)
 def test_an_empty_pool_builds_no_sessions(strategy):
-    assert strategy.build([], [], _builders.FakeRng(1)) == ()
+    assert strategy.build([], [], NumpyRng(1)) == ()
 
 

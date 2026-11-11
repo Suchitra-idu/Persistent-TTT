@@ -14,7 +14,7 @@ make test-gpu-modal  # the GPU tier, run on a Modal H100
 `pytest` with no arguments deselects `gpu`, `integration` and `slow`. Override
 with an explicit `-m`.
 
-The fast tier is about 1,200 tests and runs in a few seconds on a laptop CPU.
+The fast tier is about 750 tests and runs in a few seconds on a laptop CPU.
 
 ## Layout
 

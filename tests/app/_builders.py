@@ -15,7 +15,6 @@ from ttt.app.data_pipeline import Doc
 from ttt.app.stages import Data
 from ttt.core.config.dataset import DatasetSpec
 from ttt.core.config.train import TrainConfig
-from ttt.core.types import Carry
 
 LAYERS = (1, 3)
 CHUNK = 4
@@ -65,12 +64,6 @@ def docs(n: int, *, sources: Sequence[str] = SOURCES, n_tokens: int = 8) -> tupl
         doc(index, source=sources[index % len(sources)], n_tokens=n_tokens)
         for index in range(n)
     )
-
-
-def carry(value: float = 1.0, *, layers: Sequence[int] = LAYERS) -> Carry:
-    import torch
-
-    return Carry(deltas={index: torch.tensor([[value]]) for index in layers})
 
 
 @dataclass

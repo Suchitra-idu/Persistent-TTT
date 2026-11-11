@@ -5,7 +5,7 @@ from __future__ import annotations
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from tests.core._builders import FakeRng
+from ttt.adapters.numpy_rng import NumpyRng
 from ttt.core import sampling
 
 SOURCES = ["c4"] * 20 + ["github"] * 5 + ["books"] * 2
@@ -19,19 +19,19 @@ labels = st.lists(
 
 @given(n=st.integers(min_value=0, max_value=200), seed=st.integers(0, 10_000))
 def test_a_permutation_is_a_rearrangement_of_every_index(n, seed):
-    order = sampling.permutation(n, FakeRng(seed))
+    order = sampling.permutation(n, NumpyRng(seed))
 
     assert sorted(order) == list(range(n))
 
 
 def test_a_permutation_is_seed_stable():
-    assert sampling.permutation(50, FakeRng(3)) == sampling.permutation(50, FakeRng(3))
+    assert sampling.permutation(50, NumpyRng(3)) == sampling.permutation(50, NumpyRng(3))
 
 
 @given(source_labels=labels, n=st.integers(min_value=0, max_value=10))
 @settings(max_examples=50, deadline=None)
 def test_n_per_source_never_takes_more_than_n_from_any_source(source_labels, n):
-    picked, _ = sampling.n_per_source_indices(source_labels, n, FakeRng(1))
+    picked, _ = sampling.n_per_source_indices(source_labels, n, NumpyRng(1))
 
     counts: dict[str, int] = {}
     for index in picked:
@@ -42,7 +42,7 @@ def test_n_per_source_never_takes_more_than_n_from_any_source(source_labels, n):
 @given(source_labels=labels, n=st.integers(min_value=1, max_value=10))
 @settings(max_examples=50, deadline=None)
 def test_every_source_present_in_the_pool_is_represented(source_labels, n):
-    picked, _ = sampling.n_per_source_indices(source_labels, n, FakeRng(1))
+    picked, _ = sampling.n_per_source_indices(source_labels, n, NumpyRng(1))
 
     assert {source_labels[i] for i in picked} == set(source_labels)
 
@@ -50,27 +50,27 @@ def test_every_source_present_in_the_pool_is_represented(source_labels, n):
 @given(source_labels=labels, n=st.integers(min_value=0, max_value=10))
 @settings(max_examples=50, deadline=None)
 def test_n_per_source_picks_are_distinct(source_labels, n):
-    picked, _ = sampling.n_per_source_indices(source_labels, n, FakeRng(2))
+    picked, _ = sampling.n_per_source_indices(source_labels, n, NumpyRng(2))
 
     assert len(set(picked)) == len(picked)
 
 
 def test_a_scarce_source_reports_a_shortfall_instead_of_failing():
-    picked, shortfalls = sampling.n_per_source_indices(SOURCES, 5, FakeRng(0))
+    picked, shortfalls = sampling.n_per_source_indices(SOURCES, 5, NumpyRng(0))
 
     assert [(s.source, s.got, s.wanted) for s in shortfalls] == [("books", 2, 5)]
     assert len(picked) == 5 + 5 + 2
 
 
 def test_no_shortfall_is_reported_when_every_source_can_supply():
-    _, shortfalls = sampling.n_per_source_indices(SOURCES, 2, FakeRng(0))
+    _, shortfalls = sampling.n_per_source_indices(SOURCES, 2, NumpyRng(0))
 
     assert shortfalls == []
 
 
 def test_n_per_source_is_seed_stable():
-    first, _ = sampling.n_per_source_indices(SOURCES, 3, FakeRng(9))
-    second, _ = sampling.n_per_source_indices(SOURCES, 3, FakeRng(9))
+    first, _ = sampling.n_per_source_indices(SOURCES, 3, NumpyRng(9))
+    second, _ = sampling.n_per_source_indices(SOURCES, 3, NumpyRng(9))
 
     assert first == second
 

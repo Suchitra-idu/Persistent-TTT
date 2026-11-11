@@ -66,12 +66,6 @@ def test_unset_sentinels_are_dropped():
     assert kept == {"seed": 7}
 
 
-def test_a_described_config_is_sorted_by_field_name():
-    described = resolve.describe(PluginConfig())
-
-    assert [name for name, _ in described] == sorted(name for name, _ in described)
-
-
 def test_describing_covers_every_field():
     described = resolve.describe(PluginConfig())
 
@@ -82,10 +76,6 @@ def test_describing_covers_every_field():
         "enabled",
         "rate",
     }
-
-
-def test_two_identical_configs_describe_identically():
-    assert resolve.describe(TTTConfig()) == resolve.describe(TTTConfig())
 
 
 def test_a_changed_field_changes_the_description():

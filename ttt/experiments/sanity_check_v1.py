@@ -91,7 +91,10 @@ def run(
 @app.function(
     image=image,
     gpu=modal_runtime.GPU,
-    volumes={modal_runtime.HF_CACHE_MOUNT: modal_runtime.cache_volume()},
+    volumes={
+        modal_runtime.CKPT_MOUNT: modal_runtime.checkpoint_volume(),
+        modal_runtime.HF_CACHE_MOUNT: modal_runtime.cache_volume(),
+    },
     secrets=modal_runtime.secrets(),
     timeout=60 * 20,
 )

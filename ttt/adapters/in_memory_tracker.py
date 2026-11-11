@@ -8,7 +8,6 @@ from typing import Mapping
 class InMemoryTracker:
     def __init__(self) -> None:
         self.records: list[dict[str, float]] = []
-        self.images: list[tuple[str, str]] = []
         self.finished = False
 
     def log(self, metrics: Mapping[str, float]) -> None:
@@ -19,7 +18,3 @@ class InMemoryTracker:
 
     def values_of(self, key: str) -> list[float]:
         return [record[key] for record in self.records if key in record]
-
-    @property
-    def keys_logged(self) -> frozenset[str]:
-        return frozenset(key for record in self.records for key in record)

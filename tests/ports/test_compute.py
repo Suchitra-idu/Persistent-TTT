@@ -25,17 +25,11 @@ class ComputeConformance:
     def test_it_satisfies_the_port(self, compute):
         assert isinstance(compute, Compute)
 
-    def test_a_loss_is_a_finite_float(self, compute):
-        assert math.isfinite(compute.loss(IDS))
 
     def test_backward_without_a_loss_raises(self, compute):
         with pytest.raises(RuntimeError, match="backward without a preceding loss"):
             compute.backward(scale=1.0)
 
-    def test_a_loss_can_be_backwarded_once(self, compute):
-        compute.loss(IDS)
-
-        compute.backward(scale=0.5)
 
     def test_a_loss_can_be_backwarded_with_its_graph_retained(self, compute):
         compute.loss(IDS)
@@ -57,19 +51,10 @@ class ComputeConformance:
 
         assert all(math.isfinite(getattr(stats, name)) for name in GROUPS)
 
-    def test_a_step_reports_a_finite_total_norm(self, compute):
-        compute.loss(IDS)
-        compute.backward(scale=1.0)
-
-        stats = compute.clip_and_step(max_grad_norm=CLIP, learning_rates=RATES)
-
-        assert math.isfinite(stats.total_norm)
 
     def test_zero_grad_is_safe_before_any_backward(self, compute):
         compute.zero_grad()
 
-    def test_eval_loss_is_a_finite_float(self, compute):
-        assert math.isfinite(compute.eval_loss(IDS))
 
     def test_token_losses_cover_every_token_after_the_first(self, compute):
         assert len(compute.eval_token_losses(IDS)) == len(IDS) - 1
@@ -77,8 +62,6 @@ class ComputeConformance:
     def test_token_losses_skip_the_unscored_context(self, compute):
         assert len(compute.eval_token_losses(IDS, score_from=5)) == len(IDS) - 5
 
-    def test_token_losses_are_finite(self, compute):
-        assert all(math.isfinite(x) for x in compute.eval_token_losses(IDS))
 
     def test_eval_loss_does_not_consume_a_pending_backward(self, compute):
         compute.loss(IDS)

@@ -6,6 +6,8 @@ from dataclasses import dataclass, replace
 from typing import Any, Sequence
 
 import torch
+
+from tests.core._builders import generator
 import torch.nn as nn
 
 from ttt.adapters.model_builder import patch_model_with_ttt, unfreeze_ttt_params
@@ -26,12 +28,6 @@ TTT_TENSOR_SUFFIXES = (
     "output_gate.bias",
     "down_proj.weight",
 )
-
-
-def generator(seed: int) -> torch.Generator:
-    gen = torch.Generator()
-    gen.manual_seed(seed)
-    return gen
 
 
 def fill(module: nn.Module, *, seed: int, scale: float = 0.1) -> None:

@@ -13,7 +13,6 @@ from ttt.adapters.fake_fast_weights import FakeFastWeights
 from ttt.adapters.fake_tokenizer import FakeTokenizer
 from ttt.adapters.in_memory_storage import InMemoryStorage
 from ttt.adapters.in_memory_tracker import InMemoryTracker
-from ttt.core.types import Carry
 from ttt.experiments._runtime import Engine
 
 LAYERS = app_builders.LAYERS
@@ -86,16 +85,6 @@ def engine(
     return built
 
 
-def nothing_held_out(resolution: cli.Resolved) -> cli.Resolved:
-    """A populated corpus whose holdout is empty — the shape a real run hits
-    when holdout_last_n outruns the pool, not a corpus with no columns."""
-    import dataclasses
-
-    return dataclasses.replace(
-        resolution, spec=dataclasses.replace(resolution.spec, holdout_last_n=0)
-    )
-
-
 def wider_holdout(resolution: cli.Resolved, holdout_last_n: int) -> cli.Resolved:
     """More than the fixture dataset's default holdout_last_n=4 — for tests
     that need several documents per source in the eval pool."""
@@ -107,5 +96,3 @@ def wider_holdout(resolution: cli.Resolved, holdout_last_n: int) -> cli.Resolved
     )
 
 
-def carry(value: float = 1.0) -> Carry:
-    return app_builders.carry(value)

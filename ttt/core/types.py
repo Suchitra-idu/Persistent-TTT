@@ -66,12 +66,7 @@ class Session:
 
 @dataclass(frozen=True, eq=False)
 class Carry:
-    """fp32 fast-weight deltas keyed by BASE-MODEL layer index.
-
-    One key scheme, no enumeration-keyed twin: that is what makes D14 defect 2
-    unrepresentable. Not eq-comparable — tensor equality is a tolerance
-    question.
-    """
+    """fp32 fast-weight deltas keyed by base-model layer index (D14). Not eq-comparable."""
 
     deltas: Mapping[int, torch.Tensor]
 
@@ -82,13 +77,6 @@ class Carry:
                 f"Carry keys must be base-model layer indices (int), got {bad!r}"
             )
         object.__setattr__(self, "deltas", dict(self.deltas))
-
-    @classmethod
-    def empty(cls) -> "Carry":
-        return cls(deltas={})
-
-    def __len__(self) -> int:
-        return len(self.deltas)
 
     @property
     def is_empty(self) -> bool:
@@ -129,9 +117,7 @@ class PplRow:
 
 @dataclass(frozen=True)
 class SliceRow:
-    """One measured slice, keeping its position within its document — `EvalRow`
-    already collapses this away, which is exactly what a distance-into-the-
-    document breakdown needs back (arXiv 2410.23771 on plain perplexity)."""
+    """One measured slice, with its position in the document."""
 
     doc_idx: int
     source: str

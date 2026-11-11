@@ -93,7 +93,7 @@ class TestTrain:
         assert order(1) != order(2)
 
     def test_eval_does_not_fire_on_an_empty_holdout(self):
-        resolution = _builders.nothing_held_out(_builders.resolved(eval_every=1))
+        resolution = _builders.wider_holdout(_builders.resolved(eval_every=1), 0)
         spoken = []
 
         train_v1.run(

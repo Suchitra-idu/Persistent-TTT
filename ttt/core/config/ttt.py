@@ -38,9 +38,7 @@ class TTTConfig:
     conv_kernel_size: int = 8
     update_rule: str = "hebbian"
 
-    # Initialises both the main gate and the carry gate. The gated carry of the
-    # paper uses -6 with carry_gate and carry_backprop; these defaults are the
-    # ungated carry, which the recorded ungated runs relied on.
+    # Both gates. The defaults are the ungated carry; the gated carry sets -6.
     output_gate_bias_init: float = -2.0
 
     clip_enabled: bool = True

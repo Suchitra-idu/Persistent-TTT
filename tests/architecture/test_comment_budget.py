@@ -9,28 +9,25 @@ small file padded with prose does not.
 
 from __future__ import annotations
 
-import pytest
-
 from tests.architecture import _scan
 
 MAX_DOC_RATIO = 0.5
 ABSOLUTE_ALLOWANCE = 10
 
-CASES = [
-    pytest.param(path, id=_scan.package_relative(path))
-    for path in _scan.python_files("")
-    + [p for p in _scan.TESTS_ROOT.rglob("*.py") if "__pycache__" not in p.parts]
+FILES = _scan.python_files("") + [
+    p for p in _scan.TESTS_ROOT.rglob("*.py") if "__pycache__" not in p.parts
 ]
 
 
-@pytest.mark.parametrize("path", CASES)
-def test_a_file_is_not_mostly_documentation(path):
-    documentation, code = _scan.documentation_and_code_lines(path)
-    allowed = max(ABSOLUTE_ALLOWANCE, int(MAX_DOC_RATIO * code))
+def test_no_file_is_mostly_documentation():
+    offenders = []
+    for path in FILES:
+        documentation, code = _scan.documentation_and_code_lines(path)
+        allowed = max(ABSOLUTE_ALLOWANCE, int(MAX_DOC_RATIO * code))
+        if documentation > allowed:
+            offenders.append(f"{_scan.package_relative(path)}: {documentation} doc lines to {code} code, allowance {allowed}")
 
-    assert documentation <= allowed, (
-        f"{_scan.package_relative(path)} is {documentation} documentation lines "
-        f"to {code} code lines, over its allowance of {allowed}. Cut the prose: "
-        "rationale belongs in REBUILD_PLAN.md, a test's name is its documentation, and "
-        "a field needing a paragraph needs a better name."
+    assert not offenders, (
+        "cut the prose: rationale belongs in REBUILD_PLAN.md, a test's name is its "
+        "documentation, and a field needing a paragraph needs a better name.\n" + "\n".join(offenders)
     )

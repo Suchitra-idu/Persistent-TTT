@@ -67,9 +67,7 @@ class InPlaceTTTMLP(nn.Module):
             with torch.no_grad():
                 self.output_gate_carry.weight.zero_()
                 self.output_gate_carry.bias.fill_(cfg.output_gate_bias_init)
-        # Zero-init, so the carry path starts as an exact no-op and enters only
-        # if training finds it useful: a clipped carry is several times W0's
-        # largest singular value, and an open gate alone lets it wreck the output.
+        # alpha, zero-initialised: the carried term starts at exactly zero.
         self.output_gate_carry_scale = (
             nn.Parameter(torch.zeros(1)) if cfg.carry_gate else None
         )

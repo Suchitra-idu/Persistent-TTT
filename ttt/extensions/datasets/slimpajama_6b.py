@@ -22,17 +22,11 @@ SLIMPAJAMA_6B = register(
     DatasetSpec(
         name="slimpajama-6b",
         source="DKYoon/SlimPajama-6B",
-        text_column="text",
         source_meta_column="meta",
         source_meta_key="redpajama_set_name",
         include_sources=SOURCES,
-        # Without it, --limit-docs takes the raw ~77%-C4 head and the gap
-        # signal is web text. "none" opts out.
         default_source_preset="slim-research",
-        # Books are ~0.1% of this subsample: 5000 gave an *expected* count of
-        # 5, no margin against the default eval_n_docs_per_source=5 — real
-        # runs saw shortfalls. 15000 gives Books ~3x headroom (ArXiv, ~0.9%,
-        # already clears it easily at either size).
+        # Books are ~0.1% of rows; 15000 leaves room for the per-source holdout.
         holdout_last_n=15000,
     )
 )

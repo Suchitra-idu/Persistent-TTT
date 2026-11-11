@@ -38,8 +38,7 @@ class TrainConfig:
 
     strategy: str = DEFAULT_STRATEGY
 
-    # False trains the TTT architecture with its fast weights never written:
-    # the parameter-matched control.
+    # False is the parameter-matched control.
     fast_weight_updates: bool = True
 
     seed: int = 42

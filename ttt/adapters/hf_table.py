@@ -6,18 +6,8 @@ import os
 from typing import Any, Callable, Sequence
 
 MAX_FILTER_PROCS = 8
-# Benchmarked against this pipeline's real table sizes, batched=True already
-# in effect: single-process-batched beats num_proc=8 up to ~500k rows (process
-# spawn cost dominates a filter that now finishes in a few hundred ms) and
-# loses past ~1M. The pipeline's own tables cluster clearly on either side —
-# ~15k-220k for drop_short/the holdout pool, ~3.7M-8M for filter_sources and
-# prefilter — so this doesn't need to be precisely tuned, just on the right
-# side of both clusters.
+# Measured: below about 1M rows, process spawn costs more than it saves.
 MIN_ROWS_TO_PARALLELIZE = 1_000_000
-# batched=True amortises the Python<->Arrow row crossing that dominates a
-# cheap predicate (e.g. a length check) over a big table; the predicate is
-# still called once per row, just out of one Python list instead of one
-# `.filter()` example callback per row.
 FILTER_BATCH_SIZE = 1000
 
 
@@ -31,10 +21,6 @@ class HfTable:
     def __init__(self, dataset) -> None:
         self._dataset = dataset
 
-    @property
-    def dataset(self):
-        return self._dataset
-
     def __len__(self) -> int:
         return len(self._dataset)
 
@@ -45,12 +31,8 @@ class HfTable:
     def column(self, name: str) -> list[Any]:
         if name not in self._dataset.column_names:
             raise KeyError(f"no column {name!r}; have {self._dataset.column_names}")
-        # Safe because select/filter below guarantee `self._dataset` never
-        # carries a pending indices mapping: going through `.data` directly
-        # (skipping HF's own __getitem__ formatting) is the same result
-        # ~15-60x faster on a multi-million-row column, but silently wrong —
-        # returns the table in its *pre-selection* order/membership — the
-        # moment that guarantee doesn't hold.
+        # Fast path; correct only because select/filter flatten their indices,
+        # otherwise `.data` would return the pre-selection rows.
         return self._dataset.data.column(name).to_pylist()
 
     def row(self, index: int) -> dict[str, Any]:

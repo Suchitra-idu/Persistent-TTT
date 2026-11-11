@@ -5,9 +5,9 @@
         --suites regimes --flags "<the flags it was trained with>"
 
 Pass the `--flags` the checkpoint was trained with; they are recorded in the
-manifest. A checkpoint with no TTT layers runs the regimes suite only. The bundle lands in `results/<run>/<step>/<stamp>/`, and its raw rows
-also on the checkpoint volume under `evidence/`. Rebuild the tables
-from a bundle's raw rows, no GPU:
+manifest. A checkpoint with no TTT layers runs the regimes suite only. The bundle
+lands in `results/<run>/<step>/<stamp>/`, its raw rows also on the checkpoint
+volume under `evidence/`. Rebuild the tables from a bundle's raw rows, no GPU:
 
     python -m ttt.experiments.paper_eval_v1 results/ttt-v1.1/step_600/<stamp>
 """

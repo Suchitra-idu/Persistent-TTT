@@ -9,11 +9,11 @@ from __future__ import annotations
 
 from typing import Mapping, Protocol, Sequence, runtime_checkable
 
+from ttt.core.naming import GROUP_LORA as LORA
+from ttt.core.naming import GROUP_NEW as NEW
+from ttt.core.naming import GROUP_WDOWN as WDOWN
 from ttt.core.types import GradStats
 
-LORA = "lora"
-WDOWN = "wdown"
-NEW = "new"
 GROUPS = (LORA, WDOWN, NEW)
 
 

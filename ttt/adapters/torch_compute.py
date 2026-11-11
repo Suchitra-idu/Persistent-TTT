@@ -17,7 +17,7 @@ from ttt.core.config.train import TrainConfig
 from ttt.core.config.ttt import TTTConfig
 from ttt.core.types import GradStats
 from ttt.extensions.mechanism import pretrained_mlps
-from ttt.ports.compute import GROUPS
+from ttt.ports.compute import GROUPS, LORA, NEW, WDOWN
 
 
 class TorchCompute:
@@ -39,14 +39,14 @@ class TorchCompute:
                     "lr": lr,
                     "weight_decay": (
                         train_cfg.weight_decay_lora
-                        if name == "lora"
+                        if name == LORA
                         else train_cfg.weight_decay_full
                     ),
                 }
                 for name, lr in (
-                    ("lora", train_cfg.lr_lora),
-                    ("wdown", train_cfg.lr_wdown),
-                    ("new", train_cfg.lr_new_modules),
+                    (LORA, train_cfg.lr_lora),
+                    (WDOWN, train_cfg.lr_wdown),
+                    (NEW, train_cfg.lr_new_modules),
                 )
             ]
         )

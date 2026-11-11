@@ -48,19 +48,12 @@ class TrackerConformance:
     def test_it_satisfies_the_port(self, tracker):
         assert isinstance(tracker, Tracker)
 
-    def test_logging_does_not_raise(self, tracker):
+    def test_logging_and_finishing_never_raise(self, tracker):
         tracker.log(METRICS)
-
-    def test_logging_an_empty_dict_does_not_raise(self, tracker):
         tracker.log({})
-
-    def test_finishing_does_not_raise(self, tracker):
-        tracker.log(METRICS)
-        tracker.finish()
-
-    def test_logging_after_finishing_does_not_raise(self, tracker):
         tracker.finish()
         tracker.log(METRICS)
+
 
 class TestInMemoryTracker(TrackerConformance):
     @pytest.fixture

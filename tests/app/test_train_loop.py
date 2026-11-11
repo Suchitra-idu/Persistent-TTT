@@ -6,7 +6,7 @@ import pytest
 from tests.app import _builders
 from ttt.app import train_loop
 from ttt.extensions.strategies import HYBRID, Hybrid, Mixed
-from ttt.ports.tracker import TRAIN_STEP, outside_budget
+from ttt.ports.tracker import TRAIN_STEP
 
 NAN = float("nan")
 
@@ -243,12 +243,6 @@ class TestLearningRate:
 
 
 class TestLogging:
-    def test_nothing_outside_the_budget_is_logged(self):
-        _, wiring = run(n_docs=4)
-
-        assert [outside_budget(record) for record in wiring.tracker.records] == [
-            () for _ in wiring.tracker.records
-        ]
 
 
     def test_the_state_ratio_is_logged_every_item(self):

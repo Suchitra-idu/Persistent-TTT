@@ -15,7 +15,7 @@ export NO_MKDOCS_2_WARNING := 1
 ## check: the gate. Dependency Rule + the fast test tier. Nothing merges red.
 check: lint test
 
-## tables: the paper's tables T1-T16 from the bundles in results/. CPU, no Modal.
+## tables: the paper's tables (T1-T8, T11-T16) from the bundles in results/. CPU, no Modal.
 tables:
 	$(PYTHON) -m ttt.experiments.paper_analysis_v1
 	$(PYTHON) -m ttt.experiments.cross_run_tables_v1

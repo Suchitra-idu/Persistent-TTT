@@ -1,10 +1,4 @@
-"""The DATASETS registry.
-
-The spec type is `core.config.dataset.DatasetSpec` — a frozen dataclass, so
-there is no separate protocol to declare (D5). What a plugin adds is one
-instance; what the registry adds is a name and the D9 guarantee, checked at
-registration rather than at container spin-up.
-"""
+"""The DATASETS registry of `DatasetSpec`s (D5)."""
 
 from __future__ import annotations
 

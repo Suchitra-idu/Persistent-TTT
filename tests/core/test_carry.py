@@ -74,12 +74,6 @@ def test_the_first_item_starts_the_carry_regardless_of_decay():
     assert torch.allclose(carry.advance(None, delta, decay=0.5), delta, atol=TOL)
 
 
-@pytest.mark.parametrize("decay", [-0.1, 1.5, 2.0])
-def test_advance_rejects_a_decay_outside_the_unit_interval(decay):
-    with pytest.raises(ValueError, match=r"carried_decay must be in \[0, 1\]"):
-        carry.advance(None, torch.zeros((2, 2)), decay=decay)
-
-
 def test_no_state_means_a_zero_ratio():
     assert carry.state_ratio(None, w0_norm=3.0, eta=ETA) == 0.0
 

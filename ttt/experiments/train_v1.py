@@ -28,14 +28,8 @@ def run(
     announce: Callable[[str], None] = print,
     on_data_ready: Callable[[], None] = lambda: None,
 ) -> train_loop.TrainResult:
-    """The composition. Every costly thing arrives through `engine`.
-
-    `on_data_ready` fires once, after loading and before training starts —
-    Modal's hook to commit the HF cache volume here rather than only in
-    `train`'s outer `finally`, so a run killed mid-training (stop, OOM, a
-    bad LR) still keeps the corpus preprocessing instead of redoing it next
-    launch.
-    """
+    """The composition; every costly thing arrives through `engine`. `on_data_ready`
+    commits the data cache, so a run killed mid-training keeps its preprocessing."""
     docs = data_pipeline.documents(
         data_pipeline.load(
             source=source,

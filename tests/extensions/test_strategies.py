@@ -6,6 +6,7 @@ import pytest
 
 from ttt.extensions.strategies import HYBRID, MIXED, Hybrid, Mixed
 from tests.extensions import _builders
+from ttt.adapters.numpy_rng import NumpyRng
 
 
 def test_a_doc_below_the_carry_threshold_is_one_whole_item():
@@ -29,7 +30,7 @@ def test_every_hybrid_slice_meets_the_minimum_token_count():
     lengths = [HYBRID.carry_min_tokens * 4] * 20
     sources = _builders.sources_for(lengths, seed=9)
 
-    sessions = HYBRID.build(lengths, sources, _builders.FakeRng(5))
+    sessions = HYBRID.build(lengths, sources, NumpyRng(5))
 
     assert all(
         item.n_tokens >= HYBRID.slice_min_tokens
@@ -42,7 +43,7 @@ def test_hybrid_puts_exactly_one_doc_in_each_session():
     lengths = _builders.doc_lengths(30, seed=8)
     sources = _builders.sources_for(lengths, seed=9)
 
-    sessions = HYBRID.build(lengths, sources, _builders.FakeRng(5))
+    sessions = HYBRID.build(lengths, sources, NumpyRng(5))
 
     assert all(len(set(session.doc_indices)) == 1 for session in sessions)
 
@@ -65,7 +66,7 @@ MIX_SOURCES = _builders.sources_for(MIX_LENGTHS, seed=22)
 
 
 def test_mixed_uses_every_document_exactly_once():
-    sessions = MIXED.build(MIX_LENGTHS, MIX_SOURCES, _builders.FakeRng(3))
+    sessions = MIXED.build(MIX_LENGTHS, MIX_SOURCES, NumpyRng(3))
 
     firsts = [
         doc_idx
@@ -76,20 +77,20 @@ def test_mixed_uses_every_document_exactly_once():
 
 
 def test_mixed_builds_as_many_items_as_it_counts():
-    sessions = MIXED.build(MIX_LENGTHS, MIX_SOURCES, _builders.FakeRng(3))
+    sessions = MIXED.build(MIX_LENGTHS, MIX_SOURCES, NumpyRng(3))
 
     assert sum(len(session.items) for session in sessions) == MIXED.count(MIX_LENGTHS)
 
 
 def test_mixed_caps_a_session_at_docs_per_session_documents():
-    sessions = MIXED.build(MIX_LENGTHS, MIX_SOURCES, _builders.FakeRng(3))
+    sessions = MIXED.build(MIX_LENGTHS, MIX_SOURCES, NumpyRng(3))
 
     assert max(len({item.doc_idx for item in s.items}) for s in sessions) == 5
 
 
 def test_mixed_keeps_the_source_at_about_the_configured_share():
     same, switched = _boundaries(
-        MIXED.build(MIX_LENGTHS, MIX_SOURCES, _builders.FakeRng(3)), MIX_SOURCES
+        MIXED.build(MIX_LENGTHS, MIX_SOURCES, NumpyRng(3)), MIX_SOURCES
     )
 
     assert 0.4 < same / (same + switched) < 0.6
@@ -98,7 +99,7 @@ def test_mixed_keeps_the_source_at_about_the_configured_share():
 @pytest.mark.parametrize("share, other_kind", [(1.0, 1), (0.0, 0)])
 def test_a_share_of_one_or_zero_switches_kind_only_when_a_source_runs_out(share, other_kind):
     sessions = Mixed(same_source_share=share).build(
-        MIX_LENGTHS[:60], MIX_SOURCES[:60], _builders.FakeRng(4)
+        MIX_LENGTHS[:60], MIX_SOURCES[:60], NumpyRng(4)
     )
     same, switched = _boundaries(sessions, MIX_SOURCES[:60])
 
@@ -107,7 +108,7 @@ def test_a_share_of_one_or_zero_switches_kind_only_when_a_source_runs_out(share,
 
 def test_mixed_is_deterministic_given_the_seed():
     def build(seed):
-        return MIXED.build(MIX_LENGTHS, MIX_SOURCES, _builders.FakeRng(seed))
+        return MIXED.build(MIX_LENGTHS, MIX_SOURCES, NumpyRng(seed))
 
     assert build(7) == build(7) and build(7) != build(8)
 

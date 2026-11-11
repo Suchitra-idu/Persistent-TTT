@@ -30,8 +30,7 @@ ENV_MODEL_SIZE = "TTT_MODEL_SIZE"
 ENV_BASE_MODEL = "TTT_BASE_MODEL"
 
 def _settable(config_type, *, handled: frozenset[str]) -> tuple[str, ...]:
-    """Every field the CLI may set. Derived, so a new config field is reachable
-    the moment it exists rather than when someone remembers to list it here."""
+    """Every field the CLI may set, derived so a new field is reachable at once."""
     return tuple(
         field.name
         for field in dataclasses.fields(config_type)
@@ -39,14 +38,8 @@ def _settable(config_type, *, handled: frozenset[str]) -> tuple[str, ...]:
     )
 
 
-# strategy arrives as a named argument because
-# each resolves through a rule, not a copy. micro_batch_size is fixed at 1.
-_TRAIN_FIELDS = _settable(
-    TrainConfig,
-    handled=frozenset(
-        {"strategy", "micro_batch_size"}
-    ),
-)
+# strategy is a named argument of `resolve`; micro_batch_size is fixed at 1.
+_TRAIN_FIELDS = _settable(TrainConfig, handled=frozenset({"strategy", "micro_batch_size"}))
 
 _TTT_FIELDS = _settable(TTTConfig, handled=frozenset({"layer_indices"}))
 

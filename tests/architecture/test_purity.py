@@ -8,8 +8,6 @@ from __future__ import annotations
 
 import re
 
-import pytest
-
 from tests.architecture import _scan
 
 # (rule, pattern, why). Non-capturing groups so a failure reports the match.
@@ -50,21 +48,17 @@ BANNED_IDIOMS = [
 
 PURE_RING_FILES = _scan.python_files(*_scan.PURE_RINGS)
 
-CASES = [
-    pytest.param(path, pattern, reason, id=f"{_scan.package_relative(path)}::{rule}")
-    for path in PURE_RING_FILES
-    for rule, pattern, reason in BANNED_IDIOMS
-]
 
 
-@pytest.mark.parametrize(("path", "pattern", "reason"), CASES)
-def test_pure_ring_file_uses_no_banned_idiom(path, pattern, reason):
-    matches = re.findall(pattern, _scan.code_only(path))
+def test_no_pure_ring_file_uses_a_banned_idiom():
+    offenders = [
+        f"{_scan.package_relative(path)}: {matches[0]!r} ({rule}: {reason})"
+        for path in PURE_RING_FILES
+        for rule, pattern, reason in BANNED_IDIOMS
+        if (matches := re.findall(pattern, _scan.code_only(path)))
+    ]
 
-    assert not matches, (
-        f"{_scan.package_relative(path)} is in a pure ring (0-2) and uses "
-        f"{matches[0]!r} — {reason}."
-    )
+    assert not offenders, "rings 0-2 are pure:\n" + "\n".join(offenders)
 
 
 def test_the_pure_rings_are_actually_being_scanned():

@@ -6,6 +6,8 @@ import random
 from typing import Any
 
 import torch
+
+from tests.core._builders import generator
 import torch.nn as nn
 
 from ttt.core.config.dataset import DatasetSpec
@@ -13,25 +15,6 @@ from ttt.core.config.ttt import TTTConfig
 from ttt.extensions.mechanism import InPlaceTTTMLP
 
 FP64 = torch.float64
-
-
-class FakeRng:
-    """The Rng port's shape, backed by a private `random.Random`."""
-
-    def __init__(self, seed: int) -> None:
-        self._rng = random.Random(seed)
-
-    def random(self) -> float:
-        return self._rng.random()
-
-    def integers(self, low: int, high: int) -> int:
-        """Half-open [low, high), like numpy's."""
-        return self._rng.randrange(low, high)
-
-    def permutation(self, n: int) -> list[int]:
-        order = list(range(n))
-        self._rng.shuffle(order)
-        return order
 
 
 def doc_lengths(n: int, *, seed: int, low: int = 1, high: int = 12_000) -> list[int]:
@@ -53,12 +36,6 @@ def labelled_row(spec: DatasetSpec, source: str) -> dict[str, Any]:
 
 def a_source_of(spec: DatasetSpec) -> str:
     return spec.include_sources[0]
-
-
-def generator(seed: int) -> torch.Generator:
-    gen = torch.Generator()
-    gen.manual_seed(seed)
-    return gen
 
 
 class FakeMLP(nn.Module):
