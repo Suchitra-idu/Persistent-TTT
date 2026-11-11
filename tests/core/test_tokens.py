@@ -27,16 +27,6 @@ def test_the_char_threshold_round_trips_to_at_least_the_token_minimum(min_tokens
     assert tokens.estimate_tokens(threshold) >= min_tokens - 1
 
 
-@given(
-    n_chars=st.integers(min_value=0, max_value=1_000_000),
-    min_tokens=st.integers(min_value=0, max_value=10_000),
-)
-def test_the_filter_agrees_with_the_threshold_it_is_built_from(n_chars, min_tokens):
-    assert tokens.has_enough_tokens(n_chars, min_tokens) == (
-        n_chars >= tokens.min_chars_for(min_tokens)
-    )
-
-
 def test_an_empty_document_has_no_tokens():
     assert tokens.estimate_tokens(0) == 0
 

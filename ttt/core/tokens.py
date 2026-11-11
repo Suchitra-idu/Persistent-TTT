@@ -31,9 +31,3 @@ def min_chars_for(
     return int(min_tokens * chars_per_token)
 
 
-def has_enough_tokens(
-    n_chars: int,
-    min_tokens: int,
-    chars_per_token: float = PREFILTER_CHARS_PER_TOKEN,
-) -> bool:
-    return n_chars >= min_chars_for(min_tokens, chars_per_token)

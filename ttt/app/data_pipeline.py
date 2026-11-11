@@ -12,7 +12,6 @@ from typing import Callable, Mapping, Sequence
 from ttt.app import stages
 from ttt.app.stages import Data
 from ttt.core import sampling, tokens
-from ttt.core.config import presets
 from ttt.core.config.dataset import DatasetSpec
 from ttt.core.config.train import TrainConfig
 from ttt.ports.data_source import DataSource

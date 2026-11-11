@@ -18,19 +18,12 @@ from typing import Any, Callable, Mapping, Sequence
 
 from ttt.adapters.local_storage import LocalStorage
 from ttt.adapters.numpy_rng import NumpyRng
-from ttt.app import (
-    boundary_eval,
-    context_eval,
-    evidence,
-    paper_analysis,
-    relatedness_eval,
-    repeat_eval,
-)
+from ttt.app import evidence, paper_analysis
 from ttt.app.paper_analysis import VS_MATCHED, Saturation, StatePoint
 from ttt.core import report
 from ttt.core.metrics import ALL_SOURCES
 from ttt.core.stats import Estimate
-from ttt.core.types import COLD_CARRY, EvalRow, SliceRow
+from ttt.core.types import COLD_CARRY, EvalRow
 from ttt.experiments import paper_eval_v1
 
 RESULTS_DIR = Path("results")
@@ -56,8 +49,7 @@ class Bundle:
         return evidence.rows_from(ROW_TYPES[name], json.loads(raw.read_text()))
 
     def state_ratios(self, name: str) -> list[float]:
-        """Read straight from raw rows: the swap suite is retired, but two
-        step-600 bundles still hold its state ratios, which T6 counts."""
+        """Raw `state_ratio`s of a suite with no row type; two bundles' swap rows feed T6."""
         raw = self.path / "raw" / f"{name}.json"
         return [row["state_ratio"] for row in json.loads(raw.read_text())] if raw.is_file() else []
 
